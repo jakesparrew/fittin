@@ -10,9 +10,11 @@ export async function GET() {
   return NextResponse.json({ ok: true });
 }
 
-// Svix signature check (no-op until RESEND_INBOUND_SECRET / RESEND_WEBHOOK_SECRET is set).
+// Svix signature check (no-op until RESEND_INBOUND_SECRET is set). NOTE: each Resend webhook
+// endpoint has its OWN signing secret — the inbound endpoint's secret differs from the stats one,
+// so we never fall back to RESEND_WEBHOOK_SECRET (a wrong secret would reject real inbound mail).
 function verify(headers, raw) {
-  const secret = process.env.RESEND_INBOUND_SECRET || process.env.RESEND_WEBHOOK_SECRET;
+  const secret = process.env.RESEND_INBOUND_SECRET;
   if (!secret) return true;
   const id = headers.get("svix-id"), ts = headers.get("svix-timestamp"), sh = headers.get("svix-signature");
   if (!id || !ts || !sh) return false;
