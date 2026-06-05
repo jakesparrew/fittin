@@ -8,9 +8,78 @@
   --color-lav: #b2adc2;
   --color-paper: #f5f6fa;
   --color-borderc: #e6e4f0;
-  --font-sans: "Lato", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-lato), "Lato", ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes floaty {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(0, -22px) scale(1.04); }
+}
+@keyframes floaty-slow {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-14px, 16px) scale(1.06); }
+}
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(95, 218, 107, 0.5); }
+  70% { box-shadow: 0 0 0 16px rgba(95, 218, 107, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(95, 218, 107, 0); }
+}
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+@keyframes grain-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ---------- Utilities ---------- */
+.animate-floaty { animation: floaty 8s ease-in-out infinite; }
+.animate-floaty-slow { animation: floaty-slow 11s ease-in-out infinite; }
+.animate-pulse-ring { animation: pulse-ring 2.4s ease-out infinite; }
+
+.marquee-track { animation: marquee 32s linear infinite; }
+.marquee-track:hover { animation-play-state: paused; }
+
+/* Animated brand gradient backdrop */
+.brand-mesh {
+  background:
+    radial-gradient(60% 80% at 15% 20%, rgba(95, 218, 107, 0.28), transparent 60%),
+    radial-gradient(50% 70% at 85% 15%, rgba(178, 173, 194, 0.30), transparent 60%),
+    radial-gradient(70% 90% at 70% 90%, rgba(95, 218, 107, 0.18), transparent 60%);
+  background-size: 180% 180%;
+  animation: grain-shift 16s ease-in-out infinite;
+}
+
+/* Scroll reveal (toggled by IntersectionObserver) */
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(0.2, 0.6, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.6, 0.2, 1); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* Shine sweep on hover (wrap an element with .shine) */
+.shine { position: relative; overflow: hidden; }
+.shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+}
+.shine:hover::after { animation: shimmer 0.9s ease; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-floaty, .animate-floaty-slow, .animate-pulse-ring, .marquee-track, .brand-mesh { animation: none !important; }
+  .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  html { scroll-behavior: auto; }
 }

@@ -26,8 +26,8 @@ export default async function Lidmaatschap() {
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Sneller boeken</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">Beurtenkaarten</h1>
         <p className="mt-3 text-brand/70">
-          Koop credits vooraf en boek sneller. Je saldo:{" "}
-          <span className="font-black text-accentdark">{credits} credits</span>.
+          Koop sessies vooraf en boek sneller. Je saldo:{" "}
+          <span className="font-black text-accentdark">{credits} sessies</span>.
         </p>
 
         <div className="mt-8 grid gap-5 sm:grid-cols-2">
@@ -59,7 +59,7 @@ export default async function Lidmaatschap() {
         </div>
 
         <p className="mt-8 text-xs text-brand/40">
-          Betalen via Stripe. Credits worden direct bijgeschreven na betaling en zijn 6 maanden geldig.
+          Betalen via Stripe. Sessies worden direct bijgeschreven na betaling en zijn 6 maanden geldig.
           Abonnementen (maandelijks, automatisch verlengd) komen binnenkort.
         </p>
       </div>

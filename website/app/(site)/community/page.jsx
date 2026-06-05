@@ -62,7 +62,7 @@ export default async function Community() {
           {/* Referral */}
           <section className="rounded-3xl border border-borderc bg-white p-6">
             <h2 className="font-black text-brand">Breng een vriend</h2>
-            <p className="mt-1 text-sm text-brand/60">Jullie krijgen allebei een gratis credit.</p>
+            <p className="mt-1 text-sm text-brand/60">Jullie krijgen allebei een gratis sessie.</p>
             <div className="mt-4 flex items-center gap-3">
               <span className="text-xs font-bold uppercase text-lav">Jouw code</span>
               <span className="rounded-full bg-brand px-4 py-1.5 font-black tracking-wider text-accent">{profile.referral_code}</span>
@@ -109,7 +109,7 @@ export default async function Community() {
                   <div key={c.id} className="rounded-2xl bg-paper p-4">
                     <div className="flex justify-between text-sm">
                       <span className="font-bold text-brand">{c.name}</span>
-                      <span className="text-brand/50">+{c.reward_credits} cr</span>
+                      <span className="text-brand/50">+{c.reward_credits} sessies</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
                       <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />

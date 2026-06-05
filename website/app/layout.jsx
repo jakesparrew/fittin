@@ -1,5 +1,13 @@
 import "./globals.css";
+import { Lato } from "next/font/google";
 import PWARegister from "../components/PWARegister";
+
+const lato = Lato({
+  subsets: ["latin"],
+  weight: ["400", "700", "900"],
+  variable: "--font-lato",
+  display: "swap",
+});
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -32,15 +40,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="nl">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="nl" className={lato.variable}>
       <body className="bg-white font-sans text-brand antialiased">
         <PWARegister />
         {children}

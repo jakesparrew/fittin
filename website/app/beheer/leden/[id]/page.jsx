@@ -43,7 +43,7 @@ export default async function MemberDetail({ params }) {
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
         <Stat label="Sessies deze maand" value={sessionsThisMonth} />
         <Stat label="Status" value={onTrack ? "On track" : "Haakt af"} accent={onTrack} />
-        <Stat label="Credits" value={credits} />
+        <Stat label="Sessies" value={credits} />
         <Stat label="Laatste activiteit" value={lastActivity || "—"} />
       </div>
 
@@ -68,7 +68,7 @@ export default async function MemberDetail({ params }) {
             {(!notes || notes.length === 0) && <p className="text-xs text-brand/40">Nog geen notities.</p>}
           </div>
 
-          <h2 className="mt-6 font-black text-brand">Credits aanpassen</h2>
+          <h2 className="mt-6 font-black text-brand">Sessies aanpassen</h2>
           <form action={adminAdjustCredits} className="mt-2 flex flex-wrap items-center gap-2">
             <input type="hidden" name="memberId" value={member.id} />
             <input name="delta" type="number" placeholder="±" className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />

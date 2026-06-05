@@ -263,14 +263,14 @@ export default function BookingClient({
             {isFit60 && !welcomeApplies && creditBalance >= 1 && (
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
                 <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
-                <span className="text-lav">Betaal met 1 <span className="font-bold text-accent">credit</span> (saldo: {creditBalance})</span>
+                <span className="text-lav">Betaal met 1 <span className="font-bold text-accent">sessie</span> (saldo: {creditBalance})</span>
               </label>
             )}
 
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">
               <span className="text-lav">Totaal</span>
               <span className="text-3xl font-black text-accent">
-                {welcomeApplies ? "Gratis" : creditApplies ? "1 credit" : euro(priceCents)}
+                {welcomeApplies ? "Gratis" : creditApplies ? "1 sessie" : euro(priceCents)}
               </span>
             </div>
 

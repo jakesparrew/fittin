@@ -23,7 +23,7 @@ export default async function Leden() {
   return (
     <div className="px-8 py-8">
       <h1 className="text-3xl font-black text-brand">Leden</h1>
-      <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · rollen en credits beheren.</p>
+      <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · rollen en sessies beheren.</p>
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-borderc bg-white">
         <table className="w-full text-sm">
@@ -31,7 +31,7 @@ export default async function Leden() {
             <tr>
               <th className="px-5 py-3">Naam</th>
               <th className="px-5 py-3">Rol</th>
-              <th className="px-5 py-3">Credits</th>
+              <th className="px-5 py-3">Sessies</th>
               <th className="px-5 py-3">Acties</th>
             </tr>
           </thead>
@@ -63,7 +63,7 @@ export default async function Leden() {
                 <td className="px-5 py-4">
                   <form action={adminAdjustCredits} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="memberId" value={m.id} />
-                    <input name="delta" type="number" placeholder="±credits" className="w-24 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
+                    <input name="delta" type="number" placeholder="±sessies" className="w-24 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
                     <input name="reason" placeholder="reden" className="w-28 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
                     <button className="rounded-lg bg-accent px-3 py-1 text-xs font-bold text-brand">Bijwerken</button>
                   </form>

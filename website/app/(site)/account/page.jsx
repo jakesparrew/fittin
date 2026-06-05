@@ -84,7 +84,7 @@ export default async function AccountPage({ searchParams }) {
         {/* Stat row */}
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <Stat label="Aankomende sessies" value={upcoming.length} />
-          <Stat label="Credits" value={credits} />
+          <Stat label="Sessies" value={credits} />
           <Stat
             label="Welkomstsessie"
             value={profile?.welcome_code_used ? "Gebruikt" : "Beschikbaar"}
