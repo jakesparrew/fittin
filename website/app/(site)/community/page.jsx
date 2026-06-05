@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { redeemReferral, signupEvent, cancelSignup } from "./actions";
 import { acceptBuddy, removeBuddy } from "./buddy-actions";
 import BuddyInvite from "@/components/community/BuddyInvite";
+import ReferralInvite from "@/components/community/ReferralInvite";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Community | Fittin'" };
@@ -68,7 +70,8 @@ export default async function Community() {
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-5xl px-5 py-16">
-        <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Community</p>
+        <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand">← Mijn account</Link>
+        <p className="mt-3 text-sm font-bold uppercase tracking-[0.25em] text-lav">Community</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">Blijf gemotiveerd</h1>
 
         {/* Buddies */}
@@ -118,19 +121,24 @@ export default async function Community() {
           {/* Referral */}
           <section className="rounded-3xl border border-borderc bg-white p-6">
             <h2 className="font-black text-brand">Breng een vriend</h2>
-            <p className="mt-1 text-sm text-brand/60">Jullie krijgen allebei een gratis sessie.</p>
+            <p className="mt-1 text-sm text-brand/60">Nodig een vriend uit met jouw code. Zodra zij hun eerste sessie betalen, krijgen jullie allebei een gratis sessie.</p>
             <div className="mt-4 flex items-center gap-3">
               <span className="text-xs font-bold uppercase text-lav">Jouw code</span>
               <span className="rounded-full bg-brand px-4 py-1.5 font-black tracking-wider text-accent">{profile.referral_code}</span>
             </div>
-            {myReferral ? (
-              <p className="mt-4 text-sm font-semibold text-accentdark">Je hebt al een vriendcode gebruikt ✓</p>
-            ) : (
-              <form action={redeemReferral} className="mt-4 flex gap-2">
-                <input name="code" placeholder="Code van een vriend" className="flex-1 rounded-xl border-2 border-borderc px-3 py-2 text-sm uppercase" />
-                <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Inwisselen</button>
-              </form>
-            )}
+            <ReferralInvite />
+
+            <div className="mt-5 border-t border-borderc pt-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-lav">Zelf een code gekregen?</p>
+              {myReferral ? (
+                <p className="mt-2 text-sm font-semibold text-accentdark">Je hebt al een vriendcode gebruikt ✓</p>
+              ) : (
+                <form action={redeemReferral} className="mt-2 flex gap-2">
+                  <input name="code" placeholder="Code van een vriend" className="flex-1 rounded-xl border-2 border-borderc px-3 py-2 text-sm uppercase" />
+                  <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Inwisselen</button>
+                </form>
+              )}
+            </div>
           </section>
 
           {/* Leaderboard */}

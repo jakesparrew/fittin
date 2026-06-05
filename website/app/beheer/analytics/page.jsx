@@ -104,6 +104,9 @@ export default async function Analytics() {
   }
   const peakDay = Object.entries(wdTotals).sort((a, b) => b[1] - a[1])[0];
   const peakHour = Object.entries(hourTotals).sort((a, b) => b[1] - a[1])[0];
+  // Only show hours with activity (24/7 gym → 24 rows is far too tall). Fallback to a sane range.
+  const activeHours = hours.filter((h) => (hourTotals[h] || 0) > 0);
+  const showHours = activeHours.length ? activeHours : hours.filter((h) => h >= 7 && h <= 22);
 
   return (
     <div className="px-8 py-8">
@@ -165,14 +168,14 @@ export default async function Analytics() {
           <table className="text-xs">
             <thead><tr className="text-brand/40"><th className="px-2 py-1"></th>{WD.map((d) => <th key={d} className="px-2 py-1 font-bold uppercase">{d}</th>)}</tr></thead>
             <tbody>
-              {hours.map((h) => (
+              {showHours.map((h) => (
                 <tr key={h}>
-                  <td className="px-2 py-1 text-right font-bold text-brand/40">{h}:00</td>
+                  <td className="px-2 py-0.5 text-right text-[10px] font-bold text-brand/40">{h}:00</td>
                   {WD.map((d) => {
                     const c = grid[`${d}-${h}`] || 0; const intensity = gmax ? c / gmax : 0;
                     return (
-                      <td key={d} className="px-1 py-1">
-                        <div className="flex h-7 w-10 items-center justify-center rounded-md text-[10px] font-bold"
+                      <td key={d} className="px-1 py-0.5">
+                        <div className="flex h-5 w-10 items-center justify-center rounded text-[10px] font-bold"
                           style={{ backgroundColor: c ? `rgba(95,218,107,${0.15 + intensity * 0.85})` : "#f5f6fa", color: intensity > 0.5 ? "#22194f" : "#9b97ab" }}>
                           {c || ""}
                         </div>

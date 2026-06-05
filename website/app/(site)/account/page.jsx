@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cancelBookingAction } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
@@ -59,8 +60,19 @@ export default async function AccountPage({ searchParams }) {
     .eq("status", "actief")
     .maybeSingle();
 
+  // Sessions you were invited to by another member (you're a participant, not the booker).
+  const admin = createAdminClient();
+  const { data: invitedRows } = await admin
+    .from("booking_participants")
+    .select("booking:bookings(id, starts_at, ends_at, status, persons, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))")
+    .eq("user_id", user.id);
+  const invitedSessions = (invitedRows || [])
+    .map((r) => r.booking)
+    .filter((b) => b && b.status === "bevestigd")
+    .map((b) => ({ ...b, invited: true, paid: true, payment_source: "invite", price_cents: 0, services: b.services }));
+
   const now = Date.now();
-  const all = bookings || [];
+  const all = [...(bookings || []), ...invitedSessions];
   const doorActive = all.some(
     (b) =>
       b.status === "bevestigd" &&
@@ -215,11 +227,13 @@ export default async function AccountPage({ searchParams }) {
                     </p>
                     <p className="mt-1 text-xs text-brand/50">
                       {b.persons} {b.persons === 1 ? "persoon" : "personen"} ·{" "}
-                      {b.payment_source === "gratis_code"
-                        ? "Gratis (FittinWelcome)"
-                        : b.paid
-                          ? `${euro(b.price_cents)} · betaald`
-                          : `${euro(b.price_cents)} · onbetaald`}
+                      {b.invited
+                        ? `🤝 Uitgenodigd door ${b.booker?.full_name || "een lid"}`
+                        : b.payment_source === "gratis_code"
+                          ? "Gratis (FittinWelcome)"
+                          : b.paid
+                            ? `${euro(b.price_cents)} · betaald`
+                            : `${euro(b.price_cents)} · onbetaald`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -231,12 +245,14 @@ export default async function AccountPage({ searchParams }) {
                         </button>
                       </form>
                     )}
-                    <form action={cancelBookingAction}>
-                      <input type="hidden" name="bookingId" value={b.id} />
-                      <button className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-red-300 hover:text-red-600">
-                        Annuleren
-                      </button>
-                    </form>
+                    {!b.invited && (
+                      <form action={cancelBookingAction}>
+                        <input type="hidden" name="bookingId" value={b.id} />
+                        <button className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-red-300 hover:text-red-600">
+                          Annuleren
+                        </button>
+                      </form>
+                    )}
                   </div>
                 </div>
               ))}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import { coachBookSession, cancelCoachBooking, buyCoachCredits } from "./actions";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -69,13 +70,11 @@ export default async function CoachDashboard({ searchParams }) {
       )}
 
       {/* Book a session with a client */}
-      <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">
+      <section id="boeken" className="mt-8 scroll-mt-8 rounded-3xl border border-borderc bg-white p-6">
         <h2 className="font-black text-brand">Sessie boeken met een client</h2>
         <form action={coachBookSession} className="mt-4 flex flex-wrap items-end gap-3">
           <Lbl t="Client">
-            <select name="clientId" required className="w-48 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-              {(members || []).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
-            </select>
+            <SearchSelect name="clientId" required placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
           <Lbl t="Sessie">
             <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">

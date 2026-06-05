@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import { cancelCoachBooking } from "../actions";
 
@@ -30,8 +31,13 @@ export default async function Agenda() {
 
   return (
     <div className="px-8 py-8">
-      <h1 className="text-3xl font-black text-brand">Mijn agenda</h1>
-      <p className="mt-1 text-sm text-brand/50">{upcoming.length} aankomende sessies.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black text-brand">Mijn agenda</h1>
+          <p className="mt-1 text-sm text-brand/50">{upcoming.length} aankomende sessies.</p>
+        </div>
+        <Link href="/coach#boeken" className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand transition hover:opacity-90">+ Nieuwe sessie</Link>
+      </div>
 
       {days.length === 0 ? (
         <p className="mt-6 text-sm text-brand/50">Nog geen geplande sessies.</p>

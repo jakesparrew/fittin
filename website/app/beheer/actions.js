@@ -40,6 +40,7 @@ export async function updateGymSettings(formData) {
     name: formData.get("name") || undefined,
     address: formData.get("address") || undefined,
     slot_minutes: num(formData.get("slot_minutes"), 60),
+    cancel_hours: Math.max(0, num(formData.get("cancel_hours"), 1)),
     // Gym is open 24/7; daluur disabled for now.
     open_hour: 0,
     close_hour: 24,

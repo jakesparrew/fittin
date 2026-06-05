@@ -14,22 +14,29 @@ export async function cancelBookingAction(formData) {
   } = await supabase.auth.getUser();
   if (!user) return;
 
+  // Cancellation window: members may cancel up to gym.cancel_hours before the start.
+  const { data: me } = await supabase.from("profiles").select("email, full_name, gym_id").eq("id", user.id).single();
+  const { data: gym } = me?.gym_id ? await supabase.from("gyms").select("cancel_hours").eq("id", me.gym_id).single() : { data: null };
+  const cancelHours = gym?.cancel_hours ?? 1;
+  const cutoff = new Date(Date.now() + cancelHours * 3600000).toISOString();
+
   const { data: cancelled } = await supabase
     .from("bookings")
     .update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
     .eq("id", id)
     .eq("user_id", user.id)
-    .gt("starts_at", new Date().toISOString())
+    .gt("starts_at", cutoff)
     .select("starts_at, services(name)")
     .maybeSingle();
 
-  if (cancelled) {
-    const { data: me } = await supabase.from("profiles").select("email, full_name").eq("id", user.id).single();
-    await sendBookingCancelled({ to: me?.email, name: me?.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
+  if (!cancelled) {
+    return { error: cancelHours > 0 ? `Je kan tot ${cancelHours} uur voor de sessie annuleren.` : "Annuleren niet meer mogelijk." };
   }
 
+  await sendBookingCancelled({ to: me?.email, name: me?.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
   revalidatePath("/account");
   revalidatePath("/boeken");
+  return { ok: true };
 }
 
 // Open the gym door during an active booking. open_door() authorises (active booking only) + logs.

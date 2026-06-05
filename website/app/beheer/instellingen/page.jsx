@@ -24,6 +24,7 @@ export default async function Instellingen() {
         <Field name="name" label="Naam" defaultValue={gym.name} />
         <Field name="address" label="Adres" defaultValue={gym.address} />
         <Field name="slot_minutes" label="Duur van een sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
+        <Field name="cancel_hours" label="Annuleren tot (uren voor de sessie)" type="number" defaultValue={gym.cancel_hours ?? 1} min={0} max={72} />
 
         <div className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
           <p className="font-bold text-brand">🕑 24/7 open</p>
