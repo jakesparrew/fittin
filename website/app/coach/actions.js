@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
-import { sendCoachBooked } from "@/lib/email";
+import { sendCoachBooked, sendBookingCancelled } from "@/lib/email";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 const num = (v, d = 0) => {
@@ -61,12 +61,21 @@ export async function coachBookSession(formData) {
 export async function cancelCoachBooking(formData) {
   const { supabase, userId, error } = await requireCoach();
   if (error) return { error };
-  await supabase
+  const { data: cancelled } = await supabase
     .from("bookings")
     .update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
     .eq("id", formData.get("bookingId"))
     .eq("coach_id", userId)
-    .gt("starts_at", new Date().toISOString());
+    .gt("starts_at", new Date().toISOString())
+    .select("starts_at, user_id, services(name)")
+    .maybeSingle();
+  // Notify the client their coach cancelled (the credit refund is handled by a DB trigger).
+  if (cancelled) {
+    try {
+      const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", cancelled.user_id).single();
+      if (client?.email) await sendBookingCancelled({ to: client.email, name: client.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
+    } catch {}
+  }
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
 }
