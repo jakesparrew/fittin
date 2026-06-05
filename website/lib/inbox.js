@@ -55,6 +55,15 @@ export async function syncInbox(gymId, max = 40) {
   return { ok: true, added };
 }
 
+// Send a fresh email from one of the @fittin.be identities (inbox compose).
+export async function sendEmail({ from, to, subject, body }) {
+  const { Resend } = await import("resend");
+  const resend = new Resend(KEY);
+  const safe = String(body || "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;color:#22194F;white-space:pre-wrap;font-size:15px;line-height:1.5">${safe}</div>`;
+  return resend.emails.send({ from: `Fittin' <${from}>`, to, replyTo: from, subject, html });
+}
+
 // Reply to an inbound email from the same @fittin.be identity it was sent to.
 export async function sendReply({ fromEmail, toEmail, subject, body, inReplyTo }) {
   const { Resend } = await import("resend");

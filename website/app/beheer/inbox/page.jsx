@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { syncInbox } from "@/lib/inbox";
 import { syncInboxAction } from "../inbox-actions";
+import ComposeEmail from "@/components/admin/ComposeEmail";
 
 export const dynamic = "force-dynamic";
 const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -33,9 +34,12 @@ export default async function Inbox() {
           <h1 className="text-3xl font-black text-brand">Inbox</h1>
           <p className="mt-1 text-sm text-brand/50">Alle e-mails naar @fittin.be — lees en beantwoord ze hier. {unread > 0 && <span className="font-bold text-accentdark">{unread} ongelezen</span>}</p>
         </div>
-        <form action={syncInboxAction}>
-          <button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">↻ Vernieuwen</button>
-        </form>
+        <div className="flex items-center gap-2">
+          <form action={syncInboxAction}>
+            <button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">↻ Vernieuwen</button>
+          </form>
+          <ComposeEmail />
+        </div>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-borderc bg-white">

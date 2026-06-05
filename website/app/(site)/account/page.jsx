@@ -71,6 +71,14 @@ export default async function AccountPage({ searchParams }) {
     .filter((b) => b && b.status === "bevestigd")
     .map((b) => ({ ...b, invited: true, paid: true, payment_source: "invite", price_cents: 0, services: b.services }));
 
+  // Your assigned coach (if any).
+  const { data: coachLink } = await admin
+    .from("coach_clients")
+    .select("coach:profiles!coach_clients_coach_id_fkey(full_name, email)")
+    .eq("client_id", user.id)
+    .maybeSingle();
+  const myCoach = coachLink?.coach || null;
+
   const now = Date.now();
   const all = [...(bookings || []), ...invitedSessions];
   const doorActive = all.some(
@@ -126,6 +134,16 @@ export default async function AccountPage({ searchParams }) {
             accent={!profile?.welcome_code_used}
           />
         </div>
+
+        {myCoach && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-lav">Jouw coach</p>
+              <p className="mt-1 text-lg font-black text-brand">{myCoach.full_name || "Je coach"}</p>
+            </div>
+            <Link href="/training" className="rounded-full bg-paper px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-accent/15">Mijn training →</Link>
+          </div>
+        )}
 
         {!profile?.welcome_code_used && profile?.welcome_status !== "used" && (
           <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">

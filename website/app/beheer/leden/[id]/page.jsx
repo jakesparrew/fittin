@@ -160,8 +160,8 @@ export default async function MemberDetail({ params }) {
           <h2 className="mt-6 font-black text-brand">Sessies aanpassen</h2>
           <form action={adminAdjustCredits} className="mt-2 flex flex-wrap items-center gap-2">
             <input type="hidden" name="memberId" value={member.id} />
-            <input name="delta" type="number" placeholder="±" className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-            <input name="reason" placeholder="reden" className="w-32 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+            <input name="delta" type="number" placeholder="+3 of -3" title="+ = bijgeven, - = afhalen" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+            <input name="reason" placeholder="reden (lid krijgt mail)" className="w-40 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
             <button className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white">Bijwerken</button>
           </form>
         </section>

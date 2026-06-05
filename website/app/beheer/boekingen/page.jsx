@@ -69,6 +69,10 @@ export default async function Boekingen({ searchParams }) {
           <Lbl t="Datum"><input name="date" type="date" required defaultValue={days[0].dateStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <Lbl t="Uur"><HourSelect name="hour" hours={hours} /></Lbl>
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+          <label className="flex items-center gap-2 pb-1 text-xs font-bold text-brand/70">
+            <input type="checkbox" name="useCredit" className="h-4 w-4 accent-[#5fda6b]" />
+            Trek 1 sessie af
+          </label>
           <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</button>
         </form>
 

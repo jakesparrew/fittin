@@ -77,8 +77,8 @@ export default async function Leden() {
                 <td className="px-5 py-4">
                   <form action={adminAdjustCredits} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="memberId" value={m.id} />
-                    <input name="delta" type="number" placeholder="±sessies" className="w-24 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
-                    <input name="reason" placeholder="reden" className="w-28 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
+                    <input name="delta" type="number" placeholder="+3 of -3" title="+ = sessies bijgeven, - = sessies afhalen" className="w-24 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
+                    <input name="reason" placeholder="reden (lid krijgt mail)" className="w-36 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
                     <button className="rounded-lg bg-accent px-3 py-1 text-xs font-bold text-brand">Bijwerken</button>
                   </form>
                 </td>

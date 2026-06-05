@@ -191,6 +191,24 @@ export async function sendEventSignup({ to, name, title, startsAt }) {
   );
 }
 
+// ---- Member: session balance adjusted by an admin ----
+export async function sendCreditsAdjusted({ to, name, delta, reason, balance }) {
+  const up = delta >= 0;
+  await send(
+    to,
+    up ? "Je hebt sessies bijgekregen" : "Je sessiesaldo is aangepast",
+    shell({
+      title: up ? `+${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} bijgeschreven 🎉` : `${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} aangepast`,
+      intro: `Hallo ${name || "daar"}, je sessiesaldo is ${up ? "verhoogd" : "verlaagd"} met ${Math.abs(delta)} sessie${Math.abs(delta) > 1 ? "s" : ""}.`,
+      rows: [
+        ...(reason ? [["Reden", reason]] : []),
+        ...(balance != null ? [["Nieuw saldo", `${balance} sessies`]] : []),
+      ],
+      cta: { href: `${SITE}/boeken`, label: "Boek een sessie" },
+    })
+  );
+}
+
 // ---- Invited to a session (a member added you to their booking) ----
 export async function sendSessionInvite({ to, name, fromName, serviceName, startsAt, endsAt }) {
   await send(

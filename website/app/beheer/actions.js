@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount } from "@/lib/email";
+import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted } from "@/lib/email";
 import { enrollUserInDrips } from "@/lib/newsletter";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
@@ -104,14 +104,28 @@ export async function adminCancelBooking(formData) {
 export async function adminCreateBooking(formData) {
   const { supabase, error } = await requireStaff();
   if (error) return { error };
-  const { error: e } = await supabase.rpc("admin_create_booking", {
-    p_member: formData.get("memberId"),
+  const memberId = formData.get("memberId");
+  const { data: bookingId, error: e } = await supabase.rpc("admin_create_booking", {
+    p_member: memberId,
     p_service: formData.get("serviceId"),
     p_date: formData.get("date"),
     p_hour: num(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
+    p_use_credit: formData.get("useCredit") === "on",
   });
   if (e) return { error: e.message };
+  // Confirm the booking to the member by email.
+  try {
+    const admin = createAdminClient();
+    const [{ data: bk }, { data: m }] = await Promise.all([
+      admin.from("bookings").select("starts_at, ends_at, persons, services(name)").eq("id", bookingId).single(),
+      admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
+    ]);
+    if (bk && m?.email) {
+      const { sendBookingConfirmation } = await import("@/lib/email");
+      await sendBookingConfirmation({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at, endsAt: bk.ends_at, persons: bk.persons, free: true });
+    }
+  } catch {}
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
   return { ok: true };
@@ -143,13 +157,24 @@ export async function adminUnblock(formData) {
 export async function adminAdjustCredits(formData) {
   const { supabase, error } = await requireStaff();
   if (error) return { error };
-  const { error: e } = await supabase.rpc("admin_adjust_credits", {
-    p_member: formData.get("memberId"),
-    p_delta: num(formData.get("delta")),
-    p_reason: formData.get("reason") || "correctie",
-  });
+  const memberId = formData.get("memberId");
+  const delta = num(formData.get("delta"));
+  const reason = formData.get("reason") || "correctie";
+  if (!delta) return { error: "Geef een aantal (+ erbij, − eraf)." };
+  const { error: e } = await supabase.rpc("admin_adjust_credits", { p_member: memberId, p_delta: delta, p_reason: reason });
   if (e) return { error: e.message };
+  // Notify the member of the change + reason.
+  try {
+    const admin = createAdminClient();
+    const [{ data: m }, { data: ledger }] = await Promise.all([
+      admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
+      admin.from("credits_ledger").select("delta").eq("user_id", memberId),
+    ]);
+    const balance = (ledger || []).reduce((a, r) => a + r.delta, 0);
+    if (m?.email) await sendCreditsAdjusted({ to: m.email, name: m.full_name, delta, reason, balance });
+  } catch {}
   revalidatePath("/beheer/leden");
+  revalidatePath(`/beheer/leden/${memberId}`);
   return { ok: true };
 }
 

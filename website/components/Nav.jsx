@@ -64,7 +64,7 @@ export default function Nav() {
           )}
           {account && isStaff && (
             <>
-              <Link href="/account" className="hidden text-sm font-bold text-brand/60 transition hover:text-brand sm:block">{account.name?.split(" ")[0] || "Account"}</Link>
+              <Link href="/account" className="hidden text-sm font-bold text-brand/60 transition hover:text-brand sm:block">Mijn account</Link>
               <Link href={home} className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:opacity-90 sm:block">
                 {staffLabel} →
               </Link>

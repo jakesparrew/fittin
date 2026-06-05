@@ -3,7 +3,23 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { syncInbox, sendReply } from "@/lib/inbox";
+import { syncInbox, sendReply, sendEmail } from "@/lib/inbox";
+
+const IDENTITIES = ["info@fittin.be", "boekingen@booking.fittin.be", "nieuwsbrief@news.fittin.be"];
+
+export async function sendNewEmail(formData) {
+  const { error } = await requireStaff(true);
+  if (error) return { error };
+  const from = IDENTITIES.includes(formData.get("from")) ? formData.get("from") : "info@fittin.be";
+  const to = String(formData.get("to") || "").trim();
+  const subject = String(formData.get("subject") || "").trim();
+  const body = String(formData.get("body") || "").trim();
+  if (!to.includes("@")) return { error: "Geldig e-mailadres vereist." };
+  if (!subject) return { error: "Onderwerp vereist." };
+  const r = await sendEmail({ from, to, subject, body });
+  if (r?.error) return { error: r.error.message };
+  return { ok: true };
+}
 
 export async function syncInboxAction() {
   const { profile, error } = await requireStaff(true);
