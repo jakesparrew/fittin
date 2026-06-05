@@ -1,6 +1,22 @@
 "use client";
 import { useActionState } from "react";
 import { sendNewsletter } from "@/app/beheer/newsletter-actions";
+import { runActivationNow } from "@/app/beheer/activation-actions";
+
+// Run an activation campaign now (confirm + inline result).
+export function RunActivationButton({ id, matches }) {
+  const [state, action, pending] = useActionState(async (_p, fd) => runActivationNow(fd), null);
+  return (
+    <form action={action} onSubmit={(e) => { if (!confirm(`Nu versturen naar de leden die matchen (max ${matches})?`)) e.preventDefault(); }}>
+      <input type="hidden" name="id" value={id} />
+      <button disabled={pending} className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-60">
+        {pending ? "Versturen…" : "Nu versturen"}
+      </button>
+      {state?.error && <p className="mt-2 text-sm font-semibold text-red-500">{state.error}</p>}
+      {state?.ok && <p className="mt-2 text-sm font-semibold text-accentdark">Verzonden naar {state.sent} leden ({state.matched} matchten).</p>}
+    </form>
+  );
+}
 
 // Send a newsletter with a confirm + inline result.
 export function SendNewsletterButton({ id, count }) {

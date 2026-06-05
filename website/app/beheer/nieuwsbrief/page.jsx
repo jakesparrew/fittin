@@ -22,7 +22,7 @@ export default async function Newsletter() {
 
   const [{ count: subActive }, { data: campaigns }] = await Promise.all([
     supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "active"),
-    supabase.from("campaigns").select("*").eq("gym_id", gym.id).order("created_at", { ascending: false }),
+    supabase.from("campaigns").select("*").eq("gym_id", gym.id).in("kind", ["newsletter", "drip"]).order("created_at", { ascending: false }),
   ]);
 
   const sentCampaigns = (campaigns || []).filter((c) => c.kind === "newsletter" && c.status === "sent");
