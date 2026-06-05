@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
+import { sendCoachBooked } from "@/lib/email";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 const num = (v, d = 0) => {
@@ -23,9 +24,9 @@ async function requireCoach() {
 }
 
 export async function coachBookSession(formData) {
-  const { supabase, error } = await requireCoach();
+  const { supabase, userId, error } = await requireCoach();
   if (error) return { error };
-  const { error: e } = await supabase.rpc("coach_book_session", {
+  const { data: bookingId, error: e } = await supabase.rpc("coach_book_session", {
     p_client: formData.get("clientId"),
     p_service: formData.get("serviceId"),
     p_date: formData.get("date"),
@@ -33,6 +34,25 @@ export async function coachBookSession(formData) {
     p_persons: num(formData.get("persons"), 1),
   });
   if (e) return { error: e.message };
+
+  // Notify the client their coach booked a session for them.
+  try {
+    const [{ data: booking }, { data: client }, { data: coach }] = await Promise.all([
+      supabase.from("bookings").select("starts_at, ends_at, services(name)").eq("id", bookingId).single(),
+      supabase.from("profiles").select("email, full_name").eq("id", formData.get("clientId")).single(),
+      supabase.from("profiles").select("full_name").eq("id", userId).single(),
+    ]);
+    if (booking && client?.email)
+      await sendCoachBooked({
+        to: client.email,
+        name: client.full_name,
+        coachName: coach?.full_name || "Je coach",
+        serviceName: booking.services?.name || "Sessie",
+        startsAt: booking.starts_at,
+        endsAt: booking.ends_at,
+      });
+  } catch {}
+
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
   return { ok: true };

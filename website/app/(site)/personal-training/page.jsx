@@ -86,7 +86,7 @@ export default function PersonalTraining() {
             doet&rdquo;
           </p>
           <a
-            href="mailto:fit@fittingent.be?subject=Gratis%20proeftraining"
+            href="mailto:fit@fittin.be?subject=Gratis%20proeftraining"
             className="mt-7 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90"
           >
             Gratis proeftraining

@@ -45,6 +45,20 @@ async function profileFromCustomer(admin, customerId) {
   return data || null;
 }
 
+async function recordPayment(admin, { gymId, userId, amountCents, kind, description, stripeId }) {
+  if (!amountCents || amountCents <= 0) return; // skip €0 (setup/welcome)
+  let gym = gymId;
+  if (!gym && userId) {
+    const { data: p } = await admin.from("profiles").select("gym_id").eq("id", userId).maybeSingle();
+    gym = p?.gym_id;
+  }
+  if (!gym) return;
+  await admin.from("payments").upsert(
+    { gym_id: gym, user_id: userId || null, amount_cents: amountCents, kind, description, stripe_id: stripeId },
+    { onConflict: "stripe_id" }
+  );
+}
+
 async function grantCredits(admin, userId, credits, reason, withPunchcard = false) {
   if (!userId || !credits) return;
   const { data: prof } = await admin.from("profiles").select("gym_id").eq("id", userId).single();
@@ -60,14 +74,16 @@ async function grantCredits(admin, userId, credits, reason, withPunchcard = fals
   await admin.from("credits_ledger").insert({ gym_id: prof.gym_id, user_id: userId, delta: credits, reason });
 }
 
-async function markBookingPaid(admin, bookingId, paymentIntent) {
+async function markBookingPaid(admin, bookingId, paymentIntent, session) {
   const { data: booking } = await admin
     .from("bookings")
     .update({ paid: true, stripe_payment_intent: paymentIntent })
     .eq("id", bookingId)
-    .select("id, starts_at, ends_at, persons, user_id, services(name)")
+    .select("id, gym_id, starts_at, ends_at, persons, user_id, services(name)")
     .single();
   if (!booking) return;
+  if (session?.amount_total)
+    await recordPayment(admin, { gymId: booking.gym_id, userId: booking.user_id, amountCents: session.amount_total, kind: "booking", description: `Boeking · ${booking.services?.name || "Sessie"}`, stripeId: session.id });
   const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", booking.user_id).single();
   await sendBookingConfirmation({
     to: profile?.email,
@@ -128,7 +144,9 @@ async function handleEvent(event, admin) {
   switch (event.type) {
     case "checkout.session.completed": {
       if (obj.metadata?.kind === "punchcard") {
-        await grantCredits(admin, obj.metadata.user_id, parseInt(obj.metadata.credits, 10) || 0, "aankoop", true);
+        const credits = parseInt(obj.metadata.credits, 10) || 0;
+        await grantCredits(admin, obj.metadata.user_id, credits, "aankoop", true);
+        await recordPayment(admin, { userId: obj.metadata.user_id, amountCents: obj.amount_total, kind: "beurtenkaart", description: `Beurtenkaart · ${credits} sessies`, stripeId: obj.id });
       } else if (obj.metadata?.kind === "coach_credits") {
         const coachId = obj.metadata.coach_id;
         const credits = parseInt(obj.metadata.credits, 10) || 0;
@@ -136,10 +154,11 @@ async function handleEvent(event, admin) {
         if (prof && credits) {
           await admin.from("coach_ledger").insert({ gym_id: prof.gym_id, coach_id: coachId, delta: credits, reason: "aankoop" });
         }
+        await recordPayment(admin, { userId: coachId, amountCents: obj.amount_total, kind: "coach_credits", description: `Coach-sessies · ${credits}`, stripeId: obj.id });
       } else if (obj.metadata?.kind === "welcome" || obj.mode === "setup") {
         await handleWelcomeSetup(admin, obj);
       } else if (obj.metadata?.booking_id) {
-        await markBookingPaid(admin, obj.metadata.booking_id, obj.payment_intent);
+        await markBookingPaid(admin, obj.metadata.booking_id, obj.payment_intent, obj);
       }
       // subscription checkout → handled by subscription.* + invoice.paid
       return;
@@ -160,6 +179,7 @@ async function handleEvent(event, admin) {
       const prof = await profileFromCustomer(admin, obj.customer);
       if (!prof) return;
       await grantCredits(admin, prof.id, 1, "abo");
+      await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
       return;
     }
     default:

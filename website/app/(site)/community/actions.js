@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { sendEventSignup } from "@/lib/email";
 
 export async function redeemReferral(formData) {
   const supabase = await createClient();
@@ -16,13 +17,18 @@ export async function signupEvent(formData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  const { data: profile } = await supabase.from("profiles").select("gym_id").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("gym_id, email, full_name").eq("id", user.id).single();
   if (!profile) return;
-  await supabase.from("event_signups").insert({
+  const eventId = formData.get("eventId");
+  const { error } = await supabase.from("event_signups").insert({
     gym_id: profile.gym_id,
-    event_id: formData.get("eventId"),
+    event_id: eventId,
     user_id: user.id,
   });
+  if (!error && profile.email) {
+    const { data: ev } = await supabase.from("events").select("title, starts_at").eq("id", eventId).maybeSingle();
+    if (ev) await sendEventSignup({ to: profile.email, name: profile.full_name, title: ev.title, startsAt: ev.starts_at });
+  }
   revalidatePath("/community");
 }
 

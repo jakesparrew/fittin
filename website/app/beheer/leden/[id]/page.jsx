@@ -1,20 +1,24 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addSessionNote } from "../../coaching-actions";
-import { adminAdjustCredits, assignCoachClient, unassignCoachClient } from "../../actions";
+import { adminAdjustCredits, assignCoachClient, unassignCoachClient, adminSetRole } from "../../actions";
+import { DeleteUserButton } from "@/components/admin/MemberControls";
 
 export const dynamic = "force-dynamic";
 
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
+const KIND = { booking: "Boeking", beurtenkaart: "Beurtenkaart", abonnement: "Abonnement", coach_credits: "Coach-sessies", overig: "Overig" };
 
 export default async function MemberDetail({ params }) {
   const { id } = await params;
   const ctx = await getAdminContext();
   if (!ctx) return null;
-  const { supabase, gym } = ctx;
+  const { supabase, gym, profile: admin } = ctx;
+  const isBeheerder = admin.role === "beheerder";
 
-  const [{ data: member }, { data: bookings }, { data: logs }, { data: notes }, { data: ledger }, { data: program }, { data: coachLinks }, { data: coachList }, { data: coachSessions }] =
+  const [{ data: member }, { data: bookings }, { data: logs }, { data: notes }, { data: ledger }, { data: program }, { data: coachLinks }, { data: coachList }, { data: coachSessions }, { data: payments }] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", id).eq("gym_id", gym.id).single(),
       supabase.from("bookings").select("starts_at, status, services(name)").eq("user_id", id).order("starts_at", { ascending: false }).limit(20),
@@ -25,6 +29,7 @@ export default async function MemberDetail({ params }) {
       supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id),
       supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
       supabase.from("bookings").select("id, starts_at, status, coach_billing, coach:profiles!bookings_coach_id_fkey(full_name, email), services(name)").eq("user_id", id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(20),
+      supabase.from("payments").select("amount_cents, kind, description, created_at, status").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
     ]);
 
   if (!member) return <div className="px-8 py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
@@ -40,8 +45,26 @@ export default async function MemberDetail({ params }) {
   return (
     <div className="px-8 py-8">
       <Link href="/beheer/leden" className="text-sm font-semibold text-brand/50 hover:text-brand">← Leden</Link>
-      <h1 className="mt-2 text-3xl font-black text-brand">{member.full_name || "Lid"}</h1>
-      <p className="text-sm text-brand/50">{member.email} · {member.role}</p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black text-brand">{member.full_name || "Lid"}</h1>
+          <p className="text-sm text-brand/50">{member.email}{member.phone ? " · " + member.phone : ""} · <span className="capitalize font-semibold">{member.role}</span></p>
+        </div>
+        {isBeheerder && member.id !== admin.id && (
+          <div className="flex flex-wrap items-center gap-2">
+            {["lid", "coach", "beheerder"].filter((r) => r !== member.role).map((r) => (
+              <form key={r} action={adminSetRole}>
+                <input type="hidden" name="memberId" value={member.id} />
+                <input type="hidden" name="role" value={r} />
+                <button className="rounded-full border-2 border-borderc px-3 py-1.5 text-xs font-bold text-brand transition hover:border-accent hover:bg-accent/10">
+                  Maak {r === "beheerder" ? "beheerder" : r}
+                </button>
+              </form>
+            ))}
+            <DeleteUserButton userId={member.id} name={member.full_name || member.email} />
+          </div>
+        )}
+      </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
         <Stat label="Sessies deze maand" value={sessionsThisMonth} />
@@ -89,6 +112,31 @@ export default async function MemberDetail({ params }) {
             ))}
             {(!coachSessions || coachSessions.length === 0) && <p className="text-xs text-brand/40">Nog geen sessies met een coach.</p>}
           </div>
+        </div>
+      </section>
+
+      {/* Payments */}
+      <section className="mt-8 rounded-2xl border border-borderc bg-white p-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-black text-brand">Betalingen</h2>
+          <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
+            Totaal: {euro((payments || []).reduce((a, p) => a + (p.amount_cents || 0), 0))}
+          </span>
+        </div>
+        <div className="mt-3 space-y-1.5">
+          {(payments || []).map((p, i) => (
+            <div key={i} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-sm">
+              <div>
+                <span className="font-bold text-brand">{KIND[p.kind] || p.kind}</span>
+                {p.description && <span className="ml-2 text-xs text-brand/45">{p.description}</span>}
+              </div>
+              <div className="text-right">
+                <span className="font-black text-brand">{euro(p.amount_cents)}</span>
+                <span className="ml-2 text-xs text-brand/40">{fmt(p.created_at)}</span>
+              </div>
+            </div>
+          ))}
+          {(!payments || payments.length === 0) && <p className="text-xs text-brand/40">Nog geen betalingen geregistreerd.</p>}
         </div>
       </section>
 

@@ -125,7 +125,7 @@ export default function DeGym() {
               Ben je zelf coach en op zoek naar een zaal? Boek een afspraak en kom eens langs.
             </p>
             <a
-              href="mailto:fit@fittingent.be?subject=Zaal%20huren%20als%20coach"
+              href="mailto:fit@fittin.be?subject=Zaal%20huren%20als%20coach"
               className="relative mt-7 inline-block rounded-full bg-accent px-6 py-3 font-bold text-brand transition hover:opacity-90"
             >
               Kom eens langs

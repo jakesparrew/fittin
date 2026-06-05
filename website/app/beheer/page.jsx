@@ -23,11 +23,11 @@ export default async function BeheerDashboard() {
       supabase.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid"),
       supabase.from("bookings").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", dayStart.toISOString()).lt("starts_at", dayEnd.toISOString()),
       supabase.from("bookings").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", dayStart.toISOString()).lt("starts_at", weekEnd.toISOString()),
-      supabase.from("bookings").select("price_cents").eq("gym_id", gym.id).eq("paid", true).gte("created_at", monthStart.toISOString()),
+      supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).gte("created_at", monthStart.toISOString()),
       supabase.from("bookings").select("starts_at, persons, status, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", dayStart.toISOString()).lt("starts_at", dayEnd.toISOString()).order("starts_at"),
     ]);
 
-  const revenue = (paidRes.data || []).reduce((a, r) => a + (r.price_cents || 0), 0);
+  const revenue = (paidRes.data || []).reduce((a, r) => a + (r.amount_cents || 0), 0);
   const today = (todayList.data || []).filter((b) => b.status === "bevestigd");
   const dateLabel = new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long" }).format(now);
 
@@ -73,8 +73,9 @@ export default async function BeheerDashboard() {
           <div className="mt-4 grid gap-2">
             <QuickLink href="/beheer/boekingen" label="Boekingskalender" />
             <QuickLink href="/beheer/leden" label="Leden & rollen" />
+            <QuickLink href="/beheer/coaches" label="Coaches & toewijzingen" />
+            <QuickLink href="/beheer/betalingen" label="Betalingen" />
             <QuickLink href="/beheer/diensten" label="Diensten & prijzen" />
-            <QuickLink href="/beheer/instellingen" label="Openingsuren & instellingen" />
           </div>
         </section>
       </div>

@@ -1,6 +1,11 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount } from "@/lib/email";
+
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
 // Ensure the caller is staff (coach|beheerder); returns the supabase client + profile.
 async function requireStaff(beheerderOnly = false) {
@@ -177,15 +182,81 @@ export async function grantCoachCredits(formData) {
   return { ok: true };
 }
 
+// ---- User management (add / remove / create admin) ----
+// Create a new account (any role) and email a set-password link. Uses the service role.
+export async function adminAddUser(formData) {
+  const { supabase, profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const full_name = String(formData.get("full_name") || "").trim();
+  const phone = String(formData.get("phone") || "").trim();
+  const role = formData.get("role") || "lid";
+  if (!email || !email.includes("@")) return { error: "Geldig e-mailadres vereist." };
+
+  const admin = createAdminClient();
+  const { data: created, error: cErr } = await admin.auth.admin.createUser({
+    email,
+    email_confirm: true,
+    password: crypto.randomUUID() + "Aa1!",
+    user_metadata: { full_name },
+  });
+  if (cErr) {
+    if (/already|exists|registered/i.test(cErr.message)) return { error: "Er bestaat al een account met dit e-mailadres." };
+    return { error: cErr.message };
+  }
+  const uid = created.user.id;
+  // The signup trigger creates the profile; patch role/phone/gym to the admin's gym.
+  await admin.from("profiles").update({ gym_id: profile.gym_id, role, phone: phone || null, full_name: full_name || null }).eq("id", uid);
+
+  try {
+    const { data: link } = await admin.auth.admin.generateLink({
+      type: "recovery",
+      email,
+      options: { redirectTo: `${siteUrl()}/wachtwoord-herstellen` },
+    });
+    const action = link?.properties?.action_link;
+    if (action) await sendWelcomeNewAccount({ to: email, name: full_name, link: action });
+    if (role !== "lid") await sendRoleChanged({ to: email, name: full_name, role });
+  } catch {}
+
+  revalidatePath("/beheer/leden");
+  revalidatePath("/beheer/coaches");
+  return { ok: true };
+}
+
+// Permanently remove a user (cascades their data; payment history is kept). Guarded.
+export async function deleteUser(formData) {
+  const { supabase, profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const userId = formData.get("userId");
+  if (!userId) return { error: "Geen gebruiker." };
+  if (userId === profile.id) return { error: "Je kan jezelf niet verwijderen." };
+
+  const { data: target } = await supabase.from("profiles").select("role, gym_id").eq("id", userId).single();
+  if (!target || target.gym_id !== profile.gym_id) return { error: "Onbekende gebruiker." };
+  if (target.role === "beheerder") {
+    const { count } = await supabase.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", profile.gym_id).eq("role", "beheerder");
+    if ((count ?? 0) <= 1) return { error: "Dit is de laatste beheerder — niet te verwijderen." };
+  }
+
+  const admin = createAdminClient();
+  const { error: dErr } = await admin.auth.admin.deleteUser(userId);
+  if (dErr) return { error: dErr.message };
+  revalidatePath("/beheer/leden");
+  redirect("/beheer/leden");
+}
+
 // ---- Coach ↔ client assignments ----
 export async function addCoach(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
-  const { error: e } = await supabase.rpc("admin_set_role", {
-    p_member: formData.get("memberId"),
-    p_role: "coach",
-  });
+  const memberId = formData.get("memberId");
+  const { error: e } = await supabase.rpc("admin_set_role", { p_member: memberId, p_role: "coach" });
   if (e) return { error: e.message };
+  try {
+    const { data: m } = await supabase.from("profiles").select("email, full_name").eq("id", memberId).single();
+    if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role: "coach" });
+  } catch {}
   revalidatePath("/beheer/coaches");
   revalidatePath("/beheer/leden");
   return { ok: true };
@@ -202,6 +273,13 @@ export async function assignCoachClient(formData) {
     .from("coach_clients")
     .upsert({ gym_id: profile.gym_id, coach_id: coachId, client_id: clientId }, { onConflict: "gym_id,coach_id,client_id" });
   if (e) return { error: e.message };
+  try {
+    const [{ data: client }, { data: coach }] = await Promise.all([
+      supabase.from("profiles").select("email, full_name").eq("id", clientId).single(),
+      supabase.from("profiles").select("full_name").eq("id", coachId).single(),
+    ]);
+    if (client?.email) await sendCoachAssigned({ to: client.email, name: client.full_name, coachName: coach?.full_name || "een coach" });
+  } catch {}
   revalidatePath("/beheer/coaches");
   revalidatePath(`/beheer/leden/${clientId}`);
   return { ok: true };
@@ -253,11 +331,15 @@ export async function togglePackage(formData) {
 export async function adminSetRole(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
-  const { error: e } = await supabase.rpc("admin_set_role", {
-    p_member: formData.get("memberId"),
-    p_role: formData.get("role"),
-  });
+  const memberId = formData.get("memberId");
+  const role = formData.get("role");
+  const { error: e } = await supabase.rpc("admin_set_role", { p_member: memberId, p_role: role });
   if (e) return { error: e.message };
+  try {
+    const { data: m } = await supabase.from("profiles").select("email, full_name").eq("id", memberId).single();
+    if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role });
+  } catch {}
   revalidatePath("/beheer/leden");
+  revalidatePath(`/beheer/leden/${memberId}`);
   return { ok: true };
 }

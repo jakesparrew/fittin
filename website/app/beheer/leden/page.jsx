@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { adminAdjustCredits, adminSetRole } from "../actions";
+import { AddMemberForm } from "@/components/admin/MemberControls";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +28,8 @@ export default async function Leden() {
     <div className="px-8 py-8">
       <h1 className="text-3xl font-black text-brand">Leden</h1>
       <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · rollen en sessies beheren.</p>
+
+      {isBeheerder && <div className="mt-6"><AddMemberForm /></div>}
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-borderc bg-white">
         <table className="w-full text-sm">
