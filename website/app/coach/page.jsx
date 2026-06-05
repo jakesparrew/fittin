@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import CoachScheduler from "@/components/coach/CoachScheduler";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,31 @@ export default async function CoachDashboard({ searchParams }) {
   const hours = [];
   for (let h = gym.open_hour; h < gym.close_hour; h++) hours.push(h);
   const mode = profile.coach_billing_mode;
+
+  // ---- Interactive 14-day planner data (gym-wide taken slots + my own sessions) ----
+  const schedFrom = new Date(); schedFrom.setHours(0, 0, 0, 0);
+  const schedTo = new Date(schedFrom.getTime() + 14 * 86400000);
+  const { data: takenRows } = await supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: schedFrom.toISOString(), p_to: schedTo.toISOString() });
+  const keyOf = (iso) => {
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false }).formatToParts(new Date(iso));
+    const get = (t) => parts.find((x) => x.type === t)?.value;
+    let hh = get("hour"); if (hh === "24") hh = "0";
+    return `${get("year")}-${get("month")}-${get("day")}:${parseInt(hh, 10)}`;
+  };
+  const takenKeys = (takenRows || []).map((t) => keyOf(t.starts_at));
+  const mineMap = {};
+  for (const b of all) {
+    if (b.status === "bevestigd" && new Date(b.starts_at) >= schedFrom) mineMap[keyOf(b.starts_at)] = { name: b.member?.full_name || "Client", service: b.services?.name || "Sessie" };
+  }
+  const schedDays = [];
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(schedFrom.getTime() + i * 86400000);
+    schedDays.push({
+      dateStr: new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d),
+      weekday: new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short" }).format(d),
+      dayMonth: new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short" }).format(d),
+    });
+  }
 
   return (
     <div className="px-8 py-8">
@@ -91,7 +117,12 @@ export default async function CoachDashboard({ searchParams }) {
         </div>
       )}
 
-      {/* Book a session with a client */}
+      {/* Interactive schedule */}
+      <div className="mt-8">
+        <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={services || []} />
+      </div>
+
+      {/* Book a session with a client (quick form, alternative to the grid) */}
       <section id="boeken" className="mt-8 scroll-mt-8 rounded-3xl border border-borderc bg-white p-6">
         <h2 className="font-black text-brand">Sessie boeken met een client</h2>
         <form action={coachBookSession} className="mt-4 flex flex-wrap items-end gap-3">
