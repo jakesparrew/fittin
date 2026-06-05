@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { stripe, isStripeConfigured } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 import { sendCoachBooked, sendBookingCancelled } from "@/lib/email";
 
@@ -124,13 +124,15 @@ export async function buyCoachCredits(formData) {
   if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };
   const qty = num(formData.get("qty"), 10);
   const { data: me } = await supabase.from("profiles").select("coach_session_price_cents").eq("id", userId).single();
-  const unit = me?.coach_session_price_cents || 1000;
+  // Coaches pay a flat rate per session (default € 15) — no bulk/volume discount, no subscription.
+  const unit = me?.coach_session_price_cents || 1500;
   const customer = await getOrCreateCustomer(supabase, userId, email);
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer,
+    ...bizCustomer,
     line_items: [
-      { quantity: 1, price_data: { currency: "eur", unit_amount: unit * qty, product_data: { name: `${qty} coach-sessies — Fittin'` } } },
+      { quantity: qty, price_data: { currency: "eur", unit_amount: unit, product_data: { name: `Coach-sessie — Fittin' (€ ${(unit / 100).toFixed(2)}/sessie)` } } },
     ],
     metadata: { kind: "coach_credits", coach_id: userId, credits: String(qty) },
     success_url: `${siteUrl()}/coach?gekocht=1`,

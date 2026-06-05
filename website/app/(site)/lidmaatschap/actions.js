@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { stripe, isStripeConfigured } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
@@ -24,6 +24,7 @@ export async function buyPackage(formData) {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
       customer,
+      ...bizCustomer,
       line_items: [
         {
           quantity: 1,
@@ -42,6 +43,7 @@ export async function buyPackage(formData) {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer,
+      ...bizCustomer,
       line_items: [{ price: pkg.stripe_price_id, quantity: 1 }],
       metadata: { kind: "subscription", package_id: pkg.id, user_id: user.id },
       subscription_data: { metadata: { user_id: user.id, package_id: pkg.id, credits: String(pkg.credits) } },
