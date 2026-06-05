@@ -11,13 +11,16 @@ export default async function Leden() {
   if (!ctx) return null;
   const { supabase, gym, profile } = ctx;
 
-  const [{ data: members }, { data: ledger }] = await Promise.all([
+  const [{ data: members }, { data: ledger }, { data: links }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, welcome_code_used, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }),
     supabase.from("credits_ledger").select("user_id, delta").eq("gym_id", gym.id),
+    supabase.from("coach_clients").select("client_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id),
   ]);
 
   const credits = {};
   for (const r of ledger || []) credits[r.user_id] = (credits[r.user_id] || 0) + r.delta;
+  const coachOf = {};
+  for (const l of links || []) (coachOf[l.client_id] ||= []).push(l.coach?.full_name || l.coach?.email || "Coach");
   const isBeheerder = profile.role === "beheerder";
 
   return (
@@ -31,6 +34,7 @@ export default async function Leden() {
             <tr>
               <th className="px-5 py-3">Naam</th>
               <th className="px-5 py-3">Rol</th>
+              <th className="px-5 py-3">Coach</th>
               <th className="px-5 py-3">Sessies</th>
               <th className="px-5 py-3">Acties</th>
             </tr>
@@ -55,6 +59,13 @@ export default async function Leden() {
                     </form>
                   ) : (
                     <span className="font-semibold capitalize text-brand/70">{m.role}</span>
+                  )}
+                </td>
+                <td className="px-5 py-4">
+                  {(coachOf[m.id] || []).length ? (
+                    <span className="text-xs font-semibold text-brand/70">{coachOf[m.id].join(", ")}</span>
+                  ) : (
+                    <span className="text-xs text-brand/30">—</span>
                   )}
                 </td>
                 <td className="px-5 py-4">

@@ -177,6 +177,49 @@ export async function grantCoachCredits(formData) {
   return { ok: true };
 }
 
+// ---- Coach ↔ client assignments ----
+export async function addCoach(formData) {
+  const { supabase, error } = await requireStaff(true);
+  if (error) return { error };
+  const { error: e } = await supabase.rpc("admin_set_role", {
+    p_member: formData.get("memberId"),
+    p_role: "coach",
+  });
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/leden");
+  return { ok: true };
+}
+
+export async function assignCoachClient(formData) {
+  const { supabase, profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const coachId = formData.get("coachId");
+  const clientId = formData.get("clientId");
+  if (!coachId || !clientId) return { error: "Coach en lid vereist." };
+  if (coachId === clientId) return { error: "Een coach kan zichzelf niet coachen." };
+  const { error: e } = await supabase
+    .from("coach_clients")
+    .upsert({ gym_id: profile.gym_id, coach_id: coachId, client_id: clientId }, { onConflict: "gym_id,coach_id,client_id" });
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/coaches");
+  revalidatePath(`/beheer/leden/${clientId}`);
+  return { ok: true };
+}
+
+export async function unassignCoachClient(formData) {
+  const { supabase, profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const q = supabase.from("coach_clients").delete().eq("gym_id", profile.gym_id);
+  const id = formData.get("id");
+  if (id) q.eq("id", id);
+  else q.eq("coach_id", formData.get("coachId")).eq("client_id", formData.get("clientId"));
+  await q;
+  revalidatePath("/beheer/coaches");
+  if (formData.get("clientId")) revalidatePath(`/beheer/leden/${formData.get("clientId")}`);
+  return { ok: true };
+}
+
 // ---- Packages (bundles / subscriptions) ----
 export async function upsertPackage(formData) {
   const { supabase, profile, error } = await requireStaff(true);

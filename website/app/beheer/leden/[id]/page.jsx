@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addSessionNote } from "../../coaching-actions";
-import { adminAdjustCredits } from "../../actions";
+import { adminAdjustCredits, assignCoachClient, unassignCoachClient } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +14,7 @@ export default async function MemberDetail({ params }) {
   if (!ctx) return null;
   const { supabase, gym } = ctx;
 
-  const [{ data: member }, { data: bookings }, { data: logs }, { data: notes }, { data: ledger }, { data: program }] =
+  const [{ data: member }, { data: bookings }, { data: logs }, { data: notes }, { data: ledger }, { data: program }, { data: coachLinks }, { data: coachList }, { data: coachSessions }] =
     await Promise.all([
       supabase.from("profiles").select("*").eq("id", id).eq("gym_id", gym.id).single(),
       supabase.from("bookings").select("starts_at, status, services(name)").eq("user_id", id).order("starts_at", { ascending: false }).limit(20),
@@ -22,6 +22,9 @@ export default async function MemberDetail({ params }) {
       supabase.from("session_notes").select("body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
       supabase.from("credits_ledger").select("delta").eq("user_id", id),
       supabase.from("programs").select("id, name").eq("member_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id),
+      supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
+      supabase.from("bookings").select("id, starts_at, status, coach_billing, coach:profiles!bookings_coach_id_fkey(full_name, email), services(name)").eq("user_id", id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(20),
     ]);
 
   if (!member) return <div className="px-8 py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
@@ -46,6 +49,48 @@ export default async function MemberDetail({ params }) {
         <Stat label="Sessies" value={credits} />
         <Stat label="Laatste activiteit" value={lastActivity || "—"} />
       </div>
+
+      {/* Coach */}
+      <section className="mt-8 rounded-2xl border border-borderc bg-white p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-black text-brand">Coach</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            {(coachLinks || []).map((l) => (
+              <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">
+                <Link href={`/beheer/coaches`} className="hover:text-accentdark">{l.coach?.full_name || l.coach?.email || "Coach"}</Link>
+                <form action={unassignCoachClient} className="inline">
+                  <input type="hidden" name="id" value={l.id} />
+                  <input type="hidden" name="clientId" value={member.id} />
+                  <button className="text-red-500 hover:underline" title="Verwijder">×</button>
+                </form>
+              </span>
+            ))}
+            {(!coachLinks || coachLinks.length === 0) && <span className="text-xs text-brand/40">Geen coach toegewezen.</span>}
+            <form action={assignCoachClient} className="flex items-center gap-2">
+              <input type="hidden" name="clientId" value={member.id} />
+              <select name="coachId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
+                <option value="">Wijs coach toe…</option>
+                {(coachList || []).filter((co) => co.id !== member.id && !(coachLinks || []).some((l) => l.coach_id === co.id)).map((co) => (
+                  <option key={co.id} value={co.id}>{co.full_name || co.email}</option>
+                ))}
+              </select>
+              <button className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">Toewijzen</button>
+            </form>
+          </div>
+        </div>
+        <div className="mt-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-lav">Sessies met coach</p>
+          <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+            {(coachSessions || []).slice(0, 8).map((s) => (
+              <div key={s.id} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-sm">
+                <span className="font-semibold text-brand">{s.coach?.full_name || s.coach?.email || "Coach"}</span>
+                <span className="text-xs text-brand/50">{fmt(s.starts_at)} · {s.services?.name || "Sessie"}</span>
+              </div>
+            ))}
+            {(!coachSessions || coachSessions.length === 0) && <p className="text-xs text-brand/40">Nog geen sessies met een coach.</p>}
+          </div>
+        </div>
+      </section>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         <section className="rounded-2xl border border-borderc bg-white p-6">
