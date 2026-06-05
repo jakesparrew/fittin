@@ -23,3 +23,12 @@ export async function cancelBookingAction(formData) {
   revalidatePath("/account");
   revalidatePath("/boeken");
 }
+
+// Open the gym door during an active booking (logs access; Nuki call would follow server-side).
+export async function openDoorAction() {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("open_door");
+  if (error) return { error: error.message };
+  // TODO: server-side Nuki Web API call to physically unlock, using NUKI_API_TOKEN.
+  return { ok: true };
+}

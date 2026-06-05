@@ -23,6 +23,12 @@ export default function Nav({ account = null }) {
               {l.label}
             </Link>
           ))}
+          {account && (
+            <>
+              <Link href="/training" className="transition hover:text-brand">Training</Link>
+              <Link href="/community" className="transition hover:text-brand">Community</Link>
+            </>
+          )}
         </nav>
         <div className="flex items-center gap-3">
           {account && ["coach", "beheerder"].includes(account.role) && (

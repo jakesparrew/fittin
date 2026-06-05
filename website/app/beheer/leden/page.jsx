@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { adminAdjustCredits, adminSetRole } from "../actions";
 
@@ -38,7 +39,9 @@ export default async function Leden() {
             {(members || []).map((m) => (
               <tr key={m.id} className="align-top">
                 <td className="px-5 py-4">
-                  <p className="font-bold text-brand">{m.full_name || "—"}</p>
+                  <Link href={`/beheer/leden/${m.id}`} className="font-bold text-brand hover:text-accentdark">
+                    {m.full_name || "—"}
+                  </Link>
                   <p className="text-xs text-brand/50">{m.email}</p>
                 </td>
                 <td className="px-5 py-4">

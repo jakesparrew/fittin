@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cancelBookingAction } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
+import DoorButton from "@/components/DoorButton";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -47,6 +48,12 @@ export default async function AccountPage({ searchParams }) {
 
   const now = Date.now();
   const all = bookings || [];
+  const doorActive = all.some(
+    (b) =>
+      b.status === "bevestigd" &&
+      now >= new Date(b.starts_at).getTime() - 5 * 60000 &&
+      now <= new Date(b.ends_at).getTime()
+  );
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now);
   const history = all
     .filter((b) => !(b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now))
@@ -88,6 +95,14 @@ export default async function AccountPage({ searchParams }) {
           <p className="mt-6 rounded-2xl bg-accent/15 p-4 text-sm font-semibold text-accentdark">
             Betaling gelukt — je boeking is bevestigd. Je ontvangt een bevestiging per e-mail.
           </p>
+        )}
+
+        {doorActive && (
+          <div className="mt-8 rounded-3xl bg-brand p-6 text-white">
+            <p className="text-sm font-bold uppercase tracking-widest text-lav">Je sessie is bezig</p>
+            <p className="mb-4 mt-1 text-lg font-black">Open de deur met de app</p>
+            <DoorButton />
+          </div>
         )}
 
         {/* Upcoming */}

@@ -6,6 +6,11 @@ const items = [
   { href: "/beheer", label: "Dashboard", icon: "▦" },
   { href: "/beheer/boekingen", label: "Boekingen", icon: "▤" },
   { href: "/beheer/leden", label: "Leden", icon: "◍" },
+  { href: "/beheer/programmas", label: "Programma's", icon: "✎" },
+  { href: "/beheer/oefeningen", label: "Oefeningen", icon: "≣" },
+  { href: "/beheer/challenges", label: "Challenges", icon: "★" },
+  { href: "/beheer/events", label: "Events", icon: "◆" },
+  { href: "/beheer/analytics", label: "Analytics", icon: "▰" },
   { href: "/beheer/diensten", label: "Diensten & prijzen", icon: "€" },
   { href: "/beheer/instellingen", label: "Instellingen", icon: "⚙" },
 ];
