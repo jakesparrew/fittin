@@ -146,6 +146,36 @@ export async function adminAdjustCredits(formData) {
   return { ok: true };
 }
 
+// ---- Packages (bundles / subscriptions) ----
+export async function upsertPackage(formData) {
+  const { supabase, profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const id = formData.get("id");
+  const row = {
+    gym_id: profile.gym_id,
+    kind: formData.get("kind") || "beurtenkaart",
+    name: formData.get("name"),
+    price_cents: Math.round(parseFloat(String(formData.get("price_eur") || "0").replace(",", ".")) * 100),
+    credits: num(formData.get("credits"), 0),
+    period: formData.get("period") || "once",
+    sort: num(formData.get("sort"), 0),
+  };
+  const q = id ? supabase.from("packages").update(row).eq("id", id) : supabase.from("packages").insert({ ...row, active: true });
+  const { error: e } = await q;
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/pakketten");
+  revalidatePath("/lidmaatschap");
+  return { ok: true };
+}
+
+export async function togglePackage(formData) {
+  const { supabase, error } = await requireStaff(true);
+  if (error) return { error };
+  await supabase.from("packages").update({ active: formData.get("active") !== "true" }).eq("id", formData.get("id"));
+  revalidatePath("/beheer/pakketten");
+  revalidatePath("/lidmaatschap");
+}
+
 export async function adminSetRole(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };

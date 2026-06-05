@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
+import { getOrCreateCustomer } from "@/lib/stripe-customer";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -17,18 +18,16 @@ export async function buyPackage(formData) {
   if (!pkg) return { error: "Pakket niet gevonden." };
   if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };
 
+  const customer = await getOrCreateCustomer(supabase, user.id, user.email);
+
   if (pkg.kind === "beurtenkaart") {
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
-      customer_email: user.email,
+      customer,
       line_items: [
         {
           quantity: 1,
-          price_data: {
-            currency: "eur",
-            unit_amount: pkg.price_cents,
-            product_data: { name: `${pkg.name} — Fittin'` },
-          },
+          price_data: { currency: "eur", unit_amount: pkg.price_cents, product_data: { name: `${pkg.name} — Fittin'` } },
         },
       ],
       metadata: { kind: "punchcard", package_id: pkg.id, credits: String(pkg.credits), user_id: user.id },
@@ -38,7 +37,35 @@ export async function buyPackage(formData) {
     redirect(session.url);
   }
 
-  // Abonnement → Stripe Billing (mode:'subscription' with a recurring Price). Scaffolded:
-  // create a Product+Price once, store price_id on the package, then mode:'subscription'.
-  return { error: "Abonnementen komen binnenkort." };
+  if (pkg.kind === "abonnement") {
+    if (!pkg.stripe_price_id) return { error: "Abonnement nog niet geconfigureerd." };
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer,
+      line_items: [{ price: pkg.stripe_price_id, quantity: 1 }],
+      metadata: { kind: "subscription", package_id: pkg.id, user_id: user.id },
+      subscription_data: { metadata: { user_id: user.id, package_id: pkg.id, credits: String(pkg.credits) } },
+      success_url: `${siteUrl()}/account?abo=1`,
+      cancel_url: `${siteUrl()}/lidmaatschap?geannuleerd=1`,
+    });
+    redirect(session.url);
+  }
+
+  return { error: "Onbekend pakket." };
+}
+
+// Open the Stripe billing portal so members can manage/cancel their subscription + cards.
+export async function openBillingPortal() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/account");
+  const { data: profile } = await supabase.from("profiles").select("stripe_customer_id").eq("id", user.id).single();
+  if (!profile?.stripe_customer_id || !isStripeConfigured) redirect("/lidmaatschap");
+  const session = await stripe.billingPortal.sessions.create({
+    customer: profile.stripe_customer_id,
+    return_url: `${siteUrl()}/account`,
+  });
+  redirect(session.url);
 }

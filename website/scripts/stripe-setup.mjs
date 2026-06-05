@@ -16,10 +16,19 @@ const EVENTS = [
 
 // --- Webhook endpoint: recreate to capture a fresh signing secret ---
 const existing = await stripe.webhookEndpoints.list({ limit: 100 });
-for (const ep of existing.data.filter((e) => e.url === WEBHOOK_URL)) {
-  await stripe.webhookEndpoints.del(ep.id);
+for (const ep0 of existing.data.filter((e) => e.url === WEBHOOK_URL)) {
+  await stripe.webhookEndpoints.del(ep0.id);
 }
-const ep = await stripe.webhookEndpoints.create({ url: WEBHOOK_URL, enabled_events: EVENTS });
+let ep;
+for (let i = 0; i < 8; i++) {
+  try {
+    ep = await stripe.webhookEndpoints.create({ url: WEBHOOK_URL, enabled_events: EVENTS });
+    break;
+  } catch (e) {
+    if (i === 7) throw e;
+    await new Promise((r) => setTimeout(r, 2000));
+  }
+}
 console.log("STRIPE_WEBHOOK_SECRET=" + ep.secret);
 
 // --- Subscription product + monthly price (€10) ---

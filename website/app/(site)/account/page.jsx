@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cancelBookingAction } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
+import { openBillingPortal } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
 import AccountSettings from "@/components/account/AccountSettings";
 
@@ -46,6 +47,13 @@ export default async function AccountPage({ searchParams }) {
 
   const { data: ledger } = await supabase.from("credits_ledger").select("delta").eq("user_id", user.id);
   const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+
+  const { data: membership } = await supabase
+    .from("memberships")
+    .select("status, current_period_end, cancel_at_period_end")
+    .eq("user_id", user.id)
+    .eq("status", "actief")
+    .maybeSingle();
 
   const now = Date.now();
   const all = bookings || [];
@@ -103,6 +111,26 @@ export default async function AccountPage({ searchParams }) {
           <p className="mt-6 rounded-2xl bg-accent/15 p-4 text-sm font-semibold text-accentdark">
             Betaling gelukt — je boeking is bevestigd. Je ontvangt een bevestiging per e-mail.
           </p>
+        )}
+        {(sp.abo === "1" || sp.credits === "1") && (
+          <p className="mt-6 rounded-2xl bg-accent/15 p-4 text-sm font-semibold text-accentdark">
+            {sp.abo === "1" ? "Welkom als member! Je abonnement is actief." : "Sessies bijgeschreven — veel plezier!"}
+          </p>
+        )}
+
+        {membership && (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-brand p-6 text-white">
+            <div>
+              <p className="font-black">✓ Member-abonnement actief</p>
+              <p className="mt-1 text-sm text-lav">
+                {membership.cancel_at_period_end ? "Loopt af op " : "Verlengt op "}
+                {membership.current_period_end ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(membership.current_period_end)) : "—"} · je boekt aan € 8
+              </p>
+            </div>
+            <form action={openBillingPortal}>
+              <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Beheer abonnement</button>
+            </form>
+          </div>
         )}
 
         {doorActive && (
