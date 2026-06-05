@@ -12,6 +12,7 @@ const items = [
   { href: "/beheer/challenges", label: "Challenges", icon: "★" },
   { href: "/beheer/events", label: "Events", icon: "◆" },
   { href: "/beheer/betalingen", label: "Betalingen", icon: "◈" },
+  { href: "/beheer/nieuwsbrief", label: "Nieuwsbrief", icon: "✉" },
   { href: "/beheer/analytics", label: "Analytics", icon: "▰" },
   { href: "/beheer/diensten", label: "Diensten & prijzen", icon: "€" },
   { href: "/beheer/pakketten", label: "Pakketten & abo", icon: "▣" },

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount } from "@/lib/email";
+import { enrollUserInDrips } from "@/lib/newsletter";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -218,6 +219,8 @@ export async function adminAddUser(formData) {
     if (action) await sendWelcomeNewAccount({ to: email, name: full_name, link: action });
     if (role !== "lid") await sendRoleChanged({ to: email, name: full_name, role });
   } catch {}
+
+  await enrollUserInDrips(uid); // start any active welcome drip
 
   revalidatePath("/beheer/leden");
   revalidatePath("/beheer/coaches");

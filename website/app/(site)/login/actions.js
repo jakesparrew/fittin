@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { roleHome } from "@/lib/auth";
+import { enrollUserInDrips } from "@/lib/newsletter";
 
 // Resolve where to send the user after auth: an explicit non-default `next`, else their role home.
 async function destination(supabase, userId, next) {
@@ -31,6 +32,7 @@ export async function authAction(_prevState, formData) {
       options: { data: { full_name: fullName }, emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}` },
     });
     if (error) return { error: error.message };
+    await enrollUserInDrips(data.user.id); // start any active welcome drip
     if (!data.session) return { info: "Bevestig je e-mail via de link die we je net stuurden, en log dan in." };
     redirect(await destination(supabase, data.user.id, next));
   }

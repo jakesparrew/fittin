@@ -1,4 +1,5 @@
 import Link from "next/link";
+import NewsletterSignup from "./NewsletterSignup";
 
 export default function Footer() {
   return (
@@ -12,6 +13,11 @@ export default function Footer() {
             Privé fitness &amp; personal training in Gent. Train alleen, met vrienden of met je
             coach — de zaal is van jou.
           </p>
+          <div className="mt-5 max-w-xs">
+            <p className="text-xs font-bold uppercase tracking-widest text-accent">Nieuwsbrief</p>
+            <p className="mt-2 mb-3 text-sm text-lav">Tips, openingsuren &amp; acties — af en toe, nooit spam.</p>
+            <NewsletterSignup />
+          </div>
         </div>
         <div>
           <p className="text-xs font-bold uppercase tracking-widest text-accent">Menu</p>

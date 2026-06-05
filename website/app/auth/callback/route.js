@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { roleHome } from "@/lib/auth";
+import { enrollUserInDrips } from "@/lib/newsletter";
 
 // OAuth + email-confirmation landing. Exchanges the code for a session, then redirects.
 export async function GET(request) {
@@ -20,11 +21,13 @@ export async function GET(request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
       let dest = next.startsWith("/") ? next : "/account";
-      if (dest === "/account") {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: prof } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-          dest = roleHome(prof?.role);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: prof } = await supabase.from("profiles").select("role, created_at").eq("id", user.id).single();
+        if (dest === "/account") dest = roleHome(prof?.role);
+        // Just-created account (e.g. first Google sign-in) → kick off any welcome drip.
+        if (prof?.created_at && Date.now() - new Date(prof.created_at).getTime() < 60000) {
+          await enrollUserInDrips(user.id);
         }
       }
       return NextResponse.redirect(`${base}${dest}`);

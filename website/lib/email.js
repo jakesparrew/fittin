@@ -5,11 +5,15 @@ const key = process.env.RESEND_API_KEY;
 export const isEmailConfigured = Boolean(key);
 const resend = key ? new Resend(key) : null;
 
-// Sender addresses on the verified fittin.be domain. General mail goes out as info@,
-// booking/session mail as booking@. All replies route to info@ (catch-all forwards it).
+// Per-purpose sending identities (separate verified domains keep reputations isolated):
+//  • general/account mail  → info@fittin.be          (also the personal/receiving domain)
+//  • booking/session mail  → boekingen@booking.fittin.be
+//  • newsletter/campaigns  → nieuwsbrief@news.fittin.be   (see lib/newsletter.js)
+// All replies route to info@fittin.be.
 const FROM = process.env.EMAIL_FROM || "Fittin' <info@fittin.be>";
-const FROM_BOOKING = process.env.EMAIL_FROM_BOOKING || "Fittin' Boekingen <booking@fittin.be>";
-const REPLY_TO = process.env.EMAIL_REPLY_TO || "info@fittin.be";
+const FROM_BOOKING = process.env.EMAIL_FROM_BOOKING || "Fittin' Boekingen <boekingen@booking.fittin.be>";
+export const FROM_NEWS = process.env.EMAIL_FROM_NEWS || "Fittin' <nieuwsbrief@news.fittin.be>";
+export const REPLY_TO = process.env.EMAIL_REPLY_TO || "info@fittin.be";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 const fmt = (iso, opts) =>
