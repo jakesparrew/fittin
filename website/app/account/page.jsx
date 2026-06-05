@@ -4,6 +4,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cancelBookingAction } from "./actions";
+import { resumeCheckoutAction } from "@/app/boeken/actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -28,15 +29,16 @@ function fmtRange(startIso, endIso) {
 
 const ROLE_LABEL = { lid: "Lid", coach: "Coach", beheerder: "Beheerder" };
 
-export default async function AccountPage() {
+export default async function AccountPage({ searchParams }) {
   if (!isSupabaseConfigured) redirect("/login");
   const { user, profile } = await getSessionProfile();
   if (!user) redirect("/login?next=/account");
+  const sp = (await searchParams) || {};
 
   const supabase = await createClient();
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("id, starts_at, ends_at, status, persons, price_cents, payment_source, services(name,type)")
+    .select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, services(name,type)")
     .eq("user_id", user.id)
     .order("starts_at", { ascending: true });
 
@@ -82,6 +84,12 @@ export default async function AccountPage() {
           />
         </div>
 
+        {sp.betaald === "1" && (
+          <p className="mt-6 rounded-2xl bg-accent/15 p-4 text-sm font-semibold text-accentdark">
+            Betaling gelukt — je boeking is bevestigd. Je ontvangt een bevestiging per e-mail.
+          </p>
+        )}
+
         {/* Upcoming */}
         <section className="mt-12">
           <div className="flex items-center justify-between">
@@ -118,15 +126,29 @@ export default async function AccountPage() {
                     </p>
                     <p className="mt-1 text-xs text-brand/50">
                       {b.persons} {b.persons === 1 ? "persoon" : "personen"} ·{" "}
-                      {b.payment_source === "gratis_code" ? "Gratis (FittinWelcome)" : euro(b.price_cents)}
+                      {b.payment_source === "gratis_code"
+                        ? "Gratis (FittinWelcome)"
+                        : b.paid
+                          ? `${euro(b.price_cents)} · betaald`
+                          : `${euro(b.price_cents)} · onbetaald`}
                     </p>
                   </div>
-                  <form action={cancelBookingAction}>
-                    <input type="hidden" name="bookingId" value={b.id} />
-                    <button className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-red-300 hover:text-red-600">
-                      Annuleren
-                    </button>
-                  </form>
+                  <div className="flex items-center gap-2">
+                    {!b.paid && b.payment_source !== "gratis_code" && (
+                      <form action={resumeCheckoutAction}>
+                        <input type="hidden" name="bookingId" value={b.id} />
+                        <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">
+                          Afrekenen
+                        </button>
+                      </form>
+                    )}
+                    <form action={cancelBookingAction}>
+                      <input type="hidden" name="bookingId" value={b.id} />
+                      <button className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-red-300 hover:text-red-600">
+                        Annuleren
+                      </button>
+                    </form>
+                  </div>
                 </div>
               ))}
             </div>

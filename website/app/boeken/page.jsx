@@ -12,8 +12,9 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function BoekenPage() {
+export default async function BoekenPage({ searchParams }) {
   if (!isSupabaseConfigured) return <BookingUnavailable />;
+  const sp = (await searchParams) || {};
 
   const supabase = await createClient();
   const { data: gym } = await supabase.from("gyms").select("*").eq("slug", "fittin").single();
@@ -45,6 +46,7 @@ export default async function BoekenPage() {
       takenSlots={(taken || []).map((t) => t.starts_at)}
       isLoggedIn={!!user}
       welcomeAvailable={!!(profile && !profile.welcome_code_used)}
+      paymentCanceled={sp.geannuleerd === "1"}
     />
   );
 }

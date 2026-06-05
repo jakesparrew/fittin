@@ -13,6 +13,7 @@ export default function BookingClient({
   takenSlots = [],
   isLoggedIn,
   welcomeAvailable,
+  paymentCanceled = false,
 }) {
   const router = useRouter();
   const [serviceId, setServiceId] = useState(
@@ -67,18 +68,25 @@ export default function BookingClient({
       persons: isFit60 ? persons : 1,
       useWelcome: welcomeApplies,
     });
-    setBusy(false);
     if (res?.error) {
+      setBusy(false);
       setError(res.error);
       router.refresh(); // pull fresh availability if the slot was just taken
       return;
     }
+    if (res?.checkoutUrl) {
+      // Paid booking — slot is held; hand off to Stripe Checkout.
+      window.location.href = res.checkoutUrl;
+      return;
+    }
+    setBusy(false);
     setConfirmed({
       service: service.name,
       day: `${days[dayIndex].weekday} ${days[dayIndex].dayMonth}`,
       range: slotRangeLabel(hour, service.duration_min),
       persons: isFit60 ? persons : 1,
       free: welcomeApplies,
+      unpaid: res?.unpaid,
     });
     router.refresh();
   }
@@ -135,6 +143,13 @@ export default function BookingClient({
         ) : (
           <p className="mt-3 max-w-xl text-brand/70">
             Kies je sessie, dag en uur. De zaal is exclusief van jou tijdens je boeking.
+          </p>
+        )}
+
+        {paymentCanceled && (
+          <p className="mt-4 rounded-2xl bg-accent/10 p-4 text-sm font-semibold text-accentdark">
+            Betaling geannuleerd. Je gekozen tijdslot staat nog even voor je klaar — rond af
+            wanneer je wil.
           </p>
         )}
 

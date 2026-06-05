@@ -86,6 +86,9 @@ create table if not exists bookings (
   persons        int not null default 1,
   payment_source payment_source not null default 'los',
   price_cents    int not null default 0,
+  paid           boolean not null default false,
+  stripe_session_id     text,
+  stripe_payment_intent text,
   notes          text,
   created_at     timestamptz not null default now(),
   cancelled_at   timestamptz
@@ -489,8 +492,8 @@ begin
   v_source := case when v_free then 'gratis_code'::payment_source else 'los'::payment_source end;
 
   begin
-    insert into bookings (gym_id, service_id, user_id, starts_at, ends_at, persons, payment_source, price_cents)
-    values (v_gym, v_srv.id, v_uid, v_start, v_end, p_persons, v_source, v_price)
+    insert into bookings (gym_id, service_id, user_id, starts_at, ends_at, persons, payment_source, price_cents, paid)
+    values (v_gym, v_srv.id, v_uid, v_start, v_end, p_persons, v_source, v_price, v_free)
     returning id into v_id;
   exception when unique_violation then
     raise exception 'Dit tijdslot is net geboekt. Kies een ander uur.' using errcode = 'P0001';
