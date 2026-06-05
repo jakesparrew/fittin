@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { roleHome } from "@/lib/auth";
 
 // OAuth + email-confirmation landing. Exchanges the code for a session, then redirects.
 export async function GET(request) {
@@ -17,7 +18,17 @@ export async function GET(request) {
   if (code) {
     const supabase = await createClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(`${base}${next.startsWith("/") ? next : "/account"}`);
+    if (!error) {
+      let dest = next.startsWith("/") ? next : "/account";
+      if (dest === "/account") {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: prof } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+          dest = roleHome(prof?.role);
+        }
+      }
+      return NextResponse.redirect(`${base}${dest}`);
+    }
     console.error("exchangeCodeForSession failed:", error.message);
     return NextResponse.redirect(`${base}/login?error=${encodeURIComponent(error.message)}`);
   }

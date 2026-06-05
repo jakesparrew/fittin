@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
 
 const links = [
   { href: "/", label: "Home" },
@@ -16,29 +15,24 @@ export default function Nav() {
 
   useEffect(() => {
     let active = true;
-    // Instant logged-in signal from the auth cookie (no network → never hangs).
+    // Instant logged-in hint from the auth cookie so the nav doesn't flash "Inloggen".
     const hasAuthCookie = document.cookie.split(";").some((c) => /sb-.*-auth-token/.test(c.trim()));
-    if (hasAuthCookie) setAccount((a) => a || { name: "Account", role: "lid" });
+    if (hasAuthCookie) setAccount((a) => a || { name: "Account", role: "lid", home: "/account" });
 
-    const supabase = createClient();
-    // Best-effort enrich with name + role; time-boxed so a slow client never blocks the nav.
-    Promise.race([
-      (async () => {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return null;
-        const { data: profile } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).single();
-        return { name: profile?.full_name || "Account", role: profile?.role || "lid" };
-      })(),
-      new Promise((res) => setTimeout(() => res(undefined), 3000)),
-    ])
-      .then((res) => {
-        if (active && res !== undefined) setAccount(res); // null = logged out; object = enrich
+    // Authoritative state from the server (reliable; also refreshes the session cookie).
+    fetch("/api/me", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!active) return;
+        setAccount(d?.loggedIn ? { name: d.name, role: d.role, home: d.home } : null);
       })
       .catch(() => {});
     return () => { active = false; };
   }, []);
 
   const isStaff = account && ["coach", "beheerder"].includes(account.role);
+  const staffLabel = account?.role === "beheerder" ? "Beheer" : "Coach";
+  const home = account?.home || "/account";
 
   return (
     <header className="sticky top-0 z-50 border-b border-borderc/70 bg-white/80 backdrop-blur-xl">
@@ -52,7 +46,7 @@ export default function Nav() {
               {l.label}
             </Link>
           ))}
-          {account && (
+          {account && !isStaff && (
             <>
               <Link href="/training" className="transition hover:text-brand">Training</Link>
               <Link href="/community" className="transition hover:text-brand">Community</Link>
@@ -60,27 +54,31 @@ export default function Nav() {
           )}
         </nav>
         <div className="flex items-center gap-3">
-          {account?.role === "beheerder" && (
-            <Link href="/beheer" className="hidden text-sm font-bold text-accentdark transition hover:opacity-80 sm:block">Beheer</Link>
+          {!account && (
+            <>
+              <Link href="/login" className="hidden text-sm font-bold text-brand/70 transition hover:text-brand sm:block">Inloggen</Link>
+              <Link href="/login?mode=signup" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
+                Word lid
+              </Link>
+            </>
           )}
-          {account?.role === "coach" && (
-            <Link href="/coach" className="hidden text-sm font-bold text-accentdark transition hover:opacity-80 sm:block">Coach</Link>
+          {account && isStaff && (
+            <>
+              <Link href="/account" className="hidden text-sm font-bold text-brand/60 transition hover:text-brand sm:block">{account.name?.split(" ")[0] || "Account"}</Link>
+              <Link href={home} className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:opacity-90 sm:block">
+                {staffLabel} →
+              </Link>
+            </>
           )}
-          {account ? (
-            <Link href="/account" className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 sm:block">
-              {account.name?.split(" ")[0] || "Account"}
-            </Link>
-          ) : (
-            <Link href="/login" className="hidden text-sm font-bold text-brand/70 transition hover:text-brand sm:block">Inloggen</Link>
-          )}
-          {account ? (
-            <Link href="/boeken" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
-              Reserveer de gym
-            </Link>
-          ) : (
-            <Link href="/login?mode=signup" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
-              Word lid
-            </Link>
+          {account && !isStaff && (
+            <>
+              <Link href="/account" className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 sm:block">
+                {account.name?.split(" ")[0] || "Account"}
+              </Link>
+              <Link href="/boeken" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
+                Reserveer de gym
+              </Link>
+            </>
           )}
           <button onClick={() => setOpen(!open)} className="rounded-lg border border-borderc p-2 md:hidden" aria-label="Menu">
             <span className="mb-1 block h-0.5 w-5 bg-brand"></span>
@@ -94,15 +92,15 @@ export default function Nav() {
           {links.map((l) => (
             <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">{l.label}</Link>
           ))}
-          {account && (
+          {account && !isStaff && (
             <>
               <Link href="/training" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">Training</Link>
               <Link href="/community" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">Community</Link>
             </>
           )}
           <div className="mt-2 border-t border-borderc pt-2">
-            {isStaff && <Link href="/beheer" onClick={() => setOpen(false)} className="block py-2 font-bold text-accentdark">Beheer</Link>}
-            <Link href={account ? "/account" : "/login"} onClick={() => setOpen(false)} className="block py-2 font-bold text-brand">
+            {isStaff && <Link href={home} onClick={() => setOpen(false)} className="block py-2 font-bold text-accentdark">{staffLabel} →</Link>}
+            <Link href={account ? "/account" : "/login?mode=signup"} onClick={() => setOpen(false)} className="block py-2 font-bold text-brand">
               {account ? "Mijn account" : "Inloggen / word lid"}
             </Link>
           </div>
