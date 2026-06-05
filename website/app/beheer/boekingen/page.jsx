@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { slotInstant, brusselsDateStr } from "@/lib/time";
 import { adminCancelBooking, adminBlockSlot, adminUnblock, adminCreateBooking } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import PlanSlotCell from "@/components/admin/PlanSlotCell";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,9 @@ export default async function Boekingen({ searchParams }) {
 
   const hours = [];
   for (let h = gym.open_hour; h < gym.close_hour; h++) hours.push(h);
+
+  const memberOpts = (members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }));
+  const serviceOpts = services || [];
 
   return (
     <div className="px-8 py-8">
@@ -127,7 +131,13 @@ export default async function Boekingen({ searchParams }) {
                           </form>
                         </div>
                       ) : (
-                        <div className="h-7" />
+                        <PlanSlotCell
+                          date={d.dateStr}
+                          hour={h}
+                          label={`${d.weekday} ${d.dayMonth} · ${h}:00`}
+                          members={memberOpts}
+                          services={serviceOpts}
+                        />
                       )}
                     </td>
                   );

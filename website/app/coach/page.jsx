@@ -84,6 +84,24 @@ export default async function CoachDashboard({ searchParams }) {
         <Stat label="Tarief per sessie" value={mode === "free" ? "—" : euro(profile.coach_session_price_cents)} />
       </div>
 
+      {/* Coaching tools — build your own exercises + program templates, assign to clients */}
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Link href="/beheer/programmas" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
+          <div>
+            <p className="font-bold text-brand">Programma's</p>
+            <p className="mt-0.5 text-xs text-brand/50">Maak je eigen templates en wijs ze toe aan clienten.</p>
+          </div>
+          <span className="text-accentdark">→</span>
+        </Link>
+        <Link href="/beheer/oefeningen" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
+          <div>
+            <p className="font-bold text-brand">Oefeningen</p>
+            <p className="mt-0.5 text-xs text-brand/50">Bouw je eigen oefeningenbibliotheek op.</p>
+          </div>
+          <span className="text-accentdark">→</span>
+        </Link>
+      </div>
+
       {mode === "credit" && (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-borderc bg-white p-5">

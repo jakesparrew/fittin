@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
-import { setCoachBilling, grantCoachCredits, addCoach, assignCoachClient, unassignCoachClient, resolveCoachRequest } from "../actions";
+import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
@@ -68,13 +68,26 @@ export default async function Coaches() {
         </div>
       </div>
 
-      {/* Add coach */}
-      <form action={addCoach} className="mt-5 flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
-        <Lbl t="Maak een lid coach">
-          <SearchSelect name="memberId" required placeholder="Kies een lid…" options={nonCoaches.map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
-        </Lbl>
-        <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">+ Coach toevoegen</button>
-      </form>
+      {/* Add coach — promote a member OR create a brand-new coach account */}
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <form action={addCoach} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+          <Lbl t="Maak een bestaand lid coach">
+            <SearchSelect name="memberId" required placeholder="Kies een lid…" options={nonCoaches.map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+          </Lbl>
+          <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">+ Coach toevoegen</button>
+        </form>
+
+        <form action={adminAddUser} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+          <input type="hidden" name="role" value="coach" />
+          <Lbl t="Nieuwe coach (naam)">
+            <input name="full_name" required placeholder="Voornaam Naam" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+          </Lbl>
+          <Lbl t="E-mail">
+            <input name="email" type="email" required placeholder="coach@…" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+          </Lbl>
+          <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">+ Nieuwe coach aanmaken</button>
+        </form>
+      </div>
 
       <div className="mt-6 space-y-5">
         {coaches.map((c) => {

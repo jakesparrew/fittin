@@ -54,8 +54,18 @@ export default async function Training() {
 
         {!program ? (
           <div className="mt-6 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
-            <p className="font-semibold text-brand/70">Je coach heeft je nog geen programma toegewezen.</p>
-            <Link href="/personal-training" className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Boek een coach</Link>
+            {coachName ? (
+              <>
+                <p className="font-semibold text-brand/70">{coachName} stelt binnenkort je programma samen.</p>
+                <p className="mt-1 text-sm text-brand/50">Zodra je coach je trainingsschema klaarzet, verschijnt het hier.</p>
+                <Link href="/boeken" className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Boek een sessie</Link>
+              </>
+            ) : (
+              <>
+                <p className="font-semibold text-brand/70">Je hebt nog geen programma. Werk samen met een coach voor een plan op maat.</p>
+                <Link href="/personal-training" className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Ontdek personal training</Link>
+              </>
+            )}
           </div>
         ) : (
           <>
