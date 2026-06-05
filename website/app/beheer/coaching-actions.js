@@ -102,6 +102,27 @@ export async function deleteProgram(formData) {
   revalidatePath("/beheer/programmas");
 }
 
+// ---------------- Coach availability ----------------
+export async function addCoachAvailability(formData) {
+  const { supabase, profile, error } = await requireStaff();
+  if (error) return { error };
+  await supabase.from("coach_availability").insert({
+    gym_id: profile.gym_id,
+    coach_id: formData.get("coachId"),
+    weekday: num(formData.get("weekday"), 1),
+    from_hour: num(formData.get("from_hour"), 9),
+    to_hour: num(formData.get("to_hour"), 18),
+  });
+  revalidatePath("/beheer/coaches");
+}
+
+export async function deleteCoachAvailability(formData) {
+  const { supabase, error } = await requireStaff();
+  if (error) return { error };
+  await supabase.from("coach_availability").delete().eq("id", formData.get("id"));
+  revalidatePath("/beheer/coaches");
+}
+
 // ---------------- Coach note on a member ----------------
 export async function addSessionNote(formData) {
   const { supabase, profile, userId, error } = await requireStaff();

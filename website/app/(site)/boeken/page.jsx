@@ -1,5 +1,6 @@
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import BookingClient from "@/components/booking/BookingClient";
 import BookingUnavailable from "@/components/booking/BookingUnavailable";
@@ -37,6 +38,14 @@ export default async function BoekenPage({ searchParams }) {
     p_to: to.toISOString(),
   });
 
+  // Coaches + their weekly availability (for PT booking). Admin client: members can't
+  // read other profiles via RLS, but coach name/availability is public-facing info.
+  const admin = createAdminClient();
+  const [{ data: coaches }, { data: availability }] = await Promise.all([
+    admin.from("profiles").select("id, full_name").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
+    supabase.from("coach_availability").select("coach_id, weekday, from_hour, to_hour").eq("gym_id", gym.id),
+  ]);
+
   const { user, profile } = await getSessionProfile();
 
   return (
@@ -44,6 +53,8 @@ export default async function BoekenPage({ searchParams }) {
       gym={gym}
       services={services || []}
       takenSlots={(taken || []).map((t) => t.starts_at)}
+      coaches={coaches || []}
+      availability={availability || []}
       isLoggedIn={!!user}
       welcomeAvailable={!!(profile && !profile.welcome_code_used)}
       paymentCanceled={sp.geannuleerd === "1"}

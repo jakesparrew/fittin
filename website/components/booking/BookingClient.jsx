@@ -11,6 +11,8 @@ export default function BookingClient({
   gym,
   services,
   takenSlots = [],
+  coaches = [],
+  availability = [],
   isLoggedIn,
   welcomeAvailable,
   paymentCanceled = false,
@@ -22,6 +24,7 @@ export default function BookingClient({
   const [dayIndex, setDayIndex] = useState(0);
   const [hour, setHour] = useState(null);
   const [persons, setPersons] = useState(1);
+  const [coachId, setCoachId] = useState(coaches[0]?.id || "");
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,6 +32,16 @@ export default function BookingClient({
 
   const service = services.find((s) => s.id === serviceId) || services[0];
   const isFit60 = service?.type === "fit60";
+  const isPT = service?.type === "pt";
+
+  // For PT: only hours within the chosen coach's availability for that weekday are bookable.
+  function coachOpen(dateStr, h) {
+    if (!isPT || !coachId) return true;
+    const wd = new Date(`${dateStr}T12:00:00Z`).getUTCDay(); // 0=zo..6=za
+    return availability.some(
+      (a) => a.coach_id === coachId && a.weekday === wd && a.from_hour <= h && h < a.to_hour
+    );
+  }
 
   const days = useMemo(() => {
     const out = [];
@@ -67,6 +80,7 @@ export default function BookingClient({
       hour,
       persons: isFit60 ? persons : 1,
       useWelcome: welcomeApplies,
+      coachId: isPT ? coachId : null,
     });
     if (res?.error) {
       setBusy(false);
@@ -179,6 +193,33 @@ export default function BookingClient({
               </div>
             </Card>
 
+            {/* Coach (PT only) */}
+            {isPT && (
+              <Card step="•" title="Kies je coach">
+                {coaches.length === 0 ? (
+                  <p className="text-sm text-brand/50">Nog geen coaches beschikbaar — neem contact op.</p>
+                ) : (
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {coaches.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => {
+                          setCoachId(c.id);
+                          setHour(null);
+                        }}
+                        className={
+                          "rounded-2xl border-2 p-4 text-left text-sm font-bold transition " +
+                          (coachId === c.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")
+                        }
+                      >
+                        {c.full_name || "Coach"}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
+
             {/* Day */}
             <Card step="2" title="Kies je dag">
               <div className="flex gap-2 overflow-x-auto pb-1">
@@ -208,12 +249,13 @@ export default function BookingClient({
                   const t = slotInstant(days[dayIndex].dateStr, h).getTime();
                   const taken = takenSet.has(t);
                   const past = t < Date.now();
+                  const closed = !coachOpen(days[dayIndex].dateStr, h);
                   const daluur = h < gym.daluur_until_hour;
-                  if (taken || past) {
+                  if (taken || past || closed) {
                     return (
                       <div key={h} className="rounded-2xl bg-paper px-3 py-3 text-center text-brand/40">
                         <p className="font-black">{String(h).padStart(2, "0")}:00</p>
-                        <p className="text-xs">{taken ? "vol" : "—"}</p>
+                        <p className="text-xs">{taken ? "vol" : closed ? "—" : "—"}</p>
                       </div>
                     );
                   }
