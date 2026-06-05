@@ -9,10 +9,19 @@
   --color-paper: #f5f6fa;
   --color-borderc: #e6e4f0;
   --font-sans: var(--font-lato), "Lato", ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-display), "Bricolage Grotesque", var(--font-lato), ui-sans-serif, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Distinctive display face on headings + brand mark — keeps the UI out of generic-AI territory.
+   Tight optical tracking; OpenType figures for a more deliberate, designed feel. */
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.025em;
+  font-feature-settings: "ss01", "cv01";
 }
 
 /* ---------- Keyframes ---------- */

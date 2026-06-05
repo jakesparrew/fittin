@@ -1,11 +1,20 @@
 import "./globals.css";
-import { Lato } from "next/font/google";
+import { Lato, Bricolage_Grotesque } from "next/font/google";
 import PWARegister from "../components/PWARegister";
 
 const lato = Lato({
   subsets: ["latin"],
   weight: ["400", "700", "900"],
   variable: "--font-lato",
+  display: "swap",
+});
+
+// Distinctive display face for headings — characterful, editorial; keeps the UI off the
+// generic Inter/Arial/system default. Paired with Lato for refined body copy.
+const display = Bricolage_Grotesque({
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+  variable: "--font-display",
   display: "swap",
 });
 
@@ -40,7 +49,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="nl" className={lato.variable}>
+    <html lang="nl" className={`${lato.variable} ${display.variable}`}>
       <body className="bg-white font-sans text-brand antialiased">
         <PWARegister />
         {children}

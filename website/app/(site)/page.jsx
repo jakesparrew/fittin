@@ -112,7 +112,7 @@ export default function Home() {
               <span key={k} className="flex items-center gap-10">
                 {["Privé", "24/7", "Geen lidgeld", "Personal coaching", "Open de deur met de app", "Train met vrienden", "In Gent"].map((w) => (
                   <span key={w} className="flex items-center gap-10">
-                    {w} <span className="text-accent">✦</span>
+                    {w} <span className="inline-block h-2 w-2 rotate-45 bg-accent align-middle" />
                   </span>
                 ))}
               </span>
