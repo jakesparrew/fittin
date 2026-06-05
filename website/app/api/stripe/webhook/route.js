@@ -6,6 +6,11 @@ import { sendBookingConfirmation } from "@/lib/email";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Health check (Stripe validates endpoint reachability on creation).
+export async function GET() {
+  return NextResponse.json({ ok: true });
+}
+
 // Stripe webhook: confirms paid bookings + sends the confirmation email.
 export async function POST(req) {
   if (!isStripeConfigured) return new NextResponse("stripe not configured", { status: 503 });
