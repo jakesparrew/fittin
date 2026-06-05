@@ -68,7 +68,7 @@ Resend · Vercel · Nuki-koppeling. **Alles multi-tenant: `gym_id` op elke tabel
 ### 6. E-mail (Resend)
 - Templates: bevestiging boeking, annulatie, reminder (24u en 1u vooraf),
   welkom + FittinWelcome-uitleg, betaalbevestiging
-- Afzender: fit@fittingent.be; alle mails in het Nederlands
+- Afzender: info@fittin.be; alle mails in het Nederlands
 
 ### 7. Beheer (mini-dashboard)
 - Weekkalender van alle boekingen (zie `cal_mock.png`): kleurcodes geboekt/PT/daluur/vol

@@ -1,7 +1,7 @@
 # CLAUDE.md — Fittin' project
 
 ## Wat is dit project
-Fittin' (fittingent.be) is een privégym in Gent (Sint-Amandsberg). We herbouwen eerst de
+Fittin' (fittin.be) is een privégym in Gent (Sint-Amandsberg). We herbouwen eerst de
 website, daarna bouwen we er een volledige "super app" bovenop (boeken, coach-platform,
 community). Klant: Fittin' — De Wereld Draait Door VZW. Ontwikkelaar: Gaetan Jansseune —
 Sidestream OÜ (sidestream.be).
@@ -59,7 +59,7 @@ inbegrepen in de scope; App Store-lancering kost €100 (Apple) + €25 (Google)
 - PT: 1-op-1 €60 · 1-op-2 €35 pp · 1-op-3 €30 pp · gratis intake + proeftraining ·
   kosteloos annuleren tot 24u vooraf
 - Coaches: Yoshe Willems, Jelle Vercruysse, Billy Den Haese (details in docs/CONTENT.md)
-- Contact: fit@fittingent.be · Aannemersstraat 186, 9040 Gent · De Wereld Draait Door VZW,
+- Contact: info@fittin.be · Aannemersstraat 186, 9040 Gent · De Wereld Draait Door VZW,
   BE 0772.565.606 · Instagram @fittin_gent · facebook.com/fittingent
 
 ## Conventies & aandachtspunten

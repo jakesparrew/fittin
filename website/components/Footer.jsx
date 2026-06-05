@@ -26,7 +26,7 @@ export default function Footer() {
           <p className="text-xs font-bold uppercase tracking-widest text-accent">Contact</p>
           <ul className="mt-4 space-y-2 text-sm text-lav">
             <li>
-              <a href="mailto:fit@fittingent.be" className="transition hover:text-white">fit@fittingent.be</a>
+              <a href="mailto:info@fittin.be" className="transition hover:text-white">info@fittin.be</a>
             </li>
             <li>Aannemersstraat 186, 9040 Gent</li>
             <li>Gratis parking</li>

@@ -5,8 +5,11 @@ const key = process.env.RESEND_API_KEY;
 export const isEmailConfigured = Boolean(key);
 const resend = key ? new Resend(key) : null;
 
-// NOTE: the sender domain must be verified in Resend. Override via EMAIL_FROM.
-const FROM = process.env.EMAIL_FROM || "Fittin' <fit@fittin.be>";
+// Sender addresses on the verified fittin.be domain. General mail goes out as info@,
+// booking/session mail as booking@. All replies route to info@ (catch-all forwards it).
+const FROM = process.env.EMAIL_FROM || "Fittin' <info@fittin.be>";
+const FROM_BOOKING = process.env.EMAIL_FROM_BOOKING || "Fittin' Boekingen <booking@fittin.be>";
+const REPLY_TO = process.env.EMAIL_REPLY_TO || "info@fittin.be";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 const fmt = (iso, opts) =>
@@ -49,10 +52,10 @@ function shell({ title, intro, rows = [], body = "", cta }) {
   </div>`;
 }
 
-async function send(to, subject, html) {
+async function send(to, subject, html, from = FROM) {
   if (!resend || !to) return;
   try {
-    await resend.emails.send({ from: FROM, to, subject, html });
+    await resend.emails.send({ from, to, replyTo: REPLY_TO, subject, html });
   } catch (e) {
     console.error("email send failed:", subject, e?.message);
   }
@@ -76,7 +79,8 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
       rows,
       body: `<p style="font-size:14px;color:#6b6685;margin-top:14px">De deur opent tijdens je tijdslot via de app.</p>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
-    })
+    }),
+    FROM_BOOKING
   );
 }
 
@@ -95,7 +99,8 @@ export async function sendBookingCancelled({ to, name, serviceName, startsAt }) 
       ],
       body: `<p style="font-size:14px;color:#6b6685">Was dit niet de bedoeling? Boek gerust een nieuw moment.</p>`,
       cta: { href: `${SITE}/boeken`, label: "Nieuwe sessie boeken" },
-    })
+    }),
+    FROM_BOOKING
   );
 }
 
@@ -114,7 +119,8 @@ export async function sendCoachBooked({ to, name, coachName, serviceName, starts
         ["Uur", timeRange(startsAt, endsAt)],
       ],
       cta: { href: `${SITE}/account`, label: "Bekijk in mijn account" },
-    })
+    }),
+    FROM_BOOKING
   );
 }
 

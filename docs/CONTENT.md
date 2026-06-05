@@ -1,4 +1,4 @@
-# Fittin' — content & data van de huidige site (fittingent.be)
+# Fittin' — content & data van de huidige site (fittin.be)
 
 Opgehaald 2026-06. Source of truth voor teksten en cijfers. Oude site = Wix.
 
@@ -69,7 +69,7 @@ Oude site: ingebed Wix-boekingswidget (dienst "Fit60"). Geen eigen content. Word
 vervangen door eigen boekingsflow (zie website/app/boeken + roadmap Fase 1).
 
 ## Contact & juridisch
-- fit@fittingent.be · Aannemersstraat 186, 9040 Gent (Sint-Amandsberg) · gratis parking
+- info@fittin.be · Aannemersstraat 186, 9040 Gent (Sint-Amandsberg) · gratis parking
 - De Wereld Draait Door VZW · BE 0772.565.606
 - Instagram: instagram.com/fittin_gent · Facebook: facebook.com/fittingent
 
