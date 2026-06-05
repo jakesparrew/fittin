@@ -59,9 +59,11 @@ export async function updateNewsletter(formData) {
 }
 
 export async function sendNewsletter(formData) {
-  const { error } = await requireStaff(true);
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
+  const { data: own } = await supabase.from("campaigns").select("id").eq("id", id).maybeSingle(); // RLS scopes to gym
+  if (!own) return { error: "Onbekende campagne." };
   const res = await queueNewsletter(id); // fast: just queues
   if (res.error) return res;
   kickWorker(); // drain in paced background batches

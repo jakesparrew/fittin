@@ -4,9 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { roleHome } from "@/lib/auth";
 import { enrollUserInDrips } from "@/lib/newsletter";
 
-// Resolve where to send the user after auth: an explicit non-default `next`, else their role home.
+// Only allow same-site relative redirects (block open-redirect: //evil.com, https://evil.com, \\evil).
+const safeNext = (n) => (typeof n === "string" && n.startsWith("/") && !n.startsWith("//") && !n.startsWith("/\\") ? n : null);
+
+// Resolve where to send the user after auth: an explicit safe non-default `next`, else role home.
 async function destination(supabase, userId, next) {
-  if (next && next !== "/account") return next;
+  const clean = safeNext(next);
+  if (clean && clean !== "/account") return clean;
   const { data: prof } = await supabase.from("profiles").select("role").eq("id", userId).single();
   return roleHome(prof?.role);
 }

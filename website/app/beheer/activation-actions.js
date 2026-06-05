@@ -66,9 +66,11 @@ export async function setActivationStatus(formData) {
 }
 
 export async function runActivationNow(formData) {
-  const { error } = await requireStaff(true);
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
+  const { data: own } = await supabase.from("campaigns").select("id").eq("id", id).maybeSingle(); // RLS scopes to gym
+  if (!own) return { error: "Onbekende campagne." };
   const res = await runActivationCampaign(id);
   revalidatePath(`/beheer/activatie/${id}`);
   revalidatePath("/beheer/activatie");
