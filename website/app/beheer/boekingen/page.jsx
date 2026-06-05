@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { slotInstant, brusselsDateStr } from "@/lib/time";
 import { adminCancelBooking, adminBlockSlot, adminUnblock, adminCreateBooking } from "../actions";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -58,9 +59,7 @@ export default async function Boekingen({ searchParams }) {
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <form action={adminCreateBooking} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
           <Lbl t="Boeking voor lid">
-            <select name="memberId" required className="w-44 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-              {(members || []).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
-            </select>
+            <SearchSelect name="memberId" required placeholder="Kies lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
           <Lbl t="Dienst">
             <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">

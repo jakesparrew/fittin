@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { addSessionNote } from "../../coaching-actions";
 import { adminAdjustCredits, assignCoachClient, unassignCoachClient, adminSetRole } from "../../actions";
 import { DeleteUserButton } from "@/components/admin/MemberControls";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -91,12 +92,7 @@ export default async function MemberDetail({ params }) {
             {(!coachLinks || coachLinks.length === 0) && <span className="text-xs text-brand/40">Geen coach toegewezen.</span>}
             <form action={assignCoachClient} className="flex items-center gap-2">
               <input type="hidden" name="clientId" value={member.id} />
-              <select name="coachId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-                <option value="">Wijs coach toe…</option>
-                {(coachList || []).filter((co) => co.id !== member.id && !(coachLinks || []).some((l) => l.coach_id === co.id)).map((co) => (
-                  <option key={co.id} value={co.id}>{co.full_name || co.email}</option>
-                ))}
-              </select>
+              <SearchSelect name="coachId" required placeholder="Wijs coach toe…" options={(coachList || []).filter((co) => co.id !== member.id && !(coachLinks || []).some((l) => l.coach_id === co.id)).map((co) => ({ value: co.id, label: co.full_name || co.email }))} />
               <button className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">Toewijzen</button>
             </form>
           </div>

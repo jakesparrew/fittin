@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
 import { setCoachBilling, grantCoachCredits, addCoach, assignCoachClient, unassignCoachClient } from "../actions";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
 const WD_FULL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
@@ -67,10 +68,7 @@ export default async function Coaches() {
       {/* Add coach */}
       <form action={addCoach} className="mt-5 flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
         <Lbl t="Maak een lid coach">
-          <select name="memberId" required className="rounded-lg border-2 border-borderc px-3 py-2 text-sm">
-            <option value="">Kies een lid…</option>
-            {nonCoaches.map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
-          </select>
+          <SearchSelect name="memberId" required placeholder="Kies een lid…" options={nonCoaches.map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
         </Lbl>
         <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">+ Coach toevoegen</button>
       </form>
@@ -116,10 +114,7 @@ export default async function Coaches() {
                   </div>
                   <form action={assignCoachClient} className="mt-3 flex flex-wrap items-end gap-2">
                     <input type="hidden" name="coachId" value={c.id} />
-                    <select name="clientId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-                      <option value="">Wijs een lid toe…</option>
-                      {members.filter((m) => m.id !== c.id && !assignedIds.has(m.id)).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
-                    </select>
+                    <SearchSelect name="clientId" required placeholder="Wijs een lid toe…" options={members.filter((m) => m.id !== c.id && !assignedIds.has(m.id)).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
                     <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Toewijzen</button>
                   </form>
                 </div>
