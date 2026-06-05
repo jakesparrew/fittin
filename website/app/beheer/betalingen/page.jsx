@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
+import { saveInvoiceSettings } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default async function Betalingen({ searchParams }) {
 
   let q = supabase
     .from("payments")
-    .select("amount_cents, kind, description, created_at, status, member:profiles!payments_user_id_fkey(id, full_name, email)")
+    .select("id, amount_cents, kind, description, created_at, status, member:profiles!payments_user_id_fkey(id, full_name, email)")
     .eq("gym_id", gym.id)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -42,8 +43,33 @@ export default async function Betalingen({ searchParams }) {
 
   return (
     <div className="px-8 py-8">
-      <h1 className="text-3xl font-black text-brand">Betalingen</h1>
-      <p className="mt-1 text-sm text-brand/50">Alle Stripe-betalingen van je leden en coaches.</p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black text-brand">Betalingen</h1>
+          <p className="mt-1 text-sm text-brand/50">Alle Stripe-betalingen van je leden en coaches.</p>
+        </div>
+        <a
+          href={`/beheer/betalingen/export${filter ? `?kind=${filter}` : ""}`}
+          className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+        >
+          ⬇ Exporteer CSV
+        </a>
+      </div>
+
+      {/* Invoice / non-profit billing details (used on generated invoices) */}
+      <details className="mt-4 rounded-2xl border border-borderc bg-white p-4">
+        <summary className="cursor-pointer text-sm font-bold text-brand">Factuurgegevens (vzw · 6% btw)</summary>
+        <form action={saveInvoiceSettings} className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Field name="legal_name" label="Wettelijke naam (vzw)" defaultValue={gym.legal_name} />
+          <Field name="vat_number" label="Ondernemings-/btw-nummer" defaultValue={gym.vat_number} placeholder="BE0123.456.789" />
+          <Field name="iban" label="IBAN" defaultValue={gym.iban} />
+          <Field name="invoice_email" label="Facturatie-e-mail" defaultValue={gym.invoice_email} />
+          <Field name="invoice_footer" label="Voetnoot op factuur" defaultValue={gym.invoice_footer} full />
+          <div className="sm:col-span-2">
+            <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Opslaan</button>
+          </div>
+        </form>
+      </details>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Vandaag" value={euro(todayTotal)} />
@@ -72,6 +98,7 @@ export default async function Betalingen({ searchParams }) {
               <th className="px-5 py-3">Omschrijving</th>
               <th className="px-5 py-3 text-right">Bedrag</th>
               <th className="px-5 py-3 text-right">Datum</th>
+              <th className="px-5 py-3 text-right">Factuur</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borderc">
@@ -88,10 +115,11 @@ export default async function Betalingen({ searchParams }) {
                 <td className="px-5 py-3 text-brand/50">{p.description || "—"}</td>
                 <td className="px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
                 <td className="px-5 py-3 text-right text-xs text-brand/40">{fmt(p.created_at)}</td>
+                <td className="px-5 py-3 text-right"><Link href={`/beheer/factuur?payment=${p.id}`} className="text-xs font-bold text-accentdark hover:underline">Factuur →</Link></td>
               </tr>
             ))}
             {(!rows || rows.length === 0) && (
-              <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-brand/40">Nog geen betalingen. Ze verschijnen hier automatisch zodra Stripe ze bevestigt.</td></tr>
+              <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-brand/40">Nog geen betalingen. Ze verschijnen hier automatisch zodra Stripe ze bevestigt.</td></tr>
             )}
           </tbody>
         </table>
@@ -106,5 +134,13 @@ function Stat({ label, value }) {
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
       <p className="mt-2 text-2xl font-black text-brand">{value}</p>
     </div>
+  );
+}
+function Field({ name, label, defaultValue, placeholder, full }) {
+  return (
+    <label className={"block " + (full ? "sm:col-span-2" : "")}>
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">{label}</span>
+      <input name={name} defaultValue={defaultValue || ""} placeholder={placeholder} className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+    </label>
   );
 }

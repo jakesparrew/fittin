@@ -126,6 +126,7 @@ export default async function Coaches() {
                       </div>
                     ))}
                   </div>
+                  <Link href={`/beheer/factuur?coach=${c.id}&month=${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`} className="mt-3 inline-block rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90">Maak factuur (6% btw) →</Link>
                 </details>
               )}
 
