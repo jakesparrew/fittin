@@ -146,6 +146,37 @@ export async function adminAdjustCredits(formData) {
   return { ok: true };
 }
 
+// ---- Coach billing config ----
+export async function setCoachBilling(formData) {
+  const { supabase, profile, error } = await requireStaff(true);
+  if (error) return { error };
+  await supabase
+    .from("profiles")
+    .update({
+      coach_billing_mode: formData.get("mode") || "invoice",
+      coach_session_price_cents: Math.round(parseFloat(String(formData.get("price_eur") || "0").replace(",", ".")) * 100),
+    })
+    .eq("id", formData.get("coachId"))
+    .eq("gym_id", profile.gym_id);
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/coach");
+  return { ok: true };
+}
+
+export async function grantCoachCredits(formData) {
+  const { supabase, profile, error } = await requireStaff(true);
+  if (error) return { error };
+  await supabase.from("coach_ledger").insert({
+    gym_id: profile.gym_id,
+    coach_id: formData.get("coachId"),
+    delta: num(formData.get("delta")),
+    reason: "grant",
+  });
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/coach");
+  return { ok: true };
+}
+
 // ---- Packages (bundles / subscriptions) ----
 export async function upsertPackage(formData) {
   const { supabase, profile, error } = await requireStaff(true);

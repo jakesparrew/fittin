@@ -60,8 +60,11 @@ export default function Nav() {
           )}
         </nav>
         <div className="flex items-center gap-3">
-          {isStaff && (
+          {account?.role === "beheerder" && (
             <Link href="/beheer" className="hidden text-sm font-bold text-accentdark transition hover:opacity-80 sm:block">Beheer</Link>
+          )}
+          {account?.role === "coach" && (
+            <Link href="/coach" className="hidden text-sm font-bold text-accentdark transition hover:opacity-80 sm:block">Coach</Link>
           )}
           {account ? (
             <Link href="/account" className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90 sm:block">

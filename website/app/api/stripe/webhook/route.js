@@ -129,6 +129,13 @@ async function handleEvent(event, admin) {
     case "checkout.session.completed": {
       if (obj.metadata?.kind === "punchcard") {
         await grantCredits(admin, obj.metadata.user_id, parseInt(obj.metadata.credits, 10) || 0, "aankoop", true);
+      } else if (obj.metadata?.kind === "coach_credits") {
+        const coachId = obj.metadata.coach_id;
+        const credits = parseInt(obj.metadata.credits, 10) || 0;
+        const { data: prof } = await admin.from("profiles").select("gym_id").eq("id", coachId).single();
+        if (prof && credits) {
+          await admin.from("coach_ledger").insert({ gym_id: prof.gym_id, coach_id: coachId, delta: credits, reason: "aankoop" });
+        }
       } else if (obj.metadata?.kind === "welcome" || obj.mode === "setup") {
         await handleWelcomeSetup(admin, obj);
       } else if (obj.metadata?.booking_id) {
