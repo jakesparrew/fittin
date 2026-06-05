@@ -31,6 +31,30 @@ export default async function ProgramBuilder({ params }) {
   if (!program) return <div className="px-8 py-8">Programma niet gevonden. <Link href="/beheer/programmas" className="text-accentdark">Terug</Link></div>;
   const days = [...(program.program_days || [])].sort((a, b) => a.day_no - b.day_no);
 
+  // Member progress: when assigned, show what the member has actually been logging/marking done.
+  const lastByPe = {};
+  let weekActive = 0;
+  if (program.member_id) {
+    const peIds = days.flatMap((d) => (d.program_exercises || []).map((pe) => pe.id));
+    if (peIds.length) {
+      const { data: mlogs } = await supabase
+        .from("workout_logs")
+        .select("program_exercise_id, logged_on, created_at")
+        .eq("user_id", program.member_id)
+        .in("program_exercise_id", peIds)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      const weekAgo = new Date(Date.now() - 7 * 86400000);
+      const wd = new Set();
+      for (const l of mlogs || []) {
+        if (!lastByPe[l.program_exercise_id]) lastByPe[l.program_exercise_id] = l.logged_on;
+        if (new Date(l.created_at) >= weekAgo) wd.add(l.logged_on);
+      }
+      weekActive = wd.size;
+    }
+  }
+  const fmtDay = (d) => (d ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(d)) : null);
+
   return (
     <div className="px-8 py-8">
       <Link href="/beheer/programmas" className="text-sm font-semibold text-brand/50 hover:text-brand">← Programma's</Link>
@@ -53,6 +77,9 @@ export default async function ProgramBuilder({ params }) {
           </select>
         </label>
         <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</button>
+        {program.member_id && (
+          <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
+        )}
       </form>
 
       {/* Days */}
@@ -67,6 +94,11 @@ export default async function ProgramBuilder({ params }) {
                   <div key={pe.id} className="flex items-center justify-between rounded-xl bg-paper px-4 py-2.5 text-sm">
                     <span className="font-bold text-brand">{pe.exercises?.name}</span>
                     <div className="flex items-center gap-4 text-brand/60">
+                      {program.member_id && (
+                        lastByPe[pe.id]
+                          ? <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-bold text-accentdark">✓ {fmtDay(lastByPe[pe.id])}</span>
+                          : <span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-brand/40">nog niet</span>
+                      )}
                       <span>{pe.sets ?? "–"} × {pe.reps ?? "–"}</span>
                       <span>{pe.rest_sec ?? "–"}s rust</span>
                       <form action={deleteProgramExercise}>
