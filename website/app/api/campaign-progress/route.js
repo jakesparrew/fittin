@@ -15,5 +15,6 @@ export async function GET(req) {
   const supabase = await createClient();
   const { data: c } = await supabase.from("campaigns").select("status, total, sent, delivered, opened, clicked, bounced").eq("id", id).single();
   if (!c) return NextResponse.json({ error: "not found" }, { status: 404 });
-  return NextResponse.json(c, { headers: { "Cache-Control": "no-store" } });
+  const { count: failed } = await supabase.from("campaign_sends").select("id", { count: "exact", head: true }).eq("campaign_id", id).eq("status", "failed");
+  return NextResponse.json({ ...c, failed: failed || 0 }, { headers: { "Cache-Control": "no-store" } });
 }

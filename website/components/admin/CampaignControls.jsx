@@ -36,8 +36,13 @@ export function SendProgress({ id, initial }) {
         <div className={"h-full rounded-full bg-accent transition-all duration-500" + (sending ? " animate-pulse" : "")} style={{ width: pctv + "%" }} />
       </div>
       <p className="mt-2 text-xs text-brand/50">
-        {sending ? "De nieuwsbrief wordt in batches verstuurd in de achtergrond — je kan deze pagina sluiten." : "Alle e-mails zijn verstuurd."}
+        {sending ? "De nieuwsbrief wordt in batches verstuurd in de achtergrond — je kan deze pagina sluiten." : "Verzending afgerond."}
       </p>
+      {c.failed > 0 && (
+        <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">
+          {c.failed} e-mail{c.failed > 1 ? "s" : ""} niet verzonden. Controleer of <code>RESEND_API_KEY</code> in Vercel geldig is.
+        </p>
+      )}
     </div>
   );
 }
