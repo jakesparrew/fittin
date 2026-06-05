@@ -34,9 +34,22 @@ export default function Home() {
 
       {/* ============ HERO ============ */}
       <section className="relative isolate overflow-hidden bg-brand text-white">
-        <div className="brand-mesh absolute inset-0 opacity-90" />
-        <div className="animate-floaty pointer-events-none absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-accent/40 blur-2xl" />
-        <div className="animate-floaty-slow pointer-events-none absolute -bottom-40 -right-24 h-[32rem] w-[32rem] rounded-full bg-lav/30 blur-2xl" />
+        <video
+          className="absolute inset-0 h-full w-full object-cover"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+        >
+          <source src="/video.mp4" type="video/mp4" />
+        </video>
+        {/* Semi-transparent dark + brand overlay so the video shows through but text stays legible */}
+        <div className="absolute inset-0 bg-brand/65" />
+        <div className="brand-mesh absolute inset-0 opacity-40 mix-blend-multiply" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand/80 via-brand/20 to-brand/40" />
+        <div className="animate-floaty pointer-events-none absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-accent/25 blur-2xl" />
+        <div className="animate-floaty-slow pointer-events-none absolute -bottom-40 -right-24 h-[32rem] w-[32rem] rounded-full bg-lav/20 blur-2xl" />
 
         <div className="relative mx-auto max-w-6xl px-5 py-28 md:py-36">
           <Reveal>
