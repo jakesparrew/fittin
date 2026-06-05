@@ -151,11 +151,14 @@ export async function processSendQueue(max = 40) {
     };
   });
   let ids = [];
+  let lastError = null;
   try {
     const res = await resend.batch.send(payload);
     ids = res?.data?.data || [];
+    if (res?.error) lastError = res.error.message || JSON.stringify(res.error);
   } catch (e) {
-    console.error("queue batch failed:", e?.message);
+    lastError = e?.message || String(e);
+    console.error("queue batch failed:", lastError);
   }
   const now = new Date().toISOString();
   let sent = 0;
@@ -173,7 +176,7 @@ export async function processSendQueue(max = 40) {
     .eq("status", "queued");
   const done = (remaining ?? 0) === 0;
   if (done) await admin.from("campaigns").update({ status: "sent", sent_at: now }).eq("id", campaignId);
-  return { processed: batch.length, sent, campaignId, remaining: remaining ?? 0, done };
+  return { processed: batch.length, sent, campaignId, remaining: remaining ?? 0, done, error: lastError };
 }
 
 // Enroll one subscriber into every active drip and schedule each step via Resend.
