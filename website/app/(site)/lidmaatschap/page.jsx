@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { buyPackage, openBillingPortal } from "./actions";
 
@@ -10,16 +12,24 @@ const euro = (c) => "€ " + (c / 100).toFixed(2).replace(".", ",");
 
 export default async function Lidmaatschap() {
   if (!isSupabaseConfigured) redirect("/");
+  // Public pricing page — visible to everyone. Buying requires login (handled per button).
   const { user, profile } = await getSessionProfile();
-  if (!user) redirect("/login?next=/lidmaatschap");
+  const admin = createAdminClient();
+  const { data: defaultGym } = profile ? { data: { id: profile.gym_id } } : await admin.from("gyms").select("id").order("created_at").limit(1).single();
+  const gymId = defaultGym?.id;
 
-  const supabase = await createClient();
-  const [{ data: packages }, { data: ledger }, { data: membership }] = await Promise.all([
-    supabase.from("packages").select("*").eq("gym_id", profile.gym_id).eq("active", true).order("sort"),
-    supabase.from("credits_ledger").select("delta").eq("user_id", user.id),
-    supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
-  ]);
-  const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+  const { data: packages } = await admin.from("packages").select("*").eq("gym_id", gymId).eq("active", true).order("sort");
+
+  let credits = 0, membership = null;
+  if (user) {
+    const supabase = await createClient();
+    const [{ data: ledger }, { data: mem }] = await Promise.all([
+      supabase.from("credits_ledger").select("delta").eq("user_id", user.id),
+      supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
+    ]);
+    credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+    membership = mem;
+  }
   const isMember = !!membership;
 
   return (
@@ -28,8 +38,11 @@ export default async function Lidmaatschap() {
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Sneller & voordeliger</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">Sessies & abonnement</h1>
         <p className="mt-3 text-brand/70">
-          Je saldo: <span className="font-black text-accentdark">{credits} sessies</span>.
-          {isMember && " Je bent member — je boekt aan het voordeeltarief."}
+          {user ? (
+            <>Je saldo: <span className="font-black text-accentdark">{credits} sessies</span>.{isMember && " Je bent member — je boekt aan het voordeeltarief."}</>
+          ) : (
+            <>Koop sessies in bulk of word member voor het voordeeltarief. <Link href="/login?mode=signup&next=/lidmaatschap" className="font-bold text-accentdark hover:underline">Maak eerst een gratis account</Link>.</>
+          )}
         </p>
 
         {isMember && (
@@ -76,13 +89,17 @@ export default async function Lidmaatschap() {
                 </ul>
                 {ownsThis ? (
                   <p className="mt-5 rounded-full bg-accent/15 py-3 text-center font-bold text-accentdark">Je bent al member ✓</p>
-                ) : (
+                ) : user ? (
                   <form action={buyPackage} className="mt-5">
                     <input type="hidden" name="packageId" value={p.id} />
                     <button className="w-full rounded-full bg-accent py-3 font-bold text-brand transition hover:opacity-90">
                       {isAbo ? "Word member" : "Kopen"}
                     </button>
                   </form>
+                ) : (
+                  <Link href="/login?mode=signup&next=/lidmaatschap" className="mt-5 block w-full rounded-full bg-accent py-3 text-center font-bold text-brand transition hover:opacity-90">
+                    {isAbo ? "Word member" : "Kopen"}
+                  </Link>
                 )}
               </div>
             );

@@ -12,6 +12,11 @@ export default function DoorButton() {
     if (res?.error) {
       setState("error");
       setMsg(res.error);
+    } else if (res?.pending) {
+      // Authorised + logged, but the automatic lock isn't connected yet — be honest.
+      setState("pending");
+      setMsg("Je toegang is bevestigd ✓ Het automatische deurslot wordt binnenkort gekoppeld — bel ons als de deur niet opengaat.");
+      setTimeout(() => setState("idle"), 9000);
     } else {
       setState("open");
       setMsg("Deur geopend — kom binnen!");
@@ -26,7 +31,7 @@ export default function DoorButton() {
         disabled={state === "busy"}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-accent py-4 text-lg font-black text-brand transition hover:opacity-90 disabled:opacity-50"
       >
-        {state === "busy" ? "Openen…" : state === "open" ? "✓ Geopend" : "🔓 Open de deur"}
+        {state === "busy" ? "Openen…" : state === "open" ? "✓ Geopend" : state === "pending" ? "✓ Toegang bevestigd" : "🔓 Open de deur"}
       </button>
       {msg && (
         <p className={"mt-2 text-center text-sm font-semibold " + (state === "error" ? "text-red-600" : "text-accentdark")}>

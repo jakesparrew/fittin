@@ -32,11 +32,27 @@ export async function cancelBookingAction(formData) {
   revalidatePath("/boeken");
 }
 
-// Open the gym door during an active booking (logs access; Nuki call would follow server-side).
+// Open the gym door during an active booking. open_door() authorises (active booking only) + logs.
+// Physically unlocks via the Nuki Web API when configured; otherwise reports an honest pending
+// state instead of a false "opened" (so the UI never lies to the member).
 export async function openDoorAction() {
   const supabase = await createClient();
   const { error } = await supabase.rpc("open_door");
-  if (error) return { error: error.message };
-  // TODO: server-side Nuki Web API call to physically unlock, using NUKI_API_TOKEN.
-  return { ok: true };
+  if (error) return { error: error.message }; // e.g. "Je hebt nu geen actieve boeking."
+
+  const token = process.env.NUKI_API_TOKEN;
+  const lock = process.env.NUKI_SMARTLOCK_ID;
+  if (!token || !lock) return { pending: true }; // door hardware not connected yet
+
+  try {
+    const r = await fetch(`https://api.nuki.io/smartlock/${lock}/action`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ action: 3 }), // 3 = unlatch (open)
+    });
+    if (!r.ok) return { error: "De deur reageerde niet. Probeer opnieuw of bel ons even." };
+    return { ok: true };
+  } catch {
+    return { error: "Kon het deursysteem niet bereiken. Probeer opnieuw." };
+  }
 }
