@@ -10,6 +10,7 @@ import { authAction } from "@/app/(site)/login/actions";
 export default function LoginForm() {
   const params = useSearchParams();
   const nextUrl = params.get("next") || "/account";
+  const urlError = params.get("error");
   const [mode, setMode] = useState("login"); // 'login' | 'signup'
   const [state, formAction, pending] = useActionState(authAction, {});
   const [googleErr, setGoogleErr] = useState("");
@@ -44,6 +45,12 @@ export default function LoginForm() {
               ? "Log in om de gym te reserveren en je boekingen te beheren."
               : "Registreren is gratis. Je eerste uur is gratis met de code FittinWelcome."}
           </p>
+
+          {urlError && (
+            <div className="mt-5 rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-700">
+              Inloggen mislukt: {urlError === "auth" ? "probeer opnieuw." : urlError}
+            </div>
+          )}
 
           {!isSupabaseConfigured && (
             <div className="mt-5 rounded-2xl bg-accent/10 p-4 text-xs leading-relaxed text-accentdark">
