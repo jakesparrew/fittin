@@ -48,6 +48,12 @@ export default async function BoekenPage({ searchParams }) {
 
   const { user, profile } = await getSessionProfile();
 
+  let credits = 0;
+  if (user) {
+    const { data: ledger } = await supabase.from("credits_ledger").select("delta").eq("user_id", user.id);
+    credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+  }
+
   return (
     <BookingClient
       gym={gym}
@@ -57,6 +63,7 @@ export default async function BoekenPage({ searchParams }) {
       availability={availability || []}
       isLoggedIn={!!user}
       welcomeAvailable={!!(profile && !profile.welcome_code_used)}
+      creditBalance={credits}
       paymentCanceled={sp.geannuleerd === "1"}
     />
   );

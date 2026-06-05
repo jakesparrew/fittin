@@ -12,7 +12,7 @@ export default async function Instellingen() {
   return (
     <div className="px-8 py-8">
       <h1 className="text-3xl font-black text-brand">Instellingen</h1>
-      <p className="mt-1 text-sm text-brand/50">Openingsuren, daluren en de duur van een sessie.</p>
+      <p className="mt-1 text-sm text-brand/50">Algemene gegevens van de gym.</p>
 
       {readOnly && (
         <p className="mt-4 rounded-xl bg-accent/10 p-3 text-sm font-semibold text-accentdark">
@@ -23,12 +23,16 @@ export default async function Instellingen() {
       <form action={updateGymSettings} className="mt-6 max-w-2xl space-y-5 rounded-2xl border border-borderc bg-white p-7">
         <Field name="name" label="Naam" defaultValue={gym.name} />
         <Field name="address" label="Adres" defaultValue={gym.address} />
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field name="open_hour" label="Openingsuur (0–23)" type="number" defaultValue={gym.open_hour} min={0} max={23} />
-          <Field name="close_hour" label="Sluitingsuur (0–23)" type="number" defaultValue={gym.close_hour} min={0} max={23} />
-          <Field name="slot_minutes" label="Duur sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
-          <Field name="daluur_until_hour" label="Daluur tot (uur)" type="number" defaultValue={gym.daluur_until_hour} min={0} max={23} />
+        <Field name="slot_minutes" label="Duur van een sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
+
+        <div className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
+          <p className="font-bold text-brand">🕑 24/7 open</p>
+          <p className="mt-1">
+            De gym is dag en nacht beschikbaar — leden kunnen elk uur boeken. Openingsuren en
+            dalurentarieven staan uit. (Prijzen per sessie beheer je bij <b>Diensten &amp; prijzen</b>.)
+          </p>
         </div>
+
         <button
           disabled={readOnly}
           className="rounded-full bg-accent px-7 py-3 font-bold text-brand transition hover:opacity-90 disabled:opacity-40"

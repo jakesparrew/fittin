@@ -15,17 +15,19 @@ export default function BookingClient({
   availability = [],
   isLoggedIn,
   welcomeAvailable,
+  creditBalance = 0,
   paymentCanceled = false,
 }) {
   const router = useRouter();
   const [serviceId, setServiceId] = useState(
     (services.find((s) => s.type === "fit60") || services[0])?.id
   );
-  const [dayIndex, setDayIndex] = useState(0);
-  const [hour, setHour] = useState(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selected, setSelected] = useState(null); // { dateStr, hour }
   const [persons, setPersons] = useState(1);
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
+  const [useCredit, setUseCredit] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmed, setConfirmed] = useState(null);
@@ -34,19 +36,11 @@ export default function BookingClient({
   const isFit60 = service?.type === "fit60";
   const isPT = service?.type === "pt";
 
-  // For PT: only hours within the chosen coach's availability for that weekday are bookable.
-  function coachOpen(dateStr, h) {
-    if (!isPT || !coachId) return true;
-    const wd = new Date(`${dateStr}T12:00:00Z`).getUTCDay(); // 0=zo..6=za
-    return availability.some(
-      (a) => a.coach_id === coachId && a.weekday === wd && a.from_hour <= h && h < a.to_hour
-    );
-  }
-
   const days = useMemo(() => {
     const out = [];
+    const base = Date.now() + weekOffset * 7 * 86400000;
     for (let i = 0; i < 7; i++) {
-      const d = new Date(Date.now() + i * 86400000);
+      const d = new Date(base + i * 86400000);
       out.push({
         dateStr: brusselsDateStr(d),
         weekday: new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short" }).format(d),
@@ -54,12 +48,9 @@ export default function BookingClient({
       });
     }
     return out;
-  }, []);
+  }, [weekOffset]);
 
-  const takenSet = useMemo(
-    () => new Set(takenSlots.map((s) => new Date(s).getTime())),
-    [takenSlots]
-  );
+  const takenSet = useMemo(() => new Set(takenSlots.map((s) => new Date(s).getTime())), [takenSlots]);
 
   const hours = useMemo(() => {
     const list = [];
@@ -67,40 +58,47 @@ export default function BookingClient({
     return list;
   }, [gym.open_hour, gym.close_hour]);
 
+  function coachOpen(dateStr, h) {
+    if (!isPT || !coachId) return true;
+    const wd = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
+    return availability.some((a) => a.coach_id === coachId && a.weekday === wd && a.from_hour <= h && h < a.to_hour);
+  }
+
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome;
-  const priceCents = welcomeApplies ? 0 : service?.price_cents ?? 0;
+  const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= 1;
+  const priceCents = welcomeApplies || creditApplies ? 0 : service?.price_cents ?? 0;
 
   async function submit() {
-    if (hour == null || !service) return;
+    if (!selected || !service) return;
     setBusy(true);
     setError("");
     const res = await createBookingAction({
       serviceId: service.id,
-      date: days[dayIndex].dateStr,
-      hour,
+      date: selected.dateStr,
+      hour: selected.hour,
       persons: isFit60 ? persons : 1,
       useWelcome: welcomeApplies,
       coachId: isPT ? coachId : null,
+      useCredit: creditApplies,
     });
     if (res?.error) {
       setBusy(false);
       setError(res.error);
-      router.refresh(); // pull fresh availability if the slot was just taken
+      router.refresh();
       return;
     }
     if (res?.checkoutUrl) {
-      // Paid booking — slot is held; hand off to Stripe Checkout.
       window.location.href = res.checkoutUrl;
       return;
     }
     setBusy(false);
+    const day = days.find((d) => d.dateStr === selected.dateStr);
     setConfirmed({
       service: service.name,
-      day: `${days[dayIndex].weekday} ${days[dayIndex].dayMonth}`,
-      range: slotRangeLabel(hour, service.duration_min),
+      day: day ? `${day.weekday} ${day.dayMonth}` : selected.dateStr,
+      range: slotRangeLabel(selected.hour, service.duration_min),
       persons: isFit60 ? persons : 1,
       free: welcomeApplies,
-      unpaid: res?.unpaid,
     });
     router.refresh();
   }
@@ -109,40 +107,23 @@ export default function BookingClient({
     return (
       <main className="mx-auto max-w-2xl px-5 py-24">
         <div className="rounded-3xl border border-borderc bg-white p-10 text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent text-3xl font-black text-brand">
-            ✓
-          </div>
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent text-3xl font-black text-brand">✓</div>
           <h1 className="mt-6 text-3xl font-black">Boeking bevestigd!</h1>
           <p className="mt-3 leading-relaxed text-brand/70">
             {confirmed.service} · {confirmed.day} · {confirmed.range} · {confirmed.persons}{" "}
             {confirmed.persons === 1 ? "persoon" : "personen"}
             {confirmed.free && " · gratis (FittinWelcome)"}
           </p>
-          <p className="mt-4 rounded-2xl bg-paper p-4 text-sm text-brand/70">
-            Je vindt deze boeking terug in je account. Tijdens je tijdslot opent de deur via de
-            app (binnenkort). Betaling via Stripe wordt later toegevoegd.
-          </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
-            <Link
-              href="/account"
-              className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90"
-            >
-              Naar mijn account
-            </Link>
-            <button
-              onClick={() => {
-                setConfirmed(null);
-                setHour(null);
-              }}
-              className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-lav"
-            >
-              Nieuwe boeking
-            </button>
+            <Link href="/account" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90">Naar mijn account</Link>
+            <button onClick={() => { setConfirmed(null); setSelected(null); }} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-lav">Nieuwe boeking</button>
           </div>
         </div>
       </main>
     );
   }
+
+  const weekLabel = `${days[0].dayMonth} – ${days[6].dayMonth}`;
 
   return (
     <main className="bg-paper">
@@ -151,19 +132,15 @@ export default function BookingClient({
         <h1 className="mt-3 text-3xl font-black md:text-4xl">Reserveer je sessie</h1>
         {welcomeAvailable ? (
           <p className="mt-3 max-w-xl text-brand/70">
-            Welkom! Je eerste Fit60-sessie is <span className="font-bold text-accentdark">gratis</span>{" "}
-            met <span className="rounded-full bg-brand px-3 py-0.5 font-bold text-accent">FittinWelcome</span>.
+            Welkom! Je eerste Fit60-sessie is <span className="font-bold text-accentdark">gratis</span> met{" "}
+            <span className="rounded-full bg-brand px-3 py-0.5 font-bold text-accent">FittinWelcome</span>.
           </p>
         ) : (
-          <p className="mt-3 max-w-xl text-brand/70">
-            Kies je sessie, dag en uur. De zaal is exclusief van jou tijdens je boeking.
-          </p>
+          <p className="mt-3 max-w-xl text-brand/70">De zaal is 24/7 van jou tijdens je boeking — kies je moment.</p>
         )}
-
         {paymentCanceled && (
           <p className="mt-4 rounded-2xl bg-accent/10 p-4 text-sm font-semibold text-accentdark">
-            Betaling geannuleerd. Je gekozen tijdslot staat nog even voor je klaar — rond af
-            wanneer je wil.
+            Betaling geannuleerd. Kies gerust opnieuw een moment.
           </p>
         )}
 
@@ -171,29 +148,21 @@ export default function BookingClient({
           <div className="space-y-6 lg:col-span-2">
             {/* Service */}
             <Card step="1" title="Kies je sessie">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 {services.map((s) => (
                   <button
                     key={s.id}
-                    onClick={() => {
-                      setServiceId(s.id);
-                      setHour(null);
-                    }}
-                    className={
-                      "rounded-2xl border-2 p-5 text-left transition " +
-                      (serviceId === s.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")
-                    }
+                    onClick={() => { setServiceId(s.id); setSelected(null); }}
+                    className={"rounded-2xl border-2 p-5 text-left transition " + (serviceId === s.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}
                   >
                     <p className="font-black">{s.name}</p>
-                    <p className="mt-1 text-sm text-brand/60">
-                      {s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "vanaf " + euro(s.price_cents)}
-                    </p>
+                    <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "vanaf " + euro(s.price_cents)}</p>
                   </button>
                 ))}
               </div>
             </Card>
 
-            {/* Coach (PT only) */}
+            {/* Coach (PT) */}
             {isPT && (
               <Card step="•" title="Kies je coach">
                 {coaches.length === 0 ? (
@@ -201,17 +170,7 @@ export default function BookingClient({
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-3">
                     {coaches.map((c) => (
-                      <button
-                        key={c.id}
-                        onClick={() => {
-                          setCoachId(c.id);
-                          setHour(null);
-                        }}
-                        className={
-                          "rounded-2xl border-2 p-4 text-left text-sm font-bold transition " +
-                          (coachId === c.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")
-                        }
-                      >
+                      <button key={c.id} onClick={() => { setCoachId(c.id); setSelected(null); }} className={"rounded-2xl border-2 p-4 text-left text-sm font-bold transition " + (coachId === c.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
                         {c.full_name || "Coach"}
                       </button>
                     ))}
@@ -220,80 +179,63 @@ export default function BookingClient({
               </Card>
             )}
 
-            {/* Day */}
-            <Card step="2" title="Kies je dag">
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {days.map((d, i) => (
-                  <button
-                    key={d.dateStr}
-                    onClick={() => {
-                      setDayIndex(i);
-                      setHour(null);
-                    }}
-                    className={
-                      "min-w-16 rounded-2xl border-2 px-3 py-3 text-center transition " +
-                      (dayIndex === i ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")
-                    }
-                  >
-                    <p className="text-xs font-bold uppercase text-brand/50">{d.weekday}</p>
-                    <p className="mt-0.5 text-sm font-black">{d.dayMonth}</p>
-                  </button>
-                ))}
+            {/* Schedule grid */}
+            <Card step="2" title="Kies je moment">
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={() => setWeekOffset((w) => Math.max(0, w - 1))} disabled={weekOffset === 0} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">‹ vorige</button>
+                <span className="text-sm font-bold text-brand/60">{weekLabel}</span>
+                <button onClick={() => setWeekOffset((w) => Math.min(8, w + 1))} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition hover:border-lav">volgende ›</button>
               </div>
-            </Card>
 
-            {/* Slots */}
-            <Card step="3" title="Kies je uur">
-              <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                {hours.map((h) => {
-                  const t = slotInstant(days[dayIndex].dateStr, h).getTime();
-                  const taken = takenSet.has(t);
-                  const past = t < Date.now();
-                  const closed = !coachOpen(days[dayIndex].dateStr, h);
-                  const daluur = h < gym.daluur_until_hour;
-                  if (taken || past || closed) {
-                    return (
-                      <div key={h} className="rounded-2xl bg-paper px-3 py-3 text-center text-brand/40">
-                        <p className="font-black">{String(h).padStart(2, "0")}:00</p>
-                        <p className="text-xs">{taken ? "vol" : closed ? "—" : "—"}</p>
+              <div className="overflow-x-auto">
+                <div className="min-w-[620px]">
+                  {/* header */}
+                  <div className="grid grid-cols-[44px_repeat(7,1fr)] gap-1">
+                    <div />
+                    {days.map((d) => (
+                      <div key={d.dateStr} className="pb-1 text-center">
+                        <p className="text-[10px] font-bold uppercase text-brand/40">{d.weekday}</p>
+                        <p className="text-xs font-black text-brand">{d.dayMonth}</p>
                       </div>
-                    );
-                  }
-                  const sel = hour === h;
-                  return (
-                    <button
-                      key={h}
-                      onClick={() => setHour(h)}
-                      className={
-                        "rounded-2xl border-2 px-3 py-3 text-center transition " +
-                        (sel ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")
-                      }
-                    >
-                      <p className="font-black">{String(h).padStart(2, "0")}:00</p>
-                      <p className={"text-xs font-semibold " + (daluur ? "text-accentdark" : "text-brand/50")}>
-                        {daluur ? "daluur" : "vrij"}
-                      </p>
-                    </button>
-                  );
-                })}
+                    ))}
+                  </div>
+                  {/* rows */}
+                  <div className="max-h-[420px] overflow-y-auto pr-1">
+                    {hours.map((h) => (
+                      <div key={h} className="grid grid-cols-[44px_repeat(7,1fr)] gap-1 py-0.5">
+                        <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-brand/30">{String(h).padStart(2, "0")}:00</div>
+                        {days.map((d) => {
+                          const t = slotInstant(d.dateStr, h).getTime();
+                          const taken = takenSet.has(t);
+                          const past = t < Date.now();
+                          const closed = !coachOpen(d.dateStr, h);
+                          const isSel = selected && selected.dateStr === d.dateStr && selected.hour === h;
+                          if (past || closed) return <div key={d.dateStr} className="h-7 rounded-md bg-paper" />;
+                          if (taken) return <div key={d.dateStr} className="flex h-7 items-center justify-center rounded-md bg-borderc/40 text-[9px] font-bold text-brand/30">vol</div>;
+                          return (
+                            <button
+                              key={d.dateStr}
+                              onClick={() => setSelected({ dateStr: d.dateStr, hour: h })}
+                              className={"h-7 rounded-md border text-[9px] font-bold transition " + (isSel ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
+                            >
+                              {isSel ? "✓" : ""}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
+              <p className="mt-3 text-xs text-brand/40">Groen = vrij · grijs = geboekt · de zaal is exclusief van jou tijdens je sessie.</p>
             </Card>
 
             {/* Persons */}
             {isFit60 && (
-              <Card step="4" title="Met hoeveel kom je?">
+              <Card step="3" title="Met hoeveel kom je?">
                 <div className="flex gap-3">
                   {[1, 2, 3, 4].map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setPersons(n)}
-                      className={
-                        "h-12 w-12 rounded-2xl border-2 font-black transition " +
-                        (persons === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")
-                      }
-                    >
-                      {n}
-                    </button>
+                    <button key={n} onClick={() => setPersons(n)} className={"h-12 w-12 rounded-2xl border-2 font-black transition " + (persons === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n}</button>
                   ))}
                 </div>
                 <p className="mt-3 text-xs text-brand/50">Zelfde prijs, ook met vrienden — geen extra kosten.</p>
@@ -306,53 +248,42 @@ export default function BookingClient({
             <h2 className="text-lg font-black">Jouw boeking</h2>
             <dl className="mt-5 space-y-3 text-sm">
               <Row label="Sessie" value={service?.name || "—"} />
-              <Row label="Dag" value={`${days[dayIndex].weekday} ${days[dayIndex].dayMonth}`} />
-              <Row label="Uur" value={hour != null ? slotRangeLabel(hour, service.duration_min) : "—"} />
+              {isPT && <Row label="Coach" value={coaches.find((c) => c.id === coachId)?.full_name || "—"} />}
+              <Row label="Moment" value={selected ? `${days.find((d) => d.dateStr === selected.dateStr)?.weekday || ""} ${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, service.duration_min)}` : "—"} />
               {isFit60 && <Row label="Personen" value={persons} />}
             </dl>
 
             {isFit60 && welcomeAvailable && (
               <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
-                <input
-                  type="checkbox"
-                  checked={useWelcome}
-                  onChange={(e) => setUseWelcome(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 accent-[#5fda6b]"
-                />
-                <span className="text-lav">
-                  Gebruik <span className="font-bold text-accent">FittinWelcome</span> — eerste sessie gratis
-                </span>
+                <input type="checkbox" checked={useWelcome} onChange={(e) => setUseWelcome(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
+                <span className="text-lav">Gebruik <span className="font-bold text-accent">FittinWelcome</span> — eerste sessie gratis</span>
+              </label>
+            )}
+
+            {isFit60 && !welcomeApplies && creditBalance >= 1 && (
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
+                <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
+                <span className="text-lav">Betaal met 1 <span className="font-bold text-accent">credit</span> (saldo: {creditBalance})</span>
               </label>
             )}
 
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">
               <span className="text-lav">Totaal</span>
               <span className="text-3xl font-black text-accent">
-                {welcomeApplies ? "Gratis" : euro(priceCents)}
+                {welcomeApplies ? "Gratis" : creditApplies ? "1 credit" : euro(priceCents)}
               </span>
             </div>
 
             {error && <p className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm font-semibold text-red-100">{error}</p>}
 
             {isLoggedIn ? (
-              <button
-                onClick={submit}
-                disabled={hour == null || busy}
-                className="mt-6 w-full rounded-full bg-accent py-3.5 font-bold text-brand transition enabled:hover:opacity-90 disabled:opacity-40"
-              >
-                {busy ? "Even geduld…" : hour == null ? "Kies eerst een uur" : "Bevestig boeking"}
+              <button onClick={submit} disabled={!selected || busy} className="mt-6 w-full rounded-full bg-accent py-3.5 font-bold text-brand transition enabled:hover:opacity-90 disabled:opacity-40">
+                {busy ? "Even geduld…" : !selected ? "Kies eerst een moment" : "Bevestig boeking"}
               </button>
             ) : (
-              <Link
-                href="/login?next=/boeken"
-                className="mt-6 block w-full rounded-full bg-accent py-3.5 text-center font-bold text-brand transition hover:opacity-90"
-              >
-                Log in om te boeken
-              </Link>
+              <Link href="/login?next=/boeken" className="mt-6 block w-full rounded-full bg-accent py-3.5 text-center font-bold text-brand transition hover:opacity-90">Log in om te boeken</Link>
             )}
-            <p className="mt-3 text-center text-xs text-lav">
-              Kosteloos annuleren tot 24u vooraf.
-            </p>
+            <p className="mt-3 text-center text-xs text-lav">Kosteloos annuleren tot 24u vooraf.</p>
           </div>
         </div>
       </div>
@@ -363,10 +294,7 @@ export default function BookingClient({
 function Card({ step, title, children }) {
   return (
     <div className="rounded-3xl border border-borderc bg-white p-7">
-      <h2 className="font-black">
-        <span className="text-accentdark">{step} · </span>
-        {title}
-      </h2>
+      <h2 className="font-black"><span className="text-accentdark">{step} · </span>{title}</h2>
       <div className="mt-4">{children}</div>
     </div>
   );

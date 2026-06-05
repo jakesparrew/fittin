@@ -23,6 +23,21 @@ export async function POST(req) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
+
+    // Package purchase (10-beurtenkaart) → grant credits.
+    if (session.metadata?.kind === "punchcard") {
+      const admin = createAdminClient();
+      const userId = session.metadata.user_id;
+      const credits = parseInt(session.metadata.credits, 10) || 0;
+      const { data: prof } = await admin.from("profiles").select("gym_id").eq("id", userId).single();
+      if (prof) {
+        const expires = new Date(Date.now() + 180 * 86400000).toISOString();
+        await admin.from("punch_cards").insert({ gym_id: prof.gym_id, user_id: userId, credits_initial: credits, expires_at: expires });
+        await admin.from("credits_ledger").insert({ gym_id: prof.gym_id, user_id: userId, delta: credits, reason: "aankoop", ref_id: null });
+      }
+      return NextResponse.json({ received: true });
+    }
+
     const bookingId = session.metadata?.booking_id;
     if (bookingId) {
       const admin = createAdminClient();

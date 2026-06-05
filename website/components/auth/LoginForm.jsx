@@ -115,9 +115,18 @@ export default function LoginForm() {
               value={password}
               onChange={setPassword}
               type="password"
+              reveal
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
               required
             />
+
+            {mode === "login" && (
+              <div className="text-right">
+                <Link href="/wachtwoord-vergeten" className="text-xs font-semibold text-accentdark hover:underline">
+                  Wachtwoord vergeten?
+                </Link>
+              </div>
+            )}
 
             {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
             {info && <p className="text-sm font-semibold text-accentdark">{info}</p>}
@@ -154,17 +163,51 @@ export default function LoginForm() {
   );
 }
 
-function Field({ label, value, onChange, ...rest }) {
+function Field({ label, value, onChange, reveal, type, ...rest }) {
+  const [show, setShow] = useState(false);
+  const inputType = reveal ? (show ? "text" : "password") : type;
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-bold text-brand">{label}</span>
-      <input
-        {...rest}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 text-brand outline-none transition focus:border-accent"
-      />
+      <div className="relative">
+        <input
+          {...rest}
+          type={inputType}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={
+            "w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 text-brand outline-none transition focus:border-accent " +
+            (reveal ? "pr-12" : "")
+          }
+        />
+        {reveal && (
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => setShow((s) => !s)}
+            aria-label={show ? "Verberg wachtwoord" : "Toon wachtwoord"}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-brand/40 transition hover:text-brand"
+          >
+            <EyeIcon off={show} />
+          </button>
+        )}
+      </div>
     </label>
+  );
+}
+
+export function EyeIcon({ off }) {
+  return off ? (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M6.61 6.61A18.45 18.45 0 0 0 1 12s4 8 11 8a9.12 9.12 0 0 0 5.39-1.61" />
+      <line x1="2" y1="2" x2="22" y2="22" />
+      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
+    </svg>
+  ) : (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
   );
 }
 

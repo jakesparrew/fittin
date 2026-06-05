@@ -28,7 +28,7 @@ function checkoutParams(booking, email) {
 }
 
 // Creates the booking (slot held immediately). Free → confirm + email. Paid → Stripe Checkout URL.
-export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId }) {
+export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -42,6 +42,7 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     p_persons: persons,
     p_use_welcome: !!useWelcome,
     p_coach: coachId || null,
+    p_use_credit: !!useCredit,
   });
   if (error) return { error: error.message };
 

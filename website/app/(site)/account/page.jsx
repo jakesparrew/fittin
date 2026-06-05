@@ -6,6 +6,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cancelBookingAction } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
 import DoorButton from "@/components/DoorButton";
+import AccountSettings from "@/components/account/AccountSettings";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -89,6 +90,13 @@ export default async function AccountPage({ searchParams }) {
             value={profile?.welcome_code_used ? "Gebruikt" : "Beschikbaar"}
             accent={!profile?.welcome_code_used}
           />
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold">
+          <Link href="/boeken" className="rounded-full bg-accent px-5 py-2.5 text-brand transition hover:opacity-90">+ Boek een sessie</Link>
+          <Link href="/lidmaatschap" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Beurtenkaart kopen</Link>
+          <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Mijn training</Link>
+          <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Community</Link>
         </div>
 
         {sp.betaald === "1" && (
@@ -198,6 +206,8 @@ export default async function AccountPage({ searchParams }) {
             </div>
           </section>
         )}
+
+        <AccountSettings userId={user.id} initialName={profile?.full_name || ""} initialPhone={profile?.phone || ""} />
       </div>
     </main>
   );

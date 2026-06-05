@@ -33,10 +33,11 @@ export async function updateGymSettings(formData) {
   const patch = {
     name: formData.get("name") || undefined,
     address: formData.get("address") || undefined,
-    open_hour: num(formData.get("open_hour"), 7),
-    close_hour: num(formData.get("close_hour"), 21),
-    slot_minutes: num(formData.get("slot_minutes"), 75),
-    daluur_until_hour: num(formData.get("daluur_until_hour"), 16),
+    slot_minutes: num(formData.get("slot_minutes"), 60),
+    // Gym is open 24/7; daluur disabled for now.
+    open_hour: 0,
+    close_hour: 24,
+    daluur_until_hour: 0,
   };
   const { error: e } = await supabase.from("gyms").update(patch).eq("id", profile.gym_id);
   if (e) return { error: e.message };
