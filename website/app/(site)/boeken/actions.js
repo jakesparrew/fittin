@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 
@@ -53,8 +54,9 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     .single();
 
   // Mark the FittinWelcome free session as used (also blocks re-claiming with a new card).
+  // welcome_status is a protected column (members can't self-edit it) → write via service role.
   if (booking?.payment_source === "gratis_code") {
-    await supabase.from("profiles").update({ welcome_status: "used" }).eq("id", user.id);
+    await createAdminClient().from("profiles").update({ welcome_status: "used" }).eq("id", user.id);
   }
 
   revalidatePath("/account");

@@ -1,4 +1,5 @@
 import { stripe } from "./stripe";
+import { createAdminClient } from "./supabase/admin";
 
 // Get-or-create a persistent Stripe Customer for a profile (needed for subscriptions,
 // the billing portal, saved cards and invoices). Stores stripe_customer_id on the profile.
@@ -15,6 +16,7 @@ export async function getOrCreateCustomer(supabase, userId, email) {
     name: profile?.full_name || undefined,
     metadata: { user_id: userId },
   });
-  await supabase.from("profiles").update({ stripe_customer_id: customer.id }).eq("id", userId);
+  // stripe_customer_id is a protected column → write via service role, not the user client.
+  await createAdminClient().from("profiles").update({ stripe_customer_id: customer.id }).eq("id", userId);
   return customer.id;
 }
