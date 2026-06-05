@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { redeemReferral, signupEvent, cancelSignup } from "./actions";
+import { acceptBuddy, removeBuddy } from "./buddy-actions";
+import BuddyInvite from "@/components/community/BuddyInvite";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Community | Fittin'" };
@@ -52,13 +54,67 @@ export default async function Community() {
 
   const events = eventsRes.data || [];
 
+  // Buddies (admin client → can read the other member's name despite profile RLS).
+  const { data: buddyRows } = await admin
+    .from("buddies")
+    .select("id, status, requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(full_name), addressee:profiles!buddies_addressee_id_fkey(full_name)")
+    .eq("gym_id", profile.gym_id)
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+  const buddyName = (r) => (r.requester_id === user.id ? r.addressee?.full_name : r.requester?.full_name) || "Lid";
+  const accepted = (buddyRows || []).filter((r) => r.status === "accepted");
+  const incoming = (buddyRows || []).filter((r) => r.status === "pending" && r.addressee_id === user.id);
+  const outgoing = (buddyRows || []).filter((r) => r.status === "pending" && r.requester_id === user.id);
+
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-5xl px-5 py-16">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Community</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">Blijf gemotiveerd</h1>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        {/* Buddies */}
+        <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="font-black text-brand">Mijn buddies</h2>
+              <p className="mt-1 text-sm text-brand/60">Connect met andere leden en neem elkaar mee naar een sessie — elk bezoek telt mee voor jullie stats.</p>
+            </div>
+            <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">{accepted.length} buddies</span>
+          </div>
+
+          {incoming.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-lav">Aanvragen</p>
+              <div className="mt-2 space-y-2">
+                {incoming.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between rounded-xl bg-accent/10 px-3 py-2 text-sm">
+                    <span className="font-bold text-brand">{buddyName(r)} wil je buddy zijn</span>
+                    <div className="flex gap-2">
+                      <form action={acceptBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-brand">Accepteer</button></form>
+                      <form action={removeBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">Weiger</button></form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {accepted.length > 0 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {accepted.map((r) => (
+                <span key={r.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-sm font-bold text-brand">
+                  {buddyName(r)}
+                  <form action={removeBuddy} className="inline"><input type="hidden" name="id" value={r.id} /><button className="text-red-400 hover:text-red-600" title="Verwijder">×</button></form>
+                </span>
+              ))}
+            </div>
+          )}
+
+          {outgoing.length > 0 && <p className="mt-3 text-xs text-brand/40">In afwachting: {outgoing.map(buddyName).join(", ")}</p>}
+
+          <BuddyInvite />
+        </section>
+
+        <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* Referral */}
           <section className="rounded-3xl border border-borderc bg-white p-6">
             <h2 className="font-black text-brand">Breng een vriend</h2>

@@ -65,7 +65,16 @@ export default async function ActivationDetail({ params }) {
               <span className="mb-1 block text-sm font-bold text-brand">Gratis sessies erbij</span>
               <input name="reward_credits" type="number" min="0" defaultValue={c.reward_credits} className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
             </label>
+            <label className="block">
+              <span className="mb-1 block text-sm font-bold text-brand">Korting (%)</span>
+              <input name="discount_percent" type="number" min="0" max="100" defaultValue={c.discount_percent} className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
+            </label>
           </div>
+          {c.discount_percent > 0 && (
+            <p className="mt-2 text-xs text-brand/50">
+              Kortingscode {c.discount_code ? <code className="rounded bg-accent/20 px-1.5 py-0.5 font-bold text-accentdark">{c.discount_code}</code> : "wordt aangemaakt bij de eerste verzending"} · gebruik <code className="rounded bg-paper px-1">{"{{code}}"}</code> in je tekst.
+            </p>
+          )}
 
           <h2 className="mt-6 font-black text-brand">Bericht</h2>
           <p className="mt-1 text-xs text-brand/50">Gebruik <code className="rounded bg-paper px-1">{"{{naam}}"}</code> voor de voornaam.</p>

@@ -190,3 +190,31 @@ export async function sendEventSignup({ to, name, title, startsAt }) {
     })
   );
 }
+
+// ---- Buddy request (to an existing member) ----
+export async function sendBuddyRequest({ to, name, fromName }) {
+  await send(
+    to,
+    `${fromName} wil je trainingsbuddy zijn`,
+    shell({
+      title: "Nieuwe buddy-aanvraag 🤝",
+      intro: `Hallo ${name || "daar"}, ${fromName} wil met jou connecten als trainingsbuddy op Fittin'. Buddies kunnen elkaar meenemen naar sessies.`,
+      cta: { href: `${SITE}/community`, label: "Bekijk aanvraag" },
+    })
+  );
+}
+
+// ---- Buddy invite (to someone without an account yet) ----
+export async function sendBuddyInvite({ to, fromName, refCode }) {
+  const url = `${SITE}/login?mode=signup&ref=${encodeURIComponent(refCode || "")}`;
+  await send(
+    to,
+    `${fromName} nodigt je uit op Fittin'`,
+    shell({
+      title: "Train samen op Fittin' 💪",
+      intro: `${fromName} nodigt je uit om samen te trainen bij Fittin' — een privégym in Gent. Maak een gratis account en je eerste uur is gratis met de code FittinWelcome.`,
+      body: refCode ? `<p style="font-size:13px;color:#9b97ab;margin-top:10px">Gebruik bij registratie de vriendcode <b>${refCode}</b>.</p>` : "",
+      cta: { href: url, label: "Account aanmaken" },
+    })
+  );
+}

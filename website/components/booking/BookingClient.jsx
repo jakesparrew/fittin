@@ -17,6 +17,7 @@ export default function BookingClient({
   welcomeAvailable,
   creditBalance = 0,
   paymentCanceled = false,
+  buddies = [],
 }) {
   const router = useRouter();
   const [serviceId, setServiceId] = useState(
@@ -28,6 +29,8 @@ export default function BookingClient({
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
   const [useCredit, setUseCredit] = useState(false);
+  const [discountCode, setDiscountCode] = useState("");
+  const [buddySel, setBuddySel] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmed, setConfirmed] = useState(null);
@@ -80,6 +83,8 @@ export default function BookingClient({
       useWelcome: welcomeApplies,
       coachId: isPT ? coachId : null,
       useCredit: creditApplies,
+      discountCode: !welcomeApplies && !creditApplies ? discountCode.trim() : "",
+      buddyIds: buddySel,
     });
     if (res?.error) {
       setBusy(false);
@@ -265,6 +270,33 @@ export default function BookingClient({
                 <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
                 <span className="text-lav">Betaal met 1 <span className="font-bold text-accent">sessie</span> (saldo: {creditBalance})</span>
               </label>
+            )}
+
+            {isLoggedIn && buddies.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-lav">Buddies meenemen</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {buddies.map((b) => {
+                    const on = buddySel.includes(b.id);
+                    return (
+                      <button key={b.id} type="button"
+                        onClick={() => setBuddySel((s) => (on ? s.filter((x) => x !== b.id) : [...s, b.id]))}
+                        className={"rounded-full px-3 py-1.5 text-xs font-bold transition " + (on ? "bg-accent text-brand" : "bg-white/10 text-lav hover:bg-white/20")}>
+                        {on ? "✓ " : ""}{b.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1 text-[11px] text-lav/70">Hun bezoek telt mee voor hun eigen stats.</p>
+              </div>
+            )}
+
+            {isLoggedIn && !welcomeApplies && !creditApplies && (
+              <div className="mt-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-lav">Kortingscode</p>
+                <input value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} placeholder="bv. TERUG50"
+                  className="mt-2 w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm uppercase text-white placeholder:text-lav/60 outline-none focus:border-accent" />
+              </div>
             )}
 
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">

@@ -46,6 +46,7 @@ export async function updateActivation(formData) {
       body_html: formData.get("body"),
       cooldown_days: num(formData.get("cooldown_days"), 30),
       reward_credits: num(formData.get("reward_credits"), 0),
+      discount_percent: Math.max(0, Math.min(100, num(formData.get("discount_percent"), 0))),
       ...(paramKey ? { trigger_params: params } : {}),
     })
     .eq("id", id)

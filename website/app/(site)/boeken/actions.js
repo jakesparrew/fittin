@@ -5,10 +5,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
+import { validateDiscount, recordRedemption } from "@/lib/discounts";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
-function checkoutParams(booking, email) {
+function checkoutParams(booking, email, chargeCents, codeId) {
   return {
     mode: "payment",
     customer_email: email,
@@ -17,19 +18,19 @@ function checkoutParams(booking, email) {
         quantity: 1,
         price_data: {
           currency: "eur",
-          unit_amount: booking.price_cents,
+          unit_amount: chargeCents ?? booking.price_cents,
           product_data: { name: `${booking.services?.name || "Sessie"} — Fittin'` },
         },
       },
     ],
-    metadata: { booking_id: booking.id },
+    metadata: { booking_id: booking.id, ...(codeId ? { discount_code_id: codeId } : {}) },
     success_url: `${siteUrl()}/account?betaald=1`,
     cancel_url: `${siteUrl()}/boeken?geannuleerd=1`,
   };
 }
 
 // Creates the booking (slot held immediately). Free → confirm + email. Paid → Stripe Checkout URL.
-export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit }) {
+export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit, discountCode, buddyIds }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -49,9 +50,14 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, starts_at, ends_at, persons, price_cents, paid, payment_source, services(name)")
+    .select("id, gym_id, starts_at, ends_at, persons, price_cents, paid, payment_source, services(name)")
     .eq("id", bookingId)
     .single();
+
+  // Bring accepted buddies along (their attendance counts as a visit for them).
+  if (Array.isArray(buddyIds) && buddyIds.length && booking) {
+    await supabase.rpc("add_booking_buddies", { p_booking: booking.id, p_buddies: buddyIds });
+  }
 
   // Mark the FittinWelcome free session as used (also blocks re-claiming with a new card).
   // welcome_status is a protected column (members can't self-edit it) → write via service role.
@@ -76,11 +82,21 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     return { ok: true, free: true };
   }
 
+  // Optional discount code (e.g. an activation win-back) → reduce the amount charged.
+  let chargeCents = booking.price_cents;
+  let codeId = null;
+  if (discountCode) {
+    const d = await validateDiscount(booking.gym_id, user.id, discountCode, booking.price_cents);
+    if (d.error) return { error: d.error };
+    if (d.ok) { chargeCents = d.cents; codeId = d.codeId; }
+  }
+
   // Paid: hand off to Stripe Checkout. If Stripe isn't set up, confirm unpaid (dev).
   if (!isStripeConfigured) return { ok: true, unpaid: true };
 
-  const session = await stripe.checkout.sessions.create(checkoutParams(booking, user.email));
+  const session = await stripe.checkout.sessions.create(checkoutParams(booking, user.email, chargeCents, codeId));
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
+  if (codeId) await recordRedemption(booking.gym_id, codeId, user.id, booking.id);
   return { ok: true, checkoutUrl: session.url };
 }
 
