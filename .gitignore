@@ -1,0 +1,23 @@
+# dependencies / build
+node_modules/
+.next/
+out/
+dist/
+.vercel
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# os / editor
+.DS_Store
+Thumbs.db
+
+# business / financial docs — keep OUT of the public repo (contains IBAN, pricing)
+*.pdf
+*.pptx
