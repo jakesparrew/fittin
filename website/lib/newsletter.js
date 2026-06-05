@@ -96,6 +96,86 @@ export async function sendNewsletterCampaign(campaignId) {
   return { ok: true, sent };
 }
 
+// ---- Background queue (scale sending: queue now, drain in paced batches) ----
+
+// Queue a newsletter: create 'queued' send rows for every active subscriber (fast, non-blocking),
+// flip the campaign to 'sending'. A worker then drains the queue in batches.
+export async function queueNewsletter(campaignId) {
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("campaigns").select("id, gym_id, kind").eq("id", campaignId).single();
+  if (!c || c.kind !== "newsletter") return { error: "Geen nieuwsbrief-campagne." };
+
+  const [{ data: subs }, { data: existing }] = await Promise.all([
+    admin.from("subscribers").select("id, email").eq("gym_id", c.gym_id).eq("status", "active"),
+    admin.from("campaign_sends").select("subscriber_id").eq("campaign_id", campaignId),
+  ]);
+  const done = new Set((existing || []).map((e) => e.subscriber_id));
+  const targets = (subs || []).filter((s) => !done.has(s.id));
+
+  for (const part of chunk(targets, 500)) {
+    await admin.from("campaign_sends").insert(
+      part.map((s) => ({ gym_id: c.gym_id, campaign_id: campaignId, subscriber_id: s.id, email: s.email, status: "queued" }))
+    );
+  }
+  await admin.from("campaigns").update({ status: "sending", total: (subs || []).length }).eq("id", campaignId);
+  return { ok: true, queued: targets.length };
+}
+
+// Process up to `max` queued sends for one campaign. Returns progress so the worker can chain.
+export async function processSendQueue(max = 40) {
+  if (!resend) return { done: true };
+  const admin = createAdminClient();
+  const { data: q } = await admin
+    .from("campaign_sends")
+    .select("id, campaign_id, email, subscriber_id")
+    .eq("status", "queued")
+    .order("created_at")
+    .limit(max);
+  if (!q || q.length === 0) return { processed: 0, done: true };
+
+  const campaignId = q[0].campaign_id;
+  const batch = q.filter((r) => r.campaign_id === campaignId);
+  const { data: c } = await admin.from("campaigns").select("*").eq("id", campaignId).single();
+  const { data: subs } = await admin.from("subscribers").select("id, unsub_token").in("id", batch.map((b) => b.subscriber_id));
+  const tokenBy = new Map((subs || []).map((s) => [s.id, s.unsub_token]));
+
+  const payload = batch.map((b) => {
+    const token = tokenBy.get(b.subscriber_id) || "";
+    return {
+      from: FROM_NEWS,
+      to: b.email,
+      replyTo: REPLY_TO,
+      subject: c.subject || c.name,
+      html: newsletterHtml({ subject: c.subject, preheader: c.preheader, body: c.body_html, unsubUrl: unsubFor(token) }),
+      headers: listHeaders(token),
+    };
+  });
+  let ids = [];
+  try {
+    const res = await resend.batch.send(payload);
+    ids = res?.data?.data || [];
+  } catch (e) {
+    console.error("queue batch failed:", e?.message);
+  }
+  const now = new Date().toISOString();
+  let sent = 0;
+  for (let i = 0; i < batch.length; i++) {
+    const id = ids[i]?.id || null;
+    if (id) sent++;
+    await admin.from("campaign_sends").update({ status: id ? "sent" : "failed", resend_id: id, sent_at: now }).eq("id", batch[i].id);
+  }
+  if (sent) await admin.from("campaigns").update({ sent: (c.sent || 0) + sent }).eq("id", campaignId);
+
+  const { count: remaining } = await admin
+    .from("campaign_sends")
+    .select("id", { count: "exact", head: true })
+    .eq("campaign_id", campaignId)
+    .eq("status", "queued");
+  const done = (remaining ?? 0) === 0;
+  if (done) await admin.from("campaigns").update({ status: "sent", sent_at: now }).eq("id", campaignId);
+  return { processed: batch.length, sent, campaignId, remaining: remaining ?? 0, done };
+}
+
 // Enroll one subscriber into every active drip and schedule each step via Resend.
 export async function enrollSubscriberInDrips(gymId, subscriber) {
   if (!resend) return;

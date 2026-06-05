@@ -1,7 +1,46 @@
 "use client";
-import { useActionState } from "react";
+import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { sendNewsletter } from "@/app/beheer/newsletter-actions";
 import { runActivationNow } from "@/app/beheer/activation-actions";
+
+// Live send-progress bar — polls while the queue drains.
+export function SendProgress({ id, initial }) {
+  const [c, setC] = useState(initial);
+  const router = useRouter();
+  useEffect(() => {
+    if (c.status !== "sending") return;
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/campaign-progress?id=${id}`, { cache: "no-store" });
+        if (!r.ok) return;
+        const d = await r.json();
+        setC(d);
+        if (d.status !== "sending") { clearInterval(t); router.refresh(); }
+      } catch {}
+    }, 3000);
+    return () => clearInterval(t);
+  }, [id, c.status, router]);
+
+  const total = c.total || 0;
+  const sent = c.sent || 0;
+  const pctv = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
+  const sending = c.status === "sending";
+  return (
+    <div className="rounded-2xl border border-borderc bg-white p-6">
+      <div className="flex items-center justify-between">
+        <h2 className="font-black text-brand">{sending ? "Aan het verzenden…" : "Verzonden ✓"}</h2>
+        <span className="text-sm font-bold text-brand">{sent} / {total}</span>
+      </div>
+      <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-paper">
+        <div className={"h-full rounded-full bg-accent transition-all duration-500" + (sending ? " animate-pulse" : "")} style={{ width: pctv + "%" }} />
+      </div>
+      <p className="mt-2 text-xs text-brand/50">
+        {sending ? "De nieuwsbrief wordt in batches verstuurd in de achtergrond — je kan deze pagina sluiten." : "Alle e-mails zijn verstuurd."}
+      </p>
+    </div>
+  );
+}
 
 // Run an activation campaign now (confirm + inline result).
 export function RunActivationButton({ id, matches }) {
@@ -18,21 +57,26 @@ export function RunActivationButton({ id, matches }) {
   );
 }
 
-// Send a newsletter with a confirm + inline result.
+// Queue a newsletter (drains in the background) — confirm, then refresh into the progress view.
 export function SendNewsletterButton({ id, count }) {
-  const [state, action, pending] = useActionState(async (_p, fd) => sendNewsletter(fd), null);
+  const router = useRouter();
+  const [state, action, pending] = useActionState(async (_p, fd) => {
+    const r = await sendNewsletter(fd);
+    if (r?.ok) router.refresh();
+    return r;
+  }, null);
   return (
     <form
       action={action}
-      onSubmit={(e) => { if (!confirm(`Nieuwsbrief nu verzenden naar ${count} abonnees?`)) e.preventDefault(); }}
+      onSubmit={(e) => { if (!confirm(`Nieuwsbrief verzenden naar ${count} abonnees? Hij wordt in de achtergrond verstuurd.`)) e.preventDefault(); }}
       className="mt-4"
     >
       <input type="hidden" name="id" value={id} />
       <button disabled={pending || count === 0} className="w-full rounded-full bg-accent py-3 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">
-        {pending ? "Verzenden…" : `Verstuur naar ${count} abonnees`}
+        {pending ? "In wachtrij plaatsen…" : `Verstuur naar ${count} abonnees`}
       </button>
       {state?.error && <p className="mt-2 text-sm font-semibold text-red-500">{state.error}</p>}
-      {state?.ok && <p className="mt-2 text-sm font-semibold text-accentdark">Verzonden naar {state.sent} abonnees ✓</p>}
+      {state?.ok && <p className="mt-2 text-sm font-semibold text-accentdark">{state.queued} e-mails in de wachtrij — verzenden gestart ✓</p>}
     </form>
   );
 }

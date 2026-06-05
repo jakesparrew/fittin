@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { updateNewsletter, deleteCampaign, addDripStep, deleteDripStep, setDripStatus, enrollAllInDrip } from "../../newsletter-actions";
-import { SendNewsletterButton, ConfirmSubmit } from "@/components/admin/CampaignControls";
+import { SendNewsletterButton, ConfirmSubmit, SendProgress } from "@/components/admin/CampaignControls";
 
 export const dynamic = "force-dynamic";
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) + "%" : "—");
@@ -56,6 +56,12 @@ export default async function CampaignDetail({ params }) {
               <Stat label="Geopend" value={c.opened} sub={pct(c.opened, c.sent)} accent />
               <Stat label="Geklikt" value={c.clicked} sub={pct(c.clicked, c.sent)} />
               <Stat label="Bounces" value={c.bounced} sub={pct(c.bounced, c.sent)} />
+            </div>
+          )}
+
+          {c.status === "sending" && (
+            <div className="mt-6">
+              <SendProgress id={c.id} initial={{ status: c.status, total: c.total, sent: c.sent }} />
             </div>
           )}
 

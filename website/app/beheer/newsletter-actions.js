@@ -1,9 +1,18 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { requireStaff } from "@/lib/staff";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendNewsletterCampaign, enrollSubscriberInDrips } from "@/lib/newsletter";
+import { queueNewsletter, enrollSubscriberInDrips } from "@/lib/newsletter";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+function kickWorker() {
+  const secret = process.env.CRON_SECRET;
+  after(async () => {
+    try { await fetch(`${SITE}/api/queue/process${secret ? `?key=${encodeURIComponent(secret)}` : ""}`, { cache: "no-store" }); } catch {}
+  });
+}
 
 const num = (v, d = 0) => {
   const n = parseInt(v, 10);
@@ -53,10 +62,12 @@ export async function sendNewsletter(formData) {
   const { error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
-  const res = await sendNewsletterCampaign(id);
+  const res = await queueNewsletter(id); // fast: just queues
+  if (res.error) return res;
+  kickWorker(); // drain in paced background batches
   revalidatePath(`/beheer/nieuwsbrief/${id}`);
   revalidatePath("/beheer/nieuwsbrief");
-  return res;
+  return { ...res, queued: res.queued };
 }
 
 export async function deleteCampaign(formData) {
