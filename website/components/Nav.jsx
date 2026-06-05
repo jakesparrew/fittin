@@ -7,6 +7,7 @@ const links = [
   { href: "/degym", label: "De gym" },
   { href: "/personal-training", label: "Personal training" },
   { href: "/boeken", label: "Online boeken" },
+  { href: "/calorieen-berekenen", label: "Calorieën berekenen" },
 ];
 
 export default function Nav() {
