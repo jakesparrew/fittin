@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionProfile, roleHome } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -9,6 +11,15 @@ export const runtime = "nodejs";
 export async function GET() {
   const { user, profile } = await getSessionProfile();
   if (!user) return NextResponse.json({ loggedIn: false }, { headers: { "Cache-Control": "no-store" } });
+
+  // Auto-redeem a referral code carried over from a buddy-invite signup (best-effort, once).
+  if (profile?.pending_referral) {
+    try {
+      const supabase = await createClient();
+      await supabase.rpc("redeem_referral", { p_code: profile.pending_referral });
+    } catch {}
+    await createAdminClient().from("profiles").update({ pending_referral: null }).eq("id", user.id);
+  }
   return NextResponse.json(
     {
       loggedIn: true,

@@ -33,6 +33,11 @@ export async function authAction(_prevState, formData) {
     });
     if (error) return { error: error.message };
     await enrollUserInDrips(data.user.id); // start any active welcome drip
+    const ref = String(formData.get("ref") || "").trim();
+    if (ref) {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      await createAdminClient().from("profiles").update({ pending_referral: ref }).eq("id", data.user.id);
+    }
     if (!data.session) return { info: "Bevestig je e-mail via de link die we je net stuurden, en log dan in." };
     redirect(await destination(supabase, data.user.id, next));
   }

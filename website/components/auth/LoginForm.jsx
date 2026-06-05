@@ -11,7 +11,8 @@ export default function LoginForm() {
   const params = useSearchParams();
   const nextUrl = params.get("next") || "/account";
   const urlError = params.get("error");
-  const [mode, setMode] = useState(params.get("mode") === "signup" ? "signup" : "login"); // 'login' | 'signup'
+  const refCode = params.get("ref") || "";
+  const [mode, setMode] = useState(params.get("mode") === "signup" || refCode ? "signup" : "login"); // 'login' | 'signup'
   const [state, formAction, pending] = useActionState(authAction, {});
   const [googleErr, setGoogleErr] = useState("");
 
@@ -72,9 +73,16 @@ export default function LoginForm() {
             <span className="h-px flex-1 bg-borderc" /> of <span className="h-px flex-1 bg-borderc" />
           </div>
 
+          {refCode && mode === "signup" && (
+            <div className="mt-4 rounded-2xl bg-accent/10 p-3 text-sm font-semibold text-accentdark">
+              Je bent uitgenodigd met vriendcode <span className="font-black">{refCode}</span> — jullie krijgen allebei een gratis sessie.
+            </div>
+          )}
+
           <form action={formAction} className="space-y-3">
             <input type="hidden" name="mode" value={mode} />
             <input type="hidden" name="next" value={nextUrl} />
+            <input type="hidden" name="ref" value={refCode} />
             {mode === "signup" && <Field label="Naam" name="name" type="text" autoComplete="name" required />}
             <Field label="E-mail" name="email" type="email" autoComplete="email" required />
             <PasswordField autoComplete={mode === "signup" ? "new-password" : "current-password"} />
