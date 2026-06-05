@@ -5,9 +5,10 @@ import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cancelBookingAction } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
-import { openBillingPortal } from "../lidmaatschap/actions";
+import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
 import AccountSettings from "@/components/account/AccountSettings";
+import AccountLinking from "@/components/account/AccountLinking";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -99,6 +100,29 @@ export default async function AccountPage({ searchParams }) {
             accent={!profile?.welcome_code_used}
           />
         </div>
+
+        {!profile?.welcome_code_used && profile?.welcome_status !== "used" && (
+          <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
+            {profile?.welcome_status === "eligible" ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="font-bold text-brand">🎁 Je gratis eerste sessie staat klaar!</p>
+                <Link href="/boeken" className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Boek gratis sessie</Link>
+              </div>
+            ) : profile?.welcome_status === "blocked" ? (
+              <p className="text-sm font-semibold text-brand/70">Je gratis sessie is al gebruikt — deze kaart heeft al eerder een gratis sessie geactiveerd.</p>
+            ) : (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="font-bold text-brand">🎁 Activeer je gratis eerste sessie</p>
+                  <p className="mt-1 text-sm text-brand/60">Voeg eenmalig een kaart toe (geen kosten). Zo houden we de gratis sessie eerlijk — één per persoon.</p>
+                </div>
+                <form action={activateWelcome}>
+                  <button className="rounded-full bg-brand px-6 py-3 text-sm font-bold text-white transition hover:opacity-90">Activeer gratis sessie</button>
+                </form>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold">
           <Link href="/boeken" className="rounded-full bg-accent px-5 py-2.5 text-brand transition hover:opacity-90">+ Boek een sessie</Link>
@@ -236,6 +260,7 @@ export default async function AccountPage({ searchParams }) {
         )}
 
         <AccountSettings userId={user.id} initialName={profile?.full_name || ""} initialPhone={profile?.phone || ""} />
+        <AccountLinking providers={user.app_metadata?.providers || (user.app_metadata?.provider ? [user.app_metadata.provider] : [])} />
       </div>
     </main>
   );

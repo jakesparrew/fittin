@@ -54,6 +54,31 @@ export async function buyPackage(formData) {
   return { error: "Onbekend pakket." };
 }
 
+// Activate the free FittinWelcome session by putting a card on file (no charge). The card's
+// fingerprint is checked in the webhook so the same card can't farm free sessions on many accounts.
+export async function activateWelcome() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/account");
+  const { data: profile } = await supabase.from("profiles").select("welcome_status, welcome_code_used").eq("id", user.id).single();
+  if (!profile || profile.welcome_code_used || profile.welcome_status !== "unclaimed") redirect("/account");
+  if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };
+
+  const customer = await getOrCreateCustomer(supabase, user.id, user.email);
+  const session = await stripe.checkout.sessions.create({
+    mode: "setup",
+    customer,
+    payment_method_types: ["card"],
+    metadata: { kind: "welcome", user_id: user.id },
+    setup_intent_data: { metadata: { kind: "welcome", user_id: user.id } },
+    success_url: `${siteUrl()}/account?welkom=1`,
+    cancel_url: `${siteUrl()}/account?welkom=cancel`,
+  });
+  redirect(session.url);
+}
+
 // Open the Stripe billing portal so members can manage/cancel their subscription + cards.
 export async function openBillingPortal() {
   const supabase = await createClient();

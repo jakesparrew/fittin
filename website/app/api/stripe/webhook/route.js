@@ -102,12 +102,35 @@ async function upsertMembership(admin, sub) {
   else await admin.from("memberships").insert(row);
 }
 
+// Free-session activation: dedupe by card fingerprint so the same card can't claim a
+// FittinWelcome on multiple accounts.
+async function handleWelcomeSetup(admin, session) {
+  const userId = session.metadata?.user_id;
+  const setupIntentId = session.setup_intent;
+  if (!userId || !setupIntentId) return;
+  const si = await stripe.setupIntents.retrieve(setupIntentId);
+  if (!si.payment_method) return;
+  const pm = await stripe.paymentMethods.retrieve(si.payment_method);
+  const fingerprint = pm.card?.fingerprint;
+  if (!fingerprint) return;
+
+  const { error: insErr } = await admin.from("welcome_claims").insert({ fingerprint, user_id: userId });
+  if (insErr) {
+    // fingerprint already used → this card already claimed a free session elsewhere
+    await admin.from("profiles").update({ welcome_status: "blocked" }).eq("id", userId);
+  } else {
+    await admin.from("profiles").update({ welcome_status: "eligible" }).eq("id", userId);
+  }
+}
+
 async function handleEvent(event, admin) {
   const obj = event.data.object;
   switch (event.type) {
     case "checkout.session.completed": {
       if (obj.metadata?.kind === "punchcard") {
         await grantCredits(admin, obj.metadata.user_id, parseInt(obj.metadata.credits, 10) || 0, "aankoop", true);
+      } else if (obj.metadata?.kind === "welcome" || obj.mode === "setup") {
+        await handleWelcomeSetup(admin, obj);
       } else if (obj.metadata?.booking_id) {
         await markBookingPaid(admin, obj.metadata.booking_id, obj.payment_intent);
       }

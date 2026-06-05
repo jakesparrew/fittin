@@ -62,7 +62,7 @@ export default async function BoekenPage({ searchParams }) {
       coaches={coaches || []}
       availability={availability || []}
       isLoggedIn={!!user}
-      welcomeAvailable={!!(profile && !profile.welcome_code_used)}
+      welcomeAvailable={!!(profile && profile.welcome_status === "eligible" && !profile.welcome_code_used)}
       creditBalance={credits}
       paymentCanceled={sp.geannuleerd === "1"}
     />

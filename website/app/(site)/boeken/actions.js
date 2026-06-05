@@ -48,9 +48,14 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, starts_at, ends_at, persons, price_cents, paid, services(name)")
+    .select("id, starts_at, ends_at, persons, price_cents, paid, payment_source, services(name)")
     .eq("id", bookingId)
     .single();
+
+  // Mark the FittinWelcome free session as used (also blocks re-claiming with a new card).
+  if (booking?.payment_source === "gratis_code") {
+    await supabase.from("profiles").update({ welcome_status: "used" }).eq("id", user.id);
+  }
 
   revalidatePath("/account");
   revalidatePath("/boeken");
