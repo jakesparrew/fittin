@@ -22,9 +22,9 @@ const usps = [
 ];
 
 const steps = [
-  ["Boek je moment", "Reserveer in enkele tikken — alleen of met vrienden, dag en nacht.", "01"],
-  ["Open de deur", "Je boeking opent de deur via de app. Geen sleutel, geen personeel.", "02"],
-  ["Train op jouw manier", "De hele zaal voor jou. Met je coach of helemaal zelfstandig.", "03"],
+  ["Maak je gratis account", "In 30 seconden geregeld — met e-mail of met Google. Geen lidgeld, geen verplichtingen.", "01"],
+  ["Boek je eerste uur — gratis", "Reserveer een moment dat jou past en gebruik de code FittinWelcome voor je eerste gratis sessie.", "02"],
+  ["Open de deur & train", "Je boeking opent de deur via de app. De hele zaal voor jou — alleen, met vrienden of met coach.", "03"],
 ];
 
 export default function Home() {
@@ -41,7 +41,9 @@ export default function Home() {
           loop
           playsInline
           preload="auto"
+          poster="/video-poster.jpg"
         >
+          <source src="/video.webm" type="video/webm" />
           <source src="/video.mp4" type="video/mp4" />
         </video>
         {/* Semi-transparent dark + brand overlay so the video shows through but text stays legible */}
@@ -74,13 +76,16 @@ export default function Home() {
           </Reveal>
           <Reveal delay={240}>
             <div className="mt-10 flex flex-wrap gap-4">
-              <Link href="/boeken" className="shine rounded-full bg-accent px-8 py-4 text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40">
+              <Link href="/login?mode=signup" className="shine rounded-full bg-accent px-8 py-4 text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40">
+                Maak gratis account
+              </Link>
+              <Link href="/boeken" className="rounded-full border-2 border-white/30 px-8 py-4 text-lg font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10">
                 Reserveer de gym
               </Link>
-              <Link href="/personal-training" className="rounded-full border-2 border-white/30 px-8 py-4 text-lg font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10">
-                Gratis proeftraining
-              </Link>
             </div>
+            <p className="mt-4 text-sm font-semibold text-white/60">
+              Je eerste uur is <span className="font-black text-accent">gratis</span> met de code <span className="font-black text-white">FittinWelcome</span> · geen lidgeld, geen verplichtingen.
+            </p>
           </Reveal>
           <Reveal delay={320}>
             <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-3 text-sm font-bold text-white/60">
@@ -167,9 +172,9 @@ export default function Home() {
         <div className="animate-floaty-slow pointer-events-none absolute -right-24 top-10 h-80 w-80 rounded-full bg-accent/20 blur-2xl" />
         <div className="relative mx-auto max-w-6xl px-5 py-24">
           <Reveal>
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-accent">Zo werkt het</p>
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-accent">Zo begin je</p>
             <h2 className="mt-3 max-w-2xl text-4xl font-black leading-tight md:text-5xl">
-              De gym die <span className="text-accent">zichzelf opent</span>
+              Van account tot trainen in <span className="text-accent">3 stappen</span>
             </h2>
           </Reveal>
           <div className="mt-14 grid gap-6 md:grid-cols-3">
@@ -184,9 +189,14 @@ export default function Home() {
             ))}
           </div>
           <Reveal delay={120}>
-            <Link href="/boeken" className="mt-12 inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 text-lg font-black text-brand transition hover:-translate-y-0.5 hover:opacity-90">
-              Start nu <span aria-hidden>→</span>
-            </Link>
+            <div className="mt-12 flex flex-wrap items-center gap-4">
+              <Link href="/login?mode=signup" className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 text-lg font-black text-brand transition hover:-translate-y-0.5 hover:opacity-90">
+                Maak gratis account <span aria-hidden>→</span>
+              </Link>
+              <Link href="/personal-training" className="inline-flex items-center gap-2 rounded-full border-2 border-white/30 px-7 py-4 font-bold text-white transition hover:border-white hover:bg-white/10">
+                Liever met coach? Gratis proeftraining
+              </Link>
+            </div>
           </Reveal>
         </div>
       </section>

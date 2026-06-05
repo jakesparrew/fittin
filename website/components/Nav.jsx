@@ -73,9 +73,15 @@ export default function Nav() {
           ) : (
             <Link href="/login" className="hidden text-sm font-bold text-brand/70 transition hover:text-brand sm:block">Inloggen</Link>
           )}
-          <Link href="/boeken" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
-            Reserveer de gym
-          </Link>
+          {account ? (
+            <Link href="/boeken" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
+              Reserveer de gym
+            </Link>
+          ) : (
+            <Link href="/login?mode=signup" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
+              Word lid
+            </Link>
+          )}
           <button onClick={() => setOpen(!open)} className="rounded-lg border border-borderc p-2 md:hidden" aria-label="Menu">
             <span className="mb-1 block h-0.5 w-5 bg-brand"></span>
             <span className="mb-1 block h-0.5 w-5 bg-brand"></span>

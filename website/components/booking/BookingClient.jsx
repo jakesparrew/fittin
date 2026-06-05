@@ -281,7 +281,15 @@ export default function BookingClient({
                 {busy ? "Even geduld…" : !selected ? "Kies eerst een moment" : "Bevestig boeking"}
               </button>
             ) : (
-              <Link href="/login?next=/boeken" className="mt-6 block w-full rounded-full bg-accent py-3.5 text-center font-bold text-brand transition hover:opacity-90">Log in om te boeken</Link>
+              <div className="mt-6 space-y-2">
+                <Link href="/login?mode=signup&next=/boeken" className="block w-full rounded-full bg-accent py-3.5 text-center font-bold text-brand transition hover:opacity-90">
+                  Maak account & boek je eerste uur gratis
+                </Link>
+                <p className="text-center text-xs text-lav">
+                  Al een account?{" "}
+                  <Link href="/login?next=/boeken" className="font-bold text-white/80 hover:underline">Inloggen</Link>
+                </p>
+              </div>
             )}
             <p className="mt-3 text-center text-xs text-lav">Kosteloos annuleren tot 24u vooraf.</p>
           </div>

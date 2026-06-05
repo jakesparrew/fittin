@@ -11,7 +11,7 @@ export default function LoginForm() {
   const params = useSearchParams();
   const nextUrl = params.get("next") || "/account";
   const urlError = params.get("error");
-  const [mode, setMode] = useState("login"); // 'login' | 'signup'
+  const [mode, setMode] = useState(params.get("mode") === "signup" ? "signup" : "login"); // 'login' | 'signup'
   const [state, formAction, pending] = useActionState(authAction, {});
   const [googleErr, setGoogleErr] = useState("");
 
