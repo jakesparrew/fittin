@@ -1,71 +1,33 @@
 "use client";
 import { useState } from "react";
+import { useActionState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
+import { authAction } from "@/app/(site)/login/actions";
 
 export default function LoginForm() {
-  const router = useRouter();
   const params = useSearchParams();
   const nextUrl = params.get("next") || "/account";
-
   const [mode, setMode] = useState("login"); // 'login' | 'signup'
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(params.get("error") ? "Inloggen mislukt, probeer opnieuw." : "");
-  const [info, setInfo] = useState("");
+  const [state, formAction, pending] = useActionState(authAction, {});
+  const [googleErr, setGoogleErr] = useState("");
 
   const siteUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (typeof window !== "undefined" ? window.location.origin : "");
+    process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
 
   async function handleGoogle() {
-    setError("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(nextUrl)}` },
-    });
-    if (error) setError(error.message);
-  }
-
-  async function handleEmail(e) {
-    e.preventDefault();
-    setError("");
-    setInfo("");
-    setBusy(true);
-    const supabase = createClient();
+    setGoogleErr("");
     try {
-      if (mode === "signup") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: { full_name: name },
-            emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(nextUrl)}`,
-          },
-        });
-        if (error) throw error;
-        if (data.session) {
-          router.push(nextUrl);
-          router.refresh();
-        } else {
-          setInfo("Bevestig je e-mail via de link die we je net stuurden, en log dan in.");
-          setMode("login");
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        router.push(nextUrl);
-        router.refresh();
-      }
-    } catch (err) {
-      setError(err?.message || "Er ging iets mis.");
-    } finally {
-      setBusy(false);
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(nextUrl)}` },
+      });
+      if (error) setGoogleErr(error.message);
+    } catch (e) {
+      setGoogleErr("Google login is even niet beschikbaar.");
     }
   }
 
@@ -76,9 +38,7 @@ export default function LoginForm() {
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">
             {mode === "login" ? "Welkom terug" : "Word lid"}
           </p>
-          <h1 className="mt-2 text-3xl font-black">
-            {mode === "login" ? "Inloggen" : "Account aanmaken"}
-          </h1>
+          <h1 className="mt-2 text-3xl font-black">{mode === "login" ? "Inloggen" : "Account aanmaken"}</h1>
           <p className="mt-2 text-sm leading-relaxed text-brand/60">
             {mode === "login"
               ? "Log in om de gym te reserveren en je boekingen te beheren."
@@ -87,8 +47,7 @@ export default function LoginForm() {
 
           {!isSupabaseConfigured && (
             <div className="mt-5 rounded-2xl bg-accent/10 p-4 text-xs leading-relaxed text-accentdark">
-              Supabase is nog niet gekoppeld. Vul de sleutels in <code>.env.local</code> in en
-              herstart de dev-server om in te loggen.
+              Supabase is nog niet gekoppeld. Vul de sleutels in <code>.env.local</code> in.
             </div>
           )}
 
@@ -100,25 +59,18 @@ export default function LoginForm() {
             <GoogleIcon />
             Verder met Google
           </button>
+          {googleErr && <p className="mt-2 text-sm font-semibold text-red-600">{googleErr}</p>}
 
           <div className="my-5 flex items-center gap-3 text-xs font-semibold uppercase tracking-widest text-lav">
             <span className="h-px flex-1 bg-borderc" /> of <span className="h-px flex-1 bg-borderc" />
           </div>
 
-          <form onSubmit={handleEmail} className="space-y-3">
-            {mode === "signup" && (
-              <Field label="Naam" value={name} onChange={setName} type="text" autoComplete="name" required />
-            )}
-            <Field label="E-mail" value={email} onChange={setEmail} type="email" autoComplete="email" required />
-            <Field
-              label="Wachtwoord"
-              value={password}
-              onChange={setPassword}
-              type="password"
-              reveal
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              required
-            />
+          <form action={formAction} className="space-y-3">
+            <input type="hidden" name="mode" value={mode} />
+            <input type="hidden" name="next" value={nextUrl} />
+            {mode === "signup" && <Field label="Naam" name="name" type="text" autoComplete="name" required />}
+            <Field label="E-mail" name="email" type="email" autoComplete="email" required />
+            <PasswordField autoComplete={mode === "signup" ? "new-password" : "current-password"} />
 
             {mode === "login" && (
               <div className="text-right">
@@ -128,26 +80,22 @@ export default function LoginForm() {
               </div>
             )}
 
-            {error && <p className="text-sm font-semibold text-red-600">{error}</p>}
-            {info && <p className="text-sm font-semibold text-accentdark">{info}</p>}
+            {state?.error && <p className="text-sm font-semibold text-red-600">{state.error}</p>}
+            {state?.info && <p className="text-sm font-semibold text-accentdark">{state.info}</p>}
 
             <button
               type="submit"
-              disabled={busy || !isSupabaseConfigured}
+              disabled={pending || !isSupabaseConfigured}
               className="w-full rounded-full bg-accent py-3.5 font-bold text-brand transition hover:opacity-90 disabled:opacity-40"
             >
-              {busy ? "Even geduld…" : mode === "login" ? "Inloggen" : "Account aanmaken"}
+              {pending ? "Even geduld…" : mode === "login" ? "Inloggen" : "Account aanmaken"}
             </button>
           </form>
 
           <p className="mt-5 text-center text-sm text-brand/60">
             {mode === "login" ? "Nog geen account?" : "Al een account?"}{" "}
             <button
-              onClick={() => {
-                setMode(mode === "login" ? "signup" : "login");
-                setError("");
-                setInfo("");
-              }}
+              onClick={() => setMode(mode === "login" ? "signup" : "login")}
               className="font-bold text-accentdark hover:underline"
             >
               {mode === "login" ? "Word lid" : "Inloggen"}
@@ -163,51 +111,46 @@ export default function LoginForm() {
   );
 }
 
-function Field({ label, value, onChange, reveal, type, ...rest }) {
-  const [show, setShow] = useState(false);
-  const inputType = reveal ? (show ? "text" : "password") : type;
+function Field({ label, ...rest }) {
   return (
     <label className="block">
       <span className="mb-1 block text-sm font-bold text-brand">{label}</span>
-      <div className="relative">
-        <input
-          {...rest}
-          type={inputType}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={
-            "w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 text-brand outline-none transition focus:border-accent " +
-            (reveal ? "pr-12" : "")
-          }
-        />
-        {reveal && (
-          <button
-            type="button"
-            tabIndex={-1}
-            onClick={() => setShow((s) => !s)}
-            aria-label={show ? "Verberg wachtwoord" : "Toon wachtwoord"}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-brand/40 transition hover:text-brand"
-          >
-            <EyeIcon off={show} />
-          </button>
-        )}
-      </div>
+      <input
+        {...rest}
+        className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 text-brand outline-none transition focus:border-accent"
+      />
     </label>
   );
 }
 
-export function EyeIcon({ off }) {
-  return off ? (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M6.61 6.61A18.45 18.45 0 0 0 1 12s4 8 11 8a9.12 9.12 0 0 0 5.39-1.61" />
-      <line x1="2" y1="2" x2="22" y2="22" />
-      <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
-    </svg>
-  ) : (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
+function PasswordField({ autoComplete }) {
+  const [show, setShow] = useState(false);
+  return (
+    <label className="block">
+      <span className="mb-1 block text-sm font-bold text-brand">Wachtwoord</span>
+      <div className="relative">
+        <input
+          name="password"
+          type={show ? "text" : "password"}
+          autoComplete={autoComplete}
+          required
+          className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 pr-12 text-brand outline-none transition focus:border-accent"
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          onClick={() => setShow((s) => !s)}
+          aria-label={show ? "Verberg wachtwoord" : "Toon wachtwoord"}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-brand/40 transition hover:text-brand"
+        >
+          {show ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M6.61 6.61A18.45 18.45 0 0 0 1 12s4 8 11 8a9.12 9.12 0 0 0 5.39-1.61" /><line x1="2" y1="2" x2="22" y2="22" /><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /></svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
+          )}
+        </button>
+      </div>
+    </label>
   );
 }
 

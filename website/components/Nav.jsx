@@ -15,17 +15,27 @@ export default function Nav() {
   const [account, setAccount] = useState(null);
 
   useEffect(() => {
-    const supabase = createClient();
     let active = true;
-    async function load() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { if (active) setAccount(null); return; }
-      const { data: profile } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).single();
-      if (active) setAccount({ name: profile?.full_name || "Account", role: profile?.role || "lid" });
-    }
-    load();
-    const { data: sub } = supabase.auth.onAuthStateChange(() => load());
-    return () => { active = false; sub.subscription.unsubscribe(); };
+    // Instant logged-in signal from the auth cookie (no network → never hangs).
+    const hasAuthCookie = document.cookie.split(";").some((c) => /sb-.*-auth-token/.test(c.trim()));
+    if (hasAuthCookie) setAccount((a) => a || { name: "Account", role: "lid" });
+
+    const supabase = createClient();
+    // Best-effort enrich with name + role; time-boxed so a slow client never blocks the nav.
+    Promise.race([
+      (async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return null;
+        const { data: profile } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).single();
+        return { name: profile?.full_name || "Account", role: profile?.role || "lid" };
+      })(),
+      new Promise((res) => setTimeout(() => res(undefined), 3000)),
+    ])
+      .then((res) => {
+        if (active && res !== undefined) setAccount(res); // null = logged out; object = enrich
+      })
+      .catch(() => {});
+    return () => { active = false; };
   }, []);
 
   const isStaff = account && ["coach", "beheerder"].includes(account.role);
