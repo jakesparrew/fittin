@@ -8,6 +8,7 @@ import { redeemReferral, signupEvent, cancelSignup } from "./actions";
 import { acceptBuddy, removeBuddy } from "./buddy-actions";
 import BuddyInvite from "@/components/community/BuddyInvite";
 import ReferralInvite from "@/components/community/ReferralInvite";
+import ShareRank from "@/components/ShareRank";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Community | Fittin'" };
@@ -33,6 +34,23 @@ export default async function Community() {
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", now.toISOString()),
     admin.from("events").select("*, event_signups(id, user_id)").eq("gym_id", profile.gym_id).gte("starts_at", today.toISOString()).order("starts_at"),
   ]);
+
+  // All confirmed bookings (last 120d) for per-challenge leaderboards.
+  const { data: gymBookings } = await admin
+    .from("bookings")
+    .select("user_id, starts_at, member:profiles!bookings_user_id_fkey(full_name)")
+    .eq("gym_id", profile.gym_id).eq("status", "bevestigd")
+    .gte("starts_at", new Date(Date.now() - 120 * 86400000).toISOString());
+  const challengeBoard = (c) => {
+    const from = c.starts_on ? new Date(c.starts_on) : new Date(0);
+    const to = c.ends_on ? new Date(new Date(c.ends_on).getTime() + 86400000) : new Date(8640000000000000);
+    const cc = {};
+    for (const b of gymBookings || []) {
+      const t = new Date(b.starts_at);
+      if (t >= from && t < to && t <= now) (cc[b.user_id] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++;
+    }
+    return Object.entries(cc).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
+  };
 
   // Leaderboard
   const counts = {};
@@ -143,9 +161,9 @@ export default async function Community() {
 
           {/* Leaderboard */}
           <section className="rounded-3xl border border-borderc bg-white p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="font-black text-brand">Leaderboard</h2>
-              <span className="text-xs font-bold text-brand/40">deze maand</span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 className="font-black text-brand">Leaderboard <span className="text-xs font-bold text-brand/40">· deze maand</span></h2>
+              {myRank >= 0 && <ShareRank />}
             </div>
             <div className="mt-4 space-y-2">
               {board.slice(0, 6).map((r, i) => (
@@ -169,16 +187,28 @@ export default async function Community() {
               {(challenges || []).map((c) => {
                 const prog = Math.min(challengeProgress(c), c.goal_count);
                 const pct = c.goal_count ? Math.round((prog / c.goal_count) * 100) : 0;
+                const cb = challengeBoard(c);
+                const done = prog >= c.goal_count && c.goal_count > 0;
+                const myCi = cb.findIndex((r) => r.id === user.id);
                 return (
                   <div key={c.id} className="rounded-2xl bg-paper p-4">
                     <div className="flex justify-between text-sm">
-                      <span className="font-bold text-brand">{c.name}</span>
+                      <span className="font-bold text-brand">{c.name} {done && "🏆"}</span>
                       <span className="text-brand/50">+{c.reward_credits} sessies</span>
                     </div>
                     <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
-                      <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />
+                      <div className={"h-full rounded-full " + (done ? "bg-accentdark" : "bg-accent")} style={{ width: `${pct}%` }} />
                     </div>
-                    <p className="mt-1 text-xs text-brand/50">{prog} / {c.goal_count} {c.goal_type}</p>
+                    <p className="mt-1 text-xs text-brand/50">{prog} / {c.goal_count} {c.goal_type}{myCi >= 0 && ` · jij staat #${myCi + 1}`}</p>
+                    {cb.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        {cb.slice(0, 3).map((r, i) => (
+                          <span key={r.id} className={"rounded-full px-2.5 py-1 text-[11px] font-bold " + (r.id === user.id ? "bg-brand text-white" : "bg-white text-brand/70")}>
+                            {["🥇", "🥈", "🥉"][i]} {r.name?.split(" ")[0]} ({r.n})
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}

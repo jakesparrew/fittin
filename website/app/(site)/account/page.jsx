@@ -9,6 +9,7 @@ import { resumeCheckoutAction } from "../boeken/actions";
 import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
+import ShareRank from "@/components/ShareRank";
 import AccountSettings from "@/components/account/AccountSettings";
 import AccountLinking from "@/components/account/AccountLinking";
 
@@ -79,6 +80,20 @@ export default async function AccountPage({ searchParams }) {
     .maybeSingle();
   const myCoach = coachLink?.coach || null;
 
+  // Monthly leaderboard (this gym) + the member's rank.
+  const monthStartLb = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const { data: boardRows } = await admin
+    .from("bookings")
+    .select("user_id, member:profiles!bookings_user_id_fkey(full_name)")
+    .eq("gym_id", profile.gym_id)
+    .eq("status", "bevestigd")
+    .gte("starts_at", monthStartLb.toISOString())
+    .lt("starts_at", new Date().toISOString());
+  const lbCounts = {};
+  for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
+  const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
+  const myRank = leaderboard.findIndex((r) => r.id === user.id);
+
   const now = Date.now();
   const all = [...(bookings || []), ...invitedSessions];
   const doorActive = all.some(
@@ -144,6 +159,32 @@ export default async function AccountPage({ searchParams }) {
             <Link href="/training" className="rounded-full bg-paper px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-accent/15">Mijn training →</Link>
           </div>
         )}
+
+        {/* Leaderboard + share */}
+        <section className="mt-6 rounded-3xl border border-borderc bg-white p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-black text-brand">Leaderboard <span className="text-brand/40">· deze maand</span></h2>
+              <p className="text-sm text-brand/60">
+                {myRank >= 0 ? <>Je staat <span className="font-black text-accentdark">#{myRank + 1}</span> van de {leaderboard.length} leden.</> : "Boek een sessie deze maand om mee te doen."}
+              </p>
+            </div>
+            {myRank >= 0 && <ShareRank />}
+          </div>
+          <div className="mt-4 space-y-2">
+            {leaderboard.slice(0, 5).map((r, i) => (
+              <div key={r.id} className={"flex items-center justify-between rounded-xl px-3 py-2 text-sm " + (r.id === user.id ? "bg-brand text-white" : "bg-paper")}>
+                <span className="flex items-center gap-3">
+                  <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-white/20" : "bg-white")}>{i + 1}</span>
+                  <span className="font-bold">{r.name}</span>
+                </span>
+                <span className="font-black">{r.n}</span>
+              </div>
+            ))}
+            {leaderboard.length === 0 && <p className="text-sm text-brand/50">Nog geen sessies deze maand. Wees de eerste!</p>}
+            {myRank >= 5 && <p className="pt-1 text-center text-xs text-brand/50">Jij: #{myRank + 1} · {leaderboard[myRank].n} sessies</p>}
+          </div>
+        </section>
 
         {!profile?.welcome_code_used && profile?.welcome_status !== "used" && (
           <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
