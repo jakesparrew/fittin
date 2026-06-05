@@ -87,12 +87,13 @@ async function upsertMembership(admin, sub) {
   const { data: p } = await admin.from("profiles").select("gym_id").eq("id", userId).single();
   if (!p) return;
   const status = sub.status === "active" || sub.status === "trialing" ? "actief" : sub.status;
+  const periodEnd = sub.current_period_end || sub.items?.data?.[0]?.current_period_end || null;
   const row = {
     gym_id: p.gym_id,
     user_id: userId,
     stripe_sub_id: sub.id,
     status,
-    current_period_end: sub.current_period_end ? new Date(sub.current_period_end * 1000).toISOString() : null,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     cancel_at_period_end: !!sub.cancel_at_period_end,
     price_id: sub.items?.data?.[0]?.price?.id || null,
   };
@@ -121,15 +122,14 @@ async function handleEvent(event, admin) {
       await admin.from("memberships").update({ status: "geannuleerd" }).eq("stripe_sub_id", obj.id);
       return;
     case "invoice.paid": {
-      if (!obj.subscription) return; // only subscription invoices grant the monthly session
+      // Only subscription invoices grant the monthly included session.
+      // (Stripe's newer API moved the subscription ref off the invoice root, so we
+      //  key on billing_reason instead — robust across API versions.)
+      const reason = obj.billing_reason || "";
+      if (!reason.startsWith("subscription")) return;
       const prof = await profileFromCustomer(admin, obj.customer);
       if (!prof) return;
-      let credits = 1;
-      try {
-        const s = await stripe.subscriptions.retrieve(obj.subscription);
-        credits = parseInt(s.metadata?.credits, 10) || 1;
-      } catch {}
-      await grantCredits(admin, prof.id, credits, "abo");
+      await grantCredits(admin, prof.id, 1, "abo");
       return;
     }
     default:
