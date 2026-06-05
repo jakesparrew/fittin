@@ -32,6 +32,8 @@ export default async function BoekenPage({ searchParams }) {
   const from = new Date();
   from.setHours(0, 0, 0, 0);
   const to = new Date(from.getTime() + 8 * 86400000);
+  // Release abandoned unpaid slots before showing availability, so they're bookable again.
+  await supabase.rpc("expire_unpaid_bookings", { p_gym: gym.id });
   const { data: taken } = await supabase.rpc("gym_taken_slots", {
     p_gym: gym.id,
     p_from: from.toISOString(),

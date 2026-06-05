@@ -4,8 +4,23 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendSessionInvite } from "@/lib/email";
 import { validateDiscount, recordRedemption } from "@/lib/discounts";
+
+// Search gym members to invite to a session (name + id only — no contact details exposed).
+export async function searchMembersAction(q) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+  const { data: me } = await supabase.from("profiles").select("gym_id").eq("id", user.id).single();
+  if (!me) return [];
+  const admin = createAdminClient();
+  let query = admin.from("profiles").select("id, full_name").eq("gym_id", me.gym_id).neq("id", user.id).order("full_name").limit(8);
+  const term = String(q || "").trim();
+  if (term) query = query.ilike("full_name", `%${term}%`);
+  const { data } = await query;
+  return (data || []).map((p) => ({ id: p.id, name: p.full_name || "Lid" }));
+}
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -30,7 +45,7 @@ function checkoutParams(booking, email, chargeCents, codeId) {
 }
 
 // Creates the booking (slot held immediately). Free → confirm + email. Paid → Stripe Checkout URL.
-export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit, discountCode, buddyIds }) {
+export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit, discountCode, buddyIds, participantIds }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -54,9 +69,18 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     .eq("id", bookingId)
     .single();
 
-  // Bring accepted buddies along (their attendance counts as a visit for them).
-  if (Array.isArray(buddyIds) && buddyIds.length && booking) {
-    await supabase.rpc("add_booking_buddies", { p_booking: booking.id, p_buddies: buddyIds });
+  // Invite members along (capped at the booking's person count). Their attendance counts for them.
+  const invitees = (Array.isArray(participantIds) && participantIds.length ? participantIds : buddyIds) || [];
+  if (invitees.length && booking) {
+    await supabase.rpc("add_booking_participants", { p_booking: booking.id, p_users: invitees });
+    try {
+      const admin = createAdminClient();
+      const { data: people } = await admin.from("profiles").select("email, full_name").in("id", invitees);
+      const fromName = user.user_metadata?.full_name || "Een Fittin'-lid";
+      for (const p of people || []) {
+        if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at });
+      }
+    } catch {}
   }
 
   // Mark the FittinWelcome free session as used (also blocks re-claiming with a new card).

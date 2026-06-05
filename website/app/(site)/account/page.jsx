@@ -7,6 +7,7 @@ import { cancelBookingAction } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
 import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
+import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import AccountSettings from "@/components/account/AccountSettings";
 import AccountLinking from "@/components/account/AccountLinking";
 
@@ -40,9 +41,11 @@ export default async function AccountPage({ searchParams }) {
   const sp = (await searchParams) || {};
 
   const supabase = await createClient();
+  // Release any of this gym's abandoned unpaid slots first (so they show as cancelled + free up).
+  await supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id });
   const { data: bookings } = await supabase
     .from("bookings")
-    .select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, services(name,type)")
+    .select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, services(name,type)")
     .eq("user_id", user.id)
     .order("starts_at", { ascending: true });
 
@@ -65,6 +68,15 @@ export default async function AccountPage({ searchParams }) {
       now <= new Date(b.ends_at).getTime()
   );
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now);
+  // Pending payment: confirmed-but-unpaid 'los' bookings (20-min window from creation).
+  const pendingPay = upcoming
+    .filter((b) => !b.paid && b.payment_source === "los" && b.price_cents > 0)
+    .map((b) => ({
+      id: b.id,
+      name: b.services?.name || "Sessie",
+      price: b.price_cents,
+      deadline: new Date(new Date(b.created_at).getTime() + 20 * 60000).toISOString(),
+    }));
   const history = all
     .filter((b) => !(b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now))
     .reverse();
@@ -74,6 +86,8 @@ export default async function AccountPage({ searchParams }) {
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-4xl px-5 py-16">
+        {pendingPay.length > 0 && <PendingPaymentBanner items={pendingPay} />}
+
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>

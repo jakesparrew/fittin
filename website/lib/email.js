@@ -191,6 +191,26 @@ export async function sendEventSignup({ to, name, title, startsAt }) {
   );
 }
 
+// ---- Invited to a session (a member added you to their booking) ----
+export async function sendSessionInvite({ to, name, fromName, serviceName, startsAt, endsAt }) {
+  await send(
+    to,
+    `${fromName} nodigt je uit voor een sessie`,
+    shell({
+      title: "Je bent uitgenodigd voor een sessie 💪",
+      intro: `Hallo ${name || "daar"}, ${fromName} heeft je meegenomen naar een Fittin'-sessie:`,
+      rows: [
+        ["Sessie", serviceName],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt, endsAt)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Het bezoek telt mee voor jouw stats. Tot dan!</p>`,
+      cta: { href: `${SITE}/account`, label: "Mijn account" },
+    }),
+    FROM_BOOKING
+  );
+}
+
 // ---- Buddy request (to an existing member) ----
 export async function sendBuddyRequest({ to, name, fromName }) {
   await send(

@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBookingAction } from "@/app/(site)/boeken/actions";
+import { createBookingAction, searchMembersAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel } from "@/lib/time";
 
 const euro = (cents) => "€ " + (cents / 100).toFixed(2).replace(".", ",");
@@ -31,6 +31,9 @@ export default function BookingClient({
   const [useCredit, setUseCredit] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
   const [buddySel, setBuddySel] = useState([]);
+  const [invitees, setInvitees] = useState([]); // [{id,name}] members to bring along
+  const [memberQuery, setMemberQuery] = useState("");
+  const [memberResults, setMemberResults] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmed, setConfirmed] = useState(null);
@@ -84,7 +87,7 @@ export default function BookingClient({
       coachId: isPT ? coachId : null,
       useCredit: creditApplies,
       discountCode: !welcomeApplies && !creditApplies ? discountCode.trim() : "",
-      buddyIds: buddySel,
+      participantIds: invitees.map((i) => i.id),
     });
     if (res?.error) {
       setBusy(false);
@@ -272,22 +275,56 @@ export default function BookingClient({
               </label>
             )}
 
-            {isLoggedIn && buddies.length > 0 && (
+            {isLoggedIn && isFit60 && persons >= 2 && (
               <div className="mt-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-lav">Buddies meenemen</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {buddies.map((b) => {
-                    const on = buddySel.includes(b.id);
-                    return (
-                      <button key={b.id} type="button"
-                        onClick={() => setBuddySel((s) => (on ? s.filter((x) => x !== b.id) : [...s, b.id]))}
-                        className={"rounded-full px-3 py-1.5 text-xs font-bold transition " + (on ? "bg-accent text-brand" : "bg-white/10 text-lav hover:bg-white/20")}>
-                        {on ? "✓ " : ""}{b.name}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-1 text-[11px] text-lav/70">Hun bezoek telt mee voor hun eigen stats.</p>
+                <p className="text-xs font-bold uppercase tracking-wide text-lav">Nodig vrienden uit ({invitees.length}/{persons - 1})</p>
+
+                {invitees.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {invitees.map((m) => (
+                      <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">
+                        {m.name}
+                        <button type="button" onClick={() => setInvitees((s) => s.filter((x) => x.id !== m.id))} className="text-brand/60 hover:text-brand">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {invitees.length < persons - 1 && buddies.filter((b) => !invitees.some((i) => i.id === b.id)).length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {buddies.filter((b) => !invitees.some((i) => i.id === b.id)).map((b) => (
+                      <button key={b.id} type="button" onClick={() => setInvitees((s) => (s.length < persons - 1 ? [...s, { id: b.id, name: b.name }] : s))} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-lav transition hover:bg-white/20">+ {b.name}</button>
+                    ))}
+                  </div>
+                )}
+
+                {invitees.length < persons - 1 && (
+                  <div className="relative mt-2">
+                    <input
+                      value={memberQuery}
+                      onChange={async (e) => {
+                        const q = e.target.value;
+                        setMemberQuery(q);
+                        if (q.trim().length >= 2) {
+                          const r = await searchMembersAction(q);
+                          setMemberResults(r.filter((m) => !invitees.some((i) => i.id === m.id)));
+                        } else setMemberResults([]);
+                      }}
+                      placeholder="Zoek een lid op naam…"
+                      className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-lav/60 outline-none focus:border-accent"
+                    />
+                    {memberResults.length > 0 && (
+                      <div className="absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-white/15 bg-brand shadow-lg">
+                        {memberResults.map((m) => (
+                          <button key={m.id} type="button" onClick={() => { setInvitees((s) => (s.length < persons - 1 ? [...s, m] : s)); setMemberQuery(""); setMemberResults([]); }} className="block w-full px-3 py-2 text-left text-sm text-lav transition hover:bg-white/10">
+                            {m.name}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <p className="mt-1 text-[11px] text-lav/70">Ze krijgen een uitnodiging per mail; hun bezoek telt mee voor hun stats.</p>
               </div>
             )}
 

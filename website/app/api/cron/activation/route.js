@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { runAllActivations } from "@/lib/activation";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export async function GET(req) {
       return new NextResponse("unauthorized", { status: 401 });
     }
   }
+  try { await createAdminClient().rpc("expire_unpaid_bookings", { p_gym: null }); } catch {}
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.
