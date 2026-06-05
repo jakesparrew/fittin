@@ -84,6 +84,8 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
   if (!booking) return;
   if (session?.amount_total)
     await recordPayment(admin, { gymId: booking.gym_id, userId: booking.user_id, amountCents: session.amount_total, kind: "booking", description: `Boeking · ${booking.services?.name || "Sessie"}`, stripeId: session.id });
+  // Referred member just paid → reward the referrer (deferred anti-farm reward).
+  if (booking.user_id) await admin.rpc("reward_pending_referral", { p_user: booking.user_id });
   const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", booking.user_id).single();
   await sendBookingConfirmation({
     to: profile?.email,
@@ -180,6 +182,7 @@ async function handleEvent(event, admin) {
       if (!prof) return;
       await grantCredits(admin, prof.id, 1, "abo");
       await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
+      await admin.rpc("reward_pending_referral", { p_user: prof.id });
       return;
     }
     default:

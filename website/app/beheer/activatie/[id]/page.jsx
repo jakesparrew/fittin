@@ -72,7 +72,7 @@ export default async function ActivationDetail({ params }) {
           </div>
           {c.discount_percent > 0 && (
             <p className="mt-2 text-xs text-brand/50">
-              Kortingscode {c.discount_code ? <code className="rounded bg-accent/20 px-1.5 py-0.5 font-bold text-accentdark">{c.discount_code}</code> : "wordt aangemaakt bij de eerste verzending"} · gebruik <code className="rounded bg-paper px-1">{"{{code}}"}</code> in je tekst.
+              Elke ontvanger krijgt een <b>persoonlijke</b> kortingscode van {c.discount_percent}% (alleen bruikbaar door dat lid). Gebruik <code className="rounded bg-paper px-1">{"{{code}}"}</code> in je tekst om ze te tonen.
             </p>
           )}
 

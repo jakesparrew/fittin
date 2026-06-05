@@ -2,7 +2,7 @@ import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { FROM_NEWS, REPLY_TO } from "@/lib/email";
 import { newsletterHtml } from "@/lib/newsletter";
-import { ensureCampaignDiscountCode } from "@/lib/discounts";
+import { ensureRecipientCode } from "@/lib/discounts";
 
 const key = process.env.RESEND_API_KEY;
 const resend = key ? new Resend(key) : null;
@@ -77,7 +77,6 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
   const { data: c } = await admin.from("campaigns").select("*").eq("id", campaignId).single();
   if (!c || c.kind !== "activation") return { error: "Geen activatie-campagne." };
 
-  const code = await ensureCampaignDiscountCode(c); // generate win-back code if discount_percent set
   const matches = await evaluateMatches(admin, c.gym_id, c.trigger_type, c.trigger_params);
 
   // Cooldown: skip members emailed by this campaign within cooldown_days.
@@ -92,23 +91,25 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
 
   let sent = 0;
   for (const part of chunk(targets, 100)) {
-    const payload = part.map((m) => {
+    const payload = [];
+    for (const m of part) {
+      const code = c.discount_percent > 0 ? await ensureRecipientCode(c, m.user_id) : ""; // unique per member
       const rewardLine = c.reward_credits > 0
         ? `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#33B24A;font-weight:bold">🎁 We zetten ${c.reward_credits} gratis sessie${c.reward_credits > 1 ? "s" : ""} op je account — boek 'm snel!</p>`
         : "";
       const discLine = c.discount_percent > 0 && code
-        ? `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#22194F">Gebruik code <b style="background:#C6F24E;padding:2px 8px;border-radius:6px">${code}</b> voor <b>${c.discount_percent}% korting</b> op je volgende sessie.</p>`
+        ? `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#22194F">Gebruik jouw persoonlijke code <b style="background:#C6F24E;padding:2px 8px;border-radius:6px">${code}</b> voor <b>${c.discount_percent}% korting</b> op je volgende sessie.</p>`
         : "";
       const body = rewardLine + discLine + personalize(c.body_html, m, code);
-      return {
+      payload.push({
         from: FROM_NEWS,
         to: m.email,
         replyTo: REPLY_TO,
         subject: personalize(c.subject || c.name, m, code),
         html: newsletterHtml({ subject: personalize(c.subject, m, code), preheader: c.preheader, body, unsubUrl: `${SITE}/uitschrijven?token=${m.unsub_token}` }),
         headers: { "List-Unsubscribe": `<${SITE}/uitschrijven?token=${m.unsub_token}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
-      };
-    });
+      });
+    }
     let ids = [];
     try {
       const res = await resend.batch.send(payload);
