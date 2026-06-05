@@ -1,8 +1,5 @@
 import "./globals.css";
-import Nav from "../components/Nav";
-import Footer from "../components/Footer";
 import PWARegister from "../components/PWARegister";
-import { getSessionProfile } from "@/lib/auth";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -33,12 +30,7 @@ export const viewport = {
   initialScale: 1,
 };
 
-export default async function RootLayout({ children }) {
-  const { profile } = await getSessionProfile();
-  const account = profile
-    ? { name: profile.full_name || "Account", role: profile.role }
-    : null;
-
+export default function RootLayout({ children }) {
   return (
     <html lang="nl">
       <head>
@@ -51,9 +43,7 @@ export default async function RootLayout({ children }) {
       </head>
       <body className="bg-white font-sans text-brand antialiased">
         <PWARegister />
-        <Nav account={account} />
         {children}
-        <Footer />
       </body>
     </html>
   );

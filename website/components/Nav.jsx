@@ -25,6 +25,14 @@ export default function Nav({ account = null }) {
           ))}
         </nav>
         <div className="flex items-center gap-3">
+          {account && ["coach", "beheerder"].includes(account.role) && (
+            <Link
+              href="/beheer"
+              className="hidden text-sm font-bold text-accentdark transition hover:opacity-80 sm:block"
+            >
+              Beheer
+            </Link>
+          )}
           {account ? (
             <Link
               href="/account"

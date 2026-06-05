@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBookingAction } from "@/app/boeken/actions";
+import { createBookingAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel } from "@/lib/time";
 
 const euro = (cents) => "€ " + (cents / 100).toFixed(2).replace(".", ",");

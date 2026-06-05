@@ -9,7 +9,9 @@ if (!token || !ref) {
   process.exit(1);
 }
 
-const files = ["0001_init.sql", "0002_seed.sql"];
+const files = process.argv.slice(2).length
+  ? process.argv.slice(2)
+  : ["0001_init.sql", "0002_seed.sql"];
 for (const f of files) {
   const sql = await readFile(new URL(`../supabase/migrations/${f}`, import.meta.url), "utf8");
   process.stdout.write(`→ ${f} ... `);

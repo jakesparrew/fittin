@@ -4,7 +4,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { cancelBookingAction } from "./actions";
-import { resumeCheckoutAction } from "@/app/boeken/actions";
+import { resumeCheckoutAction } from "../boeken/actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
