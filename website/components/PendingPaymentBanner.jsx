@@ -25,7 +25,7 @@ export default function PendingPaymentBanner({ items }) {
   if (!live.length) return null;
 
   return (
-    <div className="sticky top-2 z-40 mb-6 rounded-2xl border-2 border-accent bg-brand p-4 text-white shadow-lg">
+    <div className="sticky top-2 z-40 mb-6 space-y-3 divide-y divide-white/10 rounded-2xl border-2 border-accent bg-brand p-4 text-white shadow-lg">
       {live.map((i) => {
         const ms = Math.max(0, new Date(i.deadline).getTime() - now);
         const m = Math.floor(ms / 60000);

@@ -262,6 +262,26 @@ export async function sendSessionInvite({ to, name, fromName, serviceName, start
   );
 }
 
+// ---- Confirmation to the booker that their invite(s) went out ----
+export async function sendInviteSent({ to, name, buddyNames, serviceName, startsAt, endsAt }) {
+  await send(
+    to,
+    `Je uitnodiging is verstuurd`,
+    shell({
+      title: "Je vrienden zijn uitgenodigd 🤝",
+      intro: `Hallo ${name || "daar"}, we hebben ${buddyNames || "je vrienden"} uitgenodigd voor jouw sessie:`,
+      rows: [
+        ["Sessie", serviceName],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt, endsAt)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Zij zien de sessie in hun account zodra je betaald hebt.</p>`,
+      cta: { href: `${SITE}/account`, label: "Mijn account" },
+    }),
+    FROM_BOOKING
+  );
+}
+
 // ---- Buddy request (to an existing member) ----
 export async function sendBuddyRequest({ to, name, fromName }) {
   await send(

@@ -9,6 +9,8 @@ import { resumeCheckoutAction } from "../boeken/actions";
 import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
+import NextSessionTimer from "@/components/NextSessionTimer";
+import BookingBuddies from "@/components/booking/BookingBuddies";
 import ShareRank from "@/components/ShareRank";
 import AccountSettings from "@/components/account/AccountSettings";
 import AccountLinking from "@/components/account/AccountLinking";
@@ -65,11 +67,12 @@ export default async function AccountPage({ searchParams }) {
   const admin = createAdminClient();
   const { data: invitedRows } = await admin
     .from("booking_participants")
-    .select("booking:bookings(id, starts_at, ends_at, status, persons, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))")
+    .select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))")
     .eq("user_id", user.id);
   const invitedSessions = (invitedRows || [])
     .map((r) => r.booking)
-    .filter((b) => b && b.status === "bevestigd")
+    // Only surface an invited session once the booker actually paid (or it's a free/credit session).
+    .filter((b) => b && b.status === "bevestigd" && (b.paid || b.price_cents === 0 || b.payment_source !== "los"))
     .map((b) => ({ ...b, invited: true, paid: true, payment_source: "invite", price_cents: 0, services: b.services }));
 
   // Your assigned coach (if any).
@@ -103,6 +106,8 @@ export default async function AccountPage({ searchParams }) {
       now <= new Date(b.ends_at).getTime()
   );
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now);
+  const nextSession = upcoming[0]; // upcoming is sorted ascending by starts_at
+  const bookedCount = all.filter((b) => b.status === "bevestigd").length; // lifetime confirmed (scoreboard)
   // Pending payment: confirmed-but-unpaid 'los' bookings (20-min window from creation).
   const pendingPay = upcoming
     .filter((b) => !b.paid && b.payment_source === "los" && b.price_cents > 0)
@@ -115,6 +120,17 @@ export default async function AccountPage({ searchParams }) {
   const history = all
     .filter((b) => !(b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now))
     .reverse();
+
+  // Who you've already invited to each of your own bookings (for the manage-buddies UI).
+  const ownIds = (bookings || []).map((b) => b.id);
+  const partMap = {};
+  if (ownIds.length) {
+    const { data: parts } = await admin
+      .from("booking_participants")
+      .select("booking_id, user_id, member:profiles!booking_participants_user_id_fkey(full_name)")
+      .in("booking_id", ownIds);
+    for (const p of parts || []) (partMap[p.booking_id] ||= []).push({ id: p.user_id, name: p.member?.full_name || "Lid" });
+  }
 
   const firstName = (profile?.full_name || "").split(" ")[0] || "daar";
 
@@ -140,15 +156,18 @@ export default async function AccountPage({ searchParams }) {
         </div>
 
         {/* Stat row */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Aankomende sessies" value={upcoming.length} />
-          <Stat label="Sessies" value={credits} />
+          <Stat label="Sessies (saldo)" value={credits} />
+          <Stat label="Totaal geboekt" value={bookedCount} />
           <Stat
             label="Welkomstsessie"
             value={profile?.welcome_code_used ? "Gebruikt" : "Beschikbaar"}
             accent={!profile?.welcome_code_used}
           />
         </div>
+
+        {nextSession && <NextSessionTimer startsAt={nextSession.starts_at} name={nextSession.services?.name} />}
 
         {myCoach && (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
@@ -213,7 +232,7 @@ export default async function AccountPage({ searchParams }) {
           <Link href="/boeken" className="rounded-full bg-accent px-5 py-2.5 text-brand transition hover:opacity-90">+ Boek een sessie</Link>
           <Link href="/lidmaatschap" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Beurtenkaart kopen</Link>
           <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Mijn training</Link>
-          <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Community</Link>
+          <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Leaderboard</Link>
         </div>
 
         {sp.betaald === "1" && (
@@ -277,8 +296,9 @@ export default async function AccountPage({ searchParams }) {
               {upcoming.map((b) => (
                 <div
                   key={b.id}
-                  className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-borderc bg-white p-5"
+                  className="rounded-2xl border border-borderc bg-white p-5"
                 >
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <p className="font-black">{b.services?.name || "Sessie"}</p>
                     <p className="mt-1 text-sm capitalize text-brand/60">
@@ -313,6 +333,10 @@ export default async function AccountPage({ searchParams }) {
                       </form>
                     )}
                   </div>
+                  </div>
+                  {!b.invited && b.persons > 1 && (
+                    <BookingBuddies bookingId={b.id} capacity={b.persons} participants={partMap[b.id] || []} paid={b.paid || b.price_cents === 0} />
+                  )}
                 </div>
               ))}
             </div>

@@ -1,7 +1,8 @@
 "use server";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { sendBookingCancelled } from "@/lib/email";
+import { sendBookingCancelled, sendSessionInvite, sendInviteSent } from "@/lib/email";
 
 // Cancel one of the caller's own future bookings (free until 24h before per house rules;
 // MVP allows cancel up to start time). Flipping status off 'bevestigd' frees the slot.
@@ -36,6 +37,50 @@ export async function cancelBookingAction(formData) {
   await sendBookingCancelled({ to: me?.email, name: me?.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
   revalidatePath("/account");
   revalidatePath("/boeken");
+  return { ok: true };
+}
+
+// Invite gym members to come along to one of your own future bookings (capped at the booking's
+// person count). Both you and each invited buddy get an email. Buddies only see the session in
+// their account once you've paid (handled in the account page query).
+export async function inviteBuddiesToBooking(bookingId, userIds) {
+  const ids = (Array.isArray(userIds) ? userIds : []).filter(Boolean);
+  if (!bookingId || !ids.length) return { error: "Selecteer minstens één lid." };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+
+  const { data: added, error } = await supabase.rpc("add_booking_participants", { p_booking: bookingId, p_users: ids });
+  if (error) return { error: error.message };
+  if (!added) return { error: "Geen plaats meer vrij voor deze boeking." };
+
+  try {
+    const admin = createAdminClient();
+    const [{ data: booking }, { data: people }, { data: me }] = await Promise.all([
+      admin.from("bookings").select("starts_at, ends_at, services(name)").eq("id", bookingId).single(),
+      admin.from("profiles").select("email, full_name").in("id", ids),
+      admin.from("profiles").select("full_name").eq("id", user.id).single(),
+    ]);
+    const fromName = me?.full_name || user.user_metadata?.full_name || "Een Fittin'-lid";
+    for (const p of people || []) {
+      if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
+    }
+    if (user.email) await sendInviteSent({ to: user.email, name: me?.full_name, buddyNames: (people || []).map((p) => p.full_name).filter(Boolean).join(", "), serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
+  } catch {}
+
+  revalidatePath("/account");
+  return { ok: true, added };
+}
+
+// Remove someone you invited from your booking.
+export async function removeBuddyFromBooking(bookingId, userId) {
+  if (!bookingId || !userId) return { error: "Ontbrekende gegevens." };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const { error } = await supabase.rpc("remove_booking_participant", { p_booking: bookingId, p_user: userId });
+  if (error) return { error: error.message };
+  revalidatePath("/account");
   return { ok: true };
 }
 
