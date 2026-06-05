@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import BookingClient from "@/components/booking/BookingClient";
 import BookingUnavailable from "@/components/booking/BookingUnavailable";
+import LeaderboardCard from "@/components/LeaderboardCard";
 
 export const metadata = {
   title: "Online boeken | Fittin'",
@@ -50,9 +51,25 @@ export default async function BoekenPage({ searchParams }) {
 
   const { user, profile } = await getSessionProfile();
 
+  // Monthly leaderboard (this gym) + my lifetime booked count — a scoreboard shown on the booking page.
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const { data: boardRows } = await admin
+    .from("bookings")
+    .select("user_id, member:profiles!bookings_user_id_fkey(full_name)")
+    .eq("gym_id", gym.id)
+    .eq("status", "bevestigd")
+    .gte("starts_at", monthStart.toISOString())
+    .lt("starts_at", new Date().toISOString());
+  const lbCounts = {};
+  for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
+  const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
+
   let credits = 0;
   let buddies = [];
+  let myBooked;
   if (user) {
+    const { count } = await admin.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "bevestigd");
+    myBooked = count || 0;
     const { data: ledger } = await supabase.from("credits_ledger").select("delta").eq("user_id", user.id);
     credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
     // Accepted buddies (either direction) — to bring along to a session.
@@ -67,17 +84,24 @@ export default async function BoekenPage({ searchParams }) {
   }
 
   return (
-    <BookingClient
-      gym={gym}
-      services={services || []}
-      takenSlots={(taken || []).map((t) => t.starts_at)}
-      coaches={coaches || []}
-      availability={availability || []}
-      isLoggedIn={!!user}
-      welcomeAvailable={!!(profile && profile.welcome_status === "eligible" && !profile.welcome_code_used)}
-      creditBalance={credits}
-      paymentCanceled={sp.geannuleerd === "1"}
-      buddies={buddies}
-    />
+    <>
+      <BookingClient
+        gym={gym}
+        services={services || []}
+        takenSlots={(taken || []).map((t) => t.starts_at)}
+        coaches={coaches || []}
+        availability={availability || []}
+        isLoggedIn={!!user}
+        welcomeAvailable={!!(profile && profile.welcome_status === "eligible" && !profile.welcome_code_used)}
+        creditBalance={credits}
+        paymentCanceled={sp.geannuleerd === "1"}
+        buddies={buddies}
+      />
+      <div className="bg-paper">
+        <div className="mx-auto max-w-6xl px-5 pb-16">
+          <LeaderboardCard rows={leaderboard} meId={user?.id} myBooked={myBooked} />
+        </div>
+      </div>
+    </>
   );
 }
