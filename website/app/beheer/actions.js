@@ -327,6 +327,26 @@ export async function unassignCoachClient(formData) {
   return { ok: true };
 }
 
+// ---- Coach session requests ----
+export async function resolveCoachRequest(formData) {
+  const { supabase, profile, userId, error } = await requireStaff(true);
+  if (error) return { error };
+  const id = formData.get("id");
+  const decision = formData.get("decision"); // approved | declined
+  const { data: req } = await supabase.from("coach_session_requests").select("*").eq("id", id).eq("gym_id", profile.gym_id).single();
+  if (!req || req.status !== "pending") return { error: "Aanvraag niet gevonden." };
+  await supabase.from("coach_session_requests").update({ status: decision, resolved_at: new Date().toISOString(), resolved_by: userId }).eq("id", id);
+  if (decision === "approved") {
+    await supabase.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: req.coach_id, delta: req.qty, reason: "grant" });
+    try {
+      const { data: c } = await supabase.from("profiles").select("email, full_name").eq("id", req.coach_id).single();
+      if (c?.email) { const { sendCoachSessionsGranted } = await import("@/lib/email"); await sendCoachSessionsGranted({ to: c.email, name: c.full_name, qty: req.qty }); }
+    } catch {}
+  }
+  revalidatePath("/beheer/coaches");
+  return { ok: true };
+}
+
 // ---- Packages (bundles / subscriptions) ----
 export async function upsertPackage(formData) {
   const { supabase, profile, error } = await requireStaff(true);

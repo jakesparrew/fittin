@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { runAllActivations } from "@/lib/activation";
+import { sendDueReminders } from "@/lib/reminders";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -20,6 +21,8 @@ export async function GET(req) {
     }
   }
   try { await createAdminClient().rpc("expire_unpaid_bookings", { p_gym: null }); } catch {}
+  let reminders = 0;
+  try { reminders = await sendDueReminders(); } catch {}
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.

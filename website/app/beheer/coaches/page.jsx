@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
-import { setCoachBilling, grantCoachCredits, addCoach, assignCoachClient, unassignCoachClient } from "../actions";
+import { setCoachBilling, grantCoachCredits, addCoach, assignCoachClient, unassignCoachClient, resolveCoachRequest } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +26,9 @@ export default async function Coaches() {
     supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id),
     supabase.from("bookings").select("id, coach_id, user_id, starts_at, status, coach_billing, coach_charge_cents, services(name)").eq("gym_id", gym.id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(400),
   ]);
+  const { data: reqs } = await supabase.from("coach_session_requests").select("*").eq("gym_id", gym.id).eq("status", "pending").order("created_at");
+  const reqByCoach = {};
+  for (const r of reqs || []) (reqByCoach[r.coach_id] ||= []).push(r);
 
   const all = people || [];
   const coaches = all.filter((p) => p.role === "coach" || p.role === "beheerder");
@@ -94,6 +97,37 @@ export default async function Coaches() {
                   {c.coach_billing_mode === "invoice" && <span className="rounded-full bg-accent/15 px-3 py-1 text-accentdark">Te factureren: {euro(invoice[c.id] || 0)}</span>}
                 </div>
               </div>
+
+              {/* Pending session requests */}
+              {(reqByCoach[c.id] || []).length > 0 && (
+                <div className="mt-4 rounded-xl border border-accent/40 bg-accent/5 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-accentdark">Sessie-aanvragen</p>
+                  {reqByCoach[c.id].map((r) => (
+                    <div key={r.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
+                      <span className="font-semibold text-brand">{r.qty} sessies{r.note ? ` — ${r.note}` : ""}</span>
+                      <div className="flex gap-2">
+                        <form action={resolveCoachRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="approved" /><button className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-brand">Goedkeuren (+{r.qty})</button></form>
+                        <form action={resolveCoachRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="declined" /><button className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">Afwijzen</button></form>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Invoice line items (this month) */}
+              {c.coach_billing_mode === "invoice" && invoice[c.id] > 0 && (
+                <details className="mt-3 rounded-xl bg-paper/60 p-3 text-sm">
+                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Te factureren deze maand: {euro(invoice[c.id])} — bekijk lijnen</summary>
+                  <div className="mt-2 space-y-1">
+                    {(sessOf[c.id] || []).filter((s) => s.coach_billing === "invoice" && s.status === "bevestigd" && new Date(s.starts_at) >= monthStart).map((s) => (
+                      <div key={s.id} className="flex justify-between text-xs">
+                        <span className="text-brand/70">{fmt(s.starts_at)} · {name(s.user_id)} · {s.services?.name}</span>
+                        <span className="font-bold text-brand">{euro(s.coach_charge_cents)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              )}
 
               {/* Clients */}
               <div className="mt-5 grid gap-5 lg:grid-cols-2">

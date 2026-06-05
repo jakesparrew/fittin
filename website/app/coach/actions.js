@@ -80,6 +80,23 @@ export async function cancelCoachBooking(formData) {
   revalidatePath("/coach/agenda");
 }
 
+// Coach requests session-credits from the superadmin (alternative to buying by card).
+export async function requestCoachSessions(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const qty = num(formData.get("qty"), 0);
+  if (qty < 1) return { error: "Geef een aantal sessies." };
+  const { error: e } = await supabase.from("coach_session_requests").insert({
+    gym_id: profile.gym_id,
+    coach_id: userId,
+    qty,
+    note: formData.get("note") || null,
+  });
+  if (e) return { error: e.message };
+  revalidatePath("/coach");
+  return { ok: true };
+}
+
 export async function addOwnAvailability(formData) {
   const { supabase, profile, userId, error } = await requireCoach();
   if (error) return { error };

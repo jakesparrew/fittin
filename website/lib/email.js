@@ -191,6 +191,39 @@ export async function sendEventSignup({ to, name, title, startsAt }) {
   );
 }
 
+// ---- Member: day-before session reminder ----
+export async function sendSessionReminder({ to, name, serviceName, startsAt, endsAt, coachName }) {
+  await send(
+    to,
+    "Herinnering: je Fittin'-sessie is binnenkort",
+    shell({
+      title: "Tot binnenkort in de zaal! 💪",
+      intro: `Hallo ${name || "daar"}, een kleine herinnering voor je geplande sessie${coachName ? ` met ${coachName}` : ""}:`,
+      rows: [
+        ["Sessie", serviceName],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt, endsAt)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">De deur opent tijdens je tijdslot via de app. Kan je niet? Annuleer tijdig in je account.</p>`,
+      cta: { href: `${SITE}/account`, label: "Mijn sessies" },
+    }),
+    FROM_BOOKING
+  );
+}
+
+// ---- Coach: session-credits granted by the superadmin ----
+export async function sendCoachSessionsGranted({ to, name, qty }) {
+  await send(
+    to,
+    "Je coach-sessies zijn goedgekeurd",
+    shell({
+      title: `+${qty} coach-sessie${qty > 1 ? "s" : ""} toegekend ✅`,
+      intro: `Hallo ${name || "coach"}, de beheerder heeft je aanvraag goedgekeurd. Je kan nu sessies inplannen met je clienten.`,
+      cta: { href: `${SITE}/coach`, label: "Naar coach-dashboard" },
+    })
+  );
+}
+
 // ---- Member: session balance adjusted by an admin ----
 export async function sendCreditsAdjusted({ to, name, delta, reason, balance }) {
   const up = delta >= 0;

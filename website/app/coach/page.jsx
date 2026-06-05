@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { coachBookSession, cancelCoachBooking, buyCoachCredits } from "./actions";
+import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
@@ -19,11 +19,12 @@ export default async function CoachDashboard({ searchParams }) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(now);
 
-  const [{ data: members }, { data: services }, { data: bookings }, { data: ledger }] = await Promise.all([
+  const [{ data: members }, { data: services }, { data: bookings }, { data: ledger }, { data: requests }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "lid").order("full_name"),
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
     supabase.from("bookings").select("id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("coach_id", userId).order("starts_at", { ascending: true }),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
+    supabase.from("coach_session_requests").select("qty, status, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(5),
   ]);
 
   const creditBalance = (ledger || []).reduce((a, r) => a + r.delta, 0);
@@ -58,14 +59,35 @@ export default async function CoachDashboard({ searchParams }) {
       </div>
 
       {mode === "credit" && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-5">
-          <p className="text-sm text-brand/70">Koop coach-sessies vooraf zodat je niet per keer hoeft af te rekenen.</p>
-          <form action={buyCoachCredits} className="flex items-end gap-2">
-            <label className="text-xs font-bold text-lav">Aantal
-              <input name="qty" type="number" defaultValue="10" min="1" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-            </label>
-            <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Kopen</button>
-          </form>
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-borderc bg-white p-5">
+            <p className="font-bold text-brand">Koop coach-sessies</p>
+            <p className="mt-0.5 text-xs text-brand/50">Direct betalen met kaart.</p>
+            <form action={buyCoachCredits} className="mt-3 flex items-end gap-2">
+              <label className="text-xs font-bold text-lav">Aantal
+                <input name="qty" type="number" defaultValue="10" min="1" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+              </label>
+              <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Kopen</button>
+            </form>
+          </div>
+          <div className="rounded-2xl border border-borderc bg-white p-5">
+            <p className="font-bold text-brand">Of vraag sessies aan</p>
+            <p className="mt-0.5 text-xs text-brand/50">De beheerder keurt goed en factureert je later.</p>
+            <form action={requestCoachSessions} className="mt-3 flex flex-wrap items-end gap-2">
+              <label className="text-xs font-bold text-lav">Aantal
+                <input name="qty" type="number" defaultValue="10" min="1" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+              </label>
+              <input name="note" placeholder="notitie (optioneel)" className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+              <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</button>
+            </form>
+            {(requests || []).length > 0 && (
+              <div className="mt-3 space-y-1 text-xs">
+                {requests.map((r, i) => (
+                  <p key={i} className="text-brand/50">{r.qty} sessies · <span className={r.status === "approved" ? "font-bold text-accentdark" : r.status === "declined" ? "text-red-500" : "text-brand/60"}>{r.status === "pending" ? "in behandeling" : r.status === "approved" ? "goedgekeurd ✓" : "afgewezen"}</span></p>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
