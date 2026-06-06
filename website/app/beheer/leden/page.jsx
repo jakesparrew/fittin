@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { adminAdjustCredits, adminSetRole } from "../actions";
 import { AddMemberForm } from "@/components/admin/MemberControls";
+import OpenMemberButton from "@/components/admin/OpenMemberButton";
+import MemberDrawer from "@/components/admin/MemberDrawer";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +28,9 @@ export default async function Leden() {
 
   return (
     <div className="px-8 py-8">
+      <MemberDrawer />
       <h1 className="text-3xl font-black text-brand">Leden</h1>
-      <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · rollen en sessies beheren.</p>
+      <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · klik een naam voor het volledige overzicht.</p>
 
       {isBeheerder && <div className="mt-6"><AddMemberForm /></div>}
 
@@ -46,9 +49,7 @@ export default async function Leden() {
             {(members || []).map((m) => (
               <tr key={m.id} className="align-top">
                 <td className="px-5 py-4">
-                  <Link href={`/beheer/leden/${m.id}`} className="font-bold text-brand hover:text-accentdark">
-                    {m.full_name || "—"}
-                  </Link>
+                  <OpenMemberButton id={m.id} name={m.full_name} email={m.email} />
                   <p className="text-xs text-brand/50">{m.email}</p>
                 </td>
                 <td className="px-5 py-4">

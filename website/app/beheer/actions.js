@@ -155,6 +155,41 @@ export async function adminUnblock(formData) {
 }
 
 // ---- Members ----
+// Admin edits a member's basic profile (name, phone) — service role (bypasses the self-only RLS).
+export async function adminUpdateMember(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const memberId = formData.get("memberId");
+  if (!memberId) return { error: "Geen lid." };
+  const admin = createAdminClient();
+  const { error: e } = await admin
+    .from("profiles")
+    .update({ full_name: formData.get("full_name") || null, phone: formData.get("phone") || null })
+    .eq("id", memberId).eq("gym_id", profile.gym_id);
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/leden");
+  revalidatePath(`/beheer/leden/${memberId}`);
+  return { ok: true, message: "Profiel bijgewerkt ✓" };
+}
+
+// Re-send the account setup / login link to a member (e.g. they never finished onboarding).
+export async function resendInviteMail(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const memberId = formData.get("memberId");
+  const admin = createAdminClient();
+  const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", memberId).eq("gym_id", profile.gym_id).maybeSingle();
+  if (!m?.email) return { error: "Geen e-mailadres." };
+  try {
+    const { data: link } = await admin.auth.admin.generateLink({ type: "recovery", email: m.email, options: { redirectTo: `${siteUrl()}/wachtwoord-herstellen` } });
+    const action = link?.properties?.action_link;
+    if (action) await sendWelcomeNewAccount({ to: m.email, name: m.full_name, link: action });
+  } catch (e) {
+    return { error: e?.message || "Versturen mislukt." };
+  }
+  return { ok: true, message: `Uitnodiging verstuurd naar ${m.email} ✓` };
+}
+
 export async function adminAdjustCredits(formData) {
   const { supabase, profile, error } = await requireStaff();
   if (error) return { error };
