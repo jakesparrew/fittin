@@ -64,6 +64,22 @@ export default async function BoekenPage({ searchParams }) {
   for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
   const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
 
+  // Approved, upcoming events (always paid; shown in the "Events" tab of the booking page).
+  const nowIso = new Date().toISOString();
+  const { data: eventRows } = await admin
+    .from("events")
+    .select("id, title, description, starts_at, ends_at, capacity, price_cents, event_signups(user_id, paid)")
+    .eq("gym_id", gym.id)
+    .eq("status", "approved")
+    .gte("starts_at", nowIso)
+    .order("starts_at")
+    .limit(50);
+  const events = (eventRows || []).map((e) => {
+    const paidCount = (e.event_signups || []).filter((s) => s.paid).length;
+    const mine = user ? (e.event_signups || []).some((s) => s.user_id === user.id && s.paid) : false;
+    return { id: e.id, title: e.title, description: e.description, starts_at: e.starts_at, ends_at: e.ends_at, capacity: e.capacity, price_cents: e.price_cents, taken: paidCount, mine };
+  });
+
   let credits = 0;
   let buddies = [];
   let myBooked;
@@ -96,6 +112,7 @@ export default async function BoekenPage({ searchParams }) {
         creditBalance={credits}
         paymentCanceled={sp.geannuleerd === "1"}
         buddies={buddies}
+        events={events}
       />
       <div className="bg-paper">
         <div className="mx-auto max-w-6xl px-5 pb-16">

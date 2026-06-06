@@ -32,7 +32,7 @@ export default async function Community() {
     supabase.from("bookings").select("starts_at").eq("user_id", user.id).eq("status", "bevestigd"),
     supabase.from("challenges").select("*").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }),
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", now.toISOString()),
-    admin.from("events").select("*, event_signups(id, user_id)").eq("gym_id", profile.gym_id).gte("starts_at", today.toISOString()).order("starts_at"),
+    admin.from("events").select("*, event_signups(id, user_id)").eq("gym_id", profile.gym_id).eq("status", "approved").gte("starts_at", today.toISOString()).order("starts_at"),
   ]);
 
   // All confirmed bookings (last 120d) for per-challenge leaderboards.

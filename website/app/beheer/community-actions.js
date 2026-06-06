@@ -51,8 +51,24 @@ export async function createEvent(formData) {
     ends_at: end.toISOString(),
     capacity: num(formData.get("capacity"), 12),
     price_cents: cents(formData.get("price_eur")),
+    status: "approved", // admin-created → live immediately
+    created_by: profile.id,
   });
   if (e) return { error: e.message };
+  revalidatePath("/beheer/events");
+  revalidatePath("/community");
+}
+
+// Approve (or reject) a coach-submitted event.
+export async function approveEvent(formData) {
+  const { supabase, error } = await requireStaff();
+  if (error) return { error };
+  const decision = formData.get("decision");
+  if (decision === "reject") {
+    await supabase.from("events").delete().eq("id", formData.get("id")).eq("status", "pending");
+  } else {
+    await supabase.from("events").update({ status: "approved" }).eq("id", formData.get("id"));
+  }
   revalidatePath("/beheer/events");
   revalidatePath("/community");
 }

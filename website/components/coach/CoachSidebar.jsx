@@ -8,6 +8,7 @@ const items = [
   { href: "/coach/clienten", label: "Mijn clienten", icon: "◍" },
   { href: "/coach/programmas", label: "Programma's", icon: "✎" },
   { href: "/coach/oefeningen", label: "Oefeningen", icon: "≣" },
+  { href: "/coach/events", label: "Events", icon: "◆" },
   { href: "/coach/beschikbaarheid", label: "Beschikbaarheid", icon: "◷" },
 ];
 

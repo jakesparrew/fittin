@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBookingAction, searchMembersAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel } from "@/lib/time";
+import EventsBooking from "@/components/booking/EventsBooking";
 
 const euro = (cents) => "€ " + (cents / 100).toFixed(2).replace(".", ",");
 
@@ -18,8 +19,10 @@ export default function BookingClient({
   creditBalance = 0,
   paymentCanceled = false,
   buddies = [],
+  events = [],
 }) {
   const router = useRouter();
+  const [mode, setMode] = useState("session"); // session | events
   const [serviceId, setServiceId] = useState(
     (services.find((s) => s.type === "fit60") || services[0])?.id
   );
@@ -158,7 +161,15 @@ export default function BookingClient({
           </p>
         )}
 
-        <div className="mt-10 grid gap-6 lg:grid-cols-3">
+        {/* Session vs Events toggle */}
+        <div className="mt-8 inline-flex rounded-full border border-borderc bg-white p-1">
+          <button onClick={() => setMode("session")} className={"rounded-full px-5 py-2 text-sm font-bold transition " + (mode === "session" ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>Sessie boeken</button>
+          <button onClick={() => setMode("events")} className={"rounded-full px-5 py-2 text-sm font-bold transition " + (mode === "events" ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>Events{events.length > 0 && ` (${events.length})`}</button>
+        </div>
+
+        {mode === "events" && <EventsBooking events={events} isLoggedIn={isLoggedIn} />}
+
+        <div className={"mt-6 grid gap-6 lg:grid-cols-3 " + (mode === "events" ? "hidden" : "")}>
           <div className="space-y-6 lg:col-span-2">
             {/* Service */}
             <Card step="1" title="Kies je sessie">

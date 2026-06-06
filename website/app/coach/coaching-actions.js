@@ -2,11 +2,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { slotInstant } from "@/lib/time";
 
 const num = (v, d = null) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
 };
+const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
 
 // Coach-only guard (coaches manage their OWN exercises + program templates from /coach,
 // never the admin /beheer area).
@@ -118,4 +120,39 @@ export async function coachDeleteProgram(formData) {
   if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
   await supabase.from("programs").delete().eq("id", programId);
   redirect("/coach/programmas");
+}
+
+// ---- Events (coach submits → admin approves) ----
+export async function coachCreateEvent(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const date = formData.get("date");
+  const hour = num(formData.get("hour"), 18);
+  const dur = num(formData.get("duration_min"), 60);
+  if (!formData.get("title") || !date) return { error: "Titel en datum zijn verplicht." };
+  const start = slotInstant(date, hour);
+  const end = new Date(start.getTime() + dur * 60000);
+  const { error: e } = await supabase.from("events").insert({
+    gym_id: profile.gym_id,
+    title: formData.get("title"),
+    description: formData.get("description") || null,
+    starts_at: start.toISOString(),
+    ends_at: end.toISOString(),
+    capacity: num(formData.get("capacity"), 12),
+    price_cents: cents(formData.get("price_eur")),
+    status: "pending", // needs admin approval before it goes live
+    coach_id: userId,
+    created_by: userId,
+  });
+  if (e) return { error: e.message };
+  revalidatePath("/coach/events");
+  return { ok: true };
+}
+
+export async function coachDeleteEvent(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  // A coach can only remove their own event (and only while still pending).
+  await supabase.from("events").delete().eq("id", formData.get("id")).eq("coach_id", userId).eq("status", "pending");
+  revalidatePath("/coach/events");
 }

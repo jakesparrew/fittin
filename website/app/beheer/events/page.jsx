@@ -1,5 +1,5 @@
 import { getAdminContext } from "@/lib/admin";
-import { createEvent, deleteEvent } from "../community-actions";
+import { createEvent, deleteEvent, approveEvent } from "../community-actions";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -13,10 +13,12 @@ export default async function Events() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const { data: events } = await supabase
     .from("events")
-    .select("*, event_signups(id)")
+    .select("*, event_signups(id), coach:profiles!events_coach_id_fkey(full_name)")
     .eq("gym_id", gym.id)
     .gte("starts_at", today.toISOString())
     .order("starts_at");
+  const pending = (events || []).filter((e) => e.status === "pending");
+  const live = (events || []).filter((e) => e.status !== "pending");
 
   const hours = [];
   for (let h = gym.open_hour; h < gym.close_hour; h++) hours.push(h);
@@ -39,11 +41,33 @@ export default async function Events() {
         <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Event</button>
       </form>
 
+      {/* Coach submissions awaiting approval */}
+      {pending.length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-sm font-bold uppercase tracking-wide text-lav">Ter goedkeuring ({pending.length})</h2>
+          <div className="mt-2 space-y-3">
+            {pending.map((ev) => (
+              <div key={ev.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent/40 bg-accent/5 p-5">
+                <div>
+                  <p className="font-black text-brand">{ev.title}</p>
+                  <p className="mt-1 text-sm capitalize text-brand/50">{fmt(ev.starts_at)} · {ev.capacity} plaatsen · {ev.price_cents ? euro(ev.price_cents) : "gratis"} · voorgesteld door {ev.coach?.full_name || "coach"}</p>
+                  {ev.description && <p className="mt-1 text-sm text-brand/60">{ev.description}</p>}
+                </div>
+                <div className="flex gap-2">
+                  <form action={approveEvent}><input type="hidden" name="id" value={ev.id} /><input type="hidden" name="decision" value="approve" /><button className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-brand">Goedkeuren</button></form>
+                  <form action={approveEvent}><input type="hidden" name="id" value={ev.id} /><input type="hidden" name="decision" value="reject" /><button className="rounded-full bg-paper px-4 py-1.5 text-xs font-bold text-brand/60">Afwijzen</button></form>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 space-y-3">
-        {(events || []).map((ev) => (
+        {live.map((ev) => (
           <div key={ev.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-5">
             <div>
-              <p className="font-black text-brand">{ev.title}</p>
+              <p className="font-black text-brand">{ev.title}{ev.coach?.full_name && <span className="ml-2 text-xs font-bold text-brand/40">· {ev.coach.full_name}</span>}</p>
               <p className="mt-1 text-sm capitalize text-brand/50">{fmt(ev.starts_at)} · {(ev.event_signups || []).length}/{ev.capacity} ingeschreven · {ev.price_cents ? euro(ev.price_cents) : "gratis"}</p>
             </div>
             <form action={deleteEvent}>
@@ -52,7 +76,7 @@ export default async function Events() {
             </form>
           </div>
         ))}
-        {(!events || events.length === 0) && <p className="text-sm text-brand/50">Nog geen komende events.</p>}
+        {live.length === 0 && <p className="text-sm text-brand/50">Nog geen komende events.</p>}
       </div>
     </div>
   );

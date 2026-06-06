@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendEventSignup } from "@/lib/email";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -157,6 +157,21 @@ async function handleEvent(event, admin) {
           await admin.from("coach_ledger").insert({ gym_id: prof.gym_id, coach_id: coachId, delta: credits, reason: "aankoop" });
         }
         await recordPayment(admin, { userId: coachId, amountCents: obj.amount_total, kind: "coach_credits", description: `Coach-sessies · ${credits}`, stripeId: obj.id });
+      } else if (obj.metadata?.kind === "event") {
+        const eventId = obj.metadata.event_id;
+        const userId = obj.metadata.user_id;
+        const { data: ev } = await admin.from("events").select("gym_id, title, starts_at").eq("id", eventId).single();
+        if (ev) {
+          await admin.from("event_signups").upsert(
+            { gym_id: ev.gym_id, event_id: eventId, user_id: userId, paid: true, stripe_session_id: obj.id },
+            { onConflict: "event_id,user_id" }
+          );
+          await recordPayment(admin, { gymId: ev.gym_id, userId, amountCents: obj.amount_total, kind: "overig", description: `Event · ${ev.title}`, stripeId: obj.id });
+          try {
+            const { data: prof } = await admin.from("profiles").select("email, full_name").eq("id", userId).single();
+            if (prof?.email) await sendEventSignup({ to: prof.email, name: prof.full_name, title: ev.title, startsAt: ev.starts_at });
+          } catch {}
+        }
       } else if (obj.metadata?.kind === "welcome" || obj.mode === "setup") {
         await handleWelcomeSetup(admin, obj);
       } else if (obj.metadata?.booking_id) {
