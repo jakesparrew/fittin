@@ -105,14 +105,17 @@ export default function Home() {
       </section>
 
       {/* ============ MARQUEE ============ */}
-      <div className="border-y border-borderc bg-white py-5">
-        <div className="flex overflow-hidden">
-          <div className="marquee-track flex shrink-0 items-center gap-10 whitespace-nowrap pr-10 text-2xl font-black uppercase tracking-tight text-brand/15 md:text-3xl">
+      <div className="border-y border-borderc bg-white py-4">
+        <div
+          className="flex overflow-hidden"
+          style={{ maskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)" }}
+        >
+          <div className="marquee-track flex shrink-0 items-center gap-8 whitespace-nowrap pr-8 text-lg font-black uppercase tracking-wide text-brand/30 md:text-xl">
             {[...Array(2)].map((_, k) => (
-              <span key={k} className="flex items-center gap-10">
+              <span key={k} className="flex items-center gap-8">
                 {["Privé", "24/7", "Geen lidgeld", "Personal coaching", "Open de deur met de app", "Train met vrienden", "In Gent"].map((w) => (
-                  <span key={w} className="flex items-center gap-10">
-                    {w} <span className="inline-block h-2 w-2 rotate-45 bg-accent align-middle" />
+                  <span key={w} className="flex items-center gap-8">
+                    {w} <span className="inline-block h-1.5 w-1.5 rotate-45 bg-accent align-middle" />
                   </span>
                 ))}
               </span>
@@ -123,22 +126,36 @@ export default function Home() {
 
       {/* ============ STATS ============ */}
       <section className="bg-white">
-        <div className="mx-auto grid max-w-6xl gap-6 px-5 py-16 sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { v: 24, s: "/7", l: "Open, elke dag" },
-            { v: 11, p: "€ ", l: "Per sessie van 1u15" },
-            { v: 4, p: "1–", l: "Personen per boeking" },
-            { v: 0, l: "Lidgeld of abonnement" },
-          ].map((stat, i) => (
-            <Reveal key={i} delay={i * 80}>
-              <div className="rounded-3xl border border-borderc bg-paper p-7 text-center transition hover:-translate-y-1 hover:border-accent/40 hover:shadow-lg hover:shadow-accent/10">
-                <p className="text-5xl font-black text-brand">
-                  <Counter to={stat.v} prefix={stat.p || ""} suffix={stat.s || ""} />
-                </p>
-                <p className="mt-2 text-sm font-bold text-brand/50">{stat.l}</p>
+        <div className="mx-auto max-w-6xl px-5 py-20">
+          <Reveal>
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Fittin&rsquo; in cijfers</p>
+            <h2 className="mt-2 max-w-xl text-2xl font-black text-brand md:text-3xl">Geen poespas. Gewoon de zaal — wanneer jij wil.</h2>
+          </Reveal>
+          <Reveal delay={120}>
+            <div className="mt-8 overflow-hidden rounded-[2rem] border border-borderc">
+              <div className="h-1.5 w-full bg-accent" />
+              <div className="grid grid-cols-2 gap-px bg-borderc lg:grid-cols-4">
+                {[
+                  { v: 24, s: "/7", l: "Open, elke dag" },
+                  { v: 11, p: "€ ", l: "Per sessie van 1u15" },
+                  { v: 4, p: "1–", l: "Personen per boeking" },
+                  { v: 0, l: "Lidgeld of abonnement" },
+                ].map((stat, i) => (
+                  <div key={i} className="group bg-white p-8 transition-colors hover:bg-paper lg:p-10">
+                    <p className="font-display text-5xl font-black leading-none text-brand md:text-6xl">
+                      {stat.p && <span className="text-accentdark">{stat.p}</span>}
+                      <Counter to={stat.v} />
+                      {stat.s && <span className="text-accentdark">{stat.s}</span>}
+                    </p>
+                    <p className="mt-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-brand/45">
+                      <span className="inline-block h-1.5 w-1.5 rotate-45 bg-accent transition group-hover:scale-150" />
+                      {stat.l}
+                    </p>
+                  </div>
+                ))}
               </div>
-            </Reveal>
-          ))}
+            </div>
+          </Reveal>
         </div>
       </section>
 
