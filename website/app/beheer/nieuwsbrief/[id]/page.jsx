@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
-import { updateNewsletter, deleteCampaign, addDripStep, deleteDripStep, setDripStatus, enrollAllInDrip } from "../../newsletter-actions";
+import { updateNewsletter, deleteCampaign, addDripStep, setDripStatus, enrollAllInDrip } from "../../newsletter-actions";
 import { SendNewsletterButton, ConfirmSubmit, SendProgress } from "@/components/admin/CampaignControls";
+import DripStepCard from "@/components/admin/DripStepCard";
 
 export const dynamic = "force-dynamic";
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) + "%" : "—");
@@ -149,23 +150,7 @@ export default async function CampaignDetail({ params }) {
 
           <div className="mt-6 space-y-3">
             {steps.map((s) => (
-              <div key={s.id} className="rounded-2xl border border-borderc bg-white p-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-black text-white">{s.step_no}</span>
-                    <div>
-                      <p className="font-bold text-brand">{s.subject}</p>
-                      <p className="text-xs text-brand/45">{s.delay_hours === 0 ? "Direct bij inschrijving" : `${s.delay_hours}u na inschrijving`}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs font-bold text-brand/50">
-                    <span>{stepStats[s.id]?.total || 0} verzonden</span>
-                    <span>{pct(stepStats[s.id]?.opened || 0, stepStats[s.id]?.total || 0)} open</span>
-                    <form action={deleteDripStep}><input type="hidden" name="id" value={s.id} /><input type="hidden" name="campaignId" value={c.id} /><button className="text-red-500 hover:underline">×</button></form>
-                  </div>
-                </div>
-                <p className="mt-2 line-clamp-2 text-sm text-brand/60">{(s.body_html || "").replace(/<[^>]+>/g, "")}</p>
-              </div>
+              <DripStepCard key={s.id} step={s} campaignId={c.id} sent={stepStats[s.id]?.total || 0} openPct={pct(stepStats[s.id]?.opened || 0, stepStats[s.id]?.total || 0)} />
             ))}
             {steps.length === 0 && <p className="rounded-xl bg-paper p-4 text-sm text-brand/50">Nog geen stappen. Voeg hieronder de eerste mail toe.</p>}
           </div>

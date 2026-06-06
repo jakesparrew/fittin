@@ -141,6 +141,23 @@ export async function deleteDripStep(formData) {
   revalidatePath(`/beheer/nieuwsbrief/${formData.get("campaignId")}`);
 }
 
+// Edit an existing drip step (subject, delay, body). Already-sent/scheduled emails are unaffected;
+// the new content applies to future enrollments.
+export async function updateDripStep(formData) {
+  const { supabase, error } = await requireStaff(true);
+  if (error) return { error };
+  const id = formData.get("id");
+  const campaignId = formData.get("campaignId");
+  const { error: e } = await supabase.from("campaign_steps").update({
+    delay_hours: num(formData.get("delay_hours"), 0),
+    subject: formData.get("subject") || "Stap",
+    body_html: formData.get("body") || "",
+  }).eq("id", id);
+  if (e) return { error: e.message };
+  revalidatePath(`/beheer/nieuwsbrief/${campaignId}`);
+  return { ok: true, message: "Stap opgeslagen ✓" };
+}
+
 export async function setDripStatus(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
