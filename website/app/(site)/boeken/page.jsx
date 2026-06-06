@@ -9,7 +9,7 @@ import LeaderboardCard from "@/components/LeaderboardCard";
 export const metadata = {
   title: "Online boeken | Fittin'",
   description:
-    "Reserveer de privégym in Gent — alleen of met vrienden. €11 per sessie van 1u15. Eerste sessie gratis met FittinWelcome.",
+    "Reserveer de privégym in Gent — alleen of met vrienden. € 15 per sessie van 1 uur. Eerste sessie gratis met FittinWelcome.",
 };
 
 export const dynamic = "force-dynamic";

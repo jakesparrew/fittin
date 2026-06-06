@@ -1,10 +1,11 @@
 "use client";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { adminCreateBooking } from "@/app/beheer/actions";
+import { adminCreateBooking, adminBlockSlot } from "@/app/beheer/actions";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 // An empty calendar cell on /beheer/boekingen. Click → modal to plan a session (member + service)
-// at this date/hour, booked via adminCreateBooking. Keeps the surrounding grid server-rendered.
+// OR block the slot (no member/service needed).
 export default function PlanSlotCell({ date, hour, label, members = [], services = [] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -13,14 +14,19 @@ export default function PlanSlotCell({ date, hour, label, members = [], services
     if (res?.error) return { error: res.error };
     return { ok: true };
   }, null);
+  const [blockState, blockAction, blocking] = useActionState(async (_p, fd) => {
+    const res = await adminBlockSlot(fd);
+    if (res?.error) return { error: res.error };
+    return { ok: true };
+  }, null);
 
   useEffect(() => {
-    if (state?.ok) { setOpen(false); router.refresh(); }
-  }, [state, router]);
+    if (state?.ok || blockState?.ok) { setOpen(false); router.refresh(); }
+  }, [state, blockState, router]);
 
   return (
     <>
-      <button onClick={() => setOpen(true)} className="flex h-7 w-full items-center justify-center rounded text-brand/20 transition hover:bg-accent/10 hover:text-accentdark" aria-label="Plan sessie">
+      <button onClick={() => setOpen(true)} className="flex h-full min-h-7 w-full items-center justify-center rounded text-brand/20 transition hover:bg-accent/10 hover:text-accentdark" aria-label="Plan sessie">
         +
       </button>
       {open && (
@@ -36,15 +42,12 @@ export default function PlanSlotCell({ date, hour, label, members = [], services
             <form action={action} className="mt-4 space-y-3">
               <input type="hidden" name="date" value={date} />
               <input type="hidden" name="hour" value={hour} />
-              <label className="block">
+              <div>
                 <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Lid</span>
-                <select name="memberId" required className="w-full rounded-lg border-2 border-borderc px-3 py-2">
-                  <option value="">Kies lid…</option>
-                  {members.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
-                </select>
-              </label>
+                <SearchSelect name="memberId" required placeholder="Zoek een lid…" options={members.map((m) => ({ value: m.id, label: m.label }))} />
+              </div>
               <label className="block">
-                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Dienst</span>
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Sessie</span>
                 <select name="serviceId" required className="w-full rounded-lg border-2 border-borderc px-3 py-2">
                   {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
@@ -63,6 +66,20 @@ export default function PlanSlotCell({ date, hour, label, members = [], services
               <button disabled={pending} className="w-full rounded-full bg-accent px-5 py-2.5 font-black text-brand transition hover:opacity-90 disabled:opacity-50">
                 {pending ? "Bezig…" : "+ Boeken"}
               </button>
+            </form>
+
+            {/* Or just block this slot (no member/service) */}
+            <form action={blockAction} className="mt-4 border-t border-borderc pt-4">
+              <input type="hidden" name="date" value={date} />
+              <input type="hidden" name="hour" value={hour} />
+              <div className="flex items-end gap-2">
+                <label className="block flex-1">
+                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Of blokkeer dit uur</span>
+                  <input name="reason" placeholder="reden (optioneel, bv. onderhoud)" className="w-full rounded-lg border-2 border-borderc px-3 py-2" />
+                </label>
+                <button disabled={blocking} className="rounded-full bg-brand px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{blocking ? "…" : "Blokkeer"}</button>
+              </div>
+              {blockState?.error && <p className="mt-2 text-sm font-semibold text-red-600">{blockState.error}</p>}
             </form>
           </div>
         </div>

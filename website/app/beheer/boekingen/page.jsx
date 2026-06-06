@@ -65,7 +65,7 @@ export default async function Boekingen({ searchParams }) {
           <Lbl t="Boeking voor lid">
             <SearchSelect name="memberId" required placeholder="Kies lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
-          <Lbl t="Dienst">
+          <Lbl t="Sessie">
             <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
               {(services || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
@@ -111,23 +111,23 @@ export default async function Boekingen({ searchParams }) {
                   const bk = bookMap.get(t);
                   const bl = blockMap.get(t);
                   return (
-                    <td key={d.dateStr} className="border-l border-borderc/60 p-1 align-top">
+                    <td key={d.dateStr} className="h-12 border-l border-borderc/60 p-1 align-top">
                       {bk ? (
-                        <div className="rounded-lg bg-accent/20 p-1.5">
-                          <p className="font-bold text-brand">{bk.member?.full_name || "Lid"}</p>
-                          <p className="text-brand/50">{bk.services?.name} · {bk.persons}p</p>
-                          <form action={adminCancelBooking}>
+                        <div className="flex h-full flex-col justify-center rounded-lg bg-accent/20 px-1.5 py-1 leading-tight">
+                          <span className="truncate font-bold text-brand">{bk.member?.full_name || "Lid"}</span>
+                          <span className="truncate text-[10px] text-brand/50">{bk.services?.name} · {bk.persons}p</span>
+                          <form action={adminCancelBooking} className="leading-none">
                             <input type="hidden" name="bookingId" value={bk.id} />
-                            <button className="mt-0.5 text-[10px] font-bold text-red-500 hover:underline">annuleer</button>
+                            <button className="text-[10px] font-bold text-red-500 hover:underline">annuleer</button>
                           </form>
                         </div>
                       ) : bl ? (
-                        <div className="rounded-lg bg-brand/10 p-1.5">
-                          <p className="font-bold text-brand/60">Geblokkeerd</p>
-                          {bl.reason && <p className="text-brand/40">{bl.reason}</p>}
-                          <form action={adminUnblock}>
+                        <div className="flex h-full flex-col justify-center rounded-lg bg-brand/10 px-1.5 py-1 leading-tight">
+                          <span className="truncate font-bold text-brand/60">Geblokkeerd</span>
+                          {bl.reason && <span className="truncate text-[10px] text-brand/40">{bl.reason}</span>}
+                          <form action={adminUnblock} className="leading-none">
                             <input type="hidden" name="blockId" value={bl.id} />
-                            <button className="mt-0.5 text-[10px] font-bold text-accentdark hover:underline">deblokkeer</button>
+                            <button className="text-[10px] font-bold text-accentdark hover:underline">deblokkeer</button>
                           </form>
                         </div>
                       ) : (

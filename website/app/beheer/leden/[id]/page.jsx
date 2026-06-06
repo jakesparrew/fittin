@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addSessionNote } from "../../coaching-actions";
 import { adminAdjustCredits, assignCoachClient, unassignCoachClient, adminSetRole } from "../../actions";
+import ActionForm from "@/components/ui/ActionForm";
 import { DeleteUserButton } from "@/components/admin/MemberControls";
 import SearchSelect from "@/components/admin/SearchSelect";
 
@@ -158,12 +159,12 @@ export default async function MemberDetail({ params }) {
           </div>
 
           <h2 className="mt-6 font-black text-brand">Sessies aanpassen</h2>
-          <form action={adminAdjustCredits} className="mt-2 flex flex-wrap items-center gap-2">
+          <ActionForm action={adminAdjustCredits} success="Sessies aangepast — het lid kreeg een e-mail ✓" className="mt-2 flex flex-wrap items-center gap-2">
             <input type="hidden" name="memberId" value={member.id} />
             <input name="delta" type="number" placeholder="+3 of -3" title="+ = bijgeven, - = afhalen" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
             <input name="reason" placeholder="reden (lid krijgt mail)" className="w-40 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
             <button className="rounded-lg bg-brand px-3 py-1.5 text-xs font-bold text-white">Bijwerken</button>
-          </form>
+          </ActionForm>
         </section>
 
         <section className="rounded-2xl border border-borderc bg-white p-6">

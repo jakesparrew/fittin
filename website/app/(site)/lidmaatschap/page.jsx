@@ -76,7 +76,7 @@ export default async function Lidmaatschap() {
                   {isAbo ? (
                     <>
                       <li className="flex gap-2"><span className="text-accent">✓</span> {p.credits} sessie / maand inclusief</li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> Boek daarna aan € 8 i.p.v. € 11</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Boek daarna aan € 10 i.p.v. € 15</li>
                       <li className="flex gap-2"><span className="text-accent">✓</span> Automatisch verlengd · stop wanneer je wil</li>
                     </>
                   ) : (

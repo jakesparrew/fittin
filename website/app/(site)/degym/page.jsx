@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "De gym | Fittin'",
   description:
-    "Een modern uitgeruste privégym in Gent. Reserveer de zaal voor jou en je vrienden — € 11 per sessie van 1u15, zonder lidgeld.",
+    "Een modern uitgeruste privégym in Gent. Reserveer de zaal voor jou en je vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
 };
 
 const memberCards = [
@@ -18,8 +18,8 @@ const memberCards = [
   {
     title: "Als lid",
     items: [
-      "Reserveer de gym voor € 11,00",
-      "Eén sessie = 1u15",
+      "Reserveer de gym voor € 15,00",
+      "Eén sessie = 1 uur",
       "1 tot 4 personen",
       "Geen extra kosten",
     ],

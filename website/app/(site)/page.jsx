@@ -89,7 +89,7 @@ export default function Home() {
           </Reveal>
           <Reveal delay={320}>
             <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-3 text-sm font-bold text-white/60">
-              {["€ 11 per sessie", "1u15 per sessie", "1 tot 4 personen", "24/7 open", "geen lidgeld"].map((t, i) => (
+              {["€ 15 per sessie", "1 uur per sessie", "1 tot 4 personen", "24/7 open", "geen lidgeld"].map((t, i) => (
                 <span key={t} className="flex items-center gap-3">
                   {i > 0 && <span className="h-1 w-1 rounded-full bg-accent" />}
                   <span className="rounded-full bg-white/5 px-3 py-1.5 ring-1 ring-white/10">{t}</span>
@@ -137,7 +137,7 @@ export default function Home() {
               <div className="grid grid-cols-2 gap-px bg-borderc lg:grid-cols-4">
                 {[
                   { v: 24, s: "/7", l: "Open, elke dag" },
-                  { v: 11, p: "€ ", l: "Per sessie van 1u15" },
+                  { v: 15, p: "€ ", l: "Per sessie van 1 uur" },
                   { v: 4, p: "1–", l: "Personen per boeking" },
                   { v: 0, l: "Lidgeld of abonnement" },
                 ].map((stat, i) => (
@@ -263,7 +263,7 @@ export default function Home() {
           </Reveal>
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {[
-              { name: "Losse sessie", price: "€ 11", per: "/ sessie", items: ["1u15 in de zaal", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
+              { name: "Losse sessie", price: "€ 15", per: "/ sessie", items: ["1 uur in de zaal", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
               { name: "10-beurtenkaart", price: "€ 100", per: "/ 10 sessies", items: ["€ 10 per sessie", "6 maanden geldig", "Deel met vrienden"], cta: "Koop sessies", href: "/lidmaatschap", hot: true },
               { name: "Personal training", price: "€ 60", per: "/ sessie 1-op-1", items: ["1-op-2 € 35 pp", "1-op-3 € 30 pp", "Gratis intake"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
             ].map((p, i) => (

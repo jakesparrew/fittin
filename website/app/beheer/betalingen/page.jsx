@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { saveInvoiceSettings } from "./actions";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +60,7 @@ export default async function Betalingen({ searchParams }) {
       {/* Invoice / non-profit billing details (used on generated invoices) */}
       <details className="mt-4 rounded-2xl border border-borderc bg-white p-4">
         <summary className="cursor-pointer text-sm font-bold text-brand">Factuurgegevens (vzw · 6% btw)</summary>
-        <form action={saveInvoiceSettings} className="mt-3 grid gap-3 sm:grid-cols-2">
+        <ActionForm action={saveInvoiceSettings} success="Factuurgegevens opgeslagen ✓" className="mt-3 grid gap-3 sm:grid-cols-2">
           <Field name="legal_name" label="Wettelijke naam (vzw)" defaultValue={gym.legal_name} />
           <Field name="vat_number" label="Ondernemings-/btw-nummer" defaultValue={gym.vat_number} placeholder="BE0123.456.789" />
           <Field name="iban" label="IBAN" defaultValue={gym.iban} />
@@ -68,7 +69,7 @@ export default async function Betalingen({ searchParams }) {
           <div className="sm:col-span-2">
             <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Opslaan</button>
           </div>
-        </form>
+        </ActionForm>
       </details>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">

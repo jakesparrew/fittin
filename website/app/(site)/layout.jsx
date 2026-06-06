@@ -1,5 +1,6 @@
 import Nav from "../../components/Nav";
 import Footer from "../../components/Footer";
+import ToastHost from "../../components/ui/ToastHost";
 
 export default function SiteLayout({ children }) {
   return (
@@ -7,6 +8,7 @@ export default function SiteLayout({ children }) {
       <Nav />
       {children}
       <Footer />
+      <ToastHost />
     </>
   );
 }
