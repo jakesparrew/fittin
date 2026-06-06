@@ -304,6 +304,7 @@ export default async function AccountPage({ searchParams }) {
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold">
           <Link href="/boeken" className="rounded-full bg-accent px-5 py-2.5 text-brand transition hover:opacity-90">+ Boek een sessie</Link>
+          {!membership && <Link href="/lidmaatschap" className="rounded-full bg-brand px-5 py-2.5 text-white transition hover:opacity-90">Word member · € 10/maand</Link>}
           <Link href="/lidmaatschap" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Beurtenkaart kopen</Link>
           <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Mijn training</Link>
           <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Leaderboard</Link>
@@ -363,6 +364,30 @@ export default async function AccountPage({ searchParams }) {
           <div className="mt-6">
             <WeightChart points={(weights || []).map((w) => ({ logged_on: w.logged_on, weight_kg: w.weight_kg }))} goal={bodyProfile?.goal_weight_kg ? Number(bodyProfile.goal_weight_kg) : null} />
           </div>
+
+          {/* Logged entries — newest first */}
+          {(weights || []).length > 0 && (
+            <div className="mt-6">
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-lav">Je metingen</p>
+              <div className="overflow-hidden rounded-2xl border border-borderc">
+                {[...weights].reverse().map((w, i) => {
+                  const prev = [...weights].reverse()[i + 1];
+                  const diff = prev ? Number(w.weight_kg) - Number(prev.weight_kg) : null;
+                  return (
+                    <div key={w.logged_on + i} className={"flex items-center justify-between px-4 py-2.5 text-sm " + (i % 2 ? "bg-paper/50" : "bg-white")}>
+                      <span className="capitalize text-brand/60">{new Intl.DateTimeFormat("nl-BE", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(w.logged_on))}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-black text-brand">{Number(w.weight_kg).toFixed(1)} kg</span>
+                        {diff != null && diff !== 0 && (
+                          <span className={"text-xs font-bold " + (diff < 0 ? "text-accentdark" : "text-brand/40")}>{diff < 0 ? "▼" : "▲"} {Math.abs(diff).toFixed(1)}</span>
+                        )}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Upcoming */}

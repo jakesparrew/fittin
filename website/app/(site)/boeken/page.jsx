@@ -83,7 +83,10 @@ export default async function BoekenPage({ searchParams }) {
   let credits = 0;
   let buddies = [];
   let myBooked;
+  let isMember = false;
   if (user) {
+    const { data: activeMember } = await supabase.rpc("has_active_membership", { p_uid: user.id });
+    isMember = !!activeMember;
     const { count } = await admin.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "bevestigd");
     myBooked = count || 0;
     const { data: ledger } = await supabase.from("credits_ledger").select("delta").eq("user_id", user.id);
@@ -110,6 +113,7 @@ export default async function BoekenPage({ searchParams }) {
         isLoggedIn={!!user}
         welcomeAvailable={!!(profile && profile.welcome_status === "eligible" && !profile.welcome_code_used)}
         creditBalance={credits}
+        isMember={isMember}
         paymentCanceled={sp.geannuleerd === "1"}
         buddies={buddies}
         events={events}

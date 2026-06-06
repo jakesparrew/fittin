@@ -17,6 +17,7 @@ export default function BookingClient({
   isLoggedIn,
   welcomeAvailable,
   creditBalance = 0,
+  isMember = false,
   paymentCanceled = false,
   buddies = [],
   events = [],
@@ -96,7 +97,10 @@ export default function BookingClient({
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
   const durFactor = duration >= 4 ? 0.9 : duration === 3 ? 0.92 : duration === 2 ? 0.95 : 1;
-  const priceCents = welcomeApplies || creditApplies ? 0 : Math.round((service?.price_cents ?? 0) * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
+  // Members book Fit60 at the member price (matches what the server charges).
+  const memberRate = isFit60 && isMember && service?.member_price_cents != null;
+  const unitCents = memberRate ? service.member_price_cents : (service?.price_cents ?? 0);
+  const priceCents = welcomeApplies || creditApplies ? 0 : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
 
   async function submit() {
     if (!selected || !service) return;
@@ -184,9 +188,10 @@ export default function BookingClient({
           <button onClick={() => setMode("events")} className={"rounded-full px-5 py-2 text-sm font-bold transition " + (mode === "events" ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>Events{events.length > 0 && ` (${events.length})`}</button>
         </div>
 
-        {mode === "events" && <EventsBooking events={events} isLoggedIn={isLoggedIn} />}
-
-        <div className={"mt-6 grid gap-6 lg:grid-cols-3 " + (mode === "events" ? "hidden" : "")}>
+        {mode === "events" ? (
+          <EventsBooking events={events} isLoggedIn={isLoggedIn} />
+        ) : (
+        <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
             {/* Service */}
             <Card step="1" title="Kies je sessie">
@@ -198,7 +203,11 @@ export default function BookingClient({
                     className={"rounded-2xl border-2 p-5 text-left transition " + (serviceId === s.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}
                   >
                     <p className="font-black">{s.name}</p>
-                    <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "vanaf " + euro(s.price_cents)}</p>
+                    {s.type === "fit60" && isMember && s.member_price_cents != null ? (
+                      <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · <span className="font-bold text-accentdark">{euro(s.member_price_cents)}</span> <span className="text-brand/40 line-through">{euro(s.price_cents)}</span> <span className="font-bold text-accentdark">ledenprijs</span></p>
+                    ) : (
+                      <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "vanaf " + euro(s.price_cents)}</p>
+                    )}
                   </button>
                 ))}
               </div>
@@ -280,8 +289,8 @@ export default function BookingClient({
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-xs text-brand/40">Groen = vrij · grijs = geboekt · de zaal is exclusief van jou tijdens je sessie.</p>
                 {hasNight && (
-                  <button onClick={() => setShowNight((s) => !s)} className="text-xs font-bold text-accentdark hover:underline">
-                    {showNight ? "Verberg nachturen" : "Toon nachturen (22u–7u)"}
+                  <button onClick={() => setShowNight((s) => !s)} className={"inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-xs font-black transition " + (showNight ? "border-brand bg-brand text-white" : "border-accent bg-accent/15 text-accentdark hover:bg-accent/30")}>
+                    🌙 {showNight ? "Verberg nachturen" : "Toon nachturen (22u–7u)"}
                   </button>
                 )}
               </div>
@@ -430,6 +439,7 @@ export default function BookingClient({
             <p className="mt-3 text-center text-xs text-lav">Kosteloos annuleren tot 24u vooraf.</p>
           </div>
         </div>
+        )}
       </div>
     </main>
   );
