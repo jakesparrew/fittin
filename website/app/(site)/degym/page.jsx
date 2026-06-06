@@ -54,7 +54,7 @@ const localBusinessLd = {
   description: "Privé fitness & personal training in Gent. Reserveer de zaal voor jezelf of met vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
   url: "https://fittin.be",
   email: "info@fittin.be",
-  image: "https://fittin.be/og.png",
+  image: "https://fittin.be/opengraph-image",
   priceRange: "€€",
   address: { "@type": "PostalAddress", streetAddress: "Aannemersstraat 186", postalCode: "9040", addressLocality: "Gent", addressCountry: "BE" },
   geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },

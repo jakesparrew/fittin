@@ -39,6 +39,11 @@ export const metadata = {
       "Reserveer de privégym in Gent — alleen of met vrienden — of train met een personal coach.",
     url: siteUrl,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Fittin' | Privé fitness & personal training in Gent",
+    description: "Reserveer de privégym in Gent — alleen of met vrienden — of train met een personal coach.",
+  },
 };
 
 export const viewport = {
