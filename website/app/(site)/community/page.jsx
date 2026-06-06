@@ -130,7 +130,19 @@ export default async function Community() {
             </div>
           )}
 
-          {outgoing.length > 0 && <p className="mt-3 text-xs text-brand/40">In afwachting: {outgoing.map(buddyName).join(", ")}</p>}
+          {outgoing.length > 0 && (
+            <div className="mt-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-lav">Verzonden aanvragen</p>
+              <div className="mt-2 space-y-2">
+                {outgoing.map((r) => (
+                  <div key={r.id} className="flex items-center justify-between rounded-xl bg-paper px-3 py-2 text-sm">
+                    <span className="font-semibold text-brand/70">Aanvraag naar <span className="font-bold text-brand">{buddyName(r)}</span> · in afwachting</span>
+                    <form action={removeBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full border-2 border-borderc px-3 py-1 text-xs font-bold text-brand/60 transition hover:border-red-300 hover:text-red-600">Intrekken</button></form>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <BuddyInvite />
         </section>

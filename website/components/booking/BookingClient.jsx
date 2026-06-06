@@ -24,6 +24,7 @@ export default function BookingClient({
     (services.find((s) => s.type === "fit60") || services[0])?.id
   );
   const [weekOffset, setWeekOffset] = useState(0);
+  const [showNight, setShowNight] = useState(false);
   const [selected, setSelected] = useState(null); // { dateStr, hour }
   const [persons, setPersons] = useState(1);
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
@@ -58,11 +59,15 @@ export default function BookingClient({
 
   const takenSet = useMemo(() => new Set(takenSlots.map((s) => new Date(s).getTime())), [takenSlots]);
 
-  const hours = useMemo(() => {
+  const allHours = useMemo(() => {
     const list = [];
     for (let h = gym.open_hour; h < gym.close_hour; h++) list.push(h);
     return list;
   }, [gym.open_hour, gym.close_hour]);
+  // 24/7 gyms have 24 rows — show daytime by default with a toggle for night hours, so the
+  // grid fits without a nested scrollbar.
+  const hasNight = allHours.some((h) => h < 7 || h >= 22);
+  const hours = showNight ? allHours : allHours.filter((h) => h >= 7 && h < 22);
 
   function coachOpen(dateStr, h) {
     if (!isPT || !coachId) return true;
@@ -136,7 +141,8 @@ export default function BookingClient({
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-6xl px-5 py-16">
-        <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Online boeken</p>
+        <Link href={isLoggedIn ? "/account" : "/"} className="inline-flex items-center gap-1.5 text-sm font-bold text-brand/60 transition hover:text-brand">← {isLoggedIn ? "Terug naar account" : "Terug naar home"}</Link>
+        <p className="mt-6 text-sm font-bold uppercase tracking-[0.25em] text-lav">Online boeken</p>
         <h1 className="mt-3 text-3xl font-black md:text-4xl">Reserveer je sessie</h1>
         {welcomeAvailable ? (
           <p className="mt-3 max-w-xl text-brand/70">
@@ -208,7 +214,7 @@ export default function BookingClient({
                     ))}
                   </div>
                   {/* rows */}
-                  <div className="max-h-[420px] overflow-y-auto pr-1">
+                  <div>
                     {hours.map((h) => (
                       <div key={h} className="grid grid-cols-[44px_repeat(7,1fr)] gap-1 py-0.5">
                         <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-brand/30">{String(h).padStart(2, "0")}:00</div>
@@ -235,7 +241,14 @@ export default function BookingClient({
                   </div>
                 </div>
               </div>
-              <p className="mt-3 text-xs text-brand/40">Groen = vrij · grijs = geboekt · de zaal is exclusief van jou tijdens je sessie.</p>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs text-brand/40">Groen = vrij · grijs = geboekt · de zaal is exclusief van jou tijdens je sessie.</p>
+                {hasNight && (
+                  <button onClick={() => setShowNight((s) => !s)} className="text-xs font-bold text-accentdark hover:underline">
+                    {showNight ? "Verberg nachturen" : "Toon nachturen (22u–7u)"}
+                  </button>
+                )}
+              </div>
             </Card>
 
             {/* Persons */}

@@ -34,8 +34,8 @@ export default function ComposeEmail() {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Aan</span>
-                <input name="to" type="email" required placeholder="ontvanger@email.be" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+                <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Aan <span className="font-normal normal-case text-brand/40">— meerdere? scheid met komma's</span></span>
+                <input name="to" type="text" required placeholder="ontvanger@email.be, tweede@email.be" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </label>
               <label className="block">
                 <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Onderwerp</span>

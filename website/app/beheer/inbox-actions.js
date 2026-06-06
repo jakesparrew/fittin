@@ -8,16 +8,27 @@ import { syncInbox, sendReply, sendEmail } from "@/lib/inbox";
 const IDENTITIES = ["info@fittin.be", "boekingen@booking.fittin.be", "nieuwsbrief@news.fittin.be"];
 
 export async function sendNewEmail(formData) {
-  const { error } = await requireStaff(true);
+  const { profile, error } = await requireStaff(true);
   if (error) return { error };
   const from = IDENTITIES.includes(formData.get("from")) ? formData.get("from") : "info@fittin.be";
-  const to = String(formData.get("to") || "").trim();
+  // Accept multiple comma- (or semicolon-) separated recipients.
+  const recipients = String(formData.get("to") || "")
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
   const subject = String(formData.get("subject") || "").trim();
   const body = String(formData.get("body") || "").trim();
-  if (!to.includes("@")) return { error: "Geldig e-mailadres vereist." };
+  if (!recipients.length || recipients.some((r) => !r.includes("@"))) return { error: "Geef geldige e-mailadressen op (gescheiden door komma's)." };
   if (!subject) return { error: "Onderwerp vereist." };
-  const r = await sendEmail({ from, to, subject, body });
+  const r = await sendEmail({ from, to: recipients, subject, body });
   if (r?.error) return { error: r.error.message };
+  // Log to the Sent view.
+  try {
+    await createAdminClient().from("sent_emails").insert({
+      gym_id: profile.gym_id, from_email: from, to_email: recipients.join(", "), subject, body, sent_by: profile.id,
+    });
+  } catch {}
+  revalidatePath("/beheer/inbox");
   return { ok: true };
 }
 
@@ -55,6 +66,12 @@ export async function replyInboxAction(formData) {
   const r = await sendReply({ fromEmail: m.to_email, toEmail: m.from_email, subject: m.subject, body, inReplyTo: m.message_id });
   if (r?.error) return { error: r.error.message };
   await admin.from("inbound_emails").update({ read: true }).eq("id", id);
+  try {
+    await admin.from("sent_emails").insert({
+      gym_id: profile.gym_id, from_email: m.to_email, to_email: m.from_email,
+      subject: /^re:/i.test(m.subject || "") ? m.subject : "Re: " + (m.subject || ""), body, sent_by: profile.id, reply_to: id,
+    });
+  } catch {}
   revalidatePath(`/beheer/inbox/${id}`);
   return { ok: true };
 }

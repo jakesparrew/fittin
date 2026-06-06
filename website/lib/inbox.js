@@ -56,6 +56,7 @@ export async function syncInbox(gymId, max = 40) {
 }
 
 // Send a fresh email from one of the @fittin.be identities (inbox compose).
+// `to` may be a single address or an array (multiple recipients).
 export async function sendEmail({ from, to, subject, body }) {
   const { Resend } = await import("resend");
   const resend = new Resend(KEY);
