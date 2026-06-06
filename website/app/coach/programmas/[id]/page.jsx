@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import { coachAddProgramDay, coachAddProgramExercise, coachDeleteProgramExercise, coachAssignProgram, coachDeleteProgram, coachQuickExercise } from "../../coaching-actions";
 import ExercisePicker from "@/components/admin/ExercisePicker";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
 const fmtDay = (d) => (d ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(d)) : null);
@@ -53,13 +54,10 @@ export default async function CoachProgramBuilder({ params }) {
       {/* Assign to one of your clients */}
       <form action={coachAssignProgram} className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-4">
         <input type="hidden" name="programId" value={program.id} />
-        <label className="block">
+        <div>
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Toewijzen aan client</span>
-          <select name="memberId" defaultValue={program.member_id || ""} className="w-56 rounded-xl border-2 border-borderc px-3 py-2 text-sm">
-            <option value="">— Template (niemand) —</option>
-            {clients.map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
-          </select>
-        </label>
+          <SearchSelect name="memberId" defaultValue={program.member_id || ""} placeholder="— Template (niemand) —" options={[{ value: "", label: "— Template (niemand) —" }, ...clients.map((m) => ({ value: m.id, label: m.full_name || m.email }))]} />
+        </div>
         <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</button>
         {program.member_id && <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>}
       </form>

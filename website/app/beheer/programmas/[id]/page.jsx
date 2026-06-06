@@ -9,6 +9,7 @@ import {
   quickExercise,
 } from "../../coaching-actions";
 import ExercisePicker from "@/components/admin/ExercisePicker";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -73,10 +74,7 @@ export default async function ProgramBuilder({ params }) {
         <input type="hidden" name="programId" value={program.id} />
         <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Toewijzen aan</span>
-          <select name="memberId" defaultValue={program.member_id || ""} className="w-56 rounded-xl border-2 border-borderc px-3 py-2 text-sm">
-            <option value="">— Template (niemand) —</option>
-            {(members || []).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
-          </select>
+          <SearchSelect name="memberId" defaultValue={program.member_id || ""} placeholder="— Template (niemand) —" options={[{ value: "", label: "— Template (niemand) —" }, ...(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))]} />
         </label>
         <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</button>
         {program.member_id && (
