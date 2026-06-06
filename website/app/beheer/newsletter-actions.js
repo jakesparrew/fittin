@@ -93,6 +93,30 @@ export async function createDrip(formData) {
   redirect(`/beheer/nieuwsbrief/${data.id}`);
 }
 
+// One-click premade "Fittin' onboarding" drip — a converting sequence that introduces every
+// feature (boeken, buddies, personal training, abonnement, community) over ~2 weeks.
+export async function createOnboardingDrip() {
+  const { supabase, profile, userId, error } = await requireStaff(true);
+  if (error) return { error };
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+  const btn = (href, label) => `<p style="margin:18px 0"><a href="${site}${href}" style="background:#5fda6b;color:#22194f;font-weight:800;text-decoration:none;padding:12px 22px;border-radius:999px;display:inline-block">${label}</a></p>`;
+  const steps = [
+    { delay_hours: 0, subject: "Welkom bij Fittin' 👋 — zo boek je je eerste sessie", body_html: `<p>Welkom! Bij Fittin' reserveer je de privégym helemaal voor jezelf (of met vrienden) — 24/7, € 15 voor een uur. Je eerste sessie is zelfs <strong>gratis</strong> met de code <strong>FittinWelcome</strong>.</p><p>Boeken doe je in 30 seconden: kies een moment, betaal, en de app opent de deur tijdens je sessie.</p>${btn("/boeken", "Boek je (gratis) sessie")}` },
+    { delay_hours: 48, subject: "Train nooit alleen — neem een buddy mee 🤝", body_html: `<p>Samen trainen houdt je gemotiveerd. Voeg je vrienden toe als buddy en neem ze mee in dezelfde boeking — tot 4 personen in de zaal, zonder meerkost per persoon.</p><p>Je kan zelfs een seintje sturen: "ik heb geboekt, kom je mee?" en zij bevestigen met één klik.</p>${btn("/community", "Voeg je buddies toe")}` },
+    { delay_hours: 120, subject: "Sneller resultaat met een personal coach", body_html: `<p>Wil je gericht sterker worden, afvallen of revalideren? Onze coaches stellen een plan op maat op — training én voeding — en volgen je vooruitgang op.</p><p>Bekijk de coaches, hun specialiteit en beschikbaarheid, en boek rechtstreeks.</p>${btn("/coaches", "Ontmoet onze coaches")}` },
+    { delay_hours: 192, subject: "Bespaar met het Fittin'-abonnement", body_html: `<p>Train je meer dan 1× per maand? Met het abonnement van <strong>€ 10/maand</strong> krijg je elke maand <strong>1 gratis sessie</strong> én boek je daarna aan <strong>€ 10</strong> in plaats van € 15. Plus member-only acties en voorrang bij events.</p><p>Twee sessies per maand en je abonnement verdient zichzelf al terug.</p>${btn("/lidmaatschap", "Word member")}` },
+    { delay_hours: 288, subject: "Doe mee met events & challenges 🏆", body_html: `<p>Fittin' is meer dan een zaal. Doe mee met groepslessen en events, klim op het leaderboard en haal maandelijkse challenges voor gratis sessies.</p><p>Bekijk wat er op de planning staat.</p>${btn("/events", "Bekijk de events")}` },
+  ];
+  const { data: camp, error: e } = await supabase
+    .from("campaigns")
+    .insert({ gym_id: profile.gym_id, kind: "drip", name: "Fittin' onboarding (kant-en-klaar)", status: "draft", trigger: "on_signup", created_by: userId })
+    .select("id")
+    .single();
+  if (e) return { error: e.message };
+  await supabase.from("campaign_steps").insert(steps.map((s, i) => ({ campaign_id: camp.id, step_no: i + 1, ...s })));
+  redirect(`/beheer/nieuwsbrief/${camp.id}`);
+}
+
 export async function addDripStep(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };

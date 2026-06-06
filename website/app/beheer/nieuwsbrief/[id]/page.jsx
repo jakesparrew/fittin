@@ -19,15 +19,17 @@ export default async function CampaignDetail({ params }) {
   const isDrip = c.kind === "drip";
   const { count: subCount } = await supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "active");
 
-  let steps = [], stepStats = {}, enrolled = 0;
+  let steps = [], stepStats = {}, enrolled = 0, completed = 0, active = 0;
   if (isDrip) {
-    const [{ data: s }, { data: sends }, { count: enr }] = await Promise.all([
+    const [{ data: s }, { data: sends }, { data: enrRows }] = await Promise.all([
       supabase.from("campaign_steps").select("*").eq("campaign_id", id).order("step_no"),
       supabase.from("campaign_sends").select("step_id, status, opened_at").eq("campaign_id", id),
-      supabase.from("drip_enrollments").select("id", { count: "exact", head: true }).eq("campaign_id", id),
+      supabase.from("drip_enrollments").select("status").eq("campaign_id", id),
     ]);
     steps = s || [];
-    enrolled = enr || 0;
+    enrolled = (enrRows || []).length;
+    completed = (enrRows || []).filter((e) => e.status === "completed").length;
+    active = (enrRows || []).filter((e) => e.status === "active").length;
     for (const row of sends || []) {
       const k = row.step_id || "x";
       (stepStats[k] ||= { total: 0, opened: 0 }).total++;
@@ -104,10 +106,11 @@ export default async function CampaignDetail({ params }) {
       {isDrip && (
         <>
           <div className="mt-6 flex flex-wrap items-center gap-3 rounded-2xl border border-borderc bg-white p-5">
-            <div className="flex gap-4">
+            <div className="flex gap-6">
               <Stat label="Stappen" value={steps.length} bare />
-              <Stat label="Ingeschreven" value={enrolled} bare />
-              <Stat label="Verzonden" value={Object.values(stepStats).reduce((a, s) => a + s.total, 0)} bare />
+              <Stat label="Gestart" value={enrolled} bare />
+              <Stat label="Bezig" value={active} bare />
+              <Stat label="Voltooid" value={completed} bare />
             </div>
             <div className="ml-auto flex items-center gap-2">
               {c.status !== "active" ? (
@@ -120,6 +123,29 @@ export default async function CampaignDetail({ params }) {
               )}
             </div>
           </div>
+
+          {/* Funnel — hoeveel mensen elke stap bereikten */}
+          {steps.length > 0 && enrolled > 0 && (
+            <div className="mt-6 rounded-2xl border border-borderc bg-white p-5">
+              <p className="font-black text-brand">Voortgang door de reeks</p>
+              <p className="mt-0.5 text-xs text-brand/50">Hoeveel ingeschrevenen elke stap (mail) al ontvingen.</p>
+              <div className="mt-4 space-y-2.5">
+                {steps.map((s) => {
+                  const reached = stepStats[s.id]?.total || 0;
+                  const w = Math.round((reached / enrolled) * 100);
+                  return (
+                    <div key={s.id} className="flex items-center gap-3">
+                      <span className="w-10 shrink-0 text-xs font-bold text-brand/50">#{s.step_no}</span>
+                      <div className="h-5 flex-1 overflow-hidden rounded-full bg-paper">
+                        <div className="flex h-full items-center justify-end rounded-full bg-accent px-2 text-[10px] font-black text-brand transition-all" style={{ width: `${Math.max(w, 6)}%` }}>{reached}</div>
+                      </div>
+                      <span className="w-10 shrink-0 text-right text-xs font-bold text-brand/40">{w}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="mt-6 space-y-3">
             {steps.map((s) => (

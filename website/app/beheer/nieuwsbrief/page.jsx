@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
-import { createNewsletter, createDrip } from "../newsletter-actions";
+import { createNewsletter, createDrip, createOnboardingDrip } from "../newsletter-actions";
+import QuickStart from "@/components/admin/QuickStart";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,23 @@ export default async function Newsletter() {
         <Stat label="Actieve abonnees" value={subActive ?? 0} />
         <Stat label="Verzonden e-mails" value={totSent} />
         <Stat label="Gem. open rate" value={pct(totOpened, totSent)} />
+      </div>
+
+      <QuickStart title="Kies hoe je begint" defaultOpen={!campaigns || campaigns.length === 0} steps={[
+        { title: "Kant-en-klare onboarding-reeks", body: "in één klik een bewezen reeks van 5 mails die nieuwe leden door alle functies leidt (boeken, buddies, coach, abonnement, events)." },
+        { title: "Eigen drip", body: "bouw zelf een reeks met je eigen stappen en wachttijden." },
+        { title: "Losse nieuwsbrief", body: "een eenmalige mail naar al je abonnees." },
+      ]} />
+
+      {/* Premade sequence — one click */}
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent/40 bg-accent/5 p-5">
+        <div>
+          <p className="font-black text-brand">✨ Fittin&rsquo; onboarding-reeks</p>
+          <p className="mt-0.5 text-sm text-brand/60">5 kant-en-klare, converterende mails die nieuwe leden alle functies laten ontdekken — verspreid over ~2 weken.</p>
+        </div>
+        <form action={createOnboardingDrip}>
+          <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Maak deze reeks aan</button>
+        </form>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
