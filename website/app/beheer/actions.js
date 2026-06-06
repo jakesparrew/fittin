@@ -132,6 +132,25 @@ export async function adminCreateBooking(formData) {
   return { ok: true };
 }
 
+// Block a consecutive range of hours at once (e.g. close the gym 9:00–17:00 for maintenance).
+export async function adminBlockRange(formData) {
+  const { supabase, error } = await requireStaff();
+  if (error) return { error };
+  const date = formData.get("date");
+  const from = num(formData.get("from_hour"));
+  const to = num(formData.get("to_hour"));
+  const reason = formData.get("reason") || null;
+  if (!date || from == null || to == null || to <= from) return { error: "Kies een geldige periode (tot > van)." };
+  let blocked = 0;
+  for (let h = from; h < to; h++) {
+    const { error: e } = await supabase.rpc("admin_block_slot", { p_date: date, p_hour: h, p_reason: reason });
+    if (!e) blocked++;
+  }
+  revalidatePath("/beheer/boekingen");
+  revalidatePath("/boeken");
+  return { ok: true, message: `${blocked} uur geblokkeerd ✓` };
+}
+
 export async function adminBlockSlot(formData) {
   const { supabase, error } = await requireStaff();
   if (error) return { error };

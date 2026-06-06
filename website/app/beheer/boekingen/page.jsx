@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { slotInstant, brusselsDateStr } from "@/lib/time";
-import { adminCancelBooking, adminBlockSlot, adminUnblock, adminCreateBooking } from "../actions";
+import { adminCancelBooking, adminBlockSlot, adminBlockRange, adminUnblock, adminCreateBooking } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import PlanSlotCell from "@/components/admin/PlanSlotCell";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -80,12 +81,13 @@ export default async function Boekingen({ searchParams }) {
           <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</button>
         </form>
 
-        <form action={adminBlockSlot} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+        <ActionForm action={adminBlockRange} success="Geblokkeerd ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
           <Lbl t="Blokkeer datum"><input name="date" type="date" required defaultValue={days[0].dateStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <Lbl t="Uur"><HourSelect name="hour" hours={hours} /></Lbl>
+          <Lbl t="Van"><HourSelect name="from_hour" hours={hours} /></Lbl>
+          <Lbl t="Tot"><select name="to_hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{[...hours.slice(1), gym.close_hour].map((h) => <option key={h} value={h}>{h}:00</option>)}</select></Lbl>
           <Lbl t="Reden"><input name="reason" placeholder="onderhoud…" className="w-32 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Blokkeer</button>
-        </form>
+          <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Blokkeer reeks</button>
+        </ActionForm>
       </div>
 
       {/* Week grid */}
