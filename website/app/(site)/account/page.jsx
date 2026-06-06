@@ -4,13 +4,14 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { cancelBookingAction, payCoachRequest } from "./actions";
+import { cancelBookingAction, payCoachRequest, respondJoinRequest } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
 import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import NextSessionTimer from "@/components/NextSessionTimer";
 import BookingBuddies from "@/components/booking/BookingBuddies";
+import BuddyJoin from "@/components/booking/BuddyJoin";
 import ShareRank from "@/components/ShareRank";
 import AccountSettings from "@/components/account/AccountSettings";
 import AccountLinking from "@/components/account/AccountLinking";
@@ -140,6 +141,21 @@ export default async function AccountPage({ searchParams }) {
     for (const p of parts || []) (partMap[p.booking_id] ||= []).push({ id: p.user_id, name: p.member?.full_name || "Lid" });
   }
 
+  // Accepted buddies (to ask "kom je mee?") + join requests sent/received.
+  const { data: buddyLinks } = await admin
+    .from("buddies")
+    .select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)")
+    .eq("status", "accepted").eq("gym_id", profile.gym_id)
+    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+  const myBuddies = (buddyLinks || []).map((l) => { const o = l.requester_id === user.id ? l.addressee : l.requester; return { id: o?.id, name: o?.full_name || "Buddy" }; }).filter((b) => b.id);
+  const { data: sentJoins } = await supabase.from("booking_join_requests").select("booking_id, to_user").eq("from_user", user.id);
+  const askedByBooking = {};
+  for (const r of sentJoins || []) (askedByBooking[r.booking_id] ||= []).push(r.to_user);
+  const { data: incomingJoins } = await admin
+    .from("booking_join_requests")
+    .select("id, booking:bookings(starts_at, ends_at, services(name)), from:profiles!booking_join_requests_from_user_fkey(full_name)")
+    .eq("to_user", user.id).eq("status", "pending");
+
   const firstName = (profile?.full_name || "").split(" ")[0] || "daar";
 
   return (
@@ -176,6 +192,26 @@ export default async function AccountPage({ searchParams }) {
         </div>
 
         {nextSession && <NextSessionTimer startsAt={nextSession.starts_at} name={nextSession.services?.name} />}
+
+        {(incomingJoins || []).length > 0 && (
+          <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
+            <p className="font-black text-brand">🤝 Kom je mee trainen?</p>
+            <div className="mt-3 space-y-2">
+              {incomingJoins.map((r) => (
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4">
+                  <div>
+                    <p className="font-bold text-brand">{r.from?.full_name || "Een buddy"} gaat trainen</p>
+                    <p className="text-xs capitalize text-brand/50">{r.booking ? fmtRange(r.booking.starts_at, r.booking.ends_at) : ""} · {r.booking?.services?.name || "Sessie"}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <form action={respondJoinRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="accept" /><button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Ik kom mee</button></form>
+                    <form action={respondJoinRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="decline" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand/60">Kan niet</button></form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {(payReqs || []).length > 0 && (
           <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
@@ -364,6 +400,9 @@ export default async function AccountPage({ searchParams }) {
                   </div>
                   {!b.invited && b.persons > 1 && (
                     <BookingBuddies bookingId={b.id} capacity={b.persons} participants={partMap[b.id] || []} paid={b.paid || b.price_cents === 0} />
+                  )}
+                  {!b.invited && myBuddies.length > 0 && (
+                    <BuddyJoin bookingId={b.id} buddies={myBuddies} askedIds={askedByBooking[b.id] || []} />
                   )}
                 </div>
               ))}

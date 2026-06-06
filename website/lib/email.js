@@ -282,6 +282,26 @@ export async function sendSessionInvite({ to, name, fromName, serviceName, start
   );
 }
 
+// ---- Buddy asks you to come train with them ----
+export async function sendBuddyJoinAsk({ to, name, fromName, serviceName, startsAt, endsAt }) {
+  await send(
+    to,
+    `${fromName} gaat trainen — kom je mee?`,
+    shell({
+      title: "Kom je mee trainen? 💪",
+      intro: `Hallo ${name || "daar"}, ${fromName} heeft de gym geboekt en vraagt of je meekomt:`,
+      rows: [
+        ["Sessie", serviceName],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt, endsAt)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Accepteer of weiger in je account.</p>`,
+      cta: { href: `${SITE}/account`, label: "Reageer op de uitnodiging" },
+    }),
+    FROM_BOOKING
+  );
+}
+
 // ---- Confirmation to the booker that their invite(s) went out ----
 export async function sendInviteSent({ to, name, buddyNames, serviceName, startsAt, endsAt }) {
   await send(

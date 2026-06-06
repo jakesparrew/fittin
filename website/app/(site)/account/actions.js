@@ -4,8 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
-import { sendBookingCancelled, sendSessionInvite, sendInviteSent } from "@/lib/email";
-import { notifyMany } from "@/lib/notify";
+import { sendBookingCancelled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk } from "@/lib/email";
+import { notify, notifyMany } from "@/lib/notify";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -114,6 +114,70 @@ export async function removeBuddyFromBooking(bookingId, userId) {
   if (!user) return { error: "Niet ingelogd." };
   const { error } = await supabase.rpc("remove_booking_participant", { p_booking: bookingId, p_user: userId });
   if (error) return { error: error.message };
+  revalidatePath("/account");
+  return { ok: true };
+}
+
+// Ask an accepted buddy to come train with you on one of your bookings ("ik heb geboekt, kom je mee?").
+export async function askBuddyToJoin(bookingId, buddyId) {
+  if (!bookingId || !buddyId) return { error: "Ontbrekende gegevens." };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const { data: me } = await supabase.from("profiles").select("gym_id, full_name").eq("id", user.id).single();
+  if (!me) return { error: "Profiel niet gevonden." };
+
+  // Must own the booking, and they must be an accepted buddy.
+  const [{ data: booking }, { data: friendship }] = await Promise.all([
+    supabase.from("bookings").select("id, user_id, persons, starts_at, ends_at, services(name)").eq("id", bookingId).eq("user_id", user.id).maybeSingle(),
+    supabase.from("buddies").select("id").eq("status", "accepted").or(`and(requester_id.eq.${user.id},addressee_id.eq.${buddyId}),and(requester_id.eq.${buddyId},addressee_id.eq.${user.id})`).maybeSingle(),
+  ]);
+  if (!booking) return { error: "Geen eigen boeking." };
+  if (!friendship) return { error: "Jullie zijn geen buddies." };
+
+  const { error } = await supabase.from("booking_join_requests").insert({ gym_id: me.gym_id, booking_id: bookingId, from_user: user.id, to_user: buddyId, status: "pending" });
+  if (error) return { error: /duplicate|unique/i.test(error.message) ? "Je vroeg deze buddy al." : error.message };
+
+  try {
+    const admin = createAdminClient();
+    const { data: buddy } = await admin.from("profiles").select("email, full_name").eq("id", buddyId).single();
+    if (buddy?.email) await sendBuddyJoinAsk({ to: buddy.email, name: buddy.full_name, fromName: me.full_name || "Een buddy", serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at });
+    await notify({ gymId: me.gym_id, userId: buddyId, actorId: user.id, type: "booking_invite", title: `${me.full_name || "Een buddy"} vraagt of je meekomt trainen`, body: booking.services?.name || "Sessie", link: "/account" });
+  } catch {}
+  revalidatePath("/account");
+  return { ok: true };
+}
+
+// Respond to a "come train with me" request (accept → join as participant; decline).
+export async function respondJoinRequest(formData) {
+  const id = formData.get("id");
+  const decision = formData.get("decision");
+  if (!id) return;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { data: req } = await supabase
+    .from("booking_join_requests")
+    .select("id, gym_id, booking_id, from_user, to_user, status")
+    .eq("id", id)
+    .eq("to_user", user.id)
+    .maybeSingle();
+  if (!req || req.status !== "pending") return;
+
+  if (decision === "accept") {
+    const { data: added } = await supabase.rpc("add_booking_participants", { p_booking: req.booking_id, p_users: [user.id] });
+    if (!added) {
+      await supabase.from("booking_join_requests").update({ status: "declined" }).eq("id", id);
+      return { error: "Geen plaats meer vrij." };
+    }
+    await supabase.from("booking_join_requests").update({ status: "accepted" }).eq("id", id);
+    const { data: me } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+    await notify({ gymId: req.gym_id, userId: req.from_user, actorId: user.id, type: "booking_invite", title: `${me?.full_name || "Je buddy"} komt mee trainen! 🎉`, link: "/account" });
+  } else {
+    await supabase.from("booking_join_requests").update({ status: "declined" }).eq("id", id);
+    const { data: me } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+    await notify({ gymId: req.gym_id, userId: req.from_user, actorId: user.id, type: "booking_invite", title: `${me?.full_name || "Je buddy"} kan niet meekomen`, link: "/account" });
+  }
   revalidatePath("/account");
   return { ok: true };
 }
