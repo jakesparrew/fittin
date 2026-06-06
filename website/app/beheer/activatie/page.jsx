@@ -2,7 +2,8 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SEGMENTS, evaluateMatches } from "@/lib/activation";
-import { createActivation } from "../activation-actions";
+import ActivationWizard from "@/components/admin/ActivationWizard";
+import QuickStart from "@/components/admin/QuickStart";
 
 export const dynamic = "force-dynamic";
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) + "%" : "—");
@@ -29,23 +30,14 @@ export default async function Activatie() {
       <h1 className="text-3xl font-black text-brand">Activatie</h1>
       <p className="mt-1 text-sm text-brand/50">Motivatie-campagnes die automatisch leden activeren — bv. wie 10 dagen niet kwam, krijgt een duwtje.</p>
 
-      <div className="mt-5 rounded-2xl border border-borderc bg-accent/5 p-4 text-sm text-brand/70">
-        Elke dag checkt Fittin&rsquo; automatisch wie aan een campagne voldoet en stuurt de mail. Een lid krijgt dezelfde campagne pas opnieuw na de ingestelde wachttijd.
-      </div>
+      <QuickStart title="Zo werkt een activatie-campagne" steps={[
+        { title: "1. Kies wie", body: "Bv. leden die 1 of 2 weken niet kwamen, of wie nog nooit boekte." },
+        { title: "2. Kies je aanbod", body: "Een gratis sessie (komt als tegoed op hun account) en/of een kortingscode." },
+        { title: "3. Schrijf je bericht", body: "Gebruik {{naam}} voor de voornaam. Zet 'm meteen actief." },
+        { title: "Daarna automatisch", body: "Fittin' checkt elke dag wie matcht en stuurt de mail — met respect voor de wachttijd." },
+      ]} />
 
-      <form action={createActivation} className="mt-6 rounded-2xl border border-borderc bg-white p-5">
-        <p className="font-black text-brand">Nieuwe activatie-campagne</p>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <label className="block">
-            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Trigger</span>
-            <select name="trigger_type" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm">
-              {Object.entries(SEGMENTS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
-            </select>
-          </label>
-          <input name="name" required placeholder="Naam (bv. We missen je)" className="flex-1 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
-          <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">Aanmaken</button>
-        </div>
-      </form>
+      <ActivationWizard segments={Object.entries(SEGMENTS).map(([key, s]) => ({ key, label: s.label, desc: s.desc, param: s.param ? { key: s.param.key, label: s.param.label, default: s.param.default } : null }))} />
 
       <div className="mt-6 space-y-3">
         {(camps || []).map((c) => {

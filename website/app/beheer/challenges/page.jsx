@@ -1,13 +1,9 @@
 import { getAdminContext } from "@/lib/admin";
-import { createChallenge, deleteChallenge } from "../community-actions";
+import { deleteChallenge } from "../community-actions";
 import QuickStart from "@/components/admin/QuickStart";
+import ChallengeWizard from "@/components/admin/ChallengeWizard";
 
 export const dynamic = "force-dynamic";
-const GOALS = [
-  ["sessions", "Aantal sessies"],
-  ["daluren", "Sessies in daluren"],
-  ["streak", "Streak (weken)"],
-];
 
 export default async function Challenges() {
   const ctx = await getAdminContext();
@@ -31,19 +27,7 @@ export default async function Challenges() {
         { title: "Beloon met sessies", body: "wie het haalt krijgt gratis sessies — leden zien hun voortgang in Community." },
       ]} />
 
-      <form action={createChallenge} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
-        <Lbl t="Naam"><input name="name" required className="w-44 rounded-xl border-2 border-borderc px-3 py-2 text-sm" placeholder="12 sessies in juni" /></Lbl>
-        <Lbl t="Doel">
-          <select name="goal_type" className="rounded-xl border-2 border-borderc px-3 py-2 text-sm">
-            {GOALS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-        </Lbl>
-        <Lbl t="Aantal"><input name="goal_count" type="number" defaultValue="12" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <Lbl t="Start"><input name="starts_on" type="date" className="rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <Lbl t="Einde"><input name="ends_on" type="date" className="rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <Lbl t="Beloning (sessies)"><input name="reward_credits" type="number" defaultValue="5" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Challenge</button>
-      </form>
+      <ChallengeWizard />
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(challenges || []).map((c) => (

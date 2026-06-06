@@ -30,6 +30,39 @@ export async function createActivation(formData) {
   redirect(`/beheer/activatie/${data.id}`);
 }
 
+// Create a fully-configured activation in one go (from the step-by-step wizard).
+export async function createActivationFull(formData) {
+  const { supabase, profile, userId, error } = await requireStaff(true);
+  if (error) return { error };
+  const trigger = formData.get("trigger_type") || "inactive";
+  // Build trigger_params from whichever single param this segment uses.
+  const paramKey = formData.get("param_key") || "";
+  const paramVal = num(formData.get("param_value"), 0);
+  const params = { days: 10, min: 4, max: 1 };
+  if (paramKey) params[paramKey] = paramVal;
+  const activate = formData.get("activate") === "on";
+  const { data, error: e } = await supabase
+    .from("campaigns")
+    .insert({
+      gym_id: profile.gym_id,
+      kind: "activation",
+      name: formData.get("name") || "Activatie-campagne",
+      trigger_type: trigger,
+      trigger_params: params,
+      subject: formData.get("subject") || null,
+      body_html: formData.get("body") || null,
+      reward_credits: num(formData.get("reward_credits"), 0),
+      discount_percent: Math.max(0, Math.min(100, num(formData.get("discount_percent"), 0))),
+      cooldown_days: num(formData.get("cooldown_days"), 30),
+      status: activate ? "active" : "draft",
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+  if (e) return { error: e.message };
+  redirect(`/beheer/activatie/${data.id}`);
+}
+
 export async function updateActivation(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
