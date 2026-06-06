@@ -182,6 +182,31 @@ export async function respondJoinRequest(formData) {
   return { ok: true };
 }
 
+// Log the member's height (profile) + today's weight (body_metrics, one per day).
+export async function logBodyMetrics(formData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const { data: me } = await supabase.from("profiles").select("gym_id").eq("id", user.id).single();
+  if (!me) return { error: "Profiel niet gevonden." };
+
+  const num = (v) => { const n = parseFloat(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : null; };
+  const height = num(formData.get("height_cm"));
+  const goal = num(formData.get("goal_weight_kg"));
+  const weight = num(formData.get("weight_kg"));
+
+  if (height != null || goal != null) {
+    await supabase.from("profiles").update({ ...(height != null ? { height_cm: Math.round(height) } : {}), ...(goal != null ? { goal_weight_kg: goal } : {}) }).eq("id", user.id);
+  }
+  if (weight != null && weight > 0) {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date());
+    const { error } = await supabase.from("body_metrics").upsert({ gym_id: me.gym_id, user_id: user.id, weight_kg: weight, logged_on: today }, { onConflict: "user_id,logged_on" });
+    if (error) return { error: error.message };
+  }
+  revalidatePath("/account");
+  return { ok: true, message: "Opgeslagen ✓" };
+}
+
 // Open the gym door during an active booking. open_door() authorises (active booking only) + logs.
 // Physically unlocks via the Nuki Web API when configured; otherwise reports an honest pending
 // state instead of a false "opened" (so the UI never lies to the member).

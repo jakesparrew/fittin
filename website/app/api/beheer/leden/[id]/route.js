@@ -15,9 +15,10 @@ export async function GET(_req, { params }) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, full_name, email, phone, role, created_at, welcome_status, welcome_code_used, referral_code, coach_public")
+    .select("id, full_name, email, phone, role, created_at, welcome_status, welcome_code_used, referral_code, coach_public, height_cm, goal_weight_kg")
     .eq("id", id).eq("gym_id", gym.id).maybeSingle();
   if (!profile) return NextResponse.json({ error: "Lid niet gevonden." }, { status: 404 });
+  const { data: lastWeight } = await admin.from("body_metrics").select("weight_kg, logged_on").eq("user_id", id).order("logged_on", { ascending: false }).limit(1).maybeSingle();
 
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const [ledger, membership, bookings, payments, events, coachLink, payReqs, buddies, refs] = await Promise.all([
@@ -41,6 +42,7 @@ export async function GET(_req, { params }) {
 
   return NextResponse.json({
     profile,
+    body: { height_cm: profile.height_cm || null, goal_weight_kg: profile.goal_weight_kg || null, latestWeight: lastWeight?.weight_kg || null },
     credits,
     membership: membership.data || null,
     coach: coachLink.data?.coach || null,

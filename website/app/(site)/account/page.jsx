@@ -4,7 +4,9 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { cancelBookingAction, payCoachRequest, respondJoinRequest } from "./actions";
+import { cancelBookingAction, payCoachRequest, respondJoinRequest, logBodyMetrics } from "./actions";
+import WeightChart from "@/components/WeightChart";
+import ActionForm from "@/components/ui/ActionForm";
 import { resumeCheckoutAction } from "../boeken/actions";
 import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
@@ -155,6 +157,14 @@ export default async function AccountPage({ searchParams }) {
     .from("booking_join_requests")
     .select("id, booking:bookings(starts_at, ends_at, services(name)), from:profiles!booking_join_requests_from_user_fkey(full_name)")
     .eq("to_user", user.id).eq("status", "pending");
+
+  // Body metrics: height/goal (profile) + weight log series (for the progress graph).
+  const [{ data: bodyProfile }, { data: weights }] = await Promise.all([
+    supabase.from("profiles").select("height_cm, goal_weight_kg").eq("id", user.id).single(),
+    supabase.from("body_metrics").select("weight_kg, logged_on").eq("user_id", user.id).order("logged_on", { ascending: true }).limit(120),
+  ]);
+  const latestWeight = (weights || []).length ? Number(weights[weights.length - 1].weight_kg) : null;
+  const bmi = bodyProfile?.height_cm && latestWeight ? +(latestWeight / Math.pow(bodyProfile.height_cm / 100, 2)).toFixed(1) : null;
 
   const firstName = (profile?.full_name || "").split(" ")[0] || "daar";
 
@@ -333,6 +343,28 @@ export default async function AccountPage({ searchParams }) {
           </div>
         )}
 
+        {/* Lichaam & voortgang */}
+        <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-black text-brand">Lichaam &amp; voortgang</h2>
+              <p className="mt-1 text-sm text-brand/60">Log je gewicht en volg je evolutie. Straks gebruiken we dit voor AI-coachingtips op maat.</p>
+            </div>
+            {bmi && <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">BMI {bmi}</span>}
+          </div>
+
+          <ActionForm action={logBodyMetrics} success="Opgeslagen ✓" className="mt-4 flex flex-wrap items-end gap-3">
+            <Lbl t="Lengte (cm)"><input name="height_cm" type="number" defaultValue={bodyProfile?.height_cm || ""} placeholder="178" className="w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+            <Lbl t="Gewicht vandaag (kg)"><input name="weight_kg" type="number" step="0.1" placeholder="78.5" className="w-28 rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+            <Lbl t="Doelgewicht (kg)"><input name="goal_weight_kg" type="number" step="0.1" defaultValue={bodyProfile?.goal_weight_kg || ""} placeholder="75" className="w-28 rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+            <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">Opslaan</button>
+          </ActionForm>
+
+          <div className="mt-6">
+            <WeightChart points={(weights || []).map((w) => ({ logged_on: w.logged_on, weight_kg: w.weight_kg }))} goal={bodyProfile?.goal_weight_kg ? Number(bodyProfile.goal_weight_kg) : null} />
+          </div>
+        </section>
+
         {/* Upcoming */}
         <section className="mt-12">
           <div className="flex items-center justify-between">
@@ -452,5 +484,13 @@ function Stat({ label, value, accent }) {
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
       <p className={"mt-2 text-2xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
     </div>
+  );
+}
+function Lbl({ t, children }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">{t}</span>
+      {children}
+    </label>
   );
 }

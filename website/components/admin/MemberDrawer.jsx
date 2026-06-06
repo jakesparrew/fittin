@@ -69,6 +69,7 @@ export default function MemberDrawer() {
                   <span className="rounded-full bg-paper px-2.5 py-0.5 text-brand/50">lid sinds {day(p.created_at)}</span>
                   {data.membership && <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-accentdark">member ✓</span>}
                   {data.coach && <span className="rounded-full bg-paper px-2.5 py-0.5 text-brand/60">coach: {data.coach.full_name}</span>}
+                  {data.body?.latestWeight && <span className="rounded-full bg-paper px-2.5 py-0.5 text-brand/60">{data.body.latestWeight} kg{data.body.height_cm ? ` · ${data.body.height_cm} cm` : ""}</span>}
                 </div>
               </div>
               <button onClick={() => setId(null)} className="rounded-full p-2 text-brand/40 hover:bg-white hover:text-brand">✕</button>
