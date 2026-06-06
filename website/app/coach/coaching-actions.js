@@ -47,6 +47,19 @@ export async function coachDeleteExercise(formData) {
   revalidatePath("/coach/oefeningen");
 }
 
+// Inline "add new exercise" from the program builder — creates it and returns it so the picker
+// can select it on the spot (no round-trip to the exercises page).
+export async function coachQuickExercise(name) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const n = String(name || "").trim();
+  if (!n) return { error: "Naam vereist." };
+  const { data, error: e } = await supabase.from("exercises").insert({ gym_id: profile.gym_id, coach_id: userId, name: n }).select("id, name").single();
+  if (e) return { error: e.message };
+  revalidatePath("/coach/programmas");
+  return { id: data.id, name: data.name };
+}
+
 // ---- Programs (coach's own templates) ----
 export async function coachCreateProgram(formData) {
   const { supabase, profile, userId, error } = await requireCoach();

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { coachAddProgramDay, coachAddProgramExercise, coachDeleteProgramExercise, coachAssignProgram, coachDeleteProgram } from "../../coaching-actions";
+import { coachAddProgramDay, coachAddProgramExercise, coachDeleteProgramExercise, coachAssignProgram, coachDeleteProgram, coachQuickExercise } from "../../coaching-actions";
+import ExercisePicker from "@/components/admin/ExercisePicker";
 
 export const dynamic = "force-dynamic";
 const fmtDay = (d) => (d ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(d)) : null);
@@ -95,9 +96,7 @@ export default async function CoachProgramBuilder({ params }) {
               <form action={coachAddProgramExercise} className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="programId" value={program.id} />
                 <input type="hidden" name="dayId" value={day.id} />
-                <select name="exerciseId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-                  {exOptions.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}
-                </select>
+                <ExercisePicker name="exerciseId" options={exOptions.map((e) => ({ id: e.id, name: e.name }))} addAction={coachQuickExercise} />
                 <input name="sets" type="number" placeholder="sets" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
                 <input name="reps" type="number" placeholder="reps" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
                 <input name="rest_sec" type="number" placeholder="rust(s)" className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />

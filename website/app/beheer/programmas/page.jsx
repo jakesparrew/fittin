@@ -20,8 +20,11 @@ export default async function Programmas() {
 
   return (
     <div className="px-8 py-8">
-      <h1 className="text-3xl font-black text-brand">Programma's</h1>
-      <p className="mt-1 text-sm text-brand/50">Bouw trainingsschema's en wijs ze toe aan leden.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-black text-brand">Programma's</h1>
+        <Link href="/beheer/oefeningen" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">≣ Oefeningenbibliotheek →</Link>
+      </div>
+      <p className="mt-1 text-sm text-brand/50">Bouw trainingsschema's en wijs ze toe aan leden. Oefeningen kun je ook rechtstreeks in de bouwer toevoegen.</p>
 
       <form action={createProgram} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
         <label className="block">

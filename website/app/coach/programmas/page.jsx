@@ -18,8 +18,11 @@ export default async function CoachProgrammas() {
   return (
     <div className="px-8 py-8">
       <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Dashboard</Link>
-      <h1 className="mt-2 text-3xl font-black text-brand">Mijn programma's</h1>
-      <p className="mt-1 text-sm text-brand/50">Maak trainingsschema's als template en wijs ze toe aan je clienten.</p>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-black text-brand">Mijn programma's</h1>
+        <Link href="/coach/oefeningen" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">≣ Oefeningenbibliotheek →</Link>
+      </div>
+      <p className="mt-1 text-sm text-brand/50">Maak trainingsschema's als template en wijs ze toe aan je clienten. Oefeningen kun je ook rechtstreeks in de bouwer toevoegen.</p>
 
       <form action={coachCreateProgram} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
         <label className="block">

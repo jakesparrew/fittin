@@ -32,6 +32,18 @@ export async function deleteExercise(formData) {
   revalidatePath("/beheer/oefeningen");
 }
 
+// Inline "add new exercise" from the program builder — returns the created exercise.
+export async function quickExercise(name) {
+  const { supabase, profile, error } = await requireStaff();
+  if (error) return { error };
+  const n = String(name || "").trim();
+  if (!n) return { error: "Naam vereist." };
+  const { data, error: e } = await supabase.from("exercises").insert({ gym_id: profile.gym_id, name: n }).select("id, name").single();
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/programmas");
+  return { id: data.id, name: data.name };
+}
+
 // ---------------- Programs ----------------
 export async function createProgram(formData) {
   const { supabase, profile, userId, error } = await requireStaff();

@@ -11,8 +11,7 @@ const groups = [
     { href: "/beheer/betalingen", label: "Betalingen", icon: "◈" },
   ] },
   { title: "Coaching", items: [
-    { href: "/beheer/programmas", label: "Programma's", icon: "✎" },
-    { href: "/beheer/oefeningen", label: "Oefeningen", icon: "≣" },
+    { href: "/beheer/programmas", label: "Programma's & oefeningen", icon: "✎" },
   ] },
   { title: "Groei", items: [
     { href: "/beheer/nieuwsbrief", label: "Nieuwsbrief", icon: "➤" },
