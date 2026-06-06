@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingCancelled, sendSessionInvite, sendInviteSent } from "@/lib/email";
+import { notifyMany } from "@/lib/notify";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -97,6 +98,8 @@ export async function inviteBuddiesToBooking(bookingId, userIds) {
       if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
     }
     if (user.email) await sendInviteSent({ to: user.email, name: me?.full_name, buddyNames: (people || []).map((p) => p.full_name).filter(Boolean).join(", "), serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
+    const { data: meRow } = await admin.from("profiles").select("gym_id").eq("id", user.id).single();
+    if (meRow) await notifyMany(ids, { gymId: meRow.gym_id, actorId: user.id, type: "booking_invite", title: `${me?.full_name || "Een lid"} nodigt je uit voor een sessie`, body: booking?.services?.name || "Sessie", link: "/account" });
   } catch {}
 
   revalidatePath("/account");

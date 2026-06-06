@@ -20,12 +20,21 @@ export async function GET() {
     } catch {}
     await createAdminClient().from("profiles").update({ pending_referral: null }).eq("id", user.id);
   }
+  // Unread notification count for the nav bell.
+  let unread = 0;
+  try {
+    const supabase = await createClient();
+    const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false);
+    unread = count || 0;
+  } catch {}
+
   return NextResponse.json(
     {
       loggedIn: true,
       name: profile?.full_name || user.email || "Account",
       role: profile?.role || "lid",
       home: roleHome(profile?.role),
+      unread,
     },
     { headers: { "Cache-Control": "no-store" } }
   );

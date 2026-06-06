@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted } from "@/lib/email";
 import { enrollUserInDrips } from "@/lib/newsletter";
+import { notify } from "@/lib/notify";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -155,7 +156,7 @@ export async function adminUnblock(formData) {
 
 // ---- Members ----
 export async function adminAdjustCredits(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff();
   if (error) return { error };
   const memberId = formData.get("memberId");
   const delta = num(formData.get("delta"));
@@ -172,6 +173,7 @@ export async function adminAdjustCredits(formData) {
     ]);
     const balance = (ledger || []).reduce((a, r) => a + r.delta, 0);
     if (m?.email) await sendCreditsAdjusted({ to: m.email, name: m.full_name, delta, reason, balance });
+    await notify({ gymId: profile.gym_id, userId: memberId, type: "credits", title: delta >= 0 ? `+${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} bijgeschreven` : `${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} aangepast`, body: reason, link: "/account" });
   } catch {}
   revalidatePath("/beheer/leden");
   revalidatePath(`/beheer/leden/${memberId}`);
@@ -308,6 +310,8 @@ export async function assignCoachClient(formData) {
       supabase.from("profiles").select("full_name").eq("id", coachId).single(),
     ]);
     if (client?.email) await sendCoachAssigned({ to: client.email, name: client.full_name, coachName: coach?.full_name || "een coach" });
+    await notify({ gymId: profile.gym_id, userId: clientId, type: "coach_assigned", title: `${coach?.full_name || "Een coach"} is nu jouw coach`, body: "Bekijk je trainingsschema bij Mijn training.", link: "/training" });
+    await notify({ gymId: profile.gym_id, userId: coachId, type: "coach_assigned", title: `${client?.full_name || "Een lid"} is aan jou toegewezen`, body: "Bekijk je client en stel een programma op.", link: "/coach/clienten" });
   } catch {}
   revalidatePath("/beheer/coaches");
   revalidatePath(`/beheer/leden/${clientId}`);

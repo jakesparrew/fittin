@@ -25,7 +25,7 @@ export default function Nav() {
       .then((r) => r.json())
       .then((d) => {
         if (!active) return;
-        setAccount(d?.loggedIn ? { name: d.name, role: d.role, home: d.home } : null);
+        setAccount(d?.loggedIn ? { name: d.name, role: d.role, home: d.home, unread: d.unread || 0 } : null);
       })
       .catch(() => {});
     return () => { active = false; };
@@ -62,6 +62,14 @@ export default function Nav() {
                 Word lid
               </Link>
             </>
+          )}
+          {account && (
+            <Link href="/notificaties" className="relative hidden rounded-full p-2 text-brand/70 transition hover:bg-paper hover:text-brand sm:block" aria-label="Notificaties">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+              {account.unread > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-black text-brand">{account.unread > 9 ? "9+" : account.unread}</span>
+              )}
+            </Link>
           )}
           {account && isStaff && (
             <>

@@ -85,12 +85,42 @@ export default async function Community() {
   const incoming = (buddyRows || []).filter((r) => r.status === "pending" && r.addressee_id === user.id);
   const outgoing = (buddyRows || []).filter((r) => r.status === "pending" && r.requester_id === user.id);
 
+  // ---------- Activity feed (friends + global) ----------
+  const buddyIds = new Set();
+  for (const r of accepted) buddyIds.add(r.requester_id === user.id ? r.addressee_id : r.requester_id);
+  const weekAgo = Date.now() - 7 * 86400000;
+  const friendVisits = (gymBookings || [])
+    .filter((b) => buddyIds.has(b.user_id) && new Date(b.starts_at) <= now && new Date(b.starts_at).getTime() >= weekAgo)
+    .map((b) => ({ icon: "🏋️", text: `${b.member?.full_name || "Een buddy"} trainde in de gym`, sub: fmt(b.starts_at), when: new Date(b.starts_at).getTime(), link: "/boeken" }));
+  const eventFeed = events.map((e) => ({ icon: "📅", text: `Nieuw event: ${e.title}`, sub: fmt(e.starts_at), when: new Date(e.created_at || e.starts_at).getTime(), link: "/boeken" }));
+  const challengeFeed = (challenges || []).slice(0, 6).map((c) => ({ icon: "🏆", text: `Nieuwe challenge: ${c.title || c.name || "Challenge"}`, sub: c.goal_count ? `Doel: ${c.goal_count} sessies` : "Doe mee!", when: new Date(c.created_at).getTime(), link: "/community" }));
+  const lbFeed = board[0] ? [{ icon: "👑", text: `${board[0].name} leidt het klassement`, sub: `${board[0].n} sessies deze maand`, when: now.getTime(), link: "/community" }] : [];
+  const feed = [...friendVisits, ...eventFeed, ...challengeFeed, ...lbFeed].sort((a, b) => b.when - a.when).slice(0, 15);
+
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-5xl px-5 py-16">
         <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand">← Mijn account</Link>
         <p className="mt-3 text-sm font-bold uppercase tracking-[0.25em] text-lav">Community</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">Blijf gemotiveerd</h1>
+
+        {/* Activity feed */}
+        <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">
+          <h2 className="font-black text-brand">Feed</h2>
+          <p className="mt-1 text-sm text-brand/60">Wat je buddies doen + alles wat er leeft in de gym.</p>
+          <div className="mt-4 space-y-2">
+            {feed.length === 0 && <p className="text-sm text-brand/50">Nog niks te zien. Voeg buddies toe en boek een sessie!</p>}
+            {feed.map((f, i) => (
+              <Link key={i} href={f.link || "#"} className="flex items-center gap-3 rounded-2xl bg-paper px-4 py-3 transition hover:bg-accent/10">
+                <span className="text-xl">{f.icon}</span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-brand">{f.text}</p>
+                  {f.sub && <p className="truncate text-xs capitalize text-brand/50">{f.sub}</p>}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
 
         {/* Buddies */}
         <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">

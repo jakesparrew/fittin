@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBuddyRequest, sendBuddyInvite } from "@/lib/email";
+import { notify } from "@/lib/notify";
 
 async function me() {
   const supabase = await createClient();
@@ -32,6 +33,7 @@ export async function inviteBuddy(formData) {
     const { error: insErr } = await supabase.from("buddies").insert({ gym_id: profile.gym_id, requester_id: user.id, addressee_id: target.id, status: "pending" });
     if (insErr) return { error: insErr.message };
     await sendBuddyRequest({ to: target.email, name: target.full_name, fromName: profile.full_name || "Een Fittin'-lid" });
+    await notify({ gymId: profile.gym_id, userId: target.id, actorId: user.id, type: "buddy_request", title: `${profile.full_name || "Een lid"} wil je buddy zijn`, body: "Bekijk de aanvraag in Community.", link: "/community" });
     revalidatePath("/community");
     return { ok: true, message: `Buddy-aanvraag verstuurd naar ${target.full_name || email}.` };
   }
@@ -68,9 +70,15 @@ export async function inviteFriendByEmail(_prev, formData) {
 }
 
 export async function acceptBuddy(formData) {
-  const { supabase, error } = await me();
+  const { supabase, user, profile, error } = await me();
   if (error) return { error };
-  await supabase.from("buddies").update({ status: "accepted" }).eq("id", formData.get("id"));
+  const id = formData.get("id");
+  const { data: row } = await supabase.from("buddies").update({ status: "accepted" }).eq("id", id).select("requester_id, addressee_id").maybeSingle();
+  // Notify the requester that their buddy request was accepted.
+  if (row) {
+    const otherId = row.requester_id === user.id ? row.addressee_id : row.requester_id;
+    await notify({ gymId: profile.gym_id, userId: otherId, actorId: user.id, type: "buddy_accepted", title: `${profile.full_name || "Een lid"} is nu je buddy 🤝`, body: "Neem elkaar mee naar een sessie.", link: "/community" });
+  }
   revalidatePath("/community");
   return { ok: true };
 }
