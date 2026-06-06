@@ -23,16 +23,19 @@ export default async function CoachClienten() {
   for (const l of links || []) if (l.client) priceByClient[l.client.id] = l.price_cents;
   const ids = clients.map((c) => c.id);
 
-  let programs = [], bookings = [], logs = [];
+  let programs = [], bookings = [], logs = [], creditRows = [];
   if (ids.length) {
     const weekAgo = new Date(Date.now() - 7 * 86400000);
-    const [pRes, bRes, lRes] = await Promise.all([
+    const [pRes, bRes, lRes, cRes] = await Promise.all([
       supabase.from("programs").select("id, name, member_id").eq("coach_id", userId).in("member_id", ids),
       supabase.from("bookings").select("id, user_id, starts_at, status, services(name)").eq("coach_id", userId).in("user_id", ids).order("starts_at"),
       supabase.from("workout_logs").select("user_id, created_at").in("user_id", ids).gte("created_at", weekAgo.toISOString()),
+      supabase.from("coach_credit_ledger").select("client_id, delta").eq("coach_id", userId).in("client_id", ids),
     ]);
-    programs = pRes.data || []; bookings = bRes.data || []; logs = lRes.data || [];
+    programs = pRes.data || []; bookings = bRes.data || []; logs = lRes.data || []; creditRows = cRes.data || [];
   }
+  const creditByClient = {};
+  for (const r of creditRows) creditByClient[r.client_id] = (creditByClient[r.client_id] || 0) + r.delta;
 
   const now = Date.now();
   const progByClient = {};
@@ -75,10 +78,11 @@ export default async function CoachClienten() {
                   </span>
                 </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+                <div className="mt-4 grid grid-cols-4 gap-3 text-center">
                   <Mini label="Laatst actief" value={fmtDay(lastActive[c.id])} />
                   <Mini label="Programma" value={prog ? "✓" : "—"} />
                   <Mini label="Volgende" value={next ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(next.starts_at)) : "—"} />
+                  <Mini label="Sessietegoed" value={creditByClient[c.id] || 0} />
                 </div>
 
                 {next && <p className="mt-3 text-xs capitalize text-brand/50">Volgende sessie: {fmt(next.starts_at)} · {next.services?.name}</p>}
@@ -107,6 +111,10 @@ export default async function CoachClienten() {
                     <label className="block flex-1">
                       <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Betaalverzoek (€)</span>
                       <input name="amount_eur" defaultValue={eur(priceByClient[c.id])} className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
+                    </label>
+                    <label className="block w-20">
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Sessies</span>
+                      <input name="sessions" type="number" min="0" defaultValue="0" title="Aantal sessietegoed dat na betaling wordt bijgeschreven (0 = los betaalverzoek)" className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
                     </label>
                     <button className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">Stuur</button>
                   </form>

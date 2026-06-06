@@ -246,6 +246,10 @@ export default async function CoachDashboard({ searchParams }) {
             <select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select>
           </Lbl>
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+          <label className="flex items-center gap-2 pb-1.5 text-xs font-bold text-brand/70">
+            <input type="checkbox" name="use_client_credit" className="h-4 w-4 accent-[#5fda6b]" />
+            Gebruik sessietegoed van client
+          </label>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
         </form>
         {(!members || members.length === 0) && <p className="mt-3 text-xs text-brand/40">Nog geen clienten/leden in de gym.</p>}

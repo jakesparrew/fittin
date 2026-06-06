@@ -36,6 +36,7 @@ export async function coachBookSession(formData) {
     p_date: formData.get("date"),
     p_hour: num(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
+    p_use_client_credit: formData.get("use_client_credit") === "on",
   });
   if (e) return { error: e.message };
 
@@ -218,12 +219,13 @@ export async function sendCoachPaymentRequest(formData) {
   if (error) return { error };
   const clientId = formData.get("clientId");
   const amount = cents(formData.get("amount_eur"));
+  const sessions = Math.max(0, num(formData.get("sessions"), 0)); // >0 → top up coachee credit on payment
   if (!clientId || amount < 1) return { error: "Kies een client en een bedrag." };
   // Confirm this is the coach's client.
   const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).maybeSingle();
   if (!link) return { error: "Dit is niet jouw client." };
   const { error: e } = await supabase.from("coach_payment_requests").insert({
-    gym_id: profile.gym_id, coach_id: userId, client_id: clientId, amount_cents: amount, description: formData.get("description") || null,
+    gym_id: profile.gym_id, coach_id: userId, client_id: clientId, amount_cents: amount, sessions, description: formData.get("description") || null,
   });
   if (e) return { error: e.message };
   try {

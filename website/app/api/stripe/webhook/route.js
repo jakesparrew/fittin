@@ -193,11 +193,16 @@ async function handleEvent(event, admin) {
         }
       } else if (obj.metadata?.kind === "coach_payment") {
         const reqId = obj.metadata.request_id;
-        const { data: req } = await admin.from("coach_payment_requests").select("gym_id, client_id, coach_id, description").eq("id", reqId).single();
-        if (req) {
+        const { data: req } = await admin.from("coach_payment_requests").select("gym_id, client_id, coach_id, description, sessions, status").eq("id", reqId).single();
+        if (req && req.status !== "paid") {
           await admin.from("coach_payment_requests").update({ status: "paid", paid_at: new Date().toISOString(), stripe_session_id: obj.id }).eq("id", reqId);
           const { data: coach } = await admin.from("profiles").select("full_name").eq("id", req.coach_id).single();
           await recordPayment(admin, { gymId: req.gym_id, userId: req.client_id, amountCents: obj.amount_total, kind: "overig", description: `Coaching · ${coach?.full_name || "coach"}${req.description ? ` · ${req.description}` : ""}`, stripeId: obj.id });
+          // Top up the coachee's prepaid sessions with this coach so future bookings don't charge again.
+          if (req.sessions > 0) {
+            await admin.from("coach_credit_ledger").insert({ gym_id: req.gym_id, coach_id: req.coach_id, client_id: req.client_id, delta: req.sessions, reason: "aankoop" });
+            await admin.from("notifications").insert({ gym_id: req.gym_id, user_id: req.client_id, type: "system", title: `${req.sessions} sessietegoed bijgeschreven`, body: `Bij ${coach?.full_name || "je coach"} — je hoeft niet telkens opnieuw te betalen.`, link: "/account" });
+          }
         }
       } else if (obj.metadata?.kind === "welcome" || obj.mode === "setup") {
         await handleWelcomeSetup(admin, obj);
