@@ -6,6 +6,7 @@ import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest } from "@/lib/email";
 import { notify } from "@/lib/notify";
+import { logCoachActivity } from "@/lib/coachlog";
 
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
 
@@ -55,7 +56,10 @@ export async function coachBookSession(formData) {
         endsAt: booking.ends_at,
       });
     const { data: prof } = await supabase.from("profiles").select("gym_id").eq("id", userId).single();
-    if (prof) await notify({ gymId: prof.gym_id, userId: formData.get("clientId"), actorId: userId, type: "coach_booked", title: `${coach?.full_name || "Je coach"} plande een sessie voor je`, body: booking?.services?.name || "Sessie", link: "/account" });
+    if (prof) {
+      await notify({ gymId: prof.gym_id, userId: formData.get("clientId"), actorId: userId, type: "coach_booked", title: `${coach?.full_name || "Je coach"} plande een sessie voor je`, body: booking?.services?.name || "Sessie", link: "/account" });
+      await logCoachActivity({ gymId: prof.gym_id, coachId: userId, type: "booked", summary: `Sessie geboekt met ${client?.full_name || "client"} · ${booking?.services?.name || "Sessie"}`, refId: bookingId });
+    }
   } catch {}
 
   revalidatePath("/coach");
@@ -98,6 +102,7 @@ export async function requestCoachSessions(formData) {
     note: formData.get("note") || null,
   });
   if (e) return { error: e.message };
+  await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "request", summary: `${qty} coach-sessies aangevraagd` });
   revalidatePath("/coach");
   return { ok: true };
 }
@@ -156,6 +161,8 @@ export async function sendCoachPaymentRequest(formData) {
     const { data: me } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
     if (client?.email) await sendPaymentRequest({ to: client.email, name: client.full_name, coachName: me?.full_name || "Je coach", amount, description: formData.get("description") });
     await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "payment_request", title: `Betaalverzoek van ${me?.full_name || "je coach"}`, body: "€ " + (amount / 100).toFixed(2).replace(".", ",") + (formData.get("description") ? " · " + formData.get("description") : ""), link: "/account" });
+    const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", clientId).single();
+    await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "payment_request", summary: `Betaalverzoek € ${(amount / 100).toFixed(2).replace(".", ",")} naar ${cl?.full_name || "client"}` });
   } catch {}
   revalidatePath("/coach/clienten");
   revalidatePath("/coach/betalingen");

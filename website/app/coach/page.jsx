@@ -35,6 +35,13 @@ export default async function CoachDashboard({ searchParams }) {
     .order("created_at", { ascending: false })
     .limit(6);
 
+  const { data: activity } = await supabase
+    .from("coach_activity")
+    .select("type, summary, created_at")
+    .eq("coach_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(8);
+
   const creditBalance = (ledger || []).reduce((a, r) => a + r.delta, 0);
   const all = bookings || [];
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= Date.now());
@@ -104,6 +111,21 @@ export default async function CoachDashboard({ searchParams }) {
                 <span className="font-bold text-brand">{n.title}</span>
                 {n.body && <span className="text-brand/50"> · {n.body}</span>}
               </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent activity log */}
+      {(activity || []).length > 0 && (
+        <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
+          <p className="font-bold text-brand">Recente activiteit</p>
+          <div className="mt-3 space-y-1.5 text-sm">
+            {activity.map((a, i) => (
+              <div key={i} className="flex items-center justify-between gap-3">
+                <span className="text-brand/70">{a.summary}</span>
+                <span className="shrink-0 text-xs text-brand/40">{new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(a.created_at))}</span>
+              </div>
             ))}
           </div>
         </div>

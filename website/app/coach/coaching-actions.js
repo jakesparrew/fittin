@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slotInstant } from "@/lib/time";
+import { logCoachActivity } from "@/lib/coachlog";
 
 const num = (v, d = null) => {
   const n = parseInt(v, 10);
@@ -117,12 +118,16 @@ export async function coachDeleteProgramExercise(formData) {
 }
 
 export async function coachAssignProgram(formData) {
-  const { supabase, userId, error } = await requireCoach();
+  const { supabase, profile, userId, error } = await requireCoach();
   if (error) return { error };
   const programId = formData.get("programId");
   if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
   const memberId = formData.get("memberId") || null;
   await supabase.from("programs").update({ member_id: memberId, is_template: !memberId }).eq("id", programId);
+  if (memberId) {
+    const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", memberId).single();
+    await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "program", summary: `Programma toegewezen aan ${cl?.full_name || "client"}`, refId: programId });
+  }
   revalidatePath(`/coach/programmas/${programId}`);
 }
 
@@ -158,6 +163,7 @@ export async function coachCreateEvent(formData) {
     created_by: userId,
   });
   if (e) return { error: e.message };
+  await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "event", summary: `Event voorgesteld: ${formData.get("title")}` });
   revalidatePath("/coach/events");
   return { ok: true };
 }

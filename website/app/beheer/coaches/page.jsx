@@ -30,6 +30,10 @@ export default async function Coaches() {
   const reqByCoach = {};
   for (const r of reqs || []) (reqByCoach[r.coach_id] ||= []).push(r);
 
+  const { data: activityRows } = await supabase.from("coach_activity").select("coach_id, summary, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }).limit(200);
+  const activityOf = {};
+  for (const a of activityRows || []) (activityOf[a.coach_id] ||= []).push(a);
+
   const all = people || [];
   const coaches = all.filter((p) => p.role === "coach" || p.role === "beheerder");
   const members = all.filter((p) => p.role !== "beheerder"); // assignable as clients
@@ -140,6 +144,21 @@ export default async function Coaches() {
                     ))}
                   </div>
                   <Link href={`/beheer/factuur?coach=${c.id}&month=${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`} className="mt-3 inline-block rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90">Maak factuur (6% btw) →</Link>
+                </details>
+              )}
+
+              {/* Activity log */}
+              {(activityOf[c.id] || []).length > 0 && (
+                <details className="mt-3 rounded-xl bg-paper/60 p-3 text-sm">
+                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Activiteitenlog ({activityOf[c.id].length})</summary>
+                  <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
+                    {activityOf[c.id].slice(0, 50).map((a, i) => (
+                      <div key={i} className="flex justify-between gap-3 text-xs">
+                        <span className="text-brand/70">{a.summary}</span>
+                        <span className="shrink-0 text-brand/40">{fmt(a.created_at)}</span>
+                      </div>
+                    ))}
+                  </div>
                 </details>
               )}
 
