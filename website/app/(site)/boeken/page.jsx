@@ -45,7 +45,7 @@ export default async function BoekenPage({ searchParams }) {
   // read other profiles via RLS, but coach name/availability is public-facing info.
   const admin = createAdminClient();
   const [{ data: coaches }, { data: availability }] = await Promise.all([
-    admin.from("profiles").select("id, full_name").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
+    admin.from("profiles").select("id, full_name, coach_pt_price_cents").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
     supabase.from("coach_availability").select("coach_id, weekday, from_hour, to_hour").eq("gym_id", gym.id),
   ]);
 

@@ -187,6 +187,7 @@ export async function saveCoachProfile(formData) {
       coach_specialty: formData.get("specialty") || null,
       coach_photo_url: formData.get("photo_url") || null,
       coach_pricelist: formData.get("pricelist") || null,
+      coach_pt_price_cents: formData.get("pt_price_eur") ? cents(formData.get("pt_price_eur")) : null,
       coach_public: formData.get("public") === "on",
     })
     .eq("id", userId);

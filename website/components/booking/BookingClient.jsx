@@ -97,9 +97,10 @@ export default function BookingClient({
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
   const durFactor = duration >= 4 ? 0.9 : duration === 3 ? 0.92 : duration === 2 ? 0.95 : 1;
-  // Members book Fit60 at the member price (matches what the server charges).
+  // Members book Fit60 at the member price; PT uses the chosen coach's own rate (matches the server).
   const memberRate = isFit60 && isMember && service?.member_price_cents != null;
-  const unitCents = memberRate ? service.member_price_cents : (service?.price_cents ?? 0);
+  const coachPtRate = isPT && coachId ? coaches.find((c) => c.id === coachId)?.coach_pt_price_cents : null;
+  const unitCents = memberRate ? service.member_price_cents : (coachPtRate != null ? coachPtRate : (service?.price_cents ?? 0));
   const priceCents = welcomeApplies || creditApplies ? 0 : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
 
   async function submit() {

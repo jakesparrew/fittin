@@ -12,7 +12,7 @@ export default async function CoachProfiel() {
   const { supabase, userId } = ctx;
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_public")
+    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_pt_price_cents, coach_public")
     .eq("id", userId)
     .single();
 
@@ -36,6 +36,7 @@ export default async function CoachProfiel() {
           Toon mijn profiel publiek op fittin.be/coaches
         </label>
         <Field name="specialty" label="Specialiteit" defaultValue={me?.coach_specialty} placeholder="bv. Krachttraining · afvallen · revalidatie" />
+        <Field name="pt_price_eur" label="PT-tarief per sessie (€)" defaultValue={me?.coach_pt_price_cents != null ? (me.coach_pt_price_cents / 100).toFixed(2).replace(".", ",") : ""} placeholder="bv. 60 — leeg = standaardtarief" />
         <Field name="photo_url" label="Foto-URL" defaultValue={me?.coach_photo_url} placeholder="https://… (link naar je foto)" />
         <label className="block">
           <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Over mij</span>
