@@ -86,6 +86,19 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
     await recordPayment(admin, { gymId: booking.gym_id, userId: booking.user_id, amountCents: session.amount_total, kind: "booking", description: `Boeking · ${booking.services?.name || "Sessie"}`, stripeId: session.id });
   // Referred member just paid → reward the referrer (deferred anti-farm reward).
   if (booking.user_id) await admin.rpc("reward_pending_referral", { p_user: booking.user_id });
+  // Coach affiliate: if the referrer is a coach, award them a one-time commission for this member.
+  if (booking.user_id) {
+    try {
+      const { data: ref } = await admin.from("referrals").select("referrer_id").eq("referred_id", booking.user_id).maybeSingle();
+      if (ref?.referrer_id) {
+        const { data: rp } = await admin.from("profiles").select("role, gym_id").eq("id", ref.referrer_id).single();
+        if (rp?.role === "coach") {
+          const { error: cErr } = await admin.from("coach_commissions").insert({ gym_id: rp.gym_id, coach_id: ref.referrer_id, member_id: booking.user_id, amount_cents: 500, reason: "Aanbrenging — eerste betaalde boeking" });
+          if (!cErr) await admin.from("notifications").insert({ gym_id: rp.gym_id, user_id: ref.referrer_id, type: "system", title: "Commissie verdiend 🎉", body: "€ 5,00 voor een aangebracht lid", link: "/coach" });
+        }
+      }
+    } catch {}
+  }
   const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", booking.user_id).single();
   await sendBookingConfirmation({
     to: profile?.email,

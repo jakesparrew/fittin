@@ -34,6 +34,10 @@ export default async function Coaches() {
   const activityOf = {};
   for (const a of activityRows || []) (activityOf[a.coach_id] ||= []).push(a);
 
+  const { data: commRows } = await supabase.from("coach_commissions").select("coach_id, amount_cents").eq("gym_id", gym.id);
+  const commByCoach = {};
+  for (const c of commRows || []) commByCoach[c.coach_id] = (commByCoach[c.coach_id] || 0) + c.amount_cents;
+
   const all = people || [];
   const coaches = all.filter((p) => p.role === "coach" || p.role === "beheerder");
   const members = all.filter((p) => p.role !== "beheerder"); // assignable as clients
@@ -112,6 +116,7 @@ export default async function Coaches() {
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{upcoming} gepland</span>
                   {c.coach_billing_mode === "credit" && <span className="rounded-full bg-paper px-3 py-1 text-brand/60">Saldo: {balance[c.id] || 0}</span>}
                   {c.coach_billing_mode === "invoice" && <span className="rounded-full bg-accent/15 px-3 py-1 text-accentdark">Te factureren: {euro(invoice[c.id] || 0)}</span>}
+                  {commByCoach[c.id] > 0 && <span className="rounded-full bg-paper px-3 py-1 text-brand/70">Commissie: {euro(commByCoach[c.id])}</span>}
                 </div>
               </div>
 

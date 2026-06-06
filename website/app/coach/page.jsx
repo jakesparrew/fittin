@@ -43,6 +43,14 @@ export default async function CoachDashboard({ searchParams }) {
     .order("created_at", { ascending: false })
     .limit(8);
 
+  const [{ data: meRef }, { data: commissions }, { count: referredCount }] = await Promise.all([
+    supabase.from("profiles").select("referral_code").eq("id", userId).single(),
+    supabase.from("coach_commissions").select("amount_cents").eq("coach_id", userId),
+    supabase.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", userId),
+  ]);
+  const commissionTotal = (commissions || []).reduce((a, c) => a + c.amount_cents, 0);
+  const refLink = `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/login?mode=signup&ref=${meRef?.referral_code || ""}`;
+
   const creditBalance = (ledger || []).reduce((a, r) => a + r.delta, 0);
   const all = bookings || [];
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= Date.now());
@@ -116,6 +124,27 @@ export default async function CoachDashboard({ searchParams }) {
           </div>
         </div>
       )}
+
+      {/* Affiliate / commissie */}
+      <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="font-bold text-brand">Breng leden aan &amp; verdien</p>
+            <p className="mt-0.5 text-xs text-brand/50">Deel je code. Voor elk nieuw lid dat zijn eerste sessie betaalt, verdien je € 5 commissie.</p>
+          </div>
+          <div className="flex gap-4 text-center">
+            <div><p className="text-2xl font-black text-brand">{referredCount || 0}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Aangebracht</p></div>
+            <div><p className="text-2xl font-black text-accentdark">{euro(commissionTotal)}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Verdiend</p></div>
+          </div>
+        </div>
+        {meRef?.referral_code && (
+          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-paper p-3">
+            <span className="text-xs font-bold uppercase tracking-wide text-lav">Jouw code</span>
+            <span className="rounded-lg bg-white px-3 py-1 font-black text-brand">{meRef.referral_code}</span>
+            <span className="truncate text-xs text-brand/50">{refLink}</span>
+          </div>
+        )}
+      </div>
 
       {/* Recent activity log */}
       {(activity || []).length > 0 && (
