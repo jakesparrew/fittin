@@ -316,7 +316,7 @@ export default async function AccountPage({ searchParams }) {
               <p className="font-black">✓ Member-abonnement actief</p>
               <p className="mt-1 text-sm text-lav">
                 {membership.cancel_at_period_end ? "Loopt af op " : "Verlengt op "}
-                {membership.current_period_end ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(membership.current_period_end)) : "—"} · je boekt aan € 8
+                {membership.current_period_end ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(membership.current_period_end)) : "—"} · je boekt aan € 10
               </p>
             </div>
             <form action={openBillingPortal}>

@@ -45,6 +45,23 @@ export default async function Lidmaatschap() {
           )}
         </p>
 
+        {/* Quick comparison */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-borderc bg-white p-4 text-center">
+            <p className="text-2xl font-black text-brand">€ 15</p>
+            <p className="text-xs font-bold text-brand/50">losse sessie</p>
+          </div>
+          <div className="rounded-2xl border-2 border-accent bg-accent/5 p-4 text-center">
+            <p className="text-2xl font-black text-accentdark">€ 10</p>
+            <p className="text-xs font-bold text-brand/50">als member / sessie</p>
+          </div>
+          <div className="rounded-2xl border border-borderc bg-white p-4 text-center">
+            <p className="text-2xl font-black text-brand">+1</p>
+            <p className="text-xs font-bold text-brand/50">gratis sessie / maand</p>
+          </div>
+        </div>
+        <p className="mt-2 text-sm text-brand/60">Train je 2× per maand? Dan verdient je abonnement zichzelf al terug.</p>
+
         {isMember && (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-brand p-6 text-white">
             <div>
@@ -65,7 +82,8 @@ export default async function Lidmaatschap() {
             const isAbo = p.kind === "abonnement";
             const ownsThis = isAbo && isMember;
             return (
-              <div key={p.id} className={"rounded-3xl border p-7 " + (isAbo ? "border-accent bg-white" : "border-borderc bg-white")}>
+              <div key={p.id} className={"relative rounded-3xl border p-7 " + (isAbo ? "border-2 border-accent bg-white shadow-lg shadow-accent/10" : "border-borderc bg-white")}>
+                {isAbo && <span className="absolute -top-3 left-7 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">Meest gekozen</span>}
                 <p className="text-xs font-bold uppercase tracking-widest text-lav">{isAbo ? "Abonnement" : "Voordeelkaart"}</p>
                 <h2 className="mt-1 text-2xl font-black">{p.name}</h2>
                 <p className="mt-2 text-3xl font-black text-accentdark">
@@ -75,8 +93,11 @@ export default async function Lidmaatschap() {
                 <ul className="mt-4 space-y-2 text-sm text-brand/70">
                   {isAbo ? (
                     <>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> {p.credits} sessie / maand inclusief</li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> Boek daarna aan € 10 i.p.v. € 15</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> <strong>{p.credits} gratis sessie / maand</strong> inbegrepen</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Boek daarna aan <strong>€ 10</strong> i.p.v. € 15</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Je sessietegoed vervalt niet zolang je lid bent</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Member-only acties &amp; kortingscodes</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Voorrang bij events &amp; challenges</li>
                       <li className="flex gap-2"><span className="text-accent">✓</span> Automatisch verlengd · stop wanneer je wil</li>
                     </>
                   ) : (

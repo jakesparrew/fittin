@@ -25,6 +25,8 @@ export default function Footer() {
             <li><Link href="/" className="transition hover:text-white">Home</Link></li>
             <li><Link href="/degym" className="transition hover:text-white">De gym</Link></li>
             <li><Link href="/personal-training" className="transition hover:text-white">Personal training</Link></li>
+            <li><Link href="/coaches" className="transition hover:text-white">Coaches</Link></li>
+            <li><Link href="/lidmaatschap" className="transition hover:text-white">Lidmaatschap</Link></li>
             <li><Link href="/boeken" className="transition hover:text-white">Online boeken</Link></li>
             <li><Link href="/calorieen-berekenen" className="transition hover:text-white">Calorieën berekenen</Link></li>
             <li><Link href="/events" className="transition hover:text-white">Events</Link></li>
