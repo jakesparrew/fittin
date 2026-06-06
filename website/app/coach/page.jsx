@@ -90,8 +90,13 @@ export default async function CoachDashboard({ searchParams }) {
 
   return (
     <div className="px-8 py-8">
-      <h1 className="text-3xl font-black text-brand">Coach dashboard</h1>
-      <p className="mt-1 text-sm text-brand/50">Boek sessies met je clienten en beheer je agenda.</p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-black text-brand">Coach dashboard</h1>
+          <p className="mt-1 text-sm text-brand/50">Boek sessies met je clienten en beheer je agenda.</p>
+        </div>
+        <Link href="/community" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">💡 Deel een tip in de feed →</Link>
+      </div>
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
 
