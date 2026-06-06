@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions } from "./actions";
+import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import CoachScheduler from "@/components/coach/CoachScheduler";
 import SubmitButton from "@/components/ui/SubmitButton";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -142,9 +143,17 @@ export default async function CoachDashboard({ searchParams }) {
             <div><p className="text-2xl font-black text-brand">{referredCount || 0}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Aangebracht</p></div>
           </div>
         </div>
+        {/* Invite by e-mail — auto-sends the invite with your referral code */}
+        <ActionForm action={coachInviteByEmail} success="Uitnodiging verstuurd ✓" className="mt-3 flex flex-wrap items-end gap-2">
+          <label className="block flex-1">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Nodig een lid uit via e-mail</span>
+            <input name="email" type="email" required placeholder="naam@voorbeeld.be" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+          </label>
+          <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand transition hover:opacity-90">Verstuur uitnodiging</button>
+        </ActionForm>
         {meRef?.referral_code && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-paper p-3">
-            <span className="text-xs font-bold uppercase tracking-wide text-lav">Jouw code</span>
+            <span className="text-xs font-bold uppercase tracking-wide text-lav">Of deel je code</span>
             <span className="rounded-lg bg-white px-3 py-1 font-black text-brand">{meRef.referral_code}</span>
             <span className="truncate text-xs text-brand/50">{refLink}</span>
           </div>
@@ -186,14 +195,19 @@ export default async function CoachDashboard({ searchParams }) {
 
       {mode === "credit" && (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-borderc bg-white p-5">
-            <p className="font-bold text-brand">Koop coach-sessies</p>
-            <p className="mt-0.5 text-xs text-brand/50">Direct betalen met kaart.</p>
-            <form action={buyCoachCredits} className="mt-3 flex items-end gap-2">
-              <label className="text-xs font-bold text-lav">Aantal
-                <input name="qty" type="number" defaultValue="10" min="1" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+          <div className="rounded-2xl border-2 border-accent bg-accent/5 p-5">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💳</span>
+              <p className="text-lg font-black text-brand">Coach-sessies kopen</p>
+            </div>
+            <p className="mt-1 text-sm text-brand/60">
+              Reken nu af met je kaart{profile.coach_session_price_cents ? ` — € ${(profile.coach_session_price_cents / 100).toFixed(2).replace(".", ",")} per sessie` : ""}. Je betaalt voor het gebruik van de zaal; daarna boek je je clienten met dit saldo.
+            </p>
+            <form action={buyCoachCredits} className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="block text-xs font-bold text-lav">Aantal sessies
+                <input name="qty" type="number" defaultValue="10" min="1" className="mt-1 block w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </label>
-              <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Kopen</SubmitButton>
+              <SubmitButton className="rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand">Naar de kassa →</SubmitButton>
             </form>
           </div>
           <div className="rounded-2xl border border-borderc bg-white p-5">

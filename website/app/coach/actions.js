@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
-import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest } from "@/lib/email";
+import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest, sendBuddyInvite } from "@/lib/email";
 import { notify, notifyAdmins } from "@/lib/notify";
 import { logCoachActivity } from "@/lib/coachlog";
 
@@ -153,6 +153,21 @@ export async function requestCoachSessions(formData) {
   } catch {}
   revalidatePath("/coach");
   return { ok: true };
+}
+
+// Invite a (future) member by e-mail with the coach's referral code — auto-sends the invite mail.
+export async function coachInviteByEmail(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  if (!email.includes("@")) return { error: "Vul een geldig e-mailadres in." };
+  const { data: me } = await supabase.from("profiles").select("full_name, referral_code").eq("id", userId).single();
+  try {
+    await sendBuddyInvite({ to: email, fromName: me?.full_name || "Je Fittin'-coach", refCode: me?.referral_code });
+  } catch (e) {
+    return { error: "Versturen mislukt. Probeer opnieuw." };
+  }
+  return { ok: true, message: `Uitnodiging verstuurd naar ${email} ✓` };
 }
 
 // Upload a real profile photo to Supabase Storage and save the public URL.

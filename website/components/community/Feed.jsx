@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useActionState } from "react";
-import { createPost, toggleKudos, addComment, deletePost } from "@/app/(site)/community/feed-actions";
+import { createPost, toggleKudos, deletePost } from "@/app/(site)/community/feed-actions";
 
 const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 const initials = (n) => (n || "?").split(" ").map((x) => x[0]).slice(0, 2).join("").toUpperCase();
@@ -70,26 +70,19 @@ function Composer({ isCoach }) {
   return (
     <form ref={formRef} action={action} className="mt-5 rounded-2xl border border-borderc bg-paper/50 p-4">
       <textarea name="body" rows={2} placeholder={isCoach ? "Deel een tip, aankondiging of motivatie met de community…" : "Hoe ging je training? Deel een update…"} className="w-full resize-none rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm" />
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <label className="flex cursor-pointer items-center gap-2 text-xs font-bold text-brand/60">
-          <span className="rounded-full bg-white px-3 py-1.5 transition hover:bg-accent/15">📷 Foto</span>
-          <input type="file" name="image" accept="image/*" className="hidden" onChange={(e) => { e.target.previousSibling.textContent = e.target.files?.[0] ? "📷 " + e.target.files[0].name.slice(0, 18) : "📷 Foto"; }} />
-        </label>
-        <div className="flex items-center gap-2">
-          {isCoach && (
-            <label className="flex items-center gap-1.5 text-xs font-bold text-brand/60">
-              <input type="checkbox" name="kind" value="coach_tip" className="h-4 w-4 accent-[#5fda6b]" /> Als coach-tip
-            </label>
-          )}
-          <button disabled={pending} className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand transition hover:opacity-90 disabled:opacity-50">{pending ? "Bezig…" : "Plaats"}</button>
-        </div>
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+        {isCoach && (
+          <label className="flex items-center gap-1.5 text-xs font-bold text-brand/60">
+            <input type="checkbox" name="kind" value="coach_tip" className="h-4 w-4 accent-[#5fda6b]" /> Als coach-tip
+          </label>
+        )}
+        <button disabled={pending} className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand transition hover:opacity-90 disabled:opacity-50">{pending ? "Bezig…" : "Plaats"}</button>
       </div>
     </form>
   );
 }
 
 function PostCard({ post, me }) {
-  const [showComments, setShowComments] = useState(false);
   const badge = KIND_BADGE[post.kind];
   const mine = post.author_id === me.id;
 
@@ -115,38 +108,15 @@ function PostCard({ post, me }) {
             <img src={post.image_url} alt="" className="mt-3 max-h-96 w-full rounded-xl object-cover" />
           )}
 
-          {/* Kudos + comment toggle */}
+          {/* Kudos */}
           <div className="mt-3 flex items-center gap-4 text-sm">
             <form action={toggleKudos}>
               <input type="hidden" name="postId" value={post.id} />
               <button className={"inline-flex items-center gap-1.5 font-bold transition " + (post.i_kudosed ? "text-accentdark" : "text-brand/50 hover:text-brand")}>
-                <span className="text-base">{post.i_kudosed ? "👏" : "👏"}</span> {post.kudos > 0 ? post.kudos : ""} Kudos
+                <span className="text-base">👏</span> {post.kudos > 0 ? post.kudos : ""} Kudos
               </button>
             </form>
-            <button onClick={() => setShowComments((s) => !s)} className="font-bold text-brand/50 transition hover:text-brand">
-              💬 {post.comments.length > 0 ? post.comments.length : ""} Reageer
-            </button>
           </div>
-
-          {showComments && (
-            <div className="mt-3 space-y-2 border-t border-borderc pt-3">
-              {post.comments.map((c) => (
-                <div key={c.id} className="flex items-start gap-2">
-                  <Avatar name={c.author_name} small />
-                  <div className="rounded-xl bg-paper px-3 py-1.5">
-                    <span className="text-xs font-bold text-brand">{c.author_name}</span>
-                    <span className="ml-2 text-xs text-brand/40">{fmt(c.created_at)}</span>
-                    <p className="text-sm text-brand/80">{c.body}</p>
-                  </div>
-                </div>
-              ))}
-              <form action={addComment} className="flex gap-2">
-                <input type="hidden" name="postId" value={post.id} />
-                <input name="body" placeholder="Schrijf een reactie…" className="flex-1 rounded-full border-2 border-borderc px-3 py-1.5 text-sm" />
-                <button className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white">Stuur</button>
-              </form>
-            </div>
-          )}
         </div>
       </div>
     </article>
