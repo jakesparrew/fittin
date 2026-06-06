@@ -47,9 +47,25 @@ const loves = [
   ["We love cables", "Kabelstations voor eindeloze variatie in je training."],
 ];
 
+const localBusinessLd = {
+  "@context": "https://schema.org",
+  "@type": "HealthClub",
+  name: "Fittin'",
+  description: "Privé fitness & personal training in Gent. Reserveer de zaal voor jezelf of met vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
+  url: "https://fittin.be",
+  email: "info@fittin.be",
+  image: "https://fittin.be/og.png",
+  priceRange: "€€",
+  address: { "@type": "PostalAddress", streetAddress: "Aannemersstraat 186", postalCode: "9040", addressLocality: "Gent", addressCountry: "BE" },
+  geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },
+  openingHours: "Mo-Su 00:00-24:00",
+  hasMap: "https://www.google.com/maps?q=Aannemersstraat+186,+9040+Gent",
+};
+
 export default function DeGym() {
   return (
     <main>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessLd) }} />
       {/* Hero */}
       <section className="relative overflow-hidden bg-paper">
         <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-accent" />
@@ -158,6 +174,37 @@ export default function DeGym() {
             vinden het belangrijk een toegankelijk tarief te bieden: je betaalt enkel voor de tijd
             waarin je gebruik maakt van onze gym, met of zonder coach.
           </p>
+        </div>
+      </section>
+
+      {/* Locatie & bereikbaarheid */}
+      <section className="pb-20">
+        <div className="mx-auto max-w-6xl px-5">
+          <div className="overflow-hidden rounded-3xl border border-borderc bg-white md:grid md:grid-cols-[1fr_1.3fr]">
+            <div className="p-8 md:p-10">
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Vind ons</p>
+              <h2 className="mt-2 text-3xl font-black text-brand">In het hart van Gent</h2>
+              <p className="mt-4 leading-relaxed text-brand/70">Onze privégym ligt vlot bereikbaar met gratis parking aan de deur.</p>
+              <dl className="mt-6 space-y-3 text-sm">
+                <div><dt className="font-bold text-brand">Adres</dt><dd className="text-brand/70">Aannemersstraat 186, 9040 Gent</dd></div>
+                <div><dt className="font-bold text-brand">Parking</dt><dd className="text-brand/70">Gratis parking aan de deur</dd></div>
+                <div><dt className="font-bold text-brand">Contact</dt><dd><a href="mailto:info@fittin.be" className="text-accentdark hover:underline">info@fittin.be</a></dd></div>
+              </dl>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=Aannemersstraat+186,+9040+Gent" target="_blank" rel="noreferrer" className="mt-6 inline-block rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Routebeschrijving →</a>
+            </div>
+            <div className="min-h-[320px]">
+              <iframe
+                title="Fittin' op de kaart"
+                src="https://www.google.com/maps?q=Aannemersstraat%20186%2C%209040%20Gent&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0, minHeight: "320px" }}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                allowFullScreen
+              />
+            </div>
+          </div>
         </div>
       </section>
     </main>
