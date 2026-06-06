@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions, coachBulkBook } from "./actions";
+import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
-import ActionForm from "@/components/ui/ActionForm";
 import CoachScheduler from "@/components/coach/CoachScheduler";
 
 export const dynamic = "force-dynamic";
@@ -43,12 +42,10 @@ export default async function CoachDashboard({ searchParams }) {
     .order("created_at", { ascending: false })
     .limit(8);
 
-  const [{ data: meRef }, { data: commissions }, { count: referredCount }] = await Promise.all([
+  const [{ data: meRef }, { count: referredCount }] = await Promise.all([
     supabase.from("profiles").select("referral_code").eq("id", userId).single(),
-    supabase.from("coach_commissions").select("amount_cents").eq("coach_id", userId),
     supabase.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", userId),
   ]);
-  const commissionTotal = (commissions || []).reduce((a, c) => a + c.amount_cents, 0);
   const refLink = `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/login?mode=signup&ref=${meRef?.referral_code || ""}`;
 
   const creditBalance = (ledger || []).reduce((a, r) => a + r.delta, 0);
@@ -63,7 +60,10 @@ export default async function CoachDashboard({ searchParams }) {
   const mode = profile.coach_billing_mode;
 
   // ---- Interactive 14-day planner data (gym-wide taken slots + my own sessions) ----
+  // ?w paginates the planner two weeks at a time so coaches can plan further ahead.
+  const planW = Math.max(0, parseInt(sp.w || "0", 10) || 0);
   const schedFrom = new Date(); schedFrom.setHours(0, 0, 0, 0);
+  schedFrom.setDate(schedFrom.getDate() + planW * 14);
   const schedTo = new Date(schedFrom.getTime() + 14 * 86400000);
   const { data: takenRows } = await supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: schedFrom.toISOString(), p_to: schedTo.toISOString() });
   const keyOf = (iso) => {
@@ -125,16 +125,15 @@ export default async function CoachDashboard({ searchParams }) {
         </div>
       )}
 
-      {/* Affiliate / commissie */}
+      {/* Referral — bring members along, earn a free invite session (no cash commission) */}
       <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-brand">Breng leden aan &amp; verdien</p>
-            <p className="mt-0.5 text-xs text-brand/50">Deel je code. Voor elk nieuw lid dat zijn eerste sessie betaalt, verdien je € 5 commissie.</p>
+            <p className="font-bold text-brand">Breng leden aan</p>
+            <p className="mt-0.5 text-xs text-brand/50">Deel je code. Voor elk nieuw lid dat zijn eerste sessie boekt, krijg jij een gratis introsessie om samen te trainen.</p>
           </div>
           <div className="flex gap-4 text-center">
             <div><p className="text-2xl font-black text-brand">{referredCount || 0}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Aangebracht</p></div>
-            <div><p className="text-2xl font-black text-accentdark">{euro(commissionTotal)}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Verdiend</p></div>
           </div>
         </div>
         {meRef?.referral_code && (
@@ -214,6 +213,18 @@ export default async function CoachDashboard({ searchParams }) {
 
       {/* Interactive schedule */}
       <div className="mt-8">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-black text-brand">Planning</h2>
+          <div className="flex items-center gap-2 text-sm font-bold">
+            {planW > 0 ? (
+              <Link href={`/coach?w=${planW - 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">←</Link>
+            ) : (
+              <span className="rounded-full border-2 border-borderc px-4 py-1.5 opacity-30">←</span>
+            )}
+            <span className="text-brand/60">{schedDays[0].dayMonth} – {schedDays[13].dayMonth}</span>
+            <Link href={`/coach?w=${planW + 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">→</Link>
+          </div>
+        </div>
         <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={services || []} />
       </div>
 
@@ -237,33 +248,6 @@ export default async function CoachDashboard({ searchParams }) {
           <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</button>
         </form>
         {(!members || members.length === 0) && <p className="mt-3 text-xs text-brand/40">Nog geen clienten/leden in de gym.</p>}
-      </section>
-
-      {/* Bulk: plan a recurring series */}
-      <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Reeks inplannen</h2>
-        <p className="mt-1 text-sm text-brand/50">Boek wekelijks dezelfde sessie voor een client (bv. elke maandag om 18u, 8 weken).</p>
-        <ActionForm action={coachBulkBook} success="Reeks ingepland ✓" className="mt-4 flex flex-wrap items-end gap-3">
-          <Lbl t="Client">
-            <select name="clientId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-              {(members || []).map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
-            </select>
-          </Lbl>
-          <Lbl t="Sessie">
-            <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-              {(services || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </Lbl>
-          <Lbl t="Dag">
-            <select name="weekday" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-              {[["1", "ma"], ["2", "di"], ["3", "wo"], ["4", "do"], ["5", "vr"], ["6", "za"], ["0", "zo"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </Lbl>
-          <Lbl t="Uur"><select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select></Lbl>
-          <Lbl t="Weken"><input name="weeks" type="number" min="1" max="26" defaultValue="8" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">+ Reeks inplannen</button>
-        </ActionForm>
       </section>
 
       {/* Upcoming sessions */}
