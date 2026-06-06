@@ -3,6 +3,7 @@ import { getCoachContext } from "@/lib/coach";
 import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import CoachScheduler from "@/components/coach/CoachScheduler";
+import SubmitButton from "@/components/ui/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -187,7 +188,7 @@ export default async function CoachDashboard({ searchParams }) {
               <label className="text-xs font-bold text-lav">Aantal
                 <input name="qty" type="number" defaultValue="10" min="1" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
               </label>
-              <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Kopen</button>
+              <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Kopen</SubmitButton>
             </form>
           </div>
           <div className="rounded-2xl border border-borderc bg-white p-5">
@@ -198,7 +199,7 @@ export default async function CoachDashboard({ searchParams }) {
                 <input name="qty" type="number" defaultValue="10" min="1" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
               </label>
               <input name="note" placeholder="notitie (optioneel)" className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-              <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</button>
+              <SubmitButton className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</SubmitButton>
             </form>
             {(requests || []).length > 0 && (
               <div className="mt-3 space-y-1 text-xs">
@@ -245,7 +246,7 @@ export default async function CoachDashboard({ searchParams }) {
             <select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select>
           </Lbl>
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</button>
+          <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
         </form>
         {(!members || members.length === 0) && <p className="mt-3 text-xs text-brand/40">Nog geen clienten/leden in de gym.</p>}
       </section>

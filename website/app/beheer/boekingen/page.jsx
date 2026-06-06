@@ -4,6 +4,7 @@ import { slotInstant, brusselsDateStr } from "@/lib/time";
 import { adminCreateBooking } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
+import SubmitButton from "@/components/ui/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +73,7 @@ export default async function Boekingen({ searchParams }) {
             <input type="checkbox" name="useCredit" className="h-4 w-4 accent-[#5fda6b]" />
             Trek 1 sessie af
           </label>
-          <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</button>
+          <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</SubmitButton>
         </form>
       </div>
 

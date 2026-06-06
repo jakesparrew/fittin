@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { signupEvent } from "@/app/(site)/community/actions";
+import SubmitButton from "@/components/ui/SubmitButton";
 
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -52,9 +53,9 @@ export default function EventsBooking({ events = [], isLoggedIn }) {
                   ) : (
                     <form action={signupEvent}>
                       <input type="hidden" name="eventId" value={ev.id} />
-                      <button className="rounded-full bg-accent px-6 py-3 text-sm font-black text-brand transition hover:opacity-90">
+                      <SubmitButton pendingText="Bezig met inschrijven…" className="rounded-full bg-accent px-6 py-3 text-sm font-black text-brand transition hover:opacity-90">
                         {ev.price_cents ? `Boek & betaal ${euro(ev.price_cents)}` : "Schrijf gratis in"}
-                      </button>
+                      </SubmitButton>
                     </form>
                   )}
                   <p className="mt-2 text-xs text-brand/40">Events worden altijd betaald via de kassa — sessietegoed geldt niet.</p>
