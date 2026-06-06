@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+// Marketing nav — shown to logged-out visitors.
 const links = [
   { href: "/", label: "Home" },
   { href: "/degym", label: "De gym" },
@@ -9,6 +10,14 @@ const links = [
   { href: "/coaches", label: "Coaches" },
   { href: "/boeken", label: "Online boeken" },
   { href: "/calorieen-berekenen", label: "Calorieën berekenen" },
+];
+
+// Trimmed nav for logged-in members — no homepage/sales links.
+const memberLinks = [
+  { href: "/boeken", label: "Online boeken" },
+  { href: "/coaches", label: "Coaches" },
+  { href: "/training", label: "Training" },
+  { href: "/community", label: "Community" },
 ];
 
 export default function Nav() {
@@ -35,6 +44,8 @@ export default function Nav() {
   const isStaff = account && ["coach", "beheerder"].includes(account.role);
   const staffLabel = account?.role === "beheerder" ? "Beheer" : "Coach";
   const home = account?.home || "/account";
+  // Logged-out → marketing links; member → trimmed links; staff → none (they use their dashboard button).
+  const navLinks = !account ? links : isStaff ? [] : memberLinks;
 
   return (
     <header className="sticky top-0 z-50 border-b border-borderc/70 bg-white/80 backdrop-blur-xl">
@@ -43,17 +54,11 @@ export default function Nav() {
           Fittin<span className="text-accent transition group-hover:opacity-70">&rsquo;</span>
         </Link>
         <nav className="hidden items-center gap-7 text-sm font-semibold text-brand/70 md:flex">
-          {links.map((l) => (
+          {navLinks.map((l) => (
             <Link key={l.href} href={l.href} className="relative transition hover:text-brand">
               {l.label}
             </Link>
           ))}
-          {account && !isStaff && (
-            <>
-              <Link href="/training" className="transition hover:text-brand">Training</Link>
-              <Link href="/community" className="transition hover:text-brand">Community</Link>
-            </>
-          )}
         </nav>
         <div className="flex items-center gap-3">
           {!account && (
@@ -99,15 +104,9 @@ export default function Nav() {
       </div>
       {open && (
         <nav className="border-t border-borderc bg-white px-5 py-4 md:hidden">
-          {links.map((l) => (
+          {navLinks.map((l) => (
             <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">{l.label}</Link>
           ))}
-          {account && !isStaff && (
-            <>
-              <Link href="/training" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">Training</Link>
-              <Link href="/community" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">Community</Link>
-            </>
-          )}
           <div className="mt-2 border-t border-borderc pt-2">
             {isStaff && <Link href={home} onClick={() => setOpen(false)} className="block py-2 font-bold text-accentdark">{staffLabel} →</Link>}
             <Link href={account ? "/account" : "/login?mode=signup"} onClick={() => setOpen(false)} className="block py-2 font-bold text-brand">
