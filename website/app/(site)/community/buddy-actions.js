@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendBuddyRequest, sendBuddyInvite } from "@/lib/email";
+import { sendBuddyRequest, sendBuddyInvite, sendBuddyAccepted } from "@/lib/email";
 import { notify } from "@/lib/notify";
 
 async function me() {
@@ -78,6 +78,10 @@ export async function acceptBuddy(formData) {
   if (row) {
     const otherId = row.requester_id === user.id ? row.addressee_id : row.requester_id;
     await notify({ gymId: profile.gym_id, userId: otherId, actorId: user.id, type: "buddy_accepted", title: `${profile.full_name || "Een lid"} is nu je buddy 🤝`, body: "Neem elkaar mee naar een sessie.", link: "/community" });
+    try {
+      const { data: other } = await createAdminClient().from("profiles").select("email, full_name").eq("id", otherId).single();
+      if (other?.email) await sendBuddyAccepted({ to: other.email, name: other.full_name, fromName: profile.full_name || "Een Fittin'-lid" });
+    } catch {}
   }
   revalidatePath("/community");
   return { ok: true };

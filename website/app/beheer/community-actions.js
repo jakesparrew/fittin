@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/staff";
 import { slotInstant } from "@/lib/time";
+import { notify } from "@/lib/notify";
 
 const num = (v, d = 0) => {
   const n = parseInt(v, 10);
@@ -61,13 +62,17 @@ export async function createEvent(formData) {
 
 // Approve (or reject) a coach-submitted event.
 export async function approveEvent(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff();
   if (error) return { error };
+  const id = formData.get("id");
   const decision = formData.get("decision");
+  const { data: ev } = await supabase.from("events").select("title, coach_id, gym_id").eq("id", id).maybeSingle();
   if (decision === "reject") {
-    await supabase.from("events").delete().eq("id", formData.get("id")).eq("status", "pending");
+    await supabase.from("events").delete().eq("id", id).eq("status", "pending");
+    if (ev?.coach_id) await notify({ gymId: ev.gym_id || profile.gym_id, userId: ev.coach_id, type: "event", title: "Je event werd afgewezen", body: ev.title, link: "/coach/events" });
   } else {
-    await supabase.from("events").update({ status: "approved" }).eq("id", formData.get("id"));
+    await supabase.from("events").update({ status: "approved" }).eq("id", id);
+    if (ev?.coach_id) await notify({ gymId: ev.gym_id || profile.gym_id, userId: ev.coach_id, type: "event", title: "Je event is goedgekeurd 🎉", body: `${ev.title} staat nu live`, link: "/coach/events" });
   }
   revalidatePath("/beheer/events");
   revalidatePath("/community");

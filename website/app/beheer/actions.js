@@ -119,13 +119,14 @@ export async function adminCreateBooking(formData) {
   try {
     const admin = createAdminClient();
     const [{ data: bk }, { data: m }] = await Promise.all([
-      admin.from("bookings").select("starts_at, ends_at, persons, services(name)").eq("id", bookingId).single(),
+      admin.from("bookings").select("gym_id, starts_at, ends_at, persons, services(name)").eq("id", bookingId).single(),
       admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
     ]);
     if (bk && m?.email) {
       const { sendBookingConfirmation } = await import("@/lib/email");
       await sendBookingConfirmation({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at, endsAt: bk.ends_at, persons: bk.persons, free: true });
     }
+    if (bk) await notify({ gymId: bk.gym_id, userId: memberId, type: "coach_booked", title: "Er is een sessie voor je geboekt", body: bk.services?.name || "Sessie", link: "/account" });
   } catch {}
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
@@ -400,6 +401,9 @@ export async function resolveCoachRequest(formData) {
       const { data: c } = await supabase.from("profiles").select("email, full_name").eq("id", req.coach_id).single();
       if (c?.email) { const { sendCoachSessionsGranted } = await import("@/lib/email"); await sendCoachSessionsGranted({ to: c.email, name: c.full_name, qty: req.qty }); }
     } catch {}
+    await notify({ gymId: profile.gym_id, userId: req.coach_id, type: "request", title: `${req.qty} coach-sessies goedgekeurd ✓`, body: "Je tegoed is bijgeschreven.", link: "/coach" });
+  } else {
+    await notify({ gymId: profile.gym_id, userId: req.coach_id, type: "request", title: "Je sessie-aanvraag werd afgewezen", body: `${req.qty} sessies`, link: "/coach" });
   }
   revalidatePath("/beheer/coaches");
   return { ok: true };

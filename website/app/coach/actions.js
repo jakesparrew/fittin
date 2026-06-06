@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest } from "@/lib/email";
-import { notify } from "@/lib/notify";
+import { notify, notifyAdmins } from "@/lib/notify";
 import { logCoachActivity } from "@/lib/coachlog";
 
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
@@ -123,8 +123,9 @@ export async function cancelCoachBooking(formData) {
   // Notify the client their coach cancelled (the credit refund is handled by a DB trigger).
   if (cancelled) {
     try {
-      const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", cancelled.user_id).single();
+      const { data: client } = await supabase.from("profiles").select("email, full_name, gym_id").eq("id", cancelled.user_id).single();
       if (client?.email) await sendBookingCancelled({ to: client.email, name: client.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
+      if (client) await notify({ gymId: client.gym_id, userId: cancelled.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft een sessie geannuleerd", body: cancelled.services?.name || "Sessie", link: "/account" });
     } catch {}
   }
   revalidatePath("/coach");
@@ -145,6 +146,10 @@ export async function requestCoachSessions(formData) {
   });
   if (e) return { error: e.message };
   await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "request", summary: `${qty} coach-sessies aangevraagd` });
+  try {
+    const { data: c } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    await notifyAdmins({ gymId: profile.gym_id, actorId: userId, type: "request", title: `${c?.full_name || "Een coach"} vraagt ${qty} sessies aan`, body: "Keur goed of wijs af bij Coaches.", link: "/beheer/coaches" });
+  } catch {}
   revalidatePath("/coach");
   return { ok: true };
 }

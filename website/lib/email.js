@@ -322,6 +322,38 @@ export async function sendInviteSent({ to, name, buddyNames, serviceName, starts
   );
 }
 
+// ---- Membership activated ----
+export async function sendMembershipActive({ to, name }) {
+  await send(
+    to,
+    "Welkom als Fittin'-member 🎉",
+    shell({
+      title: "Je member-abonnement is actief 🎉",
+      intro: `Hallo ${name || "daar"}, top dat je member wordt! Vanaf nu:`,
+      rows: [
+        ["Elke maand", "1 gratis sessie inbegrepen"],
+        ["Boekingstarief", "€ 10 i.p.v. € 15"],
+        ["Extra", "member-acties + voorrang bij events"],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Je kan je abonnement op elk moment beheren via je account.</p>`,
+      cta: { href: `${SITE}/boeken`, label: "Boek je volgende sessie" },
+    })
+  );
+}
+
+// ---- Buddy request accepted ----
+export async function sendBuddyAccepted({ to, name, fromName }) {
+  await send(
+    to,
+    `${fromName} is nu je buddy`,
+    shell({
+      title: "Jullie zijn nu buddies 🤝",
+      intro: `Hallo ${name || "daar"}, ${fromName} heeft je buddy-aanvraag aanvaard. Neem elkaar mee naar een sessie — elk bezoek telt mee voor jullie stats.`,
+      cta: { href: `${SITE}/boeken`, label: "Boek samen een sessie" },
+    })
+  );
+}
+
 // ---- Buddy request (to an existing member) ----
 export async function sendBuddyRequest({ to, name, fromName }) {
   await send(

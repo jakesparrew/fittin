@@ -183,6 +183,7 @@ async function handleEvent(event, admin) {
           try {
             const { data: prof } = await admin.from("profiles").select("email, full_name").eq("id", userId).single();
             if (prof?.email) await sendEventSignup({ to: prof.email, name: prof.full_name, title: ev.title, startsAt: ev.starts_at });
+            await admin.from("notifications").insert({ gym_id: ev.gym_id, user_id: userId, type: "event", title: `Ingeschreven voor ${ev.title} ✓`, body: "Tot dan!", link: "/account" });
           } catch {}
         }
       } else if (obj.metadata?.kind === "coach_payment") {
@@ -219,6 +220,15 @@ async function handleEvent(event, admin) {
       await grantCredits(admin, prof.id, 1, "abo");
       await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
       await admin.rpc("reward_pending_referral", { p_user: prof.id });
+      // Welcome the new member on their first invoice; thank them each renewal.
+      try {
+        const first = reason === "subscription_create";
+        await admin.from("notifications").insert({ gym_id: prof.gym_id, user_id: prof.id, type: "system", title: first ? "Welkom als member! 🎉" : "Je maandelijkse gratis sessie staat klaar", body: first ? "1 gratis sessie staat klaar + je boekt voortaan aan € 10." : "+1 gratis sessie bijgeschreven.", link: "/account" });
+        if (first) {
+          const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", prof.id).single();
+          if (m?.email) { const { sendMembershipActive } = await import("@/lib/email"); await sendMembershipActive({ to: m.email, name: m.full_name }); }
+        }
+      } catch {}
       return;
     }
     default:

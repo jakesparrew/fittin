@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slotInstant } from "@/lib/time";
 import { logCoachActivity } from "@/lib/coachlog";
+import { notify, notifyAdmins } from "@/lib/notify";
 
 const num = (v, d = null) => {
   const n = parseInt(v, 10);
@@ -127,6 +128,8 @@ export async function coachAssignProgram(formData) {
   if (memberId) {
     const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", memberId).single();
     await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "program", summary: `Programma toegewezen aan ${cl?.full_name || "client"}`, refId: programId });
+    const { data: co } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    await notify({ gymId: profile.gym_id, userId: memberId, actorId: userId, type: "coach_assigned", title: `${co?.full_name || "Je coach"} heeft je trainingsschema klaargezet 💪`, body: "Bekijk je programma bij Mijn training.", link: "/training" });
   }
   revalidatePath(`/coach/programmas/${programId}`);
 }
@@ -164,6 +167,10 @@ export async function coachCreateEvent(formData) {
   });
   if (e) return { error: e.message };
   await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "event", summary: `Event voorgesteld: ${formData.get("title")}` });
+  try {
+    const { data: c } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    await notifyAdmins({ gymId: profile.gym_id, actorId: userId, type: "event", title: `${c?.full_name || "Een coach"} stelt een event voor`, body: `${formData.get("title")} — keur goed in Events`, link: "/beheer/events" });
+  } catch {}
   revalidatePath("/coach/events");
   return { ok: true };
 }
