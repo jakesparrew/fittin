@@ -1,6 +1,6 @@
 export default function sitemap() {
   const site = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
-  const routes = ["", "/degym", "/personal-training", "/coaches", "/boeken", "/calorieen-berekenen", "/events"];
+  const routes = ["", "/degym", "/personal-training", "/coaches", "/boeken", "/calorieen-berekenen", "/supplementen", "/events"];
   return routes.map((r) => ({
     url: `${site}${r}`,
     changeFrequency: "weekly",

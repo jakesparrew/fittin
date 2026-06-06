@@ -132,6 +132,10 @@ export default function CalorieCalculator() {
                 <Link href="/personal-training" className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Laat een coach je plan maken →</Link>
                 <Link href="/boeken" className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-lav">Reserveer de gym</Link>
               </div>
+              <p className="mt-3 text-sm text-brand/60">
+                💡 {Math.round(r.protein)} g eiwit per dag haal je makkelijk met een goede shake — bekijk{" "}
+                <Link href="/supplementen" className="font-bold text-accentdark hover:underline">onze supplementen-aanraders</Link>.
+              </p>
               <p className="mt-4 text-xs text-brand/40">Richtwaarden o.b.v. de Mifflin-St Jeor-formule. Geen medisch advies — bij twijfel raadpleeg een arts of diëtist.</p>
             </>
           )}
