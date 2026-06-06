@@ -10,7 +10,9 @@ export default async function BeheerLayout({ children }) {
   if (!isSupabaseConfigured) redirect("/");
   const { user, profile } = await getSessionProfile();
   if (!user) redirect("/login?next=/beheer");
-  if (!profile || !["coach", "beheerder"].includes(profile.role)) redirect("/account");
+  // Beheer is superadmin-only. Coaches have their own /coach area (own clients, programs,
+  // exercises) — they must never land in the admin panel.
+  if (!profile || profile.role !== "beheerder") redirect(profile?.role === "coach" ? "/coach" : "/account");
 
   return (
     <div className="flex min-h-screen bg-paper">
