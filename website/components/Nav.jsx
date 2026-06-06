@@ -6,6 +6,7 @@ const links = [
   { href: "/", label: "Home" },
   { href: "/degym", label: "De gym" },
   { href: "/personal-training", label: "Personal training" },
+  { href: "/coaches", label: "Coaches" },
   { href: "/boeken", label: "Online boeken" },
   { href: "/calorieen-berekenen", label: "Calorieën berekenen" },
 ];

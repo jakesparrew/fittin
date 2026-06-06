@@ -102,6 +102,26 @@ export async function requestCoachSessions(formData) {
   return { ok: true };
 }
 
+// Save the coach's public profile (shown on the site at /coaches).
+export async function saveCoachProfile(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const { error: e } = await supabase
+    .from("profiles")
+    .update({
+      coach_bio: formData.get("bio") || null,
+      coach_specialty: formData.get("specialty") || null,
+      coach_photo_url: formData.get("photo_url") || null,
+      coach_pricelist: formData.get("pricelist") || null,
+      coach_public: formData.get("public") === "on",
+    })
+    .eq("id", userId);
+  if (e) return { error: e.message };
+  revalidatePath("/coach/profiel");
+  revalidatePath("/coaches");
+  return { ok: true, message: "Profiel opgeslagen ✓" };
+}
+
 // Set a coach's price for a specific client (overrides the default rate).
 export async function setClientPrice(formData) {
   const { supabase, userId, error } = await requireCoach();
