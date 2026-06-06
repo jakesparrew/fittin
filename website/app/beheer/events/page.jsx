@@ -1,5 +1,6 @@
 import { getAdminContext } from "@/lib/admin";
 import { createEvent, deleteEvent, approveEvent } from "../community-actions";
+import QuickStart from "@/components/admin/QuickStart";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -28,6 +29,13 @@ export default async function Events() {
     <div className="px-8 py-8">
       <h1 className="text-3xl font-black text-brand">Events &amp; groepslessen</h1>
       <p className="mt-1 text-sm text-brand/50">Vul daluren met events — leden schrijven zich in.</p>
+      <QuickStart title="Een event aanmaken" steps={[
+        { title: "Geef het een titel", body: "bv. 'Yoga ochtend' of 'Open deur'." },
+        { title: "Kies datum, uur en duur", body: "het tijdslot wordt voor iedereen geblokkeerd." },
+        { title: "Zet plaatsen en prijs", body: "events worden altijd betaald (geen sessietegoed); € 0 = gratis." },
+        { title: "Klik op + Event", body: "het verschijnt meteen op de site en in 'Online boeken'." },
+        { title: "Coach-voorstellen", body: "events die coaches voorstellen verschijnen hierboven ter goedkeuring." },
+      ]} />
 
       <form action={createEvent} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
         <Lbl t="Titel"><input name="title" required className="w-44 rounded-xl border-2 border-borderc px-3 py-2 text-sm" placeholder="Yoga ochtend" /></Lbl>

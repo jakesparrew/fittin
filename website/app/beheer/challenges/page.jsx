@@ -1,5 +1,6 @@
 import { getAdminContext } from "@/lib/admin";
 import { createChallenge, deleteChallenge } from "../community-actions";
+import QuickStart from "@/components/admin/QuickStart";
 
 export const dynamic = "force-dynamic";
 const GOALS = [
@@ -22,6 +23,13 @@ export default async function Challenges() {
     <div className="px-8 py-8">
       <h1 className="text-3xl font-black text-brand">Challenges</h1>
       <p className="mt-1 text-sm text-brand/50">Maandelijkse uitdagingen, beloond in sessies.</p>
+      <QuickStart title="Een challenge opzetten" steps={[
+        { title: "Kies een naam", body: "bv. '12 sessies in juni'." },
+        { title: "Kies het doeltype", body: "aantal sessies, sessies in daluren, of een streak." },
+        { title: "Zet het doel-aantal", body: "het aantal dat leden moeten halen." },
+        { title: "Bepaal de looptijd", body: "start- en einddatum; leeg = doorlopend." },
+        { title: "Beloon met sessies", body: "wie het haalt krijgt gratis sessies — leden zien hun voortgang in Community." },
+      ]} />
 
       <form action={createChallenge} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
         <Lbl t="Naam"><input name="name" required className="w-44 rounded-xl border-2 border-borderc px-3 py-2 text-sm" placeholder="12 sessies in juni" /></Lbl>

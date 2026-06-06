@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import { coachCreateEvent, coachDeleteEvent } from "../coaching-actions";
+import QuickStart from "@/components/admin/QuickStart";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -25,6 +26,12 @@ export default async function CoachEvents() {
       <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Dashboard</Link>
       <h1 className="mt-2 text-3xl font-black text-brand">Mijn events</h1>
       <p className="mt-1 text-sm text-brand/50">Stel een event voor — de beheerder keurt het goed voordat het live komt. Events worden altijd betaald (geen sessietegoed).</p>
+      <QuickStart title="Een event voorstellen" steps={[
+        { title: "Titel + beschrijving", body: "vertel kort wat het event inhoudt." },
+        { title: "Datum, uur, duur", body: "kies een moment dat in jouw agenda past." },
+        { title: "Plaatsen en prijs", body: "events worden altijd betaald; € 0 = gratis." },
+        { title: "Klik op + Voorstellen", body: "de beheerder keurt het goed, daarna komt het live op de site." },
+      ]} />
 
       <form action={coachCreateEvent} className="mt-6 grid gap-3 rounded-2xl border border-borderc bg-white p-5 sm:grid-cols-2 lg:grid-cols-3">
         <Lbl t="Titel" full><input name="title" required className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
