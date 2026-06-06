@@ -180,8 +180,8 @@ export default async function Community() {
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* Referral */}
           <section className="rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Breng een vriend</h2>
-            <p className="mt-1 text-sm text-brand/60">Nodig een vriend uit met jouw code. Zodra zij hun eerste sessie betalen, krijgen jullie allebei een gratis sessie.</p>
+            <h2 className="font-black text-brand">Breng een vriend 🎁</h2>
+            <p className="mt-1 text-sm text-brand/60">Nodig een vriend uit met jouw code. Zodra zij hun eerste sessie boeken, krijgt <span className="font-bold text-brand">jij een extra punt op het scoreboard</span> én <span className="font-bold text-brand">cadeauen we hen een gratis sessie</span> (direct als tegoed op hun account).</p>
             <div className="mt-4 flex items-center gap-3">
               <span className="text-xs font-bold uppercase text-lav">Jouw code</span>
               <span className="rounded-full bg-brand px-4 py-1.5 font-black tracking-wider text-accent">{profile.referral_code}</span>

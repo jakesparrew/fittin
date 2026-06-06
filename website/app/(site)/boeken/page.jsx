@@ -61,8 +61,17 @@ export default async function BoekenPage({ searchParams }) {
     .gte("starts_at", monthStart.toISOString())
     .lt("starts_at", new Date().toISOString());
   const lbCounts = {};
-  for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
-  const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
+  for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0, pts: 0 }).n++; }
+  // Bonus points: each rewarded friend-invite this month = +1 scoreboard point for the inviter.
+  const { data: refPts } = await admin.rpc("referral_points", { p_gym: gym.id, p_since: monthStart.toISOString() });
+  for (const r of refPts || []) { if (r.referrer_id) { (lbCounts[r.referrer_id] ||= { name: "Lid", n: 0, pts: 0 }).pts = r.points; } }
+  // Fill names for referrers who had no sessions this month.
+  const missing = Object.keys(lbCounts).filter((id) => lbCounts[id].name === "Lid");
+  if (missing.length) {
+    const { data: names } = await admin.from("profiles").select("id, full_name").in("id", missing);
+    for (const p of names || []) if (lbCounts[p.id]) lbCounts[p.id].name = p.full_name || "Lid";
+  }
+  const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v, score: v.n + (v.pts || 0) })).sort((a, b) => b.score - a.score);
 
   // Approved, upcoming events (always paid; shown in the "Events" tab of the booking page).
   const nowIso = new Date().toISOString();

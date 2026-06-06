@@ -18,11 +18,11 @@ export default function LeaderboardCard({ rows = [], meId, myBooked }) {
               <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === meId ? "bg-white/20" : "bg-white")}>{i + 1}</span>
               <span className="font-bold">{r.name}</span>
             </span>
-            <span className="font-black">{r.n}</span>
+            <span className="flex items-center gap-1.5 font-black">{r.score ?? r.n}{r.pts > 0 && <span className="text-[10px] font-bold text-accentdark" title={`${r.pts} via uitnodigingen`}>🎁{r.pts}</span>}</span>
           </div>
         ))}
         {rows.length === 0 && <p className="text-sm text-brand/50">Nog geen sessies deze maand. Wees de eerste!</p>}
-        {myRank >= 5 && <p className="pt-1 text-center text-xs text-brand/50">Jij: #{myRank + 1} · {rows[myRank].n} sessies</p>}
+        {myRank >= 5 && <p className="pt-1 text-center text-xs text-brand/50">Jij: #{myRank + 1} · {rows[myRank].score ?? rows[myRank].n} punten</p>}
       </div>
       <Link href="/community" className="mt-4 inline-block text-sm font-bold text-accentdark">Volledig klassement →</Link>
     </section>
