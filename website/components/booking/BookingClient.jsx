@@ -30,6 +30,7 @@ export default function BookingClient({
   const [showNight, setShowNight] = useState(false);
   const [selected, setSelected] = useState(null); // { dateStr, hour }
   const [persons, setPersons] = useState(1);
+  const [duration, setDuration] = useState(1);
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
   const [useCredit, setUseCredit] = useState(false);
@@ -78,9 +79,10 @@ export default function BookingClient({
     return availability.some((a) => a.coach_id === coachId && a.weekday === wd && a.from_hour <= h && h < a.to_hour);
   }
 
-  const welcomeApplies = isFit60 && welcomeAvailable && useWelcome;
-  const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= 1;
-  const priceCents = welcomeApplies || creditApplies ? 0 : service?.price_cents ?? 0;
+  const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
+  const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
+  const durFactor = duration >= 4 ? 0.9 : duration === 3 ? 0.92 : duration === 2 ? 0.95 : 1;
+  const priceCents = welcomeApplies || creditApplies ? 0 : Math.round((service?.price_cents ?? 0) * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
 
   async function submit() {
     if (!selected || !service) return;
@@ -90,6 +92,7 @@ export default function BookingClient({
       serviceId: service.id,
       date: selected.dateStr,
       hour: selected.hour,
+      hours: isFit60 ? duration : 1,
       persons: isFit60 ? persons : 1,
       useWelcome: welcomeApplies,
       coachId: isPT ? coachId : null,
@@ -112,7 +115,7 @@ export default function BookingClient({
     setConfirmed({
       service: service.name,
       day: day ? `${day.weekday} ${day.dayMonth}` : selected.dateStr,
-      range: slotRangeLabel(selected.hour, service.duration_min),
+      range: slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60),
       persons: isFit60 ? persons : 1,
       free: welcomeApplies,
     });
@@ -271,6 +274,23 @@ export default function BookingClient({
                   ))}
                 </div>
                 <p className="mt-3 text-xs text-brand/50">Zelfde prijs, ook met vrienden — geen extra kosten.</p>
+
+                <div className="mt-5 border-t border-borderc pt-4">
+                  <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[1, 2, 3, 4].map((n) => {
+                      const f = n >= 4 ? 0.9 : n === 3 ? 0.92 : n === 2 ? 0.95 : 1;
+                      const off = Math.round((1 - f) * 100);
+                      return (
+                        <button key={n} onClick={() => setDuration(n)} className={"rounded-2xl border-2 px-4 py-2.5 text-left transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                          <span className="block text-sm font-black text-brand">{n} uur</span>
+                          {off > 0 && <span className="block text-[11px] font-bold text-accentdark">−{off}%</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {duration > 1 && <p className="mt-2 text-xs text-brand/50">Langere sessie = voordeligere prijs per uur. De zaal is exclusief van jou de volledige duur.</p>}
+                </div>
               </Card>
             )}
           </div>
@@ -281,8 +301,9 @@ export default function BookingClient({
             <dl className="mt-5 space-y-3 text-sm">
               <Row label="Sessie" value={service?.name || "—"} />
               {isPT && <Row label="Coach" value={coaches.find((c) => c.id === coachId)?.full_name || "—"} />}
-              <Row label="Moment" value={selected ? `${days.find((d) => d.dateStr === selected.dateStr)?.weekday || ""} ${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, service.duration_min)}` : "—"} />
+              <Row label="Moment" value={selected ? `${days.find((d) => d.dateStr === selected.dateStr)?.weekday || ""} ${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}` : "—"} />
               {isFit60 && <Row label="Personen" value={persons} />}
+              {isFit60 && <Row label="Duur" value={`${duration} uur`} />}
             </dl>
 
             {isFit60 && welcomeAvailable && (
