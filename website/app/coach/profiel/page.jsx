@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { saveCoachProfile } from "../actions";
+import { saveCoachProfile, uploadCoachPhoto } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,25 @@ export default async function CoachProfiel() {
       </div>
       <p className="mt-1 text-sm text-brand/50">Dit is wat (toekomstige) leden zien op de Fittin&rsquo;-site. Zet het zichtbaar als je klaar bent.</p>
 
-      <ActionForm action={saveCoachProfile} success="Profiel opgeslagen ✓" className="mt-6 max-w-2xl space-y-4 rounded-3xl border border-borderc bg-white p-6">
+      {/* Photo upload */}
+      <ActionForm action={uploadCoachPhoto} success="Foto geüpload ✓" className="mt-6 flex max-w-2xl flex-wrap items-center gap-4 rounded-3xl border border-borderc bg-white p-6">
+        <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-paper">
+          {me?.coach_photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={me.coach_photo_url} alt="Profielfoto" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-3xl font-black text-brand/20">{(me?.full_name || "C").slice(0, 1)}</div>
+          )}
+        </div>
+        <div className="flex-1">
+          <span className="block text-xs font-bold uppercase tracking-wide text-lav">Profielfoto uploaden</span>
+          <input type="file" name="photo" accept="image/*" required className="mt-2 block w-full text-sm text-brand file:mr-3 file:rounded-full file:border-0 file:bg-paper file:px-4 file:py-2 file:text-sm file:font-bold file:text-brand" />
+          <p className="mt-1 text-xs text-brand/40">JPG/PNG, max 4 MB.</p>
+        </div>
+        <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Uploaden</button>
+      </ActionForm>
+
+      <ActionForm action={saveCoachProfile} success="Profiel opgeslagen ✓" className="mt-4 max-w-2xl space-y-4 rounded-3xl border border-borderc bg-white p-6">
         <label className="flex items-center gap-2 rounded-xl bg-paper p-3 text-sm font-bold text-brand">
           <input type="checkbox" name="public" defaultChecked={me?.coach_public} className="h-4 w-4 accent-[#5fda6b]" />
           Toon mijn profiel publiek op fittin.be/coaches

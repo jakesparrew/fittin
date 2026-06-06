@@ -107,6 +107,28 @@ export async function requestCoachSessions(formData) {
   return { ok: true };
 }
 
+// Upload a real profile photo to Supabase Storage and save the public URL.
+export async function uploadCoachPhoto(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const file = formData.get("photo");
+  if (!file || typeof file === "string" || !file.size) return { error: "Kies een afbeelding." };
+  if (file.size > 4 * 1024 * 1024) return { error: "Afbeelding mag max. 4 MB zijn." };
+  if (!/^image\//.test(file.type)) return { error: "Alleen afbeeldingen." };
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const ext = (file.name?.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `coaches/${userId}-${Date.now()}.${ext}`;
+  const buf = Buffer.from(await file.arrayBuffer());
+  const { error: upErr } = await admin.storage.from("coach-photos").upload(path, buf, { contentType: file.type, upsert: true });
+  if (upErr) return { error: upErr.message };
+  const { data: pub } = admin.storage.from("coach-photos").getPublicUrl(path);
+  await supabase.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", userId);
+  revalidatePath("/coach/profiel");
+  revalidatePath("/coaches");
+  return { ok: true, message: "Foto geüpload ✓" };
+}
+
 // Save the coach's public profile (shown on the site at /coaches).
 export async function saveCoachProfile(formData) {
   const { supabase, userId, error } = await requireCoach();
