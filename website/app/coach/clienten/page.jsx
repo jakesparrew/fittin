@@ -1,5 +1,9 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
+import { setClientPrice, sendCoachPaymentRequest } from "../actions";
+
+const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
+const eur = (c) => ((c || 0) / 100).toFixed(2).replace(".", ",");
 
 export const dynamic = "force-dynamic";
 const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -12,9 +16,11 @@ export default async function CoachClienten() {
 
   const { data: links } = await supabase
     .from("coach_clients")
-    .select("id, client:profiles!coach_clients_client_id_fkey(id, full_name, email)")
+    .select("id, price_cents, client:profiles!coach_clients_client_id_fkey(id, full_name, email)")
     .eq("coach_id", userId);
   const clients = (links || []).map((l) => l.client).filter(Boolean);
+  const priceByClient = {};
+  for (const l of links || []) if (l.client) priceByClient[l.client.id] = l.price_cents;
   const ids = clients.map((c) => c.id);
 
   let programs = [], bookings = [], logs = [];
@@ -84,6 +90,26 @@ export default async function CoachClienten() {
                     <Link href="/coach/programmas" className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">+ Programma toewijzen</Link>
                   )}
                   <Link href={`/coach#boeken`} className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-lav">Sessie boeken</Link>
+                </div>
+
+                {/* Per-client price + payment request */}
+                <div className="mt-4 grid gap-3 border-t border-borderc pt-4 sm:grid-cols-2">
+                  <form action={setClientPrice} className="flex items-end gap-2">
+                    <input type="hidden" name="clientId" value={c.id} />
+                    <label className="block flex-1">
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Tarief/sessie (€)</span>
+                      <input name="price_eur" defaultValue={eur(priceByClient[c.id])} className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
+                    </label>
+                    <button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">Opslaan</button>
+                  </form>
+                  <form action={sendCoachPaymentRequest} className="flex items-end gap-2">
+                    <input type="hidden" name="clientId" value={c.id} />
+                    <label className="block flex-1">
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Betaalverzoek (€)</span>
+                      <input name="amount_eur" defaultValue={eur(priceByClient[c.id])} className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
+                    </label>
+                    <button className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">Stuur</button>
+                  </form>
                 </div>
               </div>
             );

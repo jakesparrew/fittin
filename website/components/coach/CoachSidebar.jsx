@@ -6,6 +6,7 @@ const items = [
   { href: "/coach", label: "Dashboard", icon: "▦" },
   { href: "/coach/agenda", label: "Mijn agenda", icon: "▤" },
   { href: "/coach/clienten", label: "Mijn clienten", icon: "◍" },
+  { href: "/coach/betalingen", label: "Betalingen", icon: "◈" },
   { href: "/coach/programmas", label: "Programma's", icon: "✎" },
   { href: "/coach/oefeningen", label: "Oefeningen", icon: "≣" },
   { href: "/coach/events", label: "Events", icon: "◆" },

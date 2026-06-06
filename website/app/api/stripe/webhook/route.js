@@ -172,6 +172,14 @@ async function handleEvent(event, admin) {
             if (prof?.email) await sendEventSignup({ to: prof.email, name: prof.full_name, title: ev.title, startsAt: ev.starts_at });
           } catch {}
         }
+      } else if (obj.metadata?.kind === "coach_payment") {
+        const reqId = obj.metadata.request_id;
+        const { data: req } = await admin.from("coach_payment_requests").select("gym_id, client_id, coach_id, description").eq("id", reqId).single();
+        if (req) {
+          await admin.from("coach_payment_requests").update({ status: "paid", paid_at: new Date().toISOString(), stripe_session_id: obj.id }).eq("id", reqId);
+          const { data: coach } = await admin.from("profiles").select("full_name").eq("id", req.coach_id).single();
+          await recordPayment(admin, { gymId: req.gym_id, userId: req.client_id, amountCents: obj.amount_total, kind: "overig", description: `Coaching · ${coach?.full_name || "coach"}${req.description ? ` · ${req.description}` : ""}`, stripeId: obj.id });
+        }
       } else if (obj.metadata?.kind === "welcome" || obj.mode === "setup") {
         await handleWelcomeSetup(admin, obj);
       } else if (obj.metadata?.booking_id) {

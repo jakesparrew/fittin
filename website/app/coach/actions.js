@@ -4,7 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
-import { sendCoachBooked, sendBookingCancelled } from "@/lib/email";
+import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest } from "@/lib/email";
+
+const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 const num = (v, d = 0) => {
@@ -95,6 +97,52 @@ export async function requestCoachSessions(formData) {
   if (e) return { error: e.message };
   revalidatePath("/coach");
   return { ok: true };
+}
+
+// Set a coach's price for a specific client (overrides the default rate).
+export async function setClientPrice(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const clientId = formData.get("clientId");
+  const { error: e } = await supabase
+    .from("coach_clients")
+    .update({ price_cents: cents(formData.get("price_eur")) })
+    .eq("coach_id", userId)
+    .eq("client_id", clientId);
+  if (e) return { error: e.message };
+  revalidatePath("/coach/clienten");
+  return { ok: true };
+}
+
+// Coach sends a payment request to a client → the client pays via Stripe from their account.
+export async function sendCoachPaymentRequest(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const clientId = formData.get("clientId");
+  const amount = cents(formData.get("amount_eur"));
+  if (!clientId || amount < 1) return { error: "Kies een client en een bedrag." };
+  // Confirm this is the coach's client.
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).maybeSingle();
+  if (!link) return { error: "Dit is niet jouw client." };
+  const { error: e } = await supabase.from("coach_payment_requests").insert({
+    gym_id: profile.gym_id, coach_id: userId, client_id: clientId, amount_cents: amount, description: formData.get("description") || null,
+  });
+  if (e) return { error: e.message };
+  try {
+    const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", clientId).single();
+    const { data: me } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    if (client?.email) await sendPaymentRequest({ to: client.email, name: client.full_name, coachName: me?.full_name || "Je coach", amount, description: formData.get("description") });
+  } catch {}
+  revalidatePath("/coach/clienten");
+  revalidatePath("/coach/betalingen");
+  return { ok: true };
+}
+
+export async function cancelCoachPaymentRequest(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  await supabase.from("coach_payment_requests").update({ status: "cancelled" }).eq("id", formData.get("id")).eq("coach_id", userId).eq("status", "pending");
+  revalidatePath("/coach/betalingen");
 }
 
 export async function addOwnAvailability(formData) {

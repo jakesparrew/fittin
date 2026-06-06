@@ -1,8 +1,39 @@
 "use server";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingCancelled, sendSessionInvite, sendInviteSent } from "@/lib/email";
+
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+
+// Member pays a coach's payment request via Stripe.
+export async function payCoachRequest(formData) {
+  const id = formData.get("requestId");
+  if (!id || !isStripeConfigured) return;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login?next=/account");
+  const { data: req } = await supabase
+    .from("coach_payment_requests")
+    .select("id, amount_cents, description, status, client_id, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)")
+    .eq("id", id)
+    .eq("client_id", user.id)
+    .maybeSingle();
+  if (!req || req.status !== "pending") return;
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    customer_email: user.email,
+    ...bizGuest,
+    line_items: [{ quantity: 1, price_data: { currency: "eur", unit_amount: req.amount_cents, product_data: { name: `Coaching — ${req.coach?.full_name || "coach"}${req.description ? ` · ${req.description}` : ""}` } } }],
+    metadata: { kind: "coach_payment", request_id: req.id, user_id: user.id },
+    success_url: `${siteUrl()}/account?betaald=1`,
+    cancel_url: `${siteUrl()}/account`,
+  });
+  await supabase.from("coach_payment_requests").update({ stripe_session_id: session.id }).eq("id", req.id);
+  redirect(session.url);
+}
 
 // Cancel one of the caller's own future bookings (free until 24h before per house rules;
 // MVP allows cancel up to start time). Flipping status off 'bevestigd' frees the slot.

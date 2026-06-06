@@ -242,6 +242,26 @@ export async function sendCreditsAdjusted({ to, name, delta, reason, balance }) 
   );
 }
 
+// ---- Coach sends a payment request for a session ----
+export async function sendPaymentRequest({ to, name, coachName, amount, description }) {
+  const eur = "€ " + ((amount || 0) / 100).toFixed(2).replace(".", ",");
+  await send(
+    to,
+    `Betaalverzoek van ${coachName || "je coach"}`,
+    shell({
+      title: "Betaalverzoek voor je sessie 💪",
+      intro: `Hallo ${name || "daar"}, ${coachName || "je coach"} vraagt je om een sessie te betalen via het platform.`,
+      rows: [
+        ["Bedrag", eur],
+        ...(description ? [["Omschrijving", description]] : []),
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Betaal veilig met kaart via je account.</p>`,
+      cta: { href: `${SITE}/account`, label: "Betaal nu" },
+    }),
+    FROM_BOOKING
+  );
+}
+
 // ---- Invited to a session (a member added you to their booking) ----
 export async function sendSessionInvite({ to, name, fromName, serviceName, startsAt, endsAt }) {
   await send(

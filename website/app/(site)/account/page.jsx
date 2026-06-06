@@ -4,7 +4,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { cancelBookingAction } from "./actions";
+import { cancelBookingAction, payCoachRequest } from "./actions";
 import { resumeCheckoutAction } from "../boeken/actions";
 import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
@@ -82,6 +82,14 @@ export default async function AccountPage({ searchParams }) {
     .eq("client_id", user.id)
     .maybeSingle();
   const myCoach = coachLink?.coach || null;
+
+  // Open payment requests from a coach (pay via Stripe).
+  const { data: payReqs } = await supabase
+    .from("coach_payment_requests")
+    .select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)")
+    .eq("client_id", user.id)
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
 
   // Monthly leaderboard (this gym) + the member's rank.
   const monthStartLb = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
@@ -168,6 +176,26 @@ export default async function AccountPage({ searchParams }) {
         </div>
 
         {nextSession && <NextSessionTimer startsAt={nextSession.starts_at} name={nextSession.services?.name} />}
+
+        {(payReqs || []).length > 0 && (
+          <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
+            <p className="font-black text-brand">💳 Openstaand betaalverzoek{payReqs.length > 1 ? "en" : ""} van je coach</p>
+            <div className="mt-3 space-y-2">
+              {payReqs.map((r) => (
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4">
+                  <div>
+                    <p className="font-bold text-brand">{euro(r.amount_cents)}{r.description ? ` · ${r.description}` : ""}</p>
+                    <p className="text-xs text-brand/50">{r.coach?.full_name || "Je coach"}</p>
+                  </div>
+                  <form action={payCoachRequest}>
+                    <input type="hidden" name="requestId" value={r.id} />
+                    <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Betaal {euro(r.amount_cents)}</button>
+                  </form>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {myCoach && (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
