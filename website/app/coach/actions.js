@@ -67,6 +67,48 @@ export async function coachBookSession(formData) {
   return { ok: true };
 }
 
+// Plan a recurring series of sessions for one client: same weekday + hour, weekly for N weeks.
+// Stops early on insufficient credit; skips weeks where the slot is already taken.
+export async function coachBulkBook(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const clientId = formData.get("clientId");
+  const serviceId = formData.get("serviceId");
+  const weekday = num(formData.get("weekday"), 1); // 0=zo..6=za
+  const hour = num(formData.get("hour"), 9);
+  const weeks = Math.min(26, Math.max(1, num(formData.get("weeks"), 4)));
+  const persons = num(formData.get("persons"), 1);
+  if (!clientId || !serviceId) return { error: "Kies een client en een sessie." };
+
+  const fmtDate = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d);
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  const diff = (weekday - start.getDay() + 7) % 7;
+  start.setDate(start.getDate() + diff);
+
+  let booked = 0; let firstErr = null;
+  for (let i = 0; i < weeks; i++) {
+    const d = new Date(start.getTime() + i * 7 * 86400000);
+    const { error: e } = await supabase.rpc("coach_book_session", { p_client: clientId, p_service: serviceId, p_date: fmtDate(d), p_hour: hour, p_persons: persons });
+    if (e) {
+      firstErr = e.message;
+      if (/Onvoldoende|tegoed|credit/i.test(e.message)) break; // out of credits → stop
+      continue; // slot taken / past → skip this week
+    }
+    booked++;
+  }
+
+  try {
+    const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", clientId).single();
+    await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "booked", summary: `Reeks van ${booked} sessies ingepland met ${cl?.full_name || "client"}` });
+    if (booked > 0) await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "coach_booked", title: `Je coach plande ${booked} sessies voor je in`, link: "/account" });
+  } catch {}
+
+  revalidatePath("/coach");
+  revalidatePath("/coach/agenda");
+  if (booked === 0) return { error: firstErr || "Geen sessies ingepland." };
+  return { ok: true, message: `${booked} sessies ingepland${firstErr ? " (sommige overgeslagen/onvoldoende tegoed)" : ""} ✓` };
+}
+
 export async function cancelCoachBooking(formData) {
   const { supabase, userId, error } = await requireCoach();
   if (error) return { error };
