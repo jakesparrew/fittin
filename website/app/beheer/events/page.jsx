@@ -37,16 +37,31 @@ export default async function Events() {
         { title: "Coach-voorstellen", body: "events die coaches voorstellen verschijnen hierboven ter goedkeuring." },
       ]} />
 
-      <form action={createEvent} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
-        <Lbl t="Titel"><input name="title" required className="w-44 rounded-xl border-2 border-borderc px-3 py-2 text-sm" placeholder="Yoga ochtend" /></Lbl>
-        <Lbl t="Datum"><input name="date" type="date" required defaultValue={todayStr} className="rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <Lbl t="Uur">
-          <select name="hour" className="rounded-xl border-2 border-borderc px-3 py-2 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select>
-        </Lbl>
-        <Lbl t="Duur (min)"><input name="duration_min" type="number" defaultValue="60" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <Lbl t="Plaatsen"><input name="capacity" type="number" defaultValue="12" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <Lbl t="Prijs (€)"><input name="price_eur" defaultValue="0" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Event</button>
+      <form action={createEvent} className="mt-6 rounded-2xl border border-borderc bg-white p-5">
+        <div className="flex flex-wrap items-end gap-3">
+          <Lbl t="Titel"><input name="title" required className="w-44 rounded-xl border-2 border-borderc px-3 py-2 text-sm" placeholder="Yoga ochtend" /></Lbl>
+          <Lbl t="Datum"><input name="date" type="date" required defaultValue={todayStr} className="rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+          <Lbl t="Uur">
+            <select name="hour" className="rounded-xl border-2 border-borderc px-3 py-2 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select>
+          </Lbl>
+          <Lbl t="Duur (min)"><input name="duration_min" type="number" defaultValue="60" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+          <Lbl t="Plaatsen"><input name="capacity" type="number" defaultValue="12" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+          <Lbl t="Prijs (€)"><input name="price_eur" defaultValue="0" className="w-20 rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <Lbl t="Beschrijving"><textarea name="description" rows={3} placeholder="Wat houdt het event in?" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+          <Lbl t="Cover-afbeelding (max 5MB)"><input name="image" type="file" accept="image/*" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+        </div>
+        <p className="mt-4 text-xs font-bold uppercase tracking-wide text-lav">FAQ (optioneel)</p>
+        <div className="mt-2 space-y-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="grid gap-2 sm:grid-cols-[1fr_2fr]">
+              <input name={`faq_q${i}`} placeholder={`Vraag ${i}`} className="rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
+              <input name={`faq_a${i}`} placeholder={`Antwoord ${i}`} className="rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
+            </div>
+          ))}
+        </div>
+        <button className="mt-4 rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Event</button>
       </form>
 
       {/* Coach submissions awaiting approval */}

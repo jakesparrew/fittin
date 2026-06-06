@@ -41,7 +41,19 @@ export default async function CoachEvents() {
         <Lbl t="Duur (min)"><input name="duration_min" type="number" defaultValue="60" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
         <Lbl t="Plaatsen"><input name="capacity" type="number" defaultValue="12" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
         <Lbl t="Prijs (€)"><input name="price_eur" defaultValue="0" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-        <div className="flex items-end"><button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Voorstellen</button></div>
+        <Lbl t="Cover-afbeelding (max 5MB)" full><input name="image" type="file" accept="image/*" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
+        <div className="sm:col-span-2 lg:col-span-3">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-lav">FAQ (optioneel)</p>
+          <div className="space-y-2">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="grid gap-2 sm:grid-cols-[1fr_2fr]">
+                <input name={`faq_q${i}`} placeholder={`Vraag ${i}`} className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+                <input name={`faq_a${i}`} placeholder={`Antwoord ${i}`} className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-end sm:col-span-2 lg:col-span-3"><button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Voorstellen</button></div>
       </form>
 
       <div className="mt-6 space-y-3">

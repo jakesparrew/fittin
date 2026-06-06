@@ -68,7 +68,7 @@ export default async function BoekenPage({ searchParams }) {
   const nowIso = new Date().toISOString();
   const { data: eventRows } = await admin
     .from("events")
-    .select("id, title, description, starts_at, ends_at, capacity, price_cents, event_signups(user_id, paid)")
+    .select("id, title, description, image_url, faq, starts_at, ends_at, capacity, price_cents, event_signups(user_id, paid)")
     .eq("gym_id", gym.id)
     .eq("status", "approved")
     .gte("starts_at", nowIso)
@@ -77,7 +77,7 @@ export default async function BoekenPage({ searchParams }) {
   const events = (eventRows || []).map((e) => {
     const paidCount = (e.event_signups || []).filter((s) => s.paid).length;
     const mine = user ? (e.event_signups || []).some((s) => s.user_id === user.id && s.paid) : false;
-    return { id: e.id, title: e.title, description: e.description, starts_at: e.starts_at, ends_at: e.ends_at, capacity: e.capacity, price_cents: e.price_cents, taken: paidCount, mine };
+    return { id: e.id, title: e.title, description: e.description, image_url: e.image_url, faq: e.faq || [], starts_at: e.starts_at, ends_at: e.ends_at, capacity: e.capacity, price_cents: e.price_cents, taken: paidCount, mine };
   });
 
   let credits = 0;

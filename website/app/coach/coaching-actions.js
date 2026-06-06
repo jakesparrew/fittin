@@ -153,10 +153,14 @@ export async function coachCreateEvent(formData) {
   if (!formData.get("title") || !date) return { error: "Titel en datum zijn verplicht." };
   const start = slotInstant(date, hour);
   const end = new Date(start.getTime() + dur * 60000);
+  let image_url = null;
+  try { image_url = await uploadEventImage(formData.get("image"), profile.gym_id); } catch (err) { return { error: err.message }; }
   const { error: e } = await supabase.from("events").insert({
     gym_id: profile.gym_id,
     title: formData.get("title"),
     description: formData.get("description") || null,
+    image_url,
+    faq: parseFaq(formData),
     starts_at: start.toISOString(),
     ends_at: end.toISOString(),
     capacity: num(formData.get("capacity"), 12),

@@ -20,7 +20,7 @@ export default async function EventsPage() {
   const { data: events } = gym
     ? await supabase
         .from("events")
-        .select("id, title, description, starts_at, capacity, price_cents, event_signups(id, paid)")
+        .select("id, title, description, image_url, faq, starts_at, capacity, price_cents, event_signups(id, paid)")
         .eq("gym_id", gym.id)
         .eq("status", "approved")
         .gte("starts_at", new Date().toISOString())
@@ -44,7 +44,12 @@ export default async function EventsPage() {
             const taken = (e.event_signups || []).filter((s) => s.paid).length;
             const full = taken >= e.capacity;
             return (
-              <div key={e.id} className="rounded-3xl border border-borderc bg-white p-6">
+              <div key={e.id} className="overflow-hidden rounded-3xl border border-borderc bg-white">
+                {e.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={e.image_url} alt={e.title} className="h-48 w-full object-cover" />
+                )}
+                <div className="p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="text-xl font-black text-brand">{e.title}</p>
@@ -64,6 +69,17 @@ export default async function EventsPage() {
                       {user ? "Boek je plek →" : "Maak een account om te boeken →"}
                     </Link>
                   )}
+                </div>
+                {Array.isArray(e.faq) && e.faq.length > 0 && (
+                  <div className="mt-4 space-y-2 border-t border-borderc pt-4">
+                    {e.faq.map((f, i) => (
+                      <div key={i}>
+                        <p className="text-sm font-bold text-brand">{f.q}</p>
+                        <p className="mt-0.5 text-sm text-brand/65">{f.a}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 </div>
               </div>
             );

@@ -42,7 +42,22 @@ export default function EventsBooking({ events = [], isLoggedIn }) {
             </button>
             {isOpen && (
               <div className="border-t border-borderc p-6">
+                {ev.image_url && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={ev.image_url} alt={ev.title} className="mb-4 max-h-72 w-full rounded-2xl object-cover" />
+                )}
                 {ev.description && <p className="leading-relaxed text-brand/70">{ev.description}</p>}
+                {Array.isArray(ev.faq) && ev.faq.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <p className="text-xs font-bold uppercase tracking-wide text-lav">Veelgestelde vragen</p>
+                    {ev.faq.map((f, i) => (
+                      <div key={i} className="rounded-xl bg-paper p-3">
+                        <p className="text-sm font-bold text-brand">{f.q}</p>
+                        <p className="mt-0.5 text-sm text-brand/65">{f.a}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div className="mt-4">
                   {ev.mine ? (
                     <span className="inline-block rounded-full bg-accent/15 px-5 py-2.5 text-sm font-bold text-accentdark">✓ Je bent ingeschreven</span>

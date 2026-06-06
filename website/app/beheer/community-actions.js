@@ -3,6 +3,7 @@ import { revalidatePath } from "next/cache";
 import { requireStaff } from "@/lib/staff";
 import { slotInstant } from "@/lib/time";
 import { notify } from "@/lib/notify";
+import { uploadEventImage, parseFaq } from "@/lib/eventmedia";
 
 const num = (v, d = 0) => {
   const n = parseInt(v, 10);
@@ -44,10 +45,14 @@ export async function createEvent(formData) {
   const dur = num(formData.get("duration_min"), 60);
   const start = slotInstant(date, hour);
   const end = new Date(start.getTime() + dur * 60000);
+  let image_url = null;
+  try { image_url = await uploadEventImage(formData.get("image"), profile.gym_id); } catch (err) { return { error: err.message }; }
   const { error: e } = await supabase.from("events").insert({
     gym_id: profile.gym_id,
     title: formData.get("title"),
     description: formData.get("description") || null,
+    image_url,
+    faq: parseFaq(formData),
     starts_at: start.toISOString(),
     ends_at: end.toISOString(),
     capacity: num(formData.get("capacity"), 12),
@@ -58,6 +63,8 @@ export async function createEvent(formData) {
   if (e) return { error: e.message };
   revalidatePath("/beheer/events");
   revalidatePath("/community");
+  revalidatePath("/events");
+  return { ok: true, message: "Event aangemaakt ✓" };
 }
 
 // Approve (or reject) a coach-submitted event.
