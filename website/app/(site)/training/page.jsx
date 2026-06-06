@@ -4,6 +4,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { logWorkout, toggleExerciseDone } from "./actions";
+import MessageThread from "@/components/MessageThread";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn training | Fittin'" };
@@ -28,8 +29,15 @@ export default async function Training() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(120),
-    supabase.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(full_name)").eq("client_id", user.id).maybeSingle(),
+    supabase.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", user.id).maybeSingle(),
   ]);
+
+  const myCoachId = coachLink?.coach?.id || null;
+  let coachMessages = [];
+  if (myCoachId) {
+    const { data } = await supabase.from("coach_messages").select("id, sender_id, body, created_at").eq("coach_id", myCoachId).eq("client_id", user.id).order("created_at", { ascending: true }).limit(200);
+    coachMessages = data || [];
+  }
 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date());
   const loggedTodayByPe = new Set((logs || []).filter((l) => l.logged_on === today).map((l) => l.program_exercise_id));
@@ -51,6 +59,16 @@ export default async function Training() {
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.25em] text-lav">Mijn training</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">{program ? program.name : "Nog geen programma"}</h1>
         {coachName && <p className="mt-2 text-sm text-brand/60">Samengesteld door {coachName}</p>}
+
+        {myCoachId && (
+          <section className="mt-6 rounded-3xl border border-borderc bg-white p-6">
+            <h2 className="font-black text-brand">Berichten met {coachName || "je coach"}</h2>
+            <p className="mt-1 text-sm text-brand/60">Stel een vraag of deel je voortgang.</p>
+            <div className="mt-4">
+              <MessageThread coachId={myCoachId} clientId={user.id} meId={user.id} messages={coachMessages} otherName={coachName} />
+            </div>
+          </section>
+        )}
 
         {!program ? (
           <div className="mt-6 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
