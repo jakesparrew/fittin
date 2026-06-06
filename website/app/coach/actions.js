@@ -160,7 +160,7 @@ export async function uploadCoachPhoto(formData) {
   if (error) return { error };
   const file = formData.get("photo");
   if (!file || typeof file === "string" || !file.size) return { error: "Kies een afbeelding." };
-  if (file.size > 4 * 1024 * 1024) return { error: "Afbeelding mag max. 4 MB zijn." };
+  if (file.size > 5 * 1024 * 1024) return { error: "Afbeelding mag max. 5 MB zijn." };
   if (!/^image\//.test(file.type)) return { error: "Alleen afbeeldingen." };
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();

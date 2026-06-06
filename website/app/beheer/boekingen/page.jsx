@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { slotInstant, brusselsDateStr } from "@/lib/time";
-import { adminCancelBooking, adminBlockSlot, adminBlockRange, adminUnblock, adminCreateBooking } from "../actions";
+import { adminCreateBooking } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
-import PlanSlotCell from "@/components/admin/PlanSlotCell";
-import ActionForm from "@/components/ui/ActionForm";
+import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -38,11 +37,6 @@ export default async function Boekingen({ searchParams }) {
     supabase.from("services").select("id, name").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
   ]);
 
-  const bookMap = new Map();
-  for (const b of bookings || []) bookMap.set(new Date(b.starts_at).getTime(), b);
-  const blockMap = new Map();
-  for (const b of blocks || []) blockMap.set(new Date(b.starts_at).getTime(), b);
-
   const hours = [];
   for (let h = gym.open_hour; h < gym.close_hour; h++) hours.push(h);
 
@@ -60,8 +54,8 @@ export default async function Boekingen({ searchParams }) {
         </div>
       </header>
 
-      {/* Create booking on behalf + block slot */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+      {/* Create booking on behalf */}
+      <div className="mt-6">
         <form action={adminCreateBooking} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
           <Lbl t="Boeking voor lid">
             <SearchSelect name="memberId" required placeholder="Kies lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
@@ -80,75 +74,17 @@ export default async function Boekingen({ searchParams }) {
           </label>
           <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</button>
         </form>
-
-        <ActionForm action={adminBlockRange} success="Geblokkeerd ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
-          <Lbl t="Blokkeer datum"><input name="date" type="date" required defaultValue={days[0].dateStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <Lbl t="Van"><HourSelect name="from_hour" hours={hours} /></Lbl>
-          <Lbl t="Tot"><select name="to_hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{[...hours.slice(1), gym.close_hour].map((h) => <option key={h} value={h}>{h}:00</option>)}</select></Lbl>
-          <Lbl t="Reden"><input name="reason" placeholder="onderhoud…" className="w-32 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Blokkeer reeks</button>
-        </ActionForm>
       </div>
 
-      {/* Week grid */}
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-borderc bg-white">
-        <table className="w-full min-w-[760px] text-xs">
-          <thead>
-            <tr className="border-b border-borderc text-brand/50">
-              <th className="w-12 px-2 py-2"></th>
-              {days.map((d) => (
-                <th key={d.dateStr} className="px-2 py-2 font-bold">
-                  <div className="uppercase">{d.weekday}</div>
-                  <div className="text-brand">{d.dayMonth}</div>
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {hours.map((h) => (
-              <tr key={h} className="border-b border-borderc/60">
-                <td className="px-2 py-1 text-right font-bold text-brand/40">{h}:00</td>
-                {days.map((d) => {
-                  const t = slotInstant(d.dateStr, h).getTime();
-                  const bk = bookMap.get(t);
-                  const bl = blockMap.get(t);
-                  return (
-                    <td key={d.dateStr} className="h-12 border-l border-borderc/60 p-1 align-top">
-                      {bk ? (
-                        <div className="flex h-full flex-col justify-center rounded-lg bg-accent/20 px-1.5 py-1 leading-tight">
-                          <span className="truncate font-bold text-brand">{bk.member?.full_name || "Lid"}</span>
-                          <span className="truncate text-[10px] text-brand/50">{bk.services?.name} · {bk.persons}p</span>
-                          <form action={adminCancelBooking} className="leading-none">
-                            <input type="hidden" name="bookingId" value={bk.id} />
-                            <button className="text-[10px] font-bold text-red-500 hover:underline">annuleer</button>
-                          </form>
-                        </div>
-                      ) : bl ? (
-                        <div className="flex h-full flex-col justify-center rounded-lg bg-brand/10 px-1.5 py-1 leading-tight">
-                          <span className="truncate font-bold text-brand/60">Geblokkeerd</span>
-                          {bl.reason && <span className="truncate text-[10px] text-brand/40">{bl.reason}</span>}
-                          <form action={adminUnblock} className="leading-none">
-                            <input type="hidden" name="blockId" value={bl.id} />
-                            <button className="text-[10px] font-bold text-accentdark hover:underline">deblokkeer</button>
-                          </form>
-                        </div>
-                      ) : (
-                        <PlanSlotCell
-                          date={d.dateStr}
-                          hour={h}
-                          label={`${d.weekday} ${d.dayMonth} · ${h}:00`}
-                          members={memberOpts}
-                          services={serviceOpts}
-                        />
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Week grid — click to plan/block, drag over empty hours to block a range */}
+      <AdminWeekGrid
+        days={days}
+        hours={hours}
+        bookings={(bookings || []).map((b) => ({ t: new Date(b.starts_at).getTime(), id: b.id, name: b.member?.full_name, serviceName: b.services?.name, persons: b.persons }))}
+        blocks={(blocks || []).map((b) => ({ t: new Date(b.starts_at).getTime(), id: b.id, reason: b.reason }))}
+        members={memberOpts}
+        services={serviceOpts}
+      />
     </div>
   );
 }

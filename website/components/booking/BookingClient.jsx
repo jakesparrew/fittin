@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBookingAction, searchMembersAction } from "@/app/(site)/boeken/actions";
@@ -28,6 +28,7 @@ export default function BookingClient({
   );
   const [weekOffset, setWeekOffset] = useState(0);
   const [showNight, setShowNight] = useState(false);
+  const [dragStart, setDragStart] = useState(null); // { dateStr, hour } while drag-selecting hours
   const [selected, setSelected] = useState(null); // { dateStr, hour }
   const [persons, setPersons] = useState(1);
   const [duration, setDuration] = useState(1);
@@ -78,6 +79,19 @@ export default function BookingClient({
     const wd = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
     return availability.some((a) => a.coach_id === coachId && a.weekday === wd && a.from_hour <= h && h < a.to_hour);
   }
+
+  // Is one hour bookable (free + open + future)?
+  function slotFree(dateStr, h) {
+    const t = slotInstant(dateStr, h).getTime();
+    return !takenSet.has(t) && t >= Date.now() && coachOpen(dateStr, h);
+  }
+  // End any drag when the mouse is released anywhere.
+  useEffect(() => {
+    const up = () => setDragStart(null);
+    window.addEventListener("mouseup", up);
+    window.addEventListener("touchend", up);
+    return () => { window.removeEventListener("mouseup", up); window.removeEventListener("touchend", up); };
+  }, []);
 
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
@@ -237,16 +251,24 @@ export default function BookingClient({
                           const taken = takenSet.has(t);
                           const past = t < Date.now();
                           const closed = !coachOpen(d.dateStr, h);
+                          const inRange = isFit60 && selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + duration;
                           const isSel = selected && selected.dateStr === d.dateStr && selected.hour === h;
                           if (past || closed) return <div key={d.dateStr} className="h-7 rounded-md bg-paper" />;
                           if (taken) return <div key={d.dateStr} className="flex h-7 items-center justify-center rounded-md bg-borderc/40 text-[9px] font-bold text-brand/30">vol</div>;
                           return (
                             <button
                               key={d.dateStr}
-                              onClick={() => setSelected({ dateStr: d.dateStr, hour: h })}
-                              className={"h-7 rounded-md border text-[9px] font-bold transition " + (isSel ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
+                              onMouseDown={(e) => { e.preventDefault(); setSelected({ dateStr: d.dateStr, hour: h }); if (isFit60) { setDuration(1); setDragStart({ dateStr: d.dateStr, hour: h }); } }}
+                              onMouseEnter={() => {
+                                if (!dragStart || !isFit60 || dragStart.dateStr !== d.dateStr || h < dragStart.hour) return;
+                                let ok = true;
+                                for (let hh = dragStart.hour; hh <= h; hh++) if (!slotFree(d.dateStr, hh)) { ok = false; break; }
+                                if (ok) setDuration(Math.min(4, h - dragStart.hour + 1));
+                              }}
+                              onClick={() => { if (!dragStart) setSelected({ dateStr: d.dateStr, hour: h }); }}
+                              className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
                             >
-                              {isSel ? "✓" : ""}
+                              {isSel ? "✓" : inRange ? "•" : ""}
                             </button>
                           );
                         })}
