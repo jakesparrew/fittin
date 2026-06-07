@@ -2,6 +2,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
+import { getGymCached, getServicesCached, getPublicCoachesCached, getCoachAvailabilityCached } from "@/lib/cache";
 import BookingClient from "@/components/booking/BookingClient";
 import BookingUnavailable from "@/components/booking/BookingUnavailable";
 import LeaderboardCard from "@/components/LeaderboardCard";
@@ -20,11 +21,8 @@ export default async function BoekenPage({ searchParams }) {
 
   const supabase = await createClient();
   const admin = createAdminClient();
-  // gym + session in parallel.
-  const [{ data: gym }, sess] = await Promise.all([
-    supabase.from("gyms").select("*").eq("slug", "fittin").single(),
-    getSessionProfile(),
-  ]);
+  // Cached gym (public, rarely changes) + session in parallel.
+  const [gym, sess] = await Promise.all([getGymCached(), getSessionProfile()]);
   if (!gym) return <BookingUnavailable />;
   const { user, profile } = sess;
 
@@ -33,21 +31,22 @@ export default async function BoekenPage({ searchParams }) {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const nowIso = new Date().toISOString();
 
-  // Free abandoned unpaid slots first (so availability is correct), then fetch everything in one batch.
+  // Free abandoned unpaid slots first (so availability is correct), then fetch in one batch.
+  // services/coaches/availability come from the Data Cache → no DB hit on most renders.
   await supabase.rpc("expire_unpaid_bookings", { p_gym: gym.id });
   const [
-    { data: services },
+    services,
     { data: taken },
-    { data: coaches },
-    { data: availability },
+    coaches,
+    availability,
     { data: boardRows },
     { data: refPts },
     { data: eventRows },
   ] = await Promise.all([
-    supabase.from("services").select("*").eq("gym_id", gym.id).eq("active", true).order("price_cents", { ascending: true }),
+    getServicesCached(gym.id),
     supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from.toISOString(), p_to: to.toISOString() }),
-    admin.from("profiles").select("id, full_name, coach_pt_price_cents").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
-    supabase.from("coach_availability").select("coach_id, weekday, from_hour, to_hour").eq("gym_id", gym.id),
+    getPublicCoachesCached(gym.id),
+    getCoachAvailabilityCached(gym.id),
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", nowIso),
     admin.rpc("referral_points", { p_gym: gym.id, p_since: monthStart.toISOString() }),
     admin.from("events").select("id, title, description, image_url, faq, starts_at, ends_at, capacity, price_cents, event_signups(user_id, paid)").eq("gym_id", gym.id).eq("status", "approved").gte("starts_at", nowIso).order("starts_at").limit(50),

@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
@@ -208,6 +208,7 @@ export async function saveCoachProfile(formData) {
     })
     .eq("id", userId);
   if (e) return { error: e.message };
+  revalidateTag("coaches");
   revalidatePath("/coach/profiel");
   revalidatePath("/coaches");
   return { ok: true, message: "Profiel opgeslagen ✓" };
@@ -273,6 +274,7 @@ export async function addOwnAvailability(formData) {
     from_hour: num(formData.get("from_hour"), 9),
     to_hour: num(formData.get("to_hour"), 18),
   });
+  revalidateTag("coaches");
   revalidatePath("/coach/beschikbaarheid");
 }
 
@@ -280,6 +282,7 @@ export async function deleteOwnAvailability(formData) {
   const { supabase, userId, error } = await requireCoach();
   if (error) return { error };
   await supabase.from("coach_availability").delete().eq("id", formData.get("id")).eq("coach_id", userId);
+  revalidateTag("coaches");
   revalidatePath("/coach/beschikbaarheid");
 }
 

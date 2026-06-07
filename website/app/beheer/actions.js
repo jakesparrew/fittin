@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -49,6 +49,7 @@ export async function updateGymSettings(formData) {
   };
   const { error: e } = await supabase.from("gyms").update(patch).eq("id", profile.gym_id);
   if (e) return { error: e.message };
+  revalidateTag("gym");
   revalidatePath("/beheer/instellingen");
   revalidatePath("/boeken");
   return { ok: true };
@@ -74,6 +75,7 @@ export async function upsertService(formData) {
     : supabase.from("services").insert(row);
   const { error: e } = await q;
   if (e) return { error: e.message };
+  revalidateTag("services");
   revalidatePath("/beheer/diensten");
   revalidatePath("/boeken");
   return { ok: true };
@@ -85,6 +87,7 @@ export async function toggleService(formData) {
   const id = formData.get("id");
   const active = formData.get("active") === "true";
   await supabase.from("services").update({ active: !active }).eq("id", id);
+  revalidateTag("services");
   revalidatePath("/beheer/diensten");
   revalidatePath("/boeken");
 }
@@ -345,6 +348,7 @@ export async function addCoach(formData) {
     const { data: m } = await supabase.from("profiles").select("email, full_name").eq("id", memberId).single();
     if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role: "coach" });
   } catch {}
+  revalidateTag("coaches");
   revalidatePath("/beheer/coaches");
   revalidatePath("/beheer/leden");
   return { ok: true };

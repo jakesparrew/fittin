@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
 
@@ -125,6 +125,7 @@ export async function addCoachAvailability(formData) {
     from_hour: num(formData.get("from_hour"), 9),
     to_hour: num(formData.get("to_hour"), 18),
   });
+  revalidateTag("coaches");
   revalidatePath("/beheer/coaches");
 }
 
@@ -132,6 +133,7 @@ export async function deleteCoachAvailability(formData) {
   const { supabase, error } = await requireStaff();
   if (error) return { error };
   await supabase.from("coach_availability").delete().eq("id", formData.get("id"));
+  revalidateTag("coaches");
   revalidatePath("/beheer/coaches");
 }
 
