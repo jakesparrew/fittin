@@ -28,20 +28,26 @@ export default async function Community() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
-  const [{ data: myReferral }, { data: myBookings }, { data: challenges }, monthAgg, eventsRes] = await Promise.all([
+  const [
+    { data: myReferral },
+    { data: myBookings },
+    { data: challenges },
+    monthAgg,
+    eventsRes,
+    { data: gymBookings },
+    { data: buddyRows },
+    { data: postRows },
+  ] = await Promise.all([
     supabase.from("referrals").select("id").eq("referred_id", user.id).maybeSingle(),
     supabase.from("bookings").select("starts_at").eq("user_id", user.id).eq("status", "bevestigd"),
     supabase.from("challenges").select("*").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }),
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", now.toISOString()),
     admin.from("events").select("*, event_signups(id, user_id)").eq("gym_id", profile.gym_id).eq("status", "approved").gte("starts_at", today.toISOString()).order("starts_at"),
+    admin.from("bookings").select("user_id, starts_at, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 120 * 86400000).toISOString()),
+    admin.from("buddies").select("id, status, requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(full_name), addressee:profiles!buddies_addressee_id_fkey(full_name)").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+    admin.from("posts").select("id, author_id, kind, body, image_url, meta, created_at, author:profiles!posts_author_id_fkey(full_name, coach_photo_url), post_kudos(user_id), post_comments(id, user_id, body, created_at, cauthor:profiles!post_comments_user_id_fkey(full_name))").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }).limit(40),
   ]);
 
-  // All confirmed bookings (last 120d) for per-challenge leaderboards.
-  const { data: gymBookings } = await admin
-    .from("bookings")
-    .select("user_id, starts_at, member:profiles!bookings_user_id_fkey(full_name)")
-    .eq("gym_id", profile.gym_id).eq("status", "bevestigd")
-    .gte("starts_at", new Date(Date.now() - 120 * 86400000).toISOString());
   const challengeBoard = (c) => {
     const from = c.starts_on ? new Date(c.starts_on) : new Date(0);
     const to = c.ends_on ? new Date(new Date(c.ends_on).getTime() + 86400000) : new Date(8640000000000000);
@@ -75,27 +81,16 @@ export default async function Community() {
 
   const events = eventsRes.data || [];
 
-  // Buddies (admin client → can read the other member's name despite profile RLS).
-  const { data: buddyRows } = await admin
-    .from("buddies")
-    .select("id, status, requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(full_name), addressee:profiles!buddies_addressee_id_fkey(full_name)")
-    .eq("gym_id", profile.gym_id)
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+  // Buddies (fetched in the batch above via the admin client).
   const buddyName = (r) => (r.requester_id === user.id ? r.addressee?.full_name : r.requester?.full_name) || "Lid";
   const accepted = (buddyRows || []).filter((r) => r.status === "accepted");
   const incoming = (buddyRows || []).filter((r) => r.status === "pending" && r.addressee_id === user.id);
   const outgoing = (buddyRows || []).filter((r) => r.status === "pending" && r.requester_id === user.id);
 
-  // ---------- Social feed (posts + activities + kudos + comments) ----------
+  // ---------- Social feed (posts fetched in the batch above) ----------
   const buddyIds = new Set();
   for (const r of accepted) buddyIds.add(r.requester_id === user.id ? r.addressee_id : r.requester_id);
 
-  const { data: postRows } = await admin
-    .from("posts")
-    .select("id, author_id, kind, body, image_url, meta, created_at, author:profiles!posts_author_id_fkey(full_name, coach_photo_url), post_kudos(user_id), post_comments(id, user_id, body, created_at, cauthor:profiles!post_comments_user_id_fkey(full_name))")
-    .eq("gym_id", profile.gym_id)
-    .order("created_at", { ascending: false })
-    .limit(40);
   const posts = (postRows || []).map((p) => ({
     id: p.id,
     author_id: p.author_id,

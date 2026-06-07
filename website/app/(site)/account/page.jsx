@@ -48,61 +48,51 @@ export default async function AccountPage({ searchParams }) {
   const sp = (await searchParams) || {};
 
   const supabase = await createClient();
-  // Release any of this gym's abandoned unpaid slots first (so they show as cancelled + free up).
-  await supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id });
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, services(name,type)")
-    .eq("user_id", user.id)
-    .order("starts_at", { ascending: true });
-
-  const { data: ledger } = await supabase.from("credits_ledger").select("delta").eq("user_id", user.id);
-  const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
-
-  const { data: membership } = await supabase
-    .from("memberships")
-    .select("status, current_period_end, cancel_at_period_end")
-    .eq("user_id", user.id)
-    .eq("status", "actief")
-    .maybeSingle();
-
-  // Sessions you were invited to by another member (you're a participant, not the booker).
   const admin = createAdminClient();
-  const { data: invitedRows } = await admin
-    .from("booking_participants")
-    .select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))")
-    .eq("user_id", user.id);
+  const monthStartLb = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  const monthIso = monthStartLb.toISOString();
+  const nowIso = new Date().toISOString();
+
+  // One parallel batch instead of a dozen serial round-trips (each query is independent).
+  // expire_unpaid_bookings runs alongside; freed slots show correctly on the next render.
+  const [
+    , // expire rpc result (ignored)
+    { data: bookings },
+    { data: ledger },
+    { data: membership },
+    { data: invitedRows },
+    { data: coachLink },
+    { data: payReqs },
+    { data: boardRows },
+    { data: buddyLinks },
+    { data: sentJoins },
+    { data: incomingJoins },
+    { data: bodyProfile },
+    { data: weights },
+  ] = await Promise.all([
+    supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
+    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
+    supabase.from("credits_ledger").select("delta").eq("user_id", user.id),
+    supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
+    admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
+    admin.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("client_id", user.id).maybeSingle(),
+    supabase.from("coach_payment_requests").select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)").eq("client_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
+    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthIso).lt("starts_at", nowIso),
+    admin.from("buddies").select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)").eq("status", "accepted").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
+    supabase.from("booking_join_requests").select("booking_id, to_user").eq("from_user", user.id),
+    admin.from("booking_join_requests").select("id, booking:bookings(starts_at, ends_at, services(name)), from:profiles!booking_join_requests_from_user_fkey(full_name)").eq("to_user", user.id).eq("status", "pending"),
+    supabase.from("profiles").select("height_cm, goal_weight_kg").eq("id", user.id).single(),
+    supabase.from("body_metrics").select("weight_kg, logged_on").eq("user_id", user.id).order("logged_on", { ascending: true }).limit(120),
+  ]);
+
+  const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
   const invitedSessions = (invitedRows || [])
     .map((r) => r.booking)
     // Only surface an invited session once the booker actually paid (or it's a free/credit session).
     .filter((b) => b && b.status === "bevestigd" && (b.paid || b.price_cents === 0 || b.payment_source !== "los"))
     .map((b) => ({ ...b, invited: true, paid: true, payment_source: "invite", price_cents: 0, services: b.services }));
-
-  // Your assigned coach (if any).
-  const { data: coachLink } = await admin
-    .from("coach_clients")
-    .select("coach:profiles!coach_clients_coach_id_fkey(full_name, email)")
-    .eq("client_id", user.id)
-    .maybeSingle();
   const myCoach = coachLink?.coach || null;
 
-  // Open payment requests from a coach (pay via Stripe).
-  const { data: payReqs } = await supabase
-    .from("coach_payment_requests")
-    .select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)")
-    .eq("client_id", user.id)
-    .eq("status", "pending")
-    .order("created_at", { ascending: false });
-
-  // Monthly leaderboard (this gym) + the member's rank.
-  const monthStartLb = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const { data: boardRows } = await admin
-    .from("bookings")
-    .select("user_id, member:profiles!bookings_user_id_fkey(full_name)")
-    .eq("gym_id", profile.gym_id)
-    .eq("status", "bevestigd")
-    .gte("starts_at", monthStartLb.toISOString())
-    .lt("starts_at", new Date().toISOString());
   const lbCounts = {};
   for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
   const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
@@ -143,26 +133,11 @@ export default async function AccountPage({ searchParams }) {
     for (const p of parts || []) (partMap[p.booking_id] ||= []).push({ id: p.user_id, name: p.member?.full_name || "Lid" });
   }
 
-  // Accepted buddies (to ask "kom je mee?") + join requests sent/received.
-  const { data: buddyLinks } = await admin
-    .from("buddies")
-    .select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)")
-    .eq("status", "accepted").eq("gym_id", profile.gym_id)
-    .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`);
+  // Derived from the batch above.
   const myBuddies = (buddyLinks || []).map((l) => { const o = l.requester_id === user.id ? l.addressee : l.requester; return { id: o?.id, name: o?.full_name || "Buddy" }; }).filter((b) => b.id);
-  const { data: sentJoins } = await supabase.from("booking_join_requests").select("booking_id, to_user").eq("from_user", user.id);
   const askedByBooking = {};
   for (const r of sentJoins || []) (askedByBooking[r.booking_id] ||= []).push(r.to_user);
-  const { data: incomingJoins } = await admin
-    .from("booking_join_requests")
-    .select("id, booking:bookings(starts_at, ends_at, services(name)), from:profiles!booking_join_requests_from_user_fkey(full_name)")
-    .eq("to_user", user.id).eq("status", "pending");
 
-  // Body metrics: height/goal (profile) + weight log series (for the progress graph).
-  const [{ data: bodyProfile }, { data: weights }] = await Promise.all([
-    supabase.from("profiles").select("height_cm, goal_weight_kg").eq("id", user.id).single(),
-    supabase.from("body_metrics").select("weight_kg, logged_on").eq("user_id", user.id).order("logged_on", { ascending: true }).limit(120),
-  ]);
   const latestWeight = (weights || []).length ? Number(weights[weights.length - 1].weight_kg) : null;
   const bmi = bodyProfile?.height_cm && latestWeight ? +(latestWeight / Math.pow(bodyProfile.height_cm / 100, 2)).toFixed(1) : null;
 
