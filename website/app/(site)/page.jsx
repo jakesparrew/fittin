@@ -40,7 +40,7 @@ export default function Home() {
           muted
           loop
           playsInline
-          preload="auto"
+          preload="none"
           poster="/video-poster.jpg"
         >
           <source src="/video.webm" type="video/webm" />
