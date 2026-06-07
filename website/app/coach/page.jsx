@@ -22,31 +22,35 @@ export default async function CoachDashboard({ searchParams }) {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const todayStr = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(now);
 
-  const [{ data: members }, { data: services }, { data: bookings }, { data: ledger }, { data: requests }] = await Promise.all([
+  // ?w paginates the planner two weeks at a time so coaches can plan further ahead.
+  const planW = Math.max(0, parseInt(sp.w || "0", 10) || 0);
+  const schedFrom = new Date(); schedFrom.setHours(0, 0, 0, 0);
+  schedFrom.setDate(schedFrom.getDate() + planW * 14);
+  const schedTo = new Date(schedFrom.getTime() + 14 * 86400000);
+
+  // One parallel batch instead of several serial round-trips.
+  const [
+    { data: members },
+    { data: services },
+    { data: bookings },
+    { data: ledger },
+    { data: requests },
+    { data: notifs },
+    { data: activity },
+    { data: meRef },
+    { count: referredCount },
+    { data: takenRows },
+  ] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "lid").order("full_name"),
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
     supabase.from("bookings").select("id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("coach_id", userId).order("starts_at", { ascending: true }),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
     supabase.from("coach_session_requests").select("qty, status, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(5),
-  ]);
-
-  const { data: notifs } = await supabase
-    .from("notifications")
-    .select("id, type, title, body, link, read, created_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(6);
-
-  const { data: activity } = await supabase
-    .from("coach_activity")
-    .select("type, summary, created_at")
-    .eq("coach_id", userId)
-    .order("created_at", { ascending: false })
-    .limit(8);
-
-  const [{ data: meRef }, { count: referredCount }] = await Promise.all([
+    supabase.from("notifications").select("id, type, title, body, link, read, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(6),
+    supabase.from("coach_activity").select("type, summary, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(8),
     supabase.from("profiles").select("referral_code").eq("id", userId).single(),
     supabase.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", userId),
+    supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: schedFrom.toISOString(), p_to: schedTo.toISOString() }),
   ]);
   const refLink = `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/login?mode=signup&ref=${meRef?.referral_code || ""}`;
 
@@ -62,12 +66,6 @@ export default async function CoachDashboard({ searchParams }) {
   const mode = profile.coach_billing_mode;
 
   // ---- Interactive 14-day planner data (gym-wide taken slots + my own sessions) ----
-  // ?w paginates the planner two weeks at a time so coaches can plan further ahead.
-  const planW = Math.max(0, parseInt(sp.w || "0", 10) || 0);
-  const schedFrom = new Date(); schedFrom.setHours(0, 0, 0, 0);
-  schedFrom.setDate(schedFrom.getDate() + planW * 14);
-  const schedTo = new Date(schedFrom.getTime() + 14 * 86400000);
-  const { data: takenRows } = await supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: schedFrom.toISOString(), p_to: schedTo.toISOString() });
   const keyOf = (iso) => {
     const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false }).formatToParts(new Date(iso));
     const get = (t) => parts.find((x) => x.type === t)?.value;

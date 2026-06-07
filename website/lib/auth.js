@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "./supabase/server";
 import { isSupabaseConfigured } from "./supabase/config";
 
@@ -7,7 +8,9 @@ export function roleHome(role) {
 }
 
 // Current authenticated user + their profile row (or nulls). Safe before config.
-export async function getSessionProfile() {
+// Wrapped in React cache() so layout + page + context helpers share ONE auth/profile
+// round-trip per request instead of 2-3 separate hits to GoTrue/Postgres.
+export const getSessionProfile = cache(async function getSessionProfile() {
   if (!isSupabaseConfigured) return { user: null, profile: null };
   const supabase = await createClient();
   const {
@@ -20,4 +23,4 @@ export async function getSessionProfile() {
     .eq("id", user.id)
     .single();
   return { user, profile };
-}
+});
