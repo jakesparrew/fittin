@@ -1,6 +1,7 @@
 import "./globals.css";
 import { Lato, Bricolage_Grotesque } from "next/font/google";
 import PWARegister from "../components/PWARegister";
+import PWAInstallPrompt from "../components/PWAInstallPrompt";
 
 const lato = Lato({
   subsets: ["latin"],
@@ -58,6 +59,7 @@ export default function RootLayout({ children }) {
       <body className="bg-white font-sans text-brand antialiased">
         <PWARegister />
         {children}
+        <PWAInstallPrompt />
       </body>
     </html>
   );
