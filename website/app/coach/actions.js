@@ -187,6 +187,7 @@ export async function uploadCoachPhoto(formData) {
   if (upErr) return { error: upErr.message };
   const { data: pub } = admin.storage.from("coach-photos").getPublicUrl(path);
   await supabase.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", userId);
+  revalidateTag("coaches"); // keep the cached public coach list/photo in sync
   revalidatePath("/coach/profiel");
   revalidatePath("/coaches");
   return { ok: true, message: "Foto geüpload ✓" };
@@ -219,14 +220,16 @@ export async function setClientPrice(formData) {
   const { supabase, userId, error } = await requireCoach();
   if (error) return { error };
   const clientId = formData.get("clientId");
+  const price = cents(formData.get("price_eur"));
+  if (price < 1) return { error: "Geef een geldig tarief (€)." };
   const { error: e } = await supabase
     .from("coach_clients")
-    .update({ price_cents: cents(formData.get("price_eur")) })
+    .update({ price_cents: price })
     .eq("coach_id", userId)
     .eq("client_id", clientId);
   if (e) return { error: e.message };
   revalidatePath("/coach/clienten");
-  return { ok: true };
+  return { ok: true, message: "Tarief opgeslagen ✓" };
 }
 
 // Coach sends a payment request to a client → the client pays via Stripe from their account.

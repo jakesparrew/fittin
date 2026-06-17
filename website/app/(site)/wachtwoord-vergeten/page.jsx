@@ -40,6 +40,7 @@ export default function ForgotPassword() {
               <input
                 type="email"
                 required
+                aria-label="E-mailadres"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="jouw@email.be"

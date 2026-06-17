@@ -1,10 +1,12 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slotInstant } from "@/lib/time";
 import { logCoachActivity } from "@/lib/coachlog";
 import { notify, notifyAdmins } from "@/lib/notify";
+import { uploadEventImage, parseFaq } from "@/lib/eventmedia";
+import { exerciseRowFromForm } from "@/lib/exercise-fields";
 
 const num = (v, d = null) => {
   const n = parseInt(v, 10);
@@ -28,18 +30,16 @@ export async function coachUpsertExercise(formData) {
   const { supabase, profile, userId, error } = await requireCoach();
   if (error) return { error };
   const id = formData.get("id");
-  const row = {
-    gym_id: profile.gym_id,
-    coach_id: userId,
-    name: formData.get("name"),
-    muscle: formData.get("muscle") || null,
-    video_url: formData.get("video_url") || null,
-  };
+  if (!String(formData.get("name") || "").trim()) return { error: "Naam is verplicht." };
+  const row = await exerciseRowFromForm(supabase, formData, profile.gym_id, { coach_id: userId }, id || null);
   // Only let a coach edit their own exercise.
   const q = id ? supabase.from("exercises").update(row).eq("id", id).eq("coach_id", userId) : supabase.from("exercises").insert(row);
   const { error: e } = await q;
   if (e) return { error: e.message };
+  revalidateTag("coaches"); // (no-op for the public list, but keeps tag usage consistent)
+  revalidateTag("exercises");
   revalidatePath("/coach/oefeningen");
+  return { ok: true, message: "Oefening opgeslagen ✓" };
 }
 
 export async function coachDeleteExercise(formData) {
@@ -99,8 +99,12 @@ export async function coachAddProgramExercise(formData) {
   if (error) return { error };
   const programId = formData.get("programId");
   if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
+  // Verify the day actually belongs to this (owned) program — don't trust the hidden dayId.
+  const dayId = formData.get("dayId");
+  const { data: day } = await supabase.from("program_days").select("id").eq("id", dayId).eq("program_id", programId).maybeSingle();
+  if (!day) return { error: "Ongeldige dag." };
   await supabase.from("program_exercises").insert({
-    program_day_id: formData.get("dayId"),
+    program_day_id: dayId,
     exercise_id: formData.get("exerciseId"),
     sets: num(formData.get("sets")),
     reps: num(formData.get("reps")),
@@ -114,7 +118,13 @@ export async function coachDeleteProgramExercise(formData) {
   if (error) return { error };
   const programId = formData.get("programId");
   if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
-  await supabase.from("program_exercises").delete().eq("id", formData.get("id"));
+  // Verify the exercise row hangs off a day of THIS program before deleting.
+  const exId = formData.get("id");
+  const { data: pe } = await supabase.from("program_exercises").select("program_day_id").eq("id", exId).maybeSingle();
+  if (!pe) return { error: "Niet gevonden." };
+  const { data: pd } = await supabase.from("program_days").select("id").eq("id", pe.program_day_id).eq("program_id", programId).maybeSingle();
+  if (!pd) return { error: "Geen toegang." };
+  await supabase.from("program_exercises").delete().eq("id", exId);
   revalidatePath(`/coach/programmas/${programId}`);
 }
 
@@ -124,14 +134,44 @@ export async function coachAssignProgram(formData) {
   const programId = formData.get("programId");
   if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
   const memberId = formData.get("memberId") || null;
-  await supabase.from("programs").update({ member_id: memberId, is_template: !memberId }).eq("id", programId);
-  if (memberId) {
-    const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", memberId).single();
-    await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "program", summary: `Programma toegewezen aan ${cl?.full_name || "client"}`, refId: programId });
-    const { data: co } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
-    await notify({ gymId: profile.gym_id, userId: memberId, actorId: userId, type: "coach_assigned", title: `${co?.full_name || "Je coach"} heeft je trainingsschema klaargezet 💪`, body: "Bekijk je programma bij Mijn training.", link: "/training" });
+
+  // No member → detach back to a reusable template.
+  if (!memberId) {
+    await supabase.from("programs").update({ member_id: null, is_template: true }).eq("id", programId).eq("coach_id", userId);
+    revalidatePath(`/coach/programmas/${programId}`);
+    return { ok: true };
   }
+
+  // Only assign to your OWN client.
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", memberId).maybeSingle();
+  if (!link) return { error: "Dit is niet jouw client." };
+
+  // Clone the program into a per-member copy so the template stays reusable and a previously
+  // assigned member keeps their own copy (assigning is a COPY, per the spec — not a move).
+  const { data: tmpl } = await supabase.from("programs").select("name").eq("id", programId).single();
+  const { data: copy, error: cErr } = await supabase
+    .from("programs")
+    .insert({ gym_id: profile.gym_id, coach_id: userId, member_id: memberId, name: tmpl?.name || "Programma", is_template: false })
+    .select("id")
+    .single();
+  if (cErr) return { error: cErr.message };
+  const { data: days } = await supabase.from("program_days").select("id, day_no, name").eq("program_id", programId).order("day_no");
+  for (const d of days || []) {
+    const { data: nd } = await supabase.from("program_days").insert({ program_id: copy.id, day_no: d.day_no, name: d.name }).select("id").single();
+    if (!nd) continue;
+    const { data: exs } = await supabase.from("program_exercises").select("exercise_id, sets, reps, rest_sec").eq("program_day_id", d.id);
+    if ((exs || []).length) {
+      await supabase.from("program_exercises").insert(exs.map((e) => ({ program_day_id: nd.id, exercise_id: e.exercise_id, sets: e.sets, reps: e.reps, rest_sec: e.rest_sec })));
+    }
+  }
+
+  const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", memberId).single();
+  await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "program", summary: `Programma toegewezen aan ${cl?.full_name || "client"}`, refId: copy.id });
+  const { data: co } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+  await notify({ gymId: profile.gym_id, userId: memberId, actorId: userId, type: "coach_assigned", title: `${co?.full_name || "Je coach"} heeft je trainingsschema klaargezet 💪`, body: "Bekijk je programma bij Mijn training.", link: "/training" });
+
   revalidatePath(`/coach/programmas/${programId}`);
+  return { ok: true, message: "Programma toegewezen ✓" };
 }
 
 export async function coachDeleteProgram(formData) {

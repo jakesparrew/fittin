@@ -2,6 +2,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
+import { exerciseRowFromForm, uniqueSlug } from "@/lib/exercise-fields";
 
 const num = (v, d = null) => {
   const n = parseInt(v, 10);
@@ -10,23 +11,21 @@ const num = (v, d = null) => {
 
 // ---------------- Exercises ----------------
 export async function upsertExercise(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
-  const row = {
-    gym_id: profile.gym_id,
-    name: formData.get("name"),
-    muscle: formData.get("muscle") || null,
-    video_url: formData.get("video_url") || null,
-  };
+  if (!String(formData.get("name") || "").trim()) return { error: "Naam is verplicht." };
+  const row = await exerciseRowFromForm(supabase, formData, profile.gym_id, {}, id || null);
   const q = id ? supabase.from("exercises").update(row).eq("id", id) : supabase.from("exercises").insert(row);
   const { error: e } = await q;
   if (e) return { error: e.message };
+  revalidateTag("exercises");
   revalidatePath("/beheer/oefeningen");
+  return { ok: true, message: "Oefening opgeslagen ✓" };
 }
 
 export async function deleteExercise(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("exercises").delete().eq("id", formData.get("id"));
   revalidatePath("/beheer/oefeningen");
@@ -34,19 +33,21 @@ export async function deleteExercise(formData) {
 
 // Inline "add new exercise" from the program builder — returns the created exercise.
 export async function quickExercise(name) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const n = String(name || "").trim();
   if (!n) return { error: "Naam vereist." };
-  const { data, error: e } = await supabase.from("exercises").insert({ gym_id: profile.gym_id, name: n }).select("id, name").single();
+  const slug = await uniqueSlug(supabase, profile.gym_id, n, null);
+  const { data, error: e } = await supabase.from("exercises").insert({ gym_id: profile.gym_id, name: n, slug, muscle: null }).select("id, name").single();
   if (e) return { error: e.message };
+  revalidateTag("exercises");
   revalidatePath("/beheer/programmas");
   return { id: data.id, name: data.name };
 }
 
 // ---------------- Programs ----------------
 export async function createProgram(formData) {
-  const { supabase, profile, userId, error } = await requireStaff();
+  const { supabase, profile, userId, error } = await requireStaff(true);
   if (error) return { error };
   const memberId = formData.get("memberId") || null;
   const { data, error: e } = await supabase
@@ -68,7 +69,7 @@ export async function createProgram(formData) {
 }
 
 export async function addProgramDay(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const programId = formData.get("programId");
   const { data: days } = await supabase.from("program_days").select("day_no").eq("program_id", programId);
@@ -78,7 +79,7 @@ export async function addProgramDay(formData) {
 }
 
 export async function addProgramExercise(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("program_exercises").insert({
     program_day_id: formData.get("dayId"),
@@ -91,14 +92,14 @@ export async function addProgramExercise(formData) {
 }
 
 export async function deleteProgramExercise(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("program_exercises").delete().eq("id", formData.get("id"));
   revalidatePath(`/beheer/programmas/${formData.get("programId")}`);
 }
 
 export async function assignProgram(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase
     .from("programs")
@@ -108,7 +109,7 @@ export async function assignProgram(formData) {
 }
 
 export async function deleteProgram(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("programs").delete().eq("id", formData.get("id"));
   revalidatePath("/beheer/programmas");
@@ -116,7 +117,7 @@ export async function deleteProgram(formData) {
 
 // ---------------- Coach availability ----------------
 export async function addCoachAvailability(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("coach_availability").insert({
     gym_id: profile.gym_id,
@@ -130,7 +131,7 @@ export async function addCoachAvailability(formData) {
 }
 
 export async function deleteCoachAvailability(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("coach_availability").delete().eq("id", formData.get("id"));
   revalidateTag("coaches");
@@ -139,7 +140,7 @@ export async function deleteCoachAvailability(formData) {
 
 // ---------------- Coach note on a member ----------------
 export async function addSessionNote(formData) {
-  const { supabase, profile, userId, error } = await requireStaff();
+  const { supabase, profile, userId, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("session_notes").insert({
     gym_id: profile.gym_id,

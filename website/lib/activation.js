@@ -89,6 +89,19 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
   const skip = new Set((recent || []).map((r) => r.subscriber_id));
   const targets = force ? matches : matches.filter((m) => !skip.has(m.subscriber_id));
 
+  // Reward credits are granted at most ONCE per (campaign, member) — re-running the campaign
+  // (after cooldown / forced) re-engages by email but never stacks more free sessions.
+  let alreadyCredited = new Set();
+  if (c.reward_credits > 0) {
+    const { data: cr } = await admin
+      .from("credits_ledger")
+      .select("user_id")
+      .eq("gym_id", c.gym_id)
+      .eq("reason", "activatie")
+      .eq("ref_id", campaignId);
+    alreadyCredited = new Set((cr || []).map((r) => r.user_id));
+  }
+
   let sent = 0;
   for (const part of chunk(targets, 100)) {
     const payload = [];
@@ -128,10 +141,16 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
       sent_at: now,
     }));
     if (rows.length) await admin.from("campaign_sends").insert(rows);
-    // Grant the reward credits to the ones we actually emailed.
+    // Grant the reward credits to the ones we actually emailed — once per member per campaign.
     if (c.reward_credits > 0) {
-      const credited = part.filter((_, i) => ids[i]?.id).map((m) => ({ gym_id: c.gym_id, user_id: m.user_id, delta: c.reward_credits, reason: "activatie" }));
-      if (credited.length) await admin.from("credits_ledger").insert(credited);
+      const credited = part
+        .filter((_, i) => ids[i]?.id)
+        .filter((m) => !alreadyCredited.has(m.user_id))
+        .map((m) => ({ gym_id: c.gym_id, user_id: m.user_id, delta: c.reward_credits, reason: "activatie", ref_id: campaignId }));
+      if (credited.length) {
+        await admin.from("credits_ledger").insert(credited);
+        credited.forEach((r) => alreadyCredited.add(r.user_id));
+      }
     }
     sent += rows.filter((r) => r.status === "sent").length;
   }

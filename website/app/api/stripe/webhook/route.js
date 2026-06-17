@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingConfirmation, sendEventSignup } from "@/lib/email";
+import { recordRedemption } from "@/lib/discounts";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,14 +28,18 @@ export async function POST(req) {
 
   const admin = createAdminClient();
 
-  // Idempotency: a unique-PK insert fails on replays → we skip.
+  // Idempotency lock: a unique-PK insert fails on a concurrent duplicate → skip.
   const { error: dupErr } = await admin.from("stripe_events").insert({ id: event.id, type: event.type });
   if (dupErr) return NextResponse.json({ received: true, duplicate: true });
 
   try {
     await handleEvent(event, admin);
   } catch (e) {
+    // The handler did not complete. Release the lock and return a non-2xx so Stripe retries.
+    // The credit / punch-card / coach grants are idempotent (stripe_ref) so re-processing is safe.
     console.error("stripe webhook error:", event.type, e?.message);
+    await admin.from("stripe_events").delete().eq("id", event.id);
+    return new NextResponse("handler error, will retry", { status: 500 });
   }
   return NextResponse.json({ received: true });
 }
@@ -59,19 +64,23 @@ async function recordPayment(admin, { gymId, userId, amountCents, kind, descript
   );
 }
 
-async function grantCredits(admin, userId, credits, reason, withPunchcard = false) {
+async function grantCredits(admin, userId, credits, reason, withPunchcard = false, stripeRef = null) {
   if (!userId || !credits) return;
   const { data: prof } = await admin.from("profiles").select("gym_id").eq("id", userId).single();
   if (!prof) return;
+  const expiresAt = new Date(Date.now() + 180 * 86400000).toISOString(); // 6-month validity
   if (withPunchcard) {
-    await admin.from("punch_cards").insert({
-      gym_id: prof.gym_id,
-      user_id: userId,
-      credits_initial: credits,
-      expires_at: new Date(Date.now() + 180 * 86400000).toISOString(),
-    });
+    await admin.from("punch_cards").upsert(
+      { gym_id: prof.gym_id, user_id: userId, credits_initial: credits, expires_at: expiresAt, stripe_ref: stripeRef },
+      { onConflict: "stripe_ref", ignoreDuplicates: true }
+    );
   }
-  await admin.from("credits_ledger").insert({ gym_id: prof.gym_id, user_id: userId, delta: credits, reason });
+  // stripe_ref makes the grant idempotent: a retried webhook adds the credits exactly once.
+  // Punch-card credits expire after 6 months; subscription ("abo") credits do not.
+  await admin.from("credits_ledger").upsert(
+    { gym_id: prof.gym_id, user_id: userId, delta: credits, reason, stripe_ref: stripeRef, expires_at: withPunchcard ? expiresAt : null },
+    { onConflict: "stripe_ref", ignoreDuplicates: true }
+  );
 }
 
 async function markBookingPaid(admin, bookingId, paymentIntent, session) {
@@ -84,6 +93,12 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
   if (!booking) return;
   if (session?.amount_total)
     await recordPayment(admin, { gymId: booking.gym_id, userId: booking.user_id, amountCents: session.amount_total, kind: "booking", description: `Boeking · ${booking.services?.name || "Sessie"}`, stripeId: session.id });
+  // Record the discount redemption now that the payment actually succeeded (once per booking).
+  const codeId = session?.metadata?.discount_code_id;
+  if (codeId && booking.user_id) {
+    const { data: already } = await admin.from("discount_redemptions").select("id").eq("code_id", codeId).eq("booking_id", booking.id).maybeSingle();
+    if (!already) { try { await recordRedemption(booking.gym_id, codeId, booking.user_id, booking.id); } catch (e) { console.error("recordRedemption:", e?.message); } }
+  }
   // Referred member just paid → reward the referrer (deferred anti-farm reward).
   if (booking.user_id) await admin.rpc("reward_pending_referral", { p_user: booking.user_id });
   // Coach referral: if the referrer is a coach, give them ONE free intro session (a credit) the
@@ -104,16 +119,21 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
       }
     } catch {}
   }
-  const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", booking.user_id).single();
-  await sendBookingConfirmation({
-    to: profile?.email,
-    name: profile?.full_name,
-    serviceName: booking.services?.name || "Sessie",
-    startsAt: booking.starts_at,
-    endsAt: booking.ends_at,
-    persons: booking.persons,
-    free: false,
-  });
+  // Best-effort confirmation mail: never let an email hiccup roll back a successful payment.
+  try {
+    const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", booking.user_id).single();
+    await sendBookingConfirmation({
+      to: profile?.email,
+      name: profile?.full_name,
+      serviceName: booking.services?.name || "Sessie",
+      startsAt: booking.starts_at,
+      endsAt: booking.ends_at,
+      persons: booking.persons,
+      free: false,
+    });
+  } catch (e) {
+    console.error("booking confirmation mail failed (payment already recorded):", e?.message);
+  }
 }
 
 async function upsertMembership(admin, sub) {
@@ -165,14 +185,17 @@ async function handleEvent(event, admin) {
     case "checkout.session.completed": {
       if (obj.metadata?.kind === "punchcard") {
         const credits = parseInt(obj.metadata.credits, 10) || 0;
-        await grantCredits(admin, obj.metadata.user_id, credits, "aankoop", true);
+        await grantCredits(admin, obj.metadata.user_id, credits, "aankoop", true, obj.id);
         await recordPayment(admin, { userId: obj.metadata.user_id, amountCents: obj.amount_total, kind: "beurtenkaart", description: `Beurtenkaart · ${credits} sessies`, stripeId: obj.id });
       } else if (obj.metadata?.kind === "coach_credits") {
         const coachId = obj.metadata.coach_id;
         const credits = parseInt(obj.metadata.credits, 10) || 0;
         const { data: prof } = await admin.from("profiles").select("gym_id").eq("id", coachId).single();
         if (prof && credits) {
-          await admin.from("coach_ledger").insert({ gym_id: prof.gym_id, coach_id: coachId, delta: credits, reason: "aankoop" });
+          await admin.from("coach_ledger").upsert(
+            { gym_id: prof.gym_id, coach_id: coachId, delta: credits, reason: "aankoop", stripe_ref: obj.id },
+            { onConflict: "stripe_ref", ignoreDuplicates: true }
+          );
         }
         await recordPayment(admin, { userId: coachId, amountCents: obj.amount_total, kind: "coach_credits", description: `Coach-sessies · ${credits}`, stripeId: obj.id });
       } else if (obj.metadata?.kind === "event") {
@@ -200,7 +223,10 @@ async function handleEvent(event, admin) {
           await recordPayment(admin, { gymId: req.gym_id, userId: req.client_id, amountCents: obj.amount_total, kind: "overig", description: `Coaching · ${coach?.full_name || "coach"}${req.description ? ` · ${req.description}` : ""}`, stripeId: obj.id });
           // Top up the coachee's prepaid sessions with this coach so future bookings don't charge again.
           if (req.sessions > 0) {
-            await admin.from("coach_credit_ledger").insert({ gym_id: req.gym_id, coach_id: req.coach_id, client_id: req.client_id, delta: req.sessions, reason: "aankoop" });
+            await admin.from("coach_credit_ledger").upsert(
+              { gym_id: req.gym_id, coach_id: req.coach_id, client_id: req.client_id, delta: req.sessions, reason: "aankoop", stripe_ref: obj.id },
+              { onConflict: "stripe_ref", ignoreDuplicates: true }
+            );
             await admin.from("notifications").insert({ gym_id: req.gym_id, user_id: req.client_id, type: "system", title: `${req.sessions} sessietegoed bijgeschreven`, body: `Bij ${coach?.full_name || "je coach"} — je hoeft niet telkens opnieuw te betalen.`, link: "/account" });
           }
         }
@@ -227,7 +253,7 @@ async function handleEvent(event, admin) {
       if (!reason.startsWith("subscription")) return;
       const prof = await profileFromCustomer(admin, obj.customer);
       if (!prof) return;
-      await grantCredits(admin, prof.id, 1, "abo");
+      await grantCredits(admin, prof.id, 1, "abo", false, obj.id);
       await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
       await admin.rpc("reward_pending_referral", { p_user: prof.id });
       // Welcome the new member on their first invoice; thank them each renewal.

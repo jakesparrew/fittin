@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { markAllRead, markRead } from "./actions";
+import { markAllRead } from "./actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notificaties | Fittin'" };
@@ -21,6 +21,8 @@ export default async function Notificaties() {
     .order("created_at", { ascending: false })
     .limit(100);
   const unread = (notifs || []).filter((n) => !n.read).length;
+  // Opening the notifications list clears the unread badge for the next load.
+  if (unread > 0) { try { await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false); } catch {} }
 
   return (
     <main className="bg-paper min-h-screen">

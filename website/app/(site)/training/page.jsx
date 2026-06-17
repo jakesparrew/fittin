@@ -3,22 +3,28 @@ import Link from "next/link";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { logWorkout, toggleExerciseDone } from "./actions";
 import MessageThread from "@/components/MessageThread";
+import WorkoutPlayer from "./WorkoutPlayer";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn training | Fittin'" };
 
+const asArray = (sj) =>
+  Array.isArray(sj) ? sj : sj && typeof sj === "object" && (sj.reps != null || sj.weight_kg != null) ? [sj] : [];
+const topW = (sj) => asArray(sj).reduce((m, s) => Math.max(m, s?.weight_kg || 0), 0);
+
+const EX_FIELDS = "id, name, slug, muscle, category, primary_muscles, secondary_muscles, equipment, difficulty, instructions, tips, image_url, animation_url, video_url";
+
 export default async function Training() {
   if (!isSupabaseConfigured) redirect("/");
-  const { user, profile } = await getSessionProfile();
+  const { user } = await getSessionProfile();
   if (!user) redirect("/login?next=/training");
 
   const supabase = await createClient();
   const [{ data: program }, { data: logs }, { data: coachLink }] = await Promise.all([
     supabase
       .from("programs")
-      .select("id, name, coach:profiles!programs_coach_id_fkey(full_name), program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, exercises(name, muscle)))")
+      .select(`id, name, coach:profiles!programs_coach_id_fkey(full_name), program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, exercises(${EX_FIELDS})))`)
       .eq("member_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -28,7 +34,7 @@ export default async function Training() {
       .select("id, program_exercise_id, sets_json, logged_on, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(120),
+      .limit(300),
     supabase.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", user.id).maybeSingle(),
   ]);
 
@@ -40,21 +46,46 @@ export default async function Training() {
   }
 
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date());
-  const loggedTodayByPe = new Set((logs || []).filter((l) => l.logged_on === today).map((l) => l.program_exercise_id));
-  // Days/exercises done in the last 7 days, for a simple progress streak.
   const weekAgo = new Date(Date.now() - 7 * 86400000);
   const weekDays = new Set((logs || []).filter((l) => new Date(l.created_at) >= weekAgo).map((l) => l.logged_on));
 
-  const days = program ? [...(program.program_days || [])].sort((a, b) => a.day_no - b.day_no) : [];
-  const totalEx = days.reduce((a, d) => a + (d.program_exercises || []).length, 0);
-  const doneToday = days.reduce((a, d) => a + (d.program_exercises || []).filter((pe) => loggedTodayByPe.has(pe.id)).length, 0);
+  // Index logs per program-exercise for done-today / last-session / PR.
+  const byPe = {};
+  for (const l of logs || []) (byPe[l.program_exercise_id] ||= []).push(l);
+
+  const rawDays = program ? [...(program.program_days || [])].sort((a, b) => a.day_no - b.day_no) : [];
+  const days = rawDays.map((d) => ({
+    id: d.id,
+    name: d.name,
+    day_no: d.day_no,
+    exercises: [...(d.program_exercises || [])]
+      .sort((a, b) => (a.position || 0) - (b.position || 0))
+      .map((pe) => {
+        const peLogs = byPe[pe.id] || [];
+        const doneToday = peLogs.some((l) => l.logged_on === today);
+        const lastLog = peLogs.find((l) => l.logged_on !== today) || (doneToday ? null : peLogs[0]);
+        const pr = peLogs.reduce((m, l) => Math.max(m, topW(l.sets_json)), 0);
+        return {
+          peId: pe.id,
+          sets: pe.sets,
+          reps: pe.reps,
+          rest_sec: pe.rest_sec,
+          exercise: pe.exercises,
+          doneToday,
+          lastSets: lastLog ? asArray(lastLog.sets_json) : [],
+          pr,
+        };
+      }),
+  }));
+
+  const totalEx = days.reduce((a, d) => a + d.exercises.length, 0);
+  const doneToday = days.reduce((a, d) => a + d.exercises.filter((pe) => pe.doneToday).length, 0);
   const pct = totalEx ? Math.round((doneToday / totalEx) * 100) : 0;
   const coachName = program?.coach?.full_name || coachLink?.coach?.full_name;
 
   return (
     <main className="bg-paper min-h-screen">
       <div className="mx-auto max-w-4xl px-5 py-16">
-        {/* Back + header */}
         <Link href="/account" className="inline-flex items-center gap-1.5 text-sm font-bold text-brand/60 transition hover:text-brand">← Terug naar account</Link>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.25em] text-lav">Mijn training</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">{program ? program.name : "Nog geen programma"}</h1>
@@ -76,18 +107,20 @@ export default async function Training() {
               <>
                 <p className="font-semibold text-brand/70">{coachName} stelt binnenkort je programma samen.</p>
                 <p className="mt-1 text-sm text-brand/50">Zodra je coach je trainingsschema klaarzet, verschijnt het hier.</p>
-                <Link href="/boeken" className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Boek een sessie</Link>
+                <Link href="/oefeningen" className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Bekijk de oefeningen</Link>
               </>
             ) : (
               <>
-                <p className="font-semibold text-brand/70">Je hebt nog geen programma. Werk samen met een coach voor een plan op maat.</p>
-                <Link href="/personal-training" className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Ontdek personal training</Link>
+                <p className="font-semibold text-brand/70">Je hebt nog geen programma. Werk samen met een coach voor een plan op maat — of verken zelf de oefeningen.</p>
+                <div className="mt-5 flex flex-wrap justify-center gap-3">
+                  <Link href="/personal-training" className="inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Ontdek personal training</Link>
+                  <Link href="/oefeningen" className="inline-block rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-lav">Oefeningenbibliotheek</Link>
+                </div>
               </>
             )}
           </div>
         ) : (
           <>
-            {/* Progress summary */}
             <div className="mt-8 rounded-3xl bg-brand p-6 text-white">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div>
@@ -101,67 +134,12 @@ export default async function Training() {
               </div>
             </div>
 
-            <div className="mt-6 space-y-6">
-              {days.map((day) => {
-                const exs = [...(day.program_exercises || [])].sort((a, b) => (a.position || 0) - (b.position || 0));
-                const dayDone = exs.filter((pe) => loggedTodayByPe.has(pe.id)).length;
-                return (
-                  <section key={day.id} className="rounded-3xl border border-borderc bg-white p-6">
-                    <div className="flex items-center justify-between">
-                      <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
-                      <span className="text-xs font-bold text-brand/40">{dayDone}/{exs.length} klaar</span>
-                    </div>
-                    <div className="mt-4 space-y-3">
-                      {exs.map((pe) => {
-                        const done = loggedTodayByPe.has(pe.id);
-                        return (
-                          <div key={pe.id} className={"rounded-2xl p-4 transition " + (done ? "bg-accent/10 ring-1 ring-accent/40" : "bg-paper")}>
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                              <div>
-                                <p className={"font-bold text-brand " + (done ? "line-through opacity-60" : "")}>{pe.exercises?.name}</p>
-                                <p className="text-xs text-brand/50">
-                                  doel: {pe.sets ?? "–"} × {pe.reps ?? "–"} · {pe.rest_sec ?? "–"}s rust{pe.exercises?.muscle ? ` · ${pe.exercises.muscle}` : ""}
-                                </p>
-                              </div>
-                              <form action={toggleExerciseDone}>
-                                <input type="hidden" name="peId" value={pe.id} />
-                                <button className={"rounded-full px-5 py-2 text-sm font-bold transition " + (done ? "border-2 border-borderc text-brand hover:border-lav" : "bg-accent text-brand hover:opacity-90")}>
-                                  {done ? "Ongedaan maken" : "Klaar ✓"}
-                                </button>
-                              </form>
-                            </div>
-                            {/* Optional: log exact sets/reps/weight for progress tracking */}
-                            <details className="mt-3">
-                              <summary className="cursor-pointer text-xs font-bold text-brand/50 hover:text-brand">Sets/gewicht loggen</summary>
-                              <form action={logWorkout} className="mt-2 flex flex-wrap items-end gap-2">
-                                <input type="hidden" name="peId" value={pe.id} />
-                                <Mini name="sets" label="sets" defaultValue={pe.sets ?? ""} />
-                                <Mini name="reps" label="reps" defaultValue={pe.reps ?? ""} />
-                                <Mini name="weight" label="kg" />
-                                <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white transition hover:opacity-90">Log</button>
-                              </form>
-                            </details>
-                          </div>
-                        );
-                      })}
-                      {exs.length === 0 && <p className="text-xs text-brand/40">Nog geen oefeningen op deze dag.</p>}
-                    </div>
-                  </section>
-                );
-              })}
+            <div className="mt-6">
+              <WorkoutPlayer days={days} />
             </div>
           </>
         )}
       </div>
     </main>
-  );
-}
-
-function Mini({ name, label, defaultValue }) {
-  return (
-    <label className="block">
-      <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-lav">{label}</span>
-      <input name={name} defaultValue={defaultValue} className="w-16 rounded-lg border-2 border-borderc bg-white px-2 py-1.5 text-sm text-brand outline-none focus:border-accent" />
-    </label>
   );
 }

@@ -20,7 +20,7 @@ const fmtShort = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/B
 export default async function FactuurPage({ searchParams }) {
   const ctx = await getAdminContext();
   if (!ctx) return null;
-  const { gym } = ctx;
+  const { gym, supabase } = ctx;
   const sp = (await searchParams) || {};
   const admin = createAdminClient();
 
@@ -39,7 +39,9 @@ export default async function FactuurPage({ searchParams }) {
       .single();
     if (!p) return <Missing />;
     title = "Factuur";
-    number = "F-" + String(p.id).slice(0, 8).toUpperCase();
+    // Assign (once) a sequential, gap-free invoice number — required for BE VAT.
+    const { data: assignedNo } = await supabase.rpc("assign_invoice_no", { p_payment: sp.payment });
+    number = assignedNo || "F-" + String(p.id).slice(0, 8).toUpperCase();
     dateLabel = fmtDate(p.created_at);
     billTo = { name: p.member?.full_name || "Lid", email: p.member?.email || "", sub: "" };
     lines = [{ desc: p.description || ({ booking: "Sessie", beurtenkaart: "Beurtenkaart", abonnement: "Abonnement", coach_credits: "Coach-sessies" }[p.kind] || "Dienst"), sub: fmtShort(p.created_at), gross: p.amount_cents || 0 }];

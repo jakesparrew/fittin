@@ -12,6 +12,10 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  // Allow next/image to optimise Supabase-hosted media (coach photos, event/feed images).
+  images: {
+    remotePatterns: [{ protocol: "https", hostname: "*.supabase.co" }],
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

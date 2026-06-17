@@ -26,7 +26,7 @@ Opgehaald 2026-06. Source of truth voor teksten en cijfers. Oude site = Wix.
 - LID WORDEN: "Word nu lid en ontvang meteen 1 gratis sessie met code 'FittinWelcome'"
   - Lid worden: registreer · eerste uur gratis met code FittinWelcome · kies "Fit60" bij
     online boeken
-  - Als lid: gym voor €11,00 · één sessie = 1u15 · 1 tot 4 personen · geen extra kosten
+  - Als lid: gym voor €15,00 · één sessie = 1 uur · 1 tot 4 personen · geen extra kosten
   - Praktisch: gratis parking · Aannemersstraat 186, 9040 Sint-Amandsberg
 - PRIVÉ GYMMEN: "Reserveer de zaal voor jou en je vrienden"
   - Volledige privacy (alleen, met vrienden of met coach: de gym is van jou)

@@ -45,9 +45,11 @@ export async function signupEvent(formData) {
     return { ok: true, free: true };
   }
 
-  // Paid event → Stripe Checkout (no credits allowed).
+  // Paid event → Stripe Checkout (no credits allowed). Reserve the seat atomically first so
+  // concurrent checkouts can't oversell the event (counts paid + fresh holds, ≤30 min).
   if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };
-  const signupId = existing?.id || (await supabase.from("event_signups").insert({ gym_id: profile.gym_id, event_id: eventId, user_id: user.id, paid: false }).select("id").single()).data?.id;
+  const { data: signupId, error: reserveErr } = await supabase.rpc("reserve_event_seat", { p_event: eventId });
+  if (reserveErr) return { error: reserveErr.message };
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer_email: user.email,

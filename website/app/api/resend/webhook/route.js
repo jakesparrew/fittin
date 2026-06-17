@@ -13,7 +13,8 @@ export async function GET() {
 // Verify the Svix signature Resend sends. No-op if RESEND_WEBHOOK_SECRET isn't set.
 function verifySignature(headers, rawBody) {
   const secret = process.env.RESEND_WEBHOOK_SECRET;
-  if (!secret) return true;
+  // Fail closed: an unsigned request is rejected unless the secret is configured.
+  if (!secret) { console.warn("RESEND_WEBHOOK_SECRET not set — rejecting webhook"); return false; }
   const id = headers.get("svix-id");
   const ts = headers.get("svix-timestamp");
   const sigHeader = headers.get("svix-signature");

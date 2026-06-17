@@ -28,8 +28,8 @@ Resend · Vercel · Nuki-koppeling. **Alles multi-tenant: `gym_id` op elke tabel
 - Nieuwe leden krijgen automatisch de welkomstcode-flow (zie 3)
 
 ### 2. Boekingssysteem (gym-slots)
-- Dienst "Fit60": sessie van 1u15, hele zaal, 1-4 personen, prijs €11 per boeking
-  (géén kost per persoon)
+- Dienst "Fit60": sessie van 1 uur, hele zaal, 1-4 personen, prijs €15 per boeking
+  (géén kost per persoon) — werkelijke prijs op site & DB, bevestigd 2026-06-15
 - Slots per uur, openingsvenster instelbaar per gym (default 07:00–21:00)
 - Eén boeking per slot (privégym = exclusief); dubbelboeken onmogelijk (db-constraint)
 - Daluren (instelbaar, default vóór 16:00): lagere prijs/credits, visueel gelabeld
@@ -43,7 +43,7 @@ Resend · Vercel · Nuki-koppeling. **Alles multi-tenant: `gym_id` op elke tabel
 - Stripe Checkout/Payment Element; boekingen & PT zijn real-world services → geen
   Apple/Google IAP nodig, ook in de app via Stripe
 - Betaalopties (zie pitch-slide "Hoe leden betalen"):
-  - Losse boeking: €11 (richtprijs €12 op pitch — gebruik werkelijk tarief €11)
+  - Losse boeking: €15 (werkelijk tarief op site & DB)
   - 10-beurtenkaart: €100 → 10 sessiecredits, 6 maanden geldig
   - Abonnement: €10/mnd → 1 sessie inclusief + boeken aan ledentarief (€8) +
     voorrang piekuren + extra dalurenkorting

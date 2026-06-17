@@ -5,20 +5,16 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingConfirmation, sendSessionInvite } from "@/lib/email";
-import { validateDiscount, recordRedemption } from "@/lib/discounts";
+import { validateDiscount } from "@/lib/discounts";
 
 // Search gym members to invite to a session (name + id only — no contact details exposed).
+// Uses an RLS-safe security-definer RPC (search_members) scoped to the caller's own gym,
+// instead of the service-role client which bypassed RLS.
 export async function searchMembersAction(q) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
-  const { data: me } = await supabase.from("profiles").select("gym_id").eq("id", user.id).single();
-  if (!me) return [];
-  const admin = createAdminClient();
-  let query = admin.from("profiles").select("id, full_name").eq("gym_id", me.gym_id).neq("id", user.id).order("full_name").limit(8);
-  const term = String(q || "").trim();
-  if (term) query = query.ilike("full_name", `%${term}%`);
-  const { data } = await query;
+  const { data } = await supabase.rpc("search_members", { p_q: String(q || "").trim() });
   return (data || []).map((p) => ({ id: p.id, name: p.full_name || "Lid" }));
 }
 
@@ -122,7 +118,10 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
 
   const session = await stripe.checkout.sessions.create(checkoutParams(booking, user.email, chargeCents, codeId));
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
-  if (codeId) await recordRedemption(booking.gym_id, codeId, user.id, booking.id);
+  // Persist the agreed charge + code (bookings columns are member-locked → service role) so a
+  // resumed checkout re-charges the same amount. The redemption is recorded by the Stripe webhook
+  // only AFTER payment succeeds, so abandoning checkout no longer burns a one-time code.
+  await createAdminClient().from("bookings").update({ charge_cents: chargeCents, discount_code_id: codeId }).eq("id", booking.id);
   return { ok: true, checkoutUrl: session.url };
 }
 
@@ -138,13 +137,16 @@ export async function resumeCheckoutAction(formData) {
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, price_cents, paid, services(name)")
+    .select("id, price_cents, charge_cents, discount_code_id, paid, services(name)")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
   if (!booking || booking.paid) return;
 
-  const session = await stripe.checkout.sessions.create(checkoutParams(booking, user.email));
+  // Re-use the originally agreed (possibly discounted) amount + code, not the full list price.
+  const session = await stripe.checkout.sessions.create(
+    checkoutParams(booking, user.email, booking.charge_cents ?? undefined, booking.discount_code_id || null)
+  );
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", id);
   redirect(session.url);
 }

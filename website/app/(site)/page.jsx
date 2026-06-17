@@ -2,14 +2,25 @@ import Link from "next/link";
 import Reveal from "@/components/anim/Reveal";
 import Counter from "@/components/anim/Counter";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+
+export const metadata = {
+  title: "Fittin' — privégym & personal training in Gent",
+  description: "Reserveer de hele zaal voor jezelf, je vrienden of met een coach. 24/7 open in Gent, geen lidgeld — je betaalt enkel voor je tijd.",
+  alternates: { canonical: SITE },
+};
+
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "HealthClub",
   name: "Fittin'",
   description: "Privé fitness & personal training in Gent. Reserveer de zaal voor jezelf of train met een coach. 24/7 open.",
   url: "https://fittin.be",
+  email: "info@fittin.be",
+  image: "https://fittin.be/opengraph-image",
   priceRange: "€€",
   address: { "@type": "PostalAddress", streetAddress: "Aannemersstraat 186", addressLocality: "Gent", postalCode: "9040", addressCountry: "BE" },
+  geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },
   sameAs: ["https://www.instagram.com/fittin_gent/", "https://www.facebook.com/fittingent"],
   openingHours: "Mo-Su 00:00-24:00",
 };

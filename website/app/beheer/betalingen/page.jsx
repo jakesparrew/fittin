@@ -35,9 +35,10 @@ export default async function Betalingen({ searchParams }) {
     .order("created_at", { ascending: false })
     .limit(200);
   if (filter) q = q.eq("kind", filter);
-  const { data: rows } = await q;
-
-  const { data: monthRows } = await supabase.from("payments").select("amount_cents, created_at").eq("gym_id", gym.id).gte("created_at", monthStart.toISOString());
+  const [{ data: rows }, { data: monthRows }] = await Promise.all([
+    q,
+    supabase.from("payments").select("amount_cents, created_at").eq("gym_id", gym.id).gte("created_at", monthStart.toISOString()),
+  ]);
   const monthTotal = (monthRows || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
   const todayTotal = (monthRows || []).filter((p) => new Date(p.created_at) >= dayStart).reduce((a, p) => a + (p.amount_cents || 0), 0);
   const shownTotal = (rows || []).reduce((a, p) => a + (p.amount_cents || 0), 0);

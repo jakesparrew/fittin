@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
@@ -31,10 +32,9 @@ export default async function CoachProfile({ params }) {
 
         <div className="mt-6 grid gap-8 md:grid-cols-[300px_1fr]">
           <div>
-            <div className="aspect-[4/5] overflow-hidden rounded-3xl border border-borderc bg-white">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-borderc bg-white">
               {c.coach_photo_url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={c.coach_photo_url} alt={c.full_name || "Coach"} className="h-full w-full object-cover" />
+                <Image src={c.coach_photo_url} alt={c.full_name || "Coach"} fill sizes="(max-width: 768px) 100vw, 300px" className="object-cover" />
               ) : (
                 <div className="flex h-full items-center justify-center text-7xl font-black text-brand/15">{(c.full_name || "C").slice(0, 1)}</div>
               )}

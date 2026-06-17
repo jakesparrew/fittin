@@ -45,6 +45,20 @@ export const getPublicCoachesCached = unstable_cache(
   { revalidate: 300, tags: ["coaches"] }
 );
 
+export const getExercisesCached = unstable_cache(
+  async (gymId) => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("exercises")
+      .select("id, name, slug, category, muscle, primary_muscles, secondary_muscles, equipment, difficulty, instructions, tips, image_url, animation_url, video_url, coach_id")
+      .eq("gym_id", gymId)
+      .order("name");
+    return data || [];
+  },
+  ["exercises-library"],
+  { revalidate: 300, tags: ["exercises"] }
+);
+
 export const getCoachAvailabilityCached = unstable_cache(
   async (gymId) => {
     const admin = createAdminClient();

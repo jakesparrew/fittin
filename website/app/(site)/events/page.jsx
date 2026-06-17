@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getSessionProfile } from "@/lib/auth";
+import { getGymCached } from "@/lib/cache";
 
 export const dynamic = "force-dynamic";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
@@ -16,18 +17,22 @@ const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brusse
 
 export default async function EventsPage() {
   const supabase = await createClient();
-  const { data: gym } = await supabase.from("gyms").select("id").eq("slug", "fittin").single();
-  const { data: events } = gym
-    ? await supabase
-        .from("events")
-        .select("id, title, description, image_url, faq, starts_at, capacity, price_cents, event_signups(id, paid)")
-        .eq("gym_id", gym.id)
-        .eq("status", "approved")
-        .gte("starts_at", new Date().toISOString())
-        .order("starts_at")
-        .limit(50)
-    : { data: [] };
-  const { user } = await getSessionProfile();
+  const gym = await getGymCached(); // cached; avoids a per-request gym lookup
+  // events depend on gym.id; the session lookup is independent → run them together.
+  const [eventsRes, { user }] = await Promise.all([
+    gym
+      ? supabase
+          .from("events")
+          .select("id, title, description, image_url, faq, starts_at, capacity, price_cents, event_signups(id, paid)")
+          .eq("gym_id", gym.id)
+          .eq("status", "approved")
+          .gte("starts_at", new Date().toISOString())
+          .order("starts_at")
+          .limit(50)
+      : Promise.resolve({ data: [] }),
+    getSessionProfile(),
+  ]);
+  const events = eventsRes.data;
 
   return (
     <main className="bg-paper">

@@ -13,7 +13,7 @@ const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) *
 
 // ---------------- Challenges ----------------
 export async function createChallenge(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const { error: e } = await supabase.from("challenges").insert({
     gym_id: profile.gym_id,
@@ -30,7 +30,7 @@ export async function createChallenge(formData) {
 }
 
 export async function deleteChallenge(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("challenges").delete().eq("id", formData.get("id"));
   revalidatePath("/beheer/challenges");
@@ -38,7 +38,7 @@ export async function deleteChallenge(formData) {
 
 // ---------------- Events ----------------
 export async function createEvent(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const date = formData.get("date");
   const hour = num(formData.get("hour"), 18);
@@ -69,7 +69,7 @@ export async function createEvent(formData) {
 
 // Approve (or reject) a coach-submitted event.
 export async function approveEvent(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
   const decision = formData.get("decision");
@@ -86,7 +86,7 @@ export async function approveEvent(formData) {
 }
 
 export async function deleteEvent(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("events").delete().eq("id", formData.get("id"));
   revalidatePath("/beheer/events");

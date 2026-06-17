@@ -42,7 +42,7 @@ export default async function Community() {
     supabase.from("bookings").select("starts_at").eq("user_id", user.id).eq("status", "bevestigd"),
     supabase.from("challenges").select("*").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }),
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", now.toISOString()),
-    admin.from("events").select("*, event_signups(id, user_id)").eq("gym_id", profile.gym_id).eq("status", "approved").gte("starts_at", today.toISOString()).order("starts_at"),
+    admin.from("events").select("*, event_signups(id, user_id, paid)").eq("gym_id", profile.gym_id).eq("status", "approved").gte("starts_at", today.toISOString()).order("starts_at"),
     admin.from("bookings").select("user_id, starts_at, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 120 * 86400000).toISOString()),
     admin.from("buddies").select("id, status, requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(full_name), addressee:profiles!buddies_addressee_id_fkey(full_name)").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
     admin.from("posts").select("id, author_id, kind, body, image_url, meta, created_at, author:profiles!posts_author_id_fkey(full_name, coach_photo_url), post_kudos(user_id), post_comments(id, user_id, body, created_at, cauthor:profiles!post_comments_user_id_fkey(full_name))").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }).limit(40),
@@ -262,14 +262,16 @@ export default async function Community() {
             <div className="mt-4 space-y-3">
               {events.map((ev) => {
                 const signups = ev.event_signups || [];
-                const mine = signups.find((s) => s.user_id === user.id);
-                const full = signups.length >= ev.capacity;
+                // Only paid signups count as a confirmed seat (unpaid = abandoned/holding).
+                const taken = signups.filter((s) => s.paid).length;
+                const mine = signups.find((s) => s.user_id === user.id && s.paid);
+                const full = taken >= ev.capacity;
                 return (
                   <div key={ev.id} className="rounded-2xl bg-paper p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
                         <p className="font-bold text-brand">{ev.title}</p>
-                        <p className="text-xs capitalize text-brand/50">{fmt(ev.starts_at)} · {signups.length}/{ev.capacity}</p>
+                        <p className="text-xs capitalize text-brand/50">{fmt(ev.starts_at)} · {taken}/{ev.capacity}</p>
                       </div>
                       {mine ? (
                         <form action={cancelSignup}>

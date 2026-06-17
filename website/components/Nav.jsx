@@ -8,6 +8,7 @@ const links = [
   { href: "/degym", label: "De gym" },
   { href: "/personal-training", label: "Personal training" },
   { href: "/coaches", label: "Coaches" },
+  { href: "/oefeningen", label: "Oefeningen" },
   { href: "/boeken", label: "Online boeken" },
   { href: "/calorieen-berekenen", label: "Calorieën berekenen" },
 ];
@@ -15,8 +16,8 @@ const links = [
 // Trimmed nav for logged-in members — no homepage/sales links.
 const memberLinks = [
   { href: "/boeken", label: "Online boeken" },
-  { href: "/coaches", label: "Coaches" },
   { href: "/training", label: "Training" },
+  { href: "/oefeningen", label: "Oefeningen" },
   { href: "/community", label: "Community" },
 ];
 
@@ -26,11 +27,13 @@ export default function Nav() {
 
   useEffect(() => {
     let active = true;
-    // Instant logged-in hint from the auth cookie so the nav doesn't flash "Inloggen".
+    // Logged-out marketing visitors (no auth cookie) → skip the /api/me serverless+DB round-trip
+    // entirely. Only logged-in users hit the endpoint (which also refreshes the session cookie).
     const hasAuthCookie = document.cookie.split(";").some((c) => /sb-.*-auth-token/.test(c.trim()));
-    if (hasAuthCookie) setAccount((a) => a || { name: "Account", role: "lid", home: "/account" });
+    if (!hasAuthCookie) return;
+    // Instant logged-in hint so the nav doesn't flash "Inloggen".
+    setAccount((a) => a || { name: "Account", role: "lid", home: "/account" });
 
-    // Authoritative state from the server (reliable; also refreshes the session cookie).
     fetch("/api/me", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
@@ -95,7 +98,7 @@ export default function Nav() {
               </Link>
             </>
           )}
-          <button onClick={() => setOpen(!open)} className="rounded-lg border border-borderc p-2 md:hidden" aria-label="Menu">
+          <button onClick={() => setOpen(!open)} className="rounded-lg border border-borderc p-2 md:hidden" aria-label="Menu" aria-expanded={open} aria-controls="mobile-menu">
             <span className="mb-1 block h-0.5 w-5 bg-brand"></span>
             <span className="mb-1 block h-0.5 w-5 bg-brand"></span>
             <span className="block h-0.5 w-5 bg-brand"></span>
@@ -103,11 +106,16 @@ export default function Nav() {
         </div>
       </div>
       {open && (
-        <nav className="border-t border-borderc bg-white px-5 py-4 md:hidden">
+        <nav id="mobile-menu" className="border-t border-borderc bg-white px-5 py-4 md:hidden">
           {navLinks.map((l) => (
             <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">{l.label}</Link>
           ))}
           <div className="mt-2 border-t border-borderc pt-2">
+            {account && (
+              <Link href="/notificaties" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">
+                Notificaties{account.unread > 0 ? ` (${account.unread > 9 ? "9+" : account.unread})` : ""}
+              </Link>
+            )}
             {isStaff && <Link href={home} onClick={() => setOpen(false)} className="block py-2 font-bold text-accentdark">{staffLabel} →</Link>}
             <Link href={account ? "/account" : "/login?mode=signup"} onClick={() => setOpen(false)} className="block py-2 font-bold text-brand">
               {account ? "Mijn account" : "Inloggen / word lid"}

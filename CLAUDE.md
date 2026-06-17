@@ -54,7 +54,8 @@ bouw: vriendenprijs €1.000 (marktwaarde €6.900, zie offerte). Native iOS/And
 inbegrepen in de scope; App Store-lancering kost €100 (Apple) + €25 (Google).
 
 ## Businessdata (volledige bron: docs/CONTENT.md)
-- Gymsessie: **€11** · 1u15 · 1-4 personen · géén lidgeld ("betaal enkel voor je tijd")
+- Gymsessie: **€15** · 1 uur · 1-4 personen · géén lidgeld ("betaal enkel voor je tijd")
+  (was €11 in oudere docs — werkelijke prijs op de site & in de DB is €15, bevestigd 2026-06-15)
 - Eerste uur gratis met code **FittinWelcome** (dienst "Fit60")
 - PT: 1-op-1 €60 · 1-op-2 €35 pp · 1-op-3 €30 pp · gratis intake + proeftraining ·
   kosteloos annuleren tot 24u vooraf

@@ -4,6 +4,7 @@ export const metadata = {
   title: "De gym | Fittin'",
   description:
     "Een modern uitgeruste privégym in Gent. Reserveer de zaal voor jou en je vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/degym` },
 };
 
 const memberCards = [
@@ -28,7 +29,7 @@ const memberCards = [
     title: "Praktisch",
     items: [
       "Gratis parking aan de deur",
-      "Aannemersstraat 186, 9040 Sint-Amandsberg",
+      "Aannemersstraat 186, 9040 Gent",
       "Toegang via de app op het moment van je boeking",
     ],
   },
@@ -141,7 +142,7 @@ export default function DeGym() {
               Ben je zelf coach en op zoek naar een zaal? Boek een afspraak en kom eens langs.
             </p>
             <a
-              href="mailto:fit@fittin.be?subject=Zaal%20huren%20als%20coach"
+              href="mailto:info@fittin.be?subject=Zaal%20huren%20als%20coach"
               className="relative mt-7 inline-block rounded-full bg-accent px-6 py-3 font-bold text-brand transition hover:opacity-90"
             >
               Kom eens langs

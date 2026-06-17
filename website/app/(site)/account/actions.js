@@ -165,16 +165,15 @@ export async function respondJoinRequest(formData) {
   if (!req || req.status !== "pending") return;
 
   if (decision === "accept") {
-    const { data: added } = await supabase.rpc("add_booking_participants", { p_booking: req.booking_id, p_users: [user.id] });
-    if (!added) {
-      await supabase.from("booking_join_requests").update({ status: "declined" }).eq("id", id);
-      return { error: "Geen plaats meer vrij." };
-    }
-    await supabase.from("booking_join_requests").update({ status: "accepted" }).eq("id", id);
+    // The invitee adds THEMSELVES via a security-definer RPC (the old code called the
+    // owner-only add_booking_participants as the invitee, so accept could never succeed).
+    const { data: accepted, error: e } = await supabase.rpc("respond_join_request", { p_request: id, p_accept: true });
+    if (e) return { error: e.message };
+    if (!accepted) return { error: "Geen plaats meer vrij." };
     const { data: me } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
     await notify({ gymId: req.gym_id, userId: req.from_user, actorId: user.id, type: "booking_invite", title: `${me?.full_name || "Je buddy"} komt mee trainen! 🎉`, link: "/account" });
   } else {
-    await supabase.from("booking_join_requests").update({ status: "declined" }).eq("id", id);
+    await supabase.rpc("respond_join_request", { p_request: id, p_accept: false });
     const { data: me } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
     await notify({ gymId: req.gym_id, userId: req.from_user, actorId: user.id, type: "booking_invite", title: `${me?.full_name || "Je buddy"} kan niet meekomen`, link: "/account" });
   }

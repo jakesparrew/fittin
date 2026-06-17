@@ -15,7 +15,8 @@ export async function GET() {
 // so we never fall back to RESEND_WEBHOOK_SECRET (a wrong secret would reject real inbound mail).
 function verify(headers, raw) {
   const secret = process.env.RESEND_INBOUND_SECRET;
-  if (!secret) return true;
+  // Fail closed: reject unsigned inbound mail unless the secret is configured.
+  if (!secret) { console.warn("RESEND_INBOUND_SECRET not set — rejecting inbound webhook"); return false; }
   const id = headers.get("svix-id"), ts = headers.get("svix-timestamp"), sh = headers.get("svix-signature");
   if (!id || !ts || !sh) return false;
   try {

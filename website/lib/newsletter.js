@@ -134,10 +134,26 @@ export async function processSendQueue(max = 40) {
   if (!q || q.length === 0) return { processed: 0, done: true };
 
   const campaignId = q[0].campaign_id;
-  const batch = q.filter((r) => r.campaign_id === campaignId);
+  const allBatch = q.filter((r) => r.campaign_id === campaignId);
   const { data: c } = await admin.from("campaigns").select("*").eq("id", campaignId).single();
-  const { data: subs } = await admin.from("subscribers").select("id, unsub_token").in("id", batch.map((b) => b.subscriber_id));
+  const { data: subs } = await admin.from("subscribers").select("id, unsub_token, status").in("id", allBatch.map((b) => b.subscriber_id));
   const tokenBy = new Map((subs || []).map((s) => [s.id, s.unsub_token]));
+  const statusBy = new Map((subs || []).map((s) => [s.id, s.status]));
+
+  // Anyone who unsubscribed/bounced AFTER being queued must not be mailed — drop them now.
+  const stale = allBatch.filter((b) => (statusBy.get(b.subscriber_id) || "active") !== "active");
+  if (stale.length) {
+    await admin.from("campaign_sends").update({ status: "skipped" }).in("id", stale.map((b) => b.id));
+  }
+  const batch = allBatch.filter((b) => (statusBy.get(b.subscriber_id) || "active") === "active");
+  if (batch.length === 0) {
+    const { count: remaining0 } = await admin
+      .from("campaign_sends").select("id", { count: "exact", head: true })
+      .eq("campaign_id", campaignId).eq("status", "queued");
+    const done0 = (remaining0 ?? 0) === 0;
+    if (done0) await admin.from("campaigns").update({ status: "sent", sent_at: new Date().toISOString() }).eq("id", campaignId);
+    return { processed: allBatch.length, sent: 0, campaignId, remaining: remaining0 ?? 0, done: done0 };
+  }
 
   const payload = batch.map((b) => {
     const token = tokenBy.get(b.subscriber_id) || "";
@@ -271,6 +287,15 @@ export async function recordResendEvent(type, emailId) {
   if (firstTime) {
     const { data: c } = await admin.from("campaigns").select(m.col).eq("id", row.campaign_id).single();
     if (c) await admin.from("campaigns").update({ [m.col]: (c[m.col] || 0) + 1 }).eq("id", row.campaign_id);
+  }
+
+  // Suppress the address so future campaigns/drips skip it (protects sender reputation).
+  if (row.subscriber_id) {
+    if (type === "email.complained") {
+      await admin.from("subscribers").update({ status: "unsubscribed" }).eq("id", row.subscriber_id);
+    } else if (type === "email.bounced") {
+      await admin.from("subscribers").update({ status: "bounced" }).eq("id", row.subscriber_id).neq("status", "unsubscribed");
+    }
   }
 }
 

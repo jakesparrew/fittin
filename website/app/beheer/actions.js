@@ -94,7 +94,7 @@ export async function toggleService(formData) {
 
 // ---- Bookings ----
 export async function adminCancelBooking(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("bookingId");
   await supabase
@@ -106,7 +106,7 @@ export async function adminCancelBooking(formData) {
 }
 
 export async function adminCreateBooking(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const memberId = formData.get("memberId");
   const { data: bookingId, error: e } = await supabase.rpc("admin_create_booking", {
@@ -138,7 +138,7 @@ export async function adminCreateBooking(formData) {
 
 // Block a consecutive range of hours at once (e.g. close the gym 9:00–17:00 for maintenance).
 export async function adminBlockRange(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const date = formData.get("date");
   const from = num(formData.get("from_hour"));
@@ -156,7 +156,7 @@ export async function adminBlockRange(formData) {
 }
 
 export async function adminBlockSlot(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const { error: e } = await supabase.rpc("admin_block_slot", {
     p_date: formData.get("date"),
@@ -170,7 +170,7 @@ export async function adminBlockSlot(formData) {
 }
 
 export async function adminUnblock(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("slot_blocks").delete().eq("id", formData.get("blockId"));
   revalidatePath("/beheer/boekingen");
@@ -214,7 +214,7 @@ export async function resendInviteMail(formData) {
 }
 
 export async function adminAdjustCredits(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const memberId = formData.get("memberId");
   const delta = num(formData.get("delta"));
@@ -227,7 +227,7 @@ export async function adminAdjustCredits(formData) {
     const admin = createAdminClient();
     const [{ data: m }, { data: ledger }] = await Promise.all([
       admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
-      admin.from("credits_ledger").select("delta").eq("user_id", memberId),
+      admin.from("credits_ledger").select("delta").eq("user_id", memberId).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
     ]);
     const balance = (ledger || []).reduce((a, r) => a + r.delta, 0);
     if (m?.email) await sendCreditsAdjusted({ to: m.email, name: m.full_name, delta, reason, balance });

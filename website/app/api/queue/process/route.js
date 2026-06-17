@@ -15,10 +15,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // response is sent (Next `after`) — a paced background chain, no external cron needed.
 export async function GET(req) {
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = req.headers.get("authorization") || req.nextUrl.searchParams.get("key");
-    if (auth !== `Bearer ${secret}` && auth !== secret) return new NextResponse("unauthorized", { status: 401 });
-  }
+  // Mandatory auth — same secret as the cron. Never world-callable.
+  if (!secret) return new NextResponse("queue not configured (set CRON_SECRET)", { status: 503 });
+  if (req.headers.get("authorization") !== `Bearer ${secret}`) return new NextResponse("unauthorized", { status: 401 });
 
   const res = await processSendQueue(BATCH);
 
@@ -27,7 +26,7 @@ export async function GET(req) {
     after(async () => {
       await sleep(DELAY);
       try {
-        await fetch(`${SITE}/api/queue/process${secret ? `?key=${encodeURIComponent(secret)}` : ""}`, { cache: "no-store" });
+        await fetch(`${SITE}/api/queue/process`, { cache: "no-store", headers: { Authorization: `Bearer ${secret}` } });
       } catch {}
     });
   }
