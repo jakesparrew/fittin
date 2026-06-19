@@ -68,7 +68,11 @@ async function grantCredits(admin, userId, credits, reason, withPunchcard = fals
   if (!userId || !credits) return;
   const { data: prof } = await admin.from("profiles").select("gym_id").eq("id", userId).single();
   if (!prof) return;
-  const expiresAt = new Date(Date.now() + 180 * 86400000).toISOString(); // 6-month validity
+  const expiresAt = new Date(Date.now() + 180 * 86400000).toISOString(); // 6-month validity (punch cards)
+  // The abo's included session is use-it-or-lose-it: it expires at the end of the current calendar
+  // month, so monthly credits never accumulate (each renewal grants a fresh one).
+  const now = new Date();
+  const endOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
   if (withPunchcard) {
     await admin.from("punch_cards").upsert(
       { gym_id: prof.gym_id, user_id: userId, credits_initial: credits, expires_at: expiresAt, stripe_ref: stripeRef },
@@ -76,9 +80,9 @@ async function grantCredits(admin, userId, credits, reason, withPunchcard = fals
     );
   }
   // stripe_ref makes the grant idempotent: a retried webhook adds the credits exactly once.
-  // Punch-card credits expire after 6 months; subscription ("abo") credits do not.
+  // Punch-card credits expire after 6 months; the abo's monthly session expires at month end.
   await admin.from("credits_ledger").upsert(
-    { gym_id: prof.gym_id, user_id: userId, delta: credits, reason, stripe_ref: stripeRef, expires_at: withPunchcard ? expiresAt : null },
+    { gym_id: prof.gym_id, user_id: userId, delta: credits, reason, stripe_ref: stripeRef, expires_at: withPunchcard ? expiresAt : endOfMonth },
     { onConflict: "stripe_ref", ignoreDuplicates: true }
   );
 }

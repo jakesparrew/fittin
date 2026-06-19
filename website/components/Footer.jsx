@@ -6,9 +6,8 @@ export default function Footer() {
     <footer className="bg-brand text-white">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-3">
         <div>
-          <p className="text-2xl font-black">
-            Fittin<span className="text-accent">&rsquo;</span>
-          </p>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-white.png" alt="Fittin'" width={170} height={45} className="h-10 w-auto" />
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-lav">
             Privé fitness &amp; personal training in Gent. Train alleen, met vrienden of met je
             coach — de zaal is van jou.

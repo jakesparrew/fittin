@@ -53,8 +53,9 @@ export default function Nav() {
   return (
     <header className="sticky top-0 z-50 border-b border-borderc/70 bg-white/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/" className="group text-2xl font-black tracking-tight text-brand">
-          Fittin<span className="text-accent transition group-hover:opacity-70">&rsquo;</span>
+        <Link href="/" className="group flex items-center" aria-label="Fittin' — home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Fittin'" width={150} height={40} className="h-8 w-auto transition group-hover:opacity-80" />
         </Link>
         <nav className="hidden items-center gap-7 text-sm font-semibold text-brand/70 md:flex">
           {navLinks.map((l) => (

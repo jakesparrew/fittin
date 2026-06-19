@@ -412,8 +412,8 @@ export async function sendMembershipActive({ to, name }) {
       title: "Je member-abonnement is actief 🎉",
       intro: `Hallo ${name || "daar"}, top dat je member wordt! Vanaf nu:`,
       rows: [
-        ["Elke maand", "1 gratis sessie inbegrepen"],
-        ["Boekingstarief", "€ 10 i.p.v. € 15"],
+        ["Elke maand", "1 sessie inbegrepen (binnen de maand)"],
+        ["Boekingstarief", "€ 12 i.p.v. € 15"],
         ["Extra", "member-acties + voorrang bij events"],
       ],
       body: `<p style="font-size:14px;color:#6b6685">Je kan je abonnement op elk moment beheren via je account.</p>`,

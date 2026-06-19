@@ -9,6 +9,7 @@ import { buyPackage, openBillingPortal } from "./actions";
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Sessies & abonnement | Fittin'" };
 const euro = (c) => "€ " + (c / 100).toFixed(2).replace(".", ",");
+const eur0 = (c) => "€ " + Math.round(c / 100); // whole-euro headline price (no ,00)
 
 export default async function Lidmaatschap() {
   if (!isSupabaseConfigured) redirect("/");
@@ -67,7 +68,7 @@ export default async function Lidmaatschap() {
             <p className="text-xs font-bold uppercase tracking-widest text-lav">Losse sessie</p>
             <h2 className="mt-1 text-2xl font-black text-brand">Per sessie</h2>
             <p className="mt-2 text-3xl font-black text-brand">€ 15</p>
-            <p className="mt-0.5 text-xs font-bold text-brand/50">€ 15 per sessie · geen verplichting</p>
+            <p className="mt-0.5 text-xs font-bold text-brand/50">geen verplichting</p>
             <ul className="mt-4 flex-1 space-y-2 text-sm text-brand/70">
               <li className="flex gap-2"><span className="text-accent">✓</span> 1 uur, de hele zaal voor jou</li>
               <li className="flex gap-2"><span className="text-accent">✓</span> 1 tot 4 personen</li>
@@ -80,7 +81,6 @@ export default async function Lidmaatschap() {
           {(packages || []).map((p) => {
             const isAbo = p.kind === "abonnement";
             const ownsThis = isAbo && isMember;
-            const perSession = euro(Math.round(p.price_cents / Math.max(1, p.credits)));
             return (
               <div key={p.id} className={"relative flex flex-col rounded-3xl border-2 p-7 " + (isAbo ? "border-accent bg-white shadow-lg shadow-accent/10" : "border-brand/15 bg-white")}>
                 <span className={"absolute -top-3 left-7 rounded-full px-3 py-1 text-xs font-black " + (isAbo ? "bg-accent text-brand" : "bg-brand text-white")}>
@@ -89,24 +89,24 @@ export default async function Lidmaatschap() {
                 <p className="text-xs font-bold uppercase tracking-widest text-lav">{isAbo ? "Abonnement" : "Voordeelkaart"}</p>
                 <h2 className="mt-1 text-2xl font-black text-brand">{p.name}</h2>
                 <p className="mt-2 text-3xl font-black text-accentdark">
-                  {euro(p.price_cents)}
+                  {eur0(p.price_cents)}
                   {p.period === "maand" && <span className="text-base font-bold text-brand/50"> / maand</span>}
                 </p>
-                <p className="mt-0.5 text-xs font-bold text-brand/50">{isAbo ? "= € 12 per sessie (goedkoopste)" : `${p.credits} sessies · ${perSession} per sessie`}</p>
+                <p className="mt-0.5 text-xs font-bold text-brand/50">{isAbo ? "goedkoopste per sessie" : "11 sessies — 10 + 1 gratis"}</p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm text-brand/70">
                   {isAbo ? (
                     <>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> <strong>1 sessie / maand inbegrepen</strong></li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> Boek al je sessies aan <strong>€ 12</strong> i.p.v. € 15</li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> Sessietegoed vervalt niet zolang je lid bent</li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> Voorrang bij events &amp; member-only acties</li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> Automatisch verlengd · stop wanneer je wil</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> <strong>1 sessie per maand inbegrepen</strong></li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Alle sessies aan ledenprijs <strong>€ 12</strong></li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Voorrang bij events &amp; member-acties</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Maandelijks opzegbaar</li>
+                      <li className="flex gap-2 text-brand/45"><span className="text-brand/30">·</span> Inbegrepen sessie geldt binnen de maand (geen opsparen)</li>
                     </>
                   ) : (
                     <>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> <strong>10 betaald + 1 gratis = {p.credits} sessies</strong></li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> € 150 i.p.v. € 165 — je bespaart € 15</li>
-                      <li className="flex gap-2"><span className="text-accent">✓</span> 6 maanden geldig · neem tot 3 vrienden mee per sessie</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> <strong>10 + 1 gratis = {p.credits} sessies</strong></li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> 6 maanden geldig</li>
+                      <li className="flex gap-2"><span className="text-accent">✓</span> Neem tot 3 vrienden mee per sessie</li>
                     </>
                   )}
                 </ul>
@@ -129,31 +129,31 @@ export default async function Lidmaatschap() {
         {/* Prijzen vergeleken — eronder, zodat de beste keuze duidelijk is */}
         <h2 className="mt-12 text-xl font-black text-brand">Prijzen vergeleken</h2>
         <div className="mt-3 overflow-x-auto rounded-3xl border border-borderc bg-white">
-          <table className="w-full min-w-[34rem] text-left text-sm">
+          <table className="w-full min-w-[30rem] text-left text-sm">
             <thead>
               <tr className="border-b border-borderc text-xs font-bold uppercase tracking-wide text-lav">
-                <th className="p-4">Optie</th><th className="p-4">Wat je betaalt</th><th className="p-4">Per sessie</th><th className="p-4">Beste voor</th>
+                <th className="p-4">Optie</th><th className="p-4">Prijs</th><th className="p-4">Ideaal voor</th>
               </tr>
             </thead>
             <tbody className="text-brand/80">
               <tr className="border-b border-borderc/60">
-                <td className="p-4 font-bold text-brand">Losse sessie</td><td className="p-4">€ 15 per keer</td><td className="p-4">€ 15</td><td className="p-4">af en toe trainen</td>
+                <td className="p-4 font-bold text-brand">Losse sessie</td><td className="p-4">€ 15</td><td className="p-4">af en toe trainen</td>
               </tr>
               <tr className="border-b border-borderc/60">
-                <td className="p-4 font-bold text-brand">10-beurtenkaart</td><td className="p-4">€ 150 → 11 sessies <span className="text-brand/40">(10 + 1 gratis)</span></td><td className="p-4">€ 13,64</td><td className="p-4">regelmatig, zonder abo</td>
+                <td className="p-4 font-bold text-brand">10-beurtenkaart</td><td className="p-4">€ 150 · 11 sessies</td><td className="p-4">regelmatig, zonder abo</td>
               </tr>
               <tr className="bg-accent/10">
-                <td className="p-4 font-black text-accentdark">Abonnement ⭐</td><td className="p-4 font-bold text-brand">€ 12 / maand</td><td className="p-4 font-black text-accentdark">€ 12</td><td className="p-4 font-semibold text-brand">wie vast traint — goedkoopste</td>
+                <td className="p-4 font-black text-accentdark">Abonnement ⭐</td><td className="p-4 font-bold text-brand">€ 12 / maand</td><td className="p-4 font-semibold text-brand">wie vast traint</td>
               </tr>
             </tbody>
           </table>
         </div>
         <p className="mt-3 text-sm leading-relaxed text-brand/70">
-          <strong className="text-accentdark">De laagste prijs per sessie is het abonnement: € 12.</strong> De 10-beurtenkaart geeft je <strong>10 + 1 gratis</strong> (11 sessies voor € 150 = € 13,64/sessie i.p.v. € 165) en is ideaal als je geen vast abonnement wil. Een losse sessie blijft € 15. Train je 2× per maand of meer? Dan is het abonnement het voordeligst.
+          <strong className="text-accentdark">Train je 2× per maand of meer?</strong> Dan zit je met het abonnement het goedkoopst. Wil je flexibel blijven, kies de 10-beurtenkaart (10 + 1 gratis). Train je af en toe? Boek gewoon een losse sessie.
         </p>
 
         <p className="mt-8 text-xs text-brand/40">
-          Veilig betalen via Stripe. Sessies worden direct bijgeschreven na betaling (6 maanden geldig).
+          Veilig betalen via Stripe. Gekochte sessies zijn 6 maanden geldig; de inbegrepen abo-sessie geldt binnen de maand.
           Abonnementen verlengen automatisch en kunnen op elk moment via "Beheer abonnement" stopgezet worden.
         </p>
       </div>
