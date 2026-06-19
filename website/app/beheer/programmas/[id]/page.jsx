@@ -10,6 +10,7 @@ import {
 } from "../../coaching-actions";
 import ExercisePicker from "@/components/admin/ExercisePicker";
 import SearchSelect from "@/components/admin/SearchSelect";
+import PublishWorkoutPanel from "@/components/workouts/PublishWorkoutPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,7 @@ export default async function ProgramBuilder({ params }) {
     supabase
       .from("programs")
       .select(
-        "id, name, is_template, member_id, program_days(id, day_no, name, program_exercises(id, sets, reps, rest_sec, exercises(name)))"
+        "id, name, is_template, member_id, is_public, slug, subtitle, level, est_minutes, focus, category, description, program_days(id, day_no, name, program_exercises(id, sets, reps, rest_sec, exercises(name)))"
       )
       .eq("id", id)
       .single(),
@@ -81,6 +82,8 @@ export default async function ProgramBuilder({ params }) {
           <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
         )}
       </form>
+
+      {!program.member_id && <PublishWorkoutPanel program={program} />}
 
       {/* Days */}
       <div className="mt-6 space-y-5">

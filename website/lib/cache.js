@@ -107,3 +107,45 @@ export const getCoachAvailabilityCached = unstable_cache(
   ["coach-availability"],
   { revalidate: 300, tags: ["coaches"] }
 );
+
+// Public follow-along workouts catalog (cards). Tag "workouts" — bust on publish/edit.
+export const getPublicWorkoutsCached = unstable_cache(
+  async (gymId) => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("programs")
+      .select("id, slug, name, subtitle, level, est_minutes, focus, category, sort_order, program_days(program_exercises(id))")
+      .eq("gym_id", gymId)
+      .eq("is_public", true)
+      .order("sort_order");
+    return (data || []).map((p) => ({
+      id: p.id, slug: p.slug, name: p.name, subtitle: p.subtitle, level: p.level,
+      est_minutes: p.est_minutes, focus: p.focus, category: p.category,
+      exerciseCount: (p.program_days || []).reduce((n, d) => n + (d.program_exercises?.length || 0), 0),
+    }));
+  },
+  ["public-workouts"],
+  { revalidate: 300, tags: ["workouts"] }
+);
+
+// One public workout with its full session (day + exercises with rich media). Tag "workouts".
+export const getPublicWorkoutBySlug = unstable_cache(
+  async (gymId, slug) => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("programs")
+      .select(
+        "id, slug, name, subtitle, description, level, est_minutes, focus, category, tips, program_days(id, day_no, name, program_exercises(id, sets, reps, rest_sec, position, section, rep_text, tempo, notes, exercise:exercises(id, name, slug, category, muscle, primary_muscles, secondary_muscles, equipment, difficulty, mechanic, force, instructions, tips, image_url, animation_url, video_url, frames)))"
+      )
+      .eq("gym_id", gymId)
+      .eq("is_public", true)
+      .eq("slug", slug)
+      .maybeSingle();
+    if (!data) return null;
+    const day = (data.program_days || []).slice().sort((a, b) => a.day_no - b.day_no)[0];
+    const exercises = ((day && day.program_exercises) || []).slice().sort((a, b) => a.position - b.position);
+    return { ...data, exercises };
+  },
+  ["public-workout-by-slug"],
+  { revalidate: 300, tags: ["workouts"] }
+);

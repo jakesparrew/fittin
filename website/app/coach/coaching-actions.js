@@ -230,3 +230,53 @@ export async function coachDeleteEvent(formData) {
   await supabase.from("events").delete().eq("id", formData.get("id")).eq("coach_id", userId).eq("status", "pending");
   revalidatePath("/coach/events");
 }
+
+// ---- Public Workouts (publish a template so EVERYONE can browse + follow it at /workouts) ----
+const slugify = (s) =>
+  String(s || "").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48) || "workout";
+
+export async function setWorkoutPublic(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const programId = formData.get("programId");
+  const publish = formData.get("publish") === "true";
+  const { data: prog } = await supabase.from("programs").select("id, gym_id, coach_id, member_id, name, slug").eq("id", programId).maybeSingle();
+  if (!prog || prog.gym_id !== profile.gym_id) return { error: "Programma niet gevonden." };
+  // Coaches may only publish their OWN programs; a beheerder may manage any gym program (incl. seeded).
+  if (profile.role !== "beheerder" && prog.coach_id !== userId) return { error: "Je kan enkel je eigen programma's publiceren." };
+
+  if (!publish) {
+    const { error: e } = await supabase.from("programs").update({ is_public: false }).eq("id", programId);
+    if (e) return { error: e.message };
+    revalidateTag("workouts");
+    revalidatePath("/workouts");
+    revalidatePath(`/coach/programmas/${programId}`);
+    revalidatePath(`/beheer/programmas/${programId}`);
+    return { ok: true, message: "Workout offline gehaald." };
+  }
+
+  if (prog.member_id) return { error: "Alleen sjablonen (niet toegewezen aan een lid) kunnen publiek worden." };
+  let slug = slugify(formData.get("slug") || prog.slug || prog.name);
+  const { data: clash } = await supabase.from("programs").select("slug").eq("gym_id", profile.gym_id).neq("id", programId).like("slug", `${slug}%`);
+  const taken = new Set((clash || []).map((r) => r.slug));
+  if (taken.has(slug)) { let i = 2; while (taken.has(`${slug}-${i}`)) i++; slug = `${slug}-${i}`; }
+
+  const patch = {
+    is_public: true, is_template: true, slug,
+    subtitle: (formData.get("subtitle") || "").trim() || null,
+    level: formData.get("level") || null,
+    est_minutes: num(formData.get("est_minutes")),
+    focus: (formData.get("focus") || "").trim() || null,
+    category: formData.get("category") || null,
+    description: (formData.get("description") || "").trim() || null,
+  };
+  const { error: e } = await supabase.from("programs").update(patch).eq("id", programId);
+  if (e) return { error: e.message };
+  revalidateTag("workouts");
+  revalidatePath("/workouts");
+  revalidatePath(`/workouts/${slug}`);
+  revalidatePath(`/coach/programmas/${programId}`);
+  revalidatePath(`/beheer/programmas/${programId}`);
+  return { ok: true, message: "Gepubliceerd als publieke workout ✓", slug };
+}

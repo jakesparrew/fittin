@@ -1,0 +1,278 @@
+[
+  {
+    "key": "chest",
+    "name": "Borst Power & Pump",
+    "subtitle": "Zware compounds eerst, daarna gericht opbouwen tot een complete borstpump.",
+    "level": "Gemiddeld",
+    "est_minutes": 60,
+    "focus": "Kracht + spiermassa borst",
+    "intro": "Deze sessie traint je volledige borst: van het brede middenstuk tot de bovenborst en de buitenrand. Je start met zware drukoefeningen voor kracht en massa, en bouwt af naar isolatie en een stevige pump-finisher. Hou je techniek strak en bewaak je tempo, dan haal je het meeste uit elke set.",
+    "tips": [
+      "Warm grondig op: de schouders en borst moeten klaar zijn voor de zware druksets.",
+      "Bij elke drukoefening: schouderbladen ingetrokken en omlaag, borst omhoog, voeten stevig op de grond.",
+      "Voel de borst werken in plaats van enkel gewicht te verzetten - kwaliteit boven ego.",
+      "Verhoog het gewicht pas als je alle herhalingen met nette techniek haalt."
+    ],
+    "exercises": [
+      {
+        "slug": "clock-push-up",
+        "section": "Warming-up",
+        "sets": 1,
+        "rep_text": "8 per kant",
+        "rest_sec": 30,
+        "tempo": "",
+        "notes": "Rustig tempo, voel borst en schouders opwarmen. Romp strak, geen doorzakkende heupen."
+      },
+      {
+        "slug": "bodyweight-flyes",
+        "section": "Warming-up",
+        "sets": 2,
+        "rep_text": "12-15",
+        "rest_sec": 30,
+        "tempo": "",
+        "notes": "Lichte activatie: voel de rek in de borst en knijp samen. Lichte buiging in de ellebogen houden."
+      },
+      {
+        "slug": "barbell-bench-press-medium-grip",
+        "section": "Hoofdoefening",
+        "sets": 4,
+        "rep_text": "5-6",
+        "rest_sec": 150,
+        "tempo": "3-1-1",
+        "notes": "Stang gecontroleerd naar onderborst, even pauzeren, dan krachtig drukken. Schouderbladen ingetrokken."
+      },
+      {
+        "slug": "barbell-incline-bench-press-medium-grip",
+        "section": "Hoofdoefening",
+        "sets": 3,
+        "rep_text": "6-8",
+        "rest_sec": 120,
+        "tempo": "2-0-1",
+        "notes": "Bank op 30 graden. Stang naar bovenste borst, ellebogen ca. 45 graden, niet te ver uitwaaieren."
+      },
+      {
+        "slug": "dumbbell-bench-press",
+        "section": "Hoofdoefening",
+        "sets": 3,
+        "rep_text": "8-10",
+        "rest_sec": 105,
+        "tempo": "",
+        "notes": "Diepe rek onderaan, dumbbells naar elkaar toe drukken bovenaan. Pols recht boven de elleboog."
+      },
+      {
+        "slug": "incline-cable-flye",
+        "section": "Accessoire",
+        "sets": 3,
+        "rep_text": "12-15",
+        "rest_sec": 60,
+        "tempo": "3-0-1",
+        "notes": "Lichte elleboogbuiging vasthouden. Voel de rek, knijp de bovenborst samen in het midden."
+      },
+      {
+        "slug": "dumbbell-flyes",
+        "section": "Accessoire",
+        "sets": 3,
+        "rep_text": "12-15",
+        "rest_sec": 60,
+        "tempo": "3-0-1",
+        "notes": "Brede boog, lichte elleboogbuiging. Niet drukken maar openen en sluiten als een omhelzing."
+      },
+      {
+        "slug": "cable-crossover",
+        "section": "Finisher",
+        "sets": 2,
+        "rep_text": "15-20",
+        "rest_sec": 45,
+        "tempo": "",
+        "notes": "Volle pump: kruis de handen licht over elkaar onderaan en knijp 1 sec. Laatste set tot falen."
+      }
+    ]
+  },
+  {
+    "key": "shoulder",
+    "name": "Schouders van Staal",
+    "subtitle": "Complete delt-sessie die alle drie de koppen treft, van zware press tot brandende pump",
+    "level": "Gemiddeld",
+    "est_minutes": 55,
+    "focus": "Kracht + spiermassa schouders (alle 3 koppen)",
+    "intro": "Deze sessie traint je volledige schouder: de voorste, zijdelingse en achterste kop. We starten met activatie en mobiliteit, bouwen op naar zware persbewegingen voor kracht, vullen aan met gerichte isolatie voor spiermassa en sluiten af met een pump-finisher. Houd de techniek strak en laat het ego thuis bij de isolatieoefeningen.",
+    "tips": [
+      "Warm de schouders altijd grondig op; de rotator cuff is kwetsbaar bij zware press.",
+      "Bij laterale en achterste delt-werk: lichter gewicht, strakke vorm en voel de spier in plaats van te slingeren.",
+      "Adem uit tijdens het persen en houd je core en bilspieren aangespannen voor stabiliteit.",
+      "Verhoog het gewicht pas wanneer je alle reps met perfecte techniek haalt (progressive overload)."
+    ],
+    "exercises": [
+      {
+        "slug": "arm-circles",
+        "section": "Warming-up",
+        "sets": 2,
+        "rep_text": "15 per richting",
+        "rest_sec": 30,
+        "tempo": "",
+        "notes": "Rustige, gecontroleerde cirkels; bouw de diameter geleidelijk op om de gewrichten warm te maken."
+      },
+      {
+        "slug": "band-pull-apart",
+        "section": "Warming-up",
+        "sets": 2,
+        "rep_text": "15-20",
+        "rest_sec": 30,
+        "tempo": "",
+        "notes": "Armen gestrekt, knijp de schouderbladen samen en houd 1 sec vast; activeer de achterste delts."
+      },
+      {
+        "slug": "barbell-shoulder-press",
+        "section": "Hoofdoefening",
+        "sets": 4,
+        "rep_text": "5-8",
+        "rest_sec": 120,
+        "tempo": "2-0-1",
+        "notes": "Stang vanaf het sleutelbeen recht omhoog persen; core strak, geen overdreven holle rug."
+      },
+      {
+        "slug": "arnold-dumbbell-press",
+        "section": "Hoofdoefening",
+        "sets": 3,
+        "rep_text": "8-10",
+        "rest_sec": 90,
+        "tempo": "",
+        "notes": "Start met handpalmen naar je toe en draai tijdens het persen volledig naar buiten voor extra delt-spanning."
+      },
+      {
+        "slug": "dumbbell-one-arm-upright-row",
+        "section": "Hoofdoefening",
+        "sets": 3,
+        "rep_text": "8-10 per kant",
+        "rest_sec": 90,
+        "tempo": "",
+        "notes": "Trek de halter langs het lichaam tot borsthoogte; elleboog leidt en blijft boven de pols."
+      },
+      {
+        "slug": "lateral-raise-with-bands",
+        "section": "Accessoire",
+        "sets": 3,
+        "rep_text": "12-15",
+        "rest_sec": 60,
+        "tempo": "2-1-2",
+        "notes": "Hef tot schouderhoogte, lichte buiging in de elleboog; geen schwung, voel de zijkant van de schouder."
+      },
+      {
+        "slug": "cable-rear-delt-fly",
+        "section": "Accessoire",
+        "sets": 3,
+        "rep_text": "12-15",
+        "rest_sec": 60,
+        "tempo": "2-1-2",
+        "notes": "Trek de kabels in een wijde boog naar achter; knijp de achterste delts en houd de romp stil."
+      },
+      {
+        "slug": "front-plate-raise",
+        "section": "Accessoire",
+        "sets": 3,
+        "rep_text": "12-15",
+        "rest_sec": 60,
+        "tempo": "",
+        "notes": "Hef de schijf gestrekt tot ooghoogte en laat gecontroleerd zakken; geen slingeren met de heupen."
+      },
+      {
+        "slug": "dumbbell-raise",
+        "section": "Finisher",
+        "sets": 2,
+        "rep_text": "AMRAP",
+        "rest_sec": 45,
+        "tempo": "",
+        "notes": "Lichte halters, blijf gaan tot spierfalen; jaag de pump op en accepteer de brand in je delts."
+      }
+    ]
+  },
+  {
+    "key": "back",
+    "name": "Rugkracht & Breedte",
+    "subtitle": "Complete rugsessie: dikte, breedte en sterke onderrug",
+    "level": "Gemiddeld",
+    "est_minutes": 65,
+    "focus": "Kracht + spiermassa volledige rug (lats, bovenrug, onderrug)",
+    "intro": "Deze sessie traint je volledige rug: we starten met de zware deadlift en barbell row voor kracht en dikte, gevolgd door pull-ups en lat pulldowns voor breedte. Bouw rustig op in gewicht en focus op een sterke, gecontroleerde uitvoering. Houd je core gespannen en trek telkens vanuit je rug, niet je armen.",
+    "tips": [
+      "Houd bij elke trekoefening je borst hoog en schouders naar achter en beneden.",
+      "Trek vanuit je ellebogen en knijp je schouderbladen samen op het hoogste punt.",
+      "Vermijd zwaaien (kipping): bij twijfel verlaag je het gewicht en blijf je strikt.",
+      "Houd je rug bij deadlift en rows altijd neutraal, nooit rond."
+    ],
+    "exercises": [
+      {
+        "slug": "straight-arm-pulldown",
+        "section": "Warming-up",
+        "sets": 2,
+        "rep_text": "15-20",
+        "rest_sec": 45,
+        "tempo": "",
+        "notes": "Licht gewicht. Activeer je lats: gestrekte armen, trek de stang naar je dijen toe."
+      },
+      {
+        "slug": "hyperextensions-back-extensions",
+        "section": "Warming-up",
+        "sets": 2,
+        "rep_text": "12-15",
+        "rest_sec": 45,
+        "tempo": "",
+        "notes": "Rustig tempo. Span je onderrug en bilspieren aan, kom tot een rechte lijn, niet overstrekken."
+      },
+      {
+        "slug": "barbell-deadlift",
+        "section": "Hoofdoefening",
+        "sets": 4,
+        "rep_text": "5-6",
+        "rest_sec": 150,
+        "tempo": "",
+        "notes": "Rechte rug, stang dicht tegen je benen. Duw de grond weg en strek heupen en knieen samen."
+      },
+      {
+        "slug": "bent-over-barbell-row",
+        "section": "Hoofdoefening",
+        "sets": 4,
+        "rep_text": "6-8",
+        "rest_sec": 120,
+        "tempo": "2-0-1",
+        "notes": "Romp circa 45 graden voorover, rug neutraal. Trek de stang naar je navel, knijp samen."
+      },
+      {
+        "slug": "pullups",
+        "section": "Hoofdoefening",
+        "sets": 3,
+        "rep_text": "6-10",
+        "rest_sec": 120,
+        "tempo": "",
+        "notes": "Volledige range: hang gestrekt en trek je borst naar de stang. Geen zwaaien."
+      },
+      {
+        "slug": "full-range-of-motion-lat-pulldown",
+        "section": "Accessoire",
+        "sets": 3,
+        "rep_text": "10-12",
+        "rest_sec": 60,
+        "tempo": "",
+        "notes": "Trek de stang naar bovenborst, ellebogen laag. Voel de rek volledig bovenaan."
+      },
+      {
+        "slug": "bent-over-two-dumbbell-row",
+        "section": "Accessoire",
+        "sets": 3,
+        "rep_text": "12-15",
+        "rest_sec": 60,
+        "tempo": "2-1-1",
+        "notes": "Trek de dumbbells langs je lichaam omhoog, pauzeer bovenaan en knijp je bovenrug samen."
+      },
+      {
+        "slug": "rope-straight-arm-pulldown",
+        "section": "Finisher",
+        "sets": 3,
+        "rep_text": "15-20",
+        "rest_sec": 45,
+        "tempo": "",
+        "notes": "Gestrekte armen, knijp je lats hard aan onderaan. Hoog tempo, ga voor de pump."
+      }
+    ]
+  }
+]

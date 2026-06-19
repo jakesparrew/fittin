@@ -9,6 +9,7 @@ const links = [
   { href: "/personal-training", label: "Personal training" },
   { href: "/coaches", label: "Coaches" },
   { href: "/oefeningen", label: "Oefeningen" },
+  { href: "/workouts", label: "Workouts" },
   { href: "/boeken", label: "Online boeken" },
   { href: "/calorieen-berekenen", label: "Calorieën berekenen" },
 ];
@@ -16,6 +17,7 @@ const links = [
 // Trimmed nav for logged-in members — no homepage/sales links.
 const memberLinks = [
   { href: "/boeken", label: "Online boeken" },
+  { href: "/workouts", label: "Workouts" },
   { href: "/training", label: "Training" },
   { href: "/plannen", label: "Plannen" },
   { href: "/oefeningen", label: "Oefeningen" },
