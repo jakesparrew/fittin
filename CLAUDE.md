@@ -56,7 +56,10 @@ inbegrepen in de scope; App Store-lancering kost €100 (Apple) + €25 (Google)
 ## Businessdata (volledige bron: docs/CONTENT.md)
 - Gymsessie: **€15** · 1 uur · 1-4 personen · géén lidgeld ("betaal enkel voor je tijd")
   (was €11 in oudere docs — werkelijke prijs op de site & in de DB is €15, bevestigd 2026-06-15)
-- Eerste uur gratis met code **FittinWelcome** (dienst "Fit60")
+- Pricing 2026 (live): losse sessie **€15** · **10-beurtenkaart €150** = 10+1 gratis (11 sessies) ·
+  **abonnement €12/mnd** (1 sessie inclusief, daarna alle sessies aan €12). Coaches betalen altijd
+  **€12/sessie** en kopen 1–100 credits vooraf (geen kaart/abonnement). Géén duurkortingen.
+- Eerste uur gratis met code **FittinWelcome** (dienst "Fit60") — verdwijnt zodra een lid het gebruikt heeft
 - PT: 1-op-1 €60 · 1-op-2 €35 pp · 1-op-3 €30 pp · gratis intake + proeftraining ·
   kosteloos annuleren tot 24u vooraf
 - Coaches: Yoshe Willems, Jelle Vercruysse, Billy Den Haese (details in docs/CONTENT.md)
@@ -66,10 +69,10 @@ inbegrepen in de scope; App Store-lancering kost €100 (Apple) + €25 (Google)
 ## Conventies & aandachtspunten
 - **Multi-tenant vanaf dag één:** zet `gym_id` op elk datamodel — uitbreiding naar meerdere
   gyms is de langetermijnvisie.
-- `/boeken` is nu een demo: deterministische slots in `slotState()`. Vervangen door
-  Supabase-data + Stripe checkout is de eerstvolgende grote taak.
-- Positionering: géén "lidgeld"-taal op de site — het goedkope abonnement (€10/mnd, 1
-  sessie inclusief, goedkoper bijboeken, daluren-korting) is een toekomstige feature en
-  staat in de pitch, nog niet op de site.
+- `/boeken` is live: echte slots + slot-hold via de `create_booking` RPC en Stripe Checkout
+  (géén `slotState()`-demo meer). Boekbaar 06:00–23:00, laatste sessie start om 22:00.
+- Positionering: losse sessie zónder lidgeld blijft de hoofdboodschap ("betaal enkel voor je
+  tijd"), maar het abonnement is intussen live (€12/mnd, 1 sessie inclusief + alle sessies aan
+  €12, géén daluren-korting). Géén lengte-/duurkortingen meer.
 - Foto's van de oude site staan op de Wix-CDN (zie docs/CONTENT.md); download originelen
   bij de klant op te vragen vóór migratie.
