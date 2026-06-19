@@ -4,16 +4,17 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { cancelBookingAction, payCoachRequest, respondJoinRequest, logBodyMetrics, setLeaderboardOptIn } from "./actions";
+import { payCoachRequest, respondJoinRequest, logBodyMetrics, setLeaderboardOptIn } from "./actions";
 import WeightChart from "@/components/WeightChart";
 import ActionForm from "@/components/ui/ActionForm";
 import { resumeCheckoutAction } from "../boeken/actions";
-import { openBillingPortal, activateWelcome } from "../lidmaatschap/actions";
+import { openBillingPortal } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
 import NextSessionTimer from "@/components/NextSessionTimer";
 import BookingBuddies from "@/components/booking/BookingBuddies";
 import BuddyJoin from "@/components/booking/BuddyJoin";
+import RescheduleBooking from "@/components/booking/RescheduleBooking";
 import ShareRank from "@/components/ShareRank";
 import AccountSettings from "@/components/account/AccountSettings";
 import AccountLinking from "@/components/account/AccountLinking";
@@ -85,6 +86,10 @@ export default async function AccountPage({ searchParams }) {
     supabase.from("profiles").select("height_cm, goal_weight_kg").eq("id", user.id).single(),
     supabase.from("body_metrics").select("weight_kg, logged_on").eq("user_id", user.id).order("logged_on", { ascending: true }).limit(120),
   ]);
+
+  const { data: gym } = await supabase.from("gyms").select("open_hour, close_hour").eq("id", profile.gym_id).maybeSingle();
+  const gymOpen = gym?.open_hour ?? 6;
+  const gymClose = gym?.close_hour ?? 23;
 
   const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
   const invitedSessions = (invitedRows || [])
@@ -309,26 +314,15 @@ export default async function AccountPage({ searchParams }) {
           </div>
         </section>
 
-        {!profile?.welcome_code_used && profile?.welcome_status !== "used" && (
+        {!profile?.welcome_code_used && profile?.welcome_status === "eligible" && (
           <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
-            {profile?.welcome_status === "eligible" ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
                 <p className="font-bold text-brand">🎁 Je gratis eerste sessie staat klaar!</p>
-                <Link href="/boeken" className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Boek gratis sessie</Link>
+                <p className="mt-1 text-sm text-brand/60">Welkomstpromo — je allereerste uur in de privégym is gratis. Geen kaart nodig, je betaalt pas vanaf je tweede sessie.</p>
               </div>
-            ) : profile?.welcome_status === "blocked" ? (
-              <p className="text-sm font-semibold text-brand/70">Je gratis sessie is al gebruikt — deze kaart heeft al eerder een gratis sessie geactiveerd.</p>
-            ) : (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="font-bold text-brand">🎁 Activeer je gratis eerste sessie</p>
-                  <p className="mt-1 text-sm text-brand/60">Voeg eenmalig een kaart toe (geen kosten). Zo houden we de gratis sessie eerlijk — één per persoon.</p>
-                </div>
-                <form action={activateWelcome}>
-                  <button className="rounded-full bg-brand px-6 py-3 text-sm font-bold text-white transition hover:opacity-90">Activeer gratis sessie</button>
-                </form>
-              </div>
-            )}
+              <Link href="/boeken" className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Boek gratis sessie</Link>
+            </div>
           </div>
         )}
 
@@ -370,6 +364,7 @@ export default async function AccountPage({ searchParams }) {
             <p className="text-sm font-bold uppercase tracking-widest text-lav">Je sessie is bezig</p>
             <p className="mb-4 mt-1 text-lg font-black">Open de deur met de app</p>
             <DoorButton />
+            <Link href="/huisregels" className="mt-3 inline-block text-sm font-bold text-accent underline-offset-2 hover:underline">Toegang &amp; huisregels →</Link>
           </div>
         )}
 
@@ -470,12 +465,7 @@ export default async function AccountPage({ searchParams }) {
                       </form>
                     )}
                     {!b.invited && (
-                      <form action={cancelBookingAction}>
-                        <input type="hidden" name="bookingId" value={b.id} />
-                        <button className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-red-300 hover:text-red-600">
-                          Annuleren
-                        </button>
-                      </form>
+                      <RescheduleBooking bookingId={b.id} startsAt={b.starts_at} openHour={gymOpen} closeHour={gymClose} />
                     )}
                   </div>
                   </div>

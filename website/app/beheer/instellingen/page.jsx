@@ -24,7 +24,8 @@ export default async function Instellingen() {
         <Field name="name" label="Naam" defaultValue={gym.name} />
         <Field name="address" label="Adres" defaultValue={gym.address} />
         <Field name="slot_minutes" label="Duur van een sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
-        <Field name="cancel_hours" label="Annuleren tot (uren voor de sessie)" type="number" defaultValue={gym.cancel_hours ?? 1} min={0} max={72} />
+        <Field name="access_code" label="Toegangscode (in de toegangsmail, ± 5 min voor de sessie)" defaultValue={gym.access_code} />
+        <Field name="access_info" label="Extra toegangsinstructie (optioneel)" defaultValue={gym.access_info} />
 
         <div className="grid grid-cols-2 gap-4">
           <Field name="open_hour" label="Eerste boekbaar uur" type="number" defaultValue={gym.open_hour ?? 6} min={0} max={23} />
@@ -32,6 +33,9 @@ export default async function Instellingen() {
         </div>
         <p className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
           🕑 Leden kunnen boeken van <b>{gym.open_hour ?? 6}u</b> tot <b>{gym.close_hour ?? 23}u</b> — de laatste sessie start om {(gym.close_hour ?? 23) - 1}u. (Prijzen per sessie beheer je bij <b>Diensten &amp; prijzen</b>.)
+        </p>
+        <p className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
+          🔑 De <b>toegangscode</b> hierboven wordt automatisch ± 5 minuten voor elke sessie naar het lid gemaild (met adres + navigatieknop). Leden kunnen hun sessie tot <b>6u</b> vooraf verplaatsen; annuleren kan niet meer.
         </p>
 
         <button

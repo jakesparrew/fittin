@@ -453,7 +453,7 @@ export default function BookingClient({
                 </p>
               </div>
             )}
-            <p className="mt-3 text-center text-xs text-lav">Kosteloos annuleren tot 24u vooraf.</p>
+            <p className="mt-3 text-center text-xs text-lav">Verplaatsen kan tot 6u voor je sessie. Sessies worden altijd betaald.</p>
           </div>
         </div>
         )}

@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
-import { sendBookingCancelled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk } from "@/lib/email";
+import { sendBookingRescheduled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk } from "@/lib/email";
 import { notify, notifyMany } from "@/lib/notify";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
@@ -48,40 +48,31 @@ export async function payCoachRequest(formData) {
   redirect(session.url);
 }
 
-// Cancel one of the caller's own future bookings (free until 24h before per house rules;
-// MVP allows cancel up to start time). Flipping status off 'bevestigd' frees the slot.
-export async function cancelBookingAction(formData) {
+// Reschedule one of the caller's own confirmed bookings to a new slot — no refund/cancel, since
+// sessions are always paid. Allowed up to 6 hours before the original start; opening hours, overlaps
+// and slot blocks are all re-validated atomically inside the reschedule_booking RPC.
+export async function rescheduleBookingAction(formData) {
   const id = formData.get("bookingId");
-  if (!id) return;
+  const date = formData.get("date"); // YYYY-MM-DD
+  const hour = parseInt(formData.get("hour"), 10);
+  if (!id || !date || !Number.isFinite(hour)) return { error: "Kies een nieuwe dag en uur." };
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
 
-  // Cancellation window: members may cancel up to gym.cancel_hours before the start.
-  const { data: me } = await supabase.from("profiles").select("email, full_name, gym_id").eq("id", user.id).single();
-  const { data: gym } = me?.gym_id ? await supabase.from("gyms").select("cancel_hours").eq("id", me.gym_id).single() : { data: null };
-  const cancelHours = gym?.cancel_hours ?? 1;
-  const cutoff = new Date(Date.now() + cancelHours * 3600000).toISOString();
+  const { error } = await supabase.rpc("reschedule_booking", { p_booking: id, p_date: date, p_hour: hour });
+  if (error) return { error: error.message };
 
-  const { data: cancelled } = await supabase
-    .from("bookings")
-    .update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
-    .eq("id", id)
-    .eq("user_id", user.id)
-    .gt("starts_at", cutoff)
-    .select("starts_at, services(name)")
-    .maybeSingle();
+  // Confirm the new time by e-mail (best-effort).
+  try {
+    const { data: me } = await supabase.from("profiles").select("email, full_name").eq("id", user.id).single();
+    const { data: b } = await supabase.from("bookings").select("starts_at, ends_at, services(name)").eq("id", id).single();
+    if (me?.email && b) await sendBookingRescheduled({ to: me.email, name: me.full_name, serviceName: b.services?.name || "Sessie", startsAt: b.starts_at, endsAt: b.ends_at });
+  } catch {}
 
-  if (!cancelled) {
-    return { error: cancelHours > 0 ? `Je kan tot ${cancelHours} uur voor de sessie annuleren.` : "Annuleren niet meer mogelijk." };
-  }
-
-  await sendBookingCancelled({ to: me?.email, name: me?.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
   revalidatePath("/account");
   revalidatePath("/boeken");
-  return { ok: true };
+  return { ok: true, message: "Je sessie is verplaatst ✓" };
 }
 
 // Invite gym members to come along to one of your own future bookings (capped at the booking's

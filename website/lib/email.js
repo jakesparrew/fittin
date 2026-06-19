@@ -81,7 +81,7 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
       title: "Je boeking is bevestigd ✅",
       intro: `Hallo ${name || "daar"}, je sessie staat vast. Tot binnenkort in de zaal!`,
       rows,
-      body: `<p style="font-size:14px;color:#6b6685;margin-top:14px">De deur opent tijdens je tijdslot via de app.</p>`,
+      body: `<p style="font-size:14px;color:#6b6685;margin-top:14px">Je ontvangt je toegangscode automatisch ± 5 minuten voor je sessie start. Verplaatsen kan tot 6u vooraf in je account.</p>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
     }),
     FROM_BOOKING
@@ -103,6 +103,66 @@ export async function sendBookingCancelled({ to, name, serviceName, startsAt }) 
       ],
       body: `<p style="font-size:14px;color:#6b6685">Was dit niet de bedoeling? Boek gerust een nieuw moment.</p>`,
       cta: { href: `${SITE}/boeken`, label: "Nieuwe sessie boeken" },
+    }),
+    FROM_BOOKING
+  );
+}
+
+// ---- Member: booking moved to a new time ----
+export async function sendBookingRescheduled({ to, name, serviceName, startsAt, endsAt }) {
+  await send(
+    to,
+    "Je Fittin'-sessie is verplaatst",
+    shell({
+      title: "Je sessie is verplaatst ✅",
+      intro: `Hallo ${name || "daar"}, je sessie staat nu op een nieuw moment:`,
+      rows: [
+        ["Sessie", serviceName],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt, endsAt)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">We mailen je de toegangscode opnieuw, ± 5 minuten voor de nieuwe starttijd.</p>`,
+      cta: { href: `${SITE}/account`, label: "Mijn sessies" },
+    }),
+    FROM_BOOKING
+  );
+}
+
+// ---- Member: access code, sent ~5 minutes before the session starts ----
+export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, address, mapsUrl }) {
+  const codeHtml = accessCode
+    ? `<div style="margin:6px 0 4px;text-align:center"><div style="font-size:12px;color:#6b6685;letter-spacing:.08em;text-transform:uppercase">Toegangscode</div><div style="font-size:34px;font-weight:800;letter-spacing:.18em;color:#22194F;background:#f0effa;border-radius:14px;padding:14px 0;margin-top:6px">${accessCode}</div></div>`
+    : `<p style="font-size:14px;color:#6b6685">Open de deur met de knop in je account zodra je sessie begint.</p>`;
+  const navHtml = mapsUrl
+    ? `<div style="text-align:center"><a href="${mapsUrl}" style="display:inline-block;margin:6px 0;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px;font-size:14px">📍 Navigeer naar de gym</a></div>`
+    : "";
+  await send(
+    to,
+    "Je toegangscode voor Fittin' 🔑",
+    shell({
+      title: "Tijd om te trainen! 🔑",
+      intro: `Hallo ${name || "daar"}, je sessie start zo meteen. Hier is alles om binnen te raken:`,
+      rows: [
+        ["Sessie", serviceName],
+        ["Uur", timeRange(startsAt, endsAt)],
+        ...(address ? [["Adres", address]] : []),
+      ],
+      body: `${codeHtml}${navHtml}
+        <div style="margin-top:16px;border-top:1px solid #ece9f5;padding-top:14px">
+          <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo kom je binnen</p>
+          <ol style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.6">
+            <li>Toets de code in op het paneel naast de voordeur (of open de deur via de knop in je account).</li>
+            <li>De toegang werkt enkel tijdens jouw tijdslot.</li>
+            <li>Sluit de deur goed achter je — zeker als je als laatste vertrekt.</li>
+          </ol>
+          <p style="font-size:14px;font-weight:bold;color:#22194F;margin:14px 0 6px">Voor je weer vertrekt</p>
+          <ul style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.6">
+            <li>Veeg de toestellen die je gebruikte schoon (spray + doek staan klaar).</li>
+            <li>Leg gewichten en materiaal terug op hun vaste plaats.</li>
+            <li>Doe de lichten uit en controleer of de deur dicht is.</li>
+          </ul>
+        </div>`,
+      cta: { href: `${SITE}/huisregels`, label: "Toegang & huisregels" },
     }),
     FROM_BOOKING
   );
@@ -204,7 +264,7 @@ export async function sendSessionReminder({ to, name, serviceName, startsAt, end
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
-      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">De deur opent tijdens je tijdslot via de app. Kan je niet? Annuleer tijdig in je account.</p>`,
+      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">Je toegangscode komt automatisch ± 5 minuten voor de start binnen. Kan je toch niet? Je kan je sessie tot 6u vooraf verplaatsen in je account.</p>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
     }),
     FROM_BOOKING
@@ -286,7 +346,7 @@ export async function sendSessionInvite({ to, name, fromName, serviceName, start
 export async function sendEmailInvite({ to, fromName, serviceName, startsAt, endsAt, signupUrl }) {
   await send(
     to,
-    `${fromName} nodigt je uit om te trainen bij Fittin'`,
+    `${fromName} nodigt je uit bij Fittin' — je 1e sessie is gratis 🎁`,
     shell({
       title: "Je bent uitgenodigd om te trainen 💪",
       intro: `${fromName} heeft je uitgenodigd voor een sessie bij Fittin' (Gent). Maak gratis een account om je plek te bevestigen:`,
@@ -294,9 +354,10 @@ export async function sendEmailInvite({ to, fromName, serviceName, startsAt, end
         ["Sessie", serviceName],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
+        ["Welkomstcadeau", `<span style="color:#33B24A">Je 1e sessie is gratis 🎁</span>`],
       ],
-      body: `<p style="font-size:14px;color:#6b6685">Een account maken is gratis en duurt 30 seconden. Daarna verschijnt de sessie in je account.</p>`,
-      cta: { href: signupUrl || `${SITE}/login?mode=signup`, label: "Maak je gratis account" },
+      body: `<div style="margin-top:8px;background:#eafbe9;border:1px solid #bdebb9;border-radius:12px;padding:12px 14px;font-size:14px;color:#22194F"><b>Promotie:</b> maak nu een gratis account en je <b>allereerste sessie is volledig gratis</b> — geen kaart nodig. Daarna train je vanaf € 15 voor een uur in de privégym.</div><p style="font-size:13px;color:#9b97ab;margin-top:10px">Een account maken duurt 30 seconden. Daarna verschijnt deze sessie meteen in je account.</p>`,
+      cta: { href: signupUrl || `${SITE}/login?mode=signup`, label: "Maak gratis account + claim je gratis sessie" },
     }),
     FROM_BOOKING
   );

@@ -16,7 +16,7 @@ const expect = [
     items: [
       "Duurt 60 minuten",
       "Kostprijs afhankelijk van het programma",
-      "Kosteloos annuleerbaar tot 24u op voorhand",
+      "Verplaatsbaar tot 6u op voorhand",
     ],
   },
   {
