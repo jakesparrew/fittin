@@ -150,7 +150,7 @@ export default function Home() {
                   { v: 24, s: "/7", l: "Open, elke dag" },
                   { v: 15, p: "€ ", l: "Per sessie van 1 uur" },
                   { v: 4, p: "1–", l: "Personen per boeking" },
-                  { v: 0, l: "Lidgeld of abonnement" },
+                  { v: 0, l: "Verplicht abonnement" },
                 ].map((stat, i) => (
                   <div key={i} className="group bg-white p-8 transition-colors hover:bg-paper lg:p-10">
                     <p className="font-display text-5xl font-black leading-none text-brand md:text-6xl">
@@ -272,15 +272,16 @@ export default function Home() {
             <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Eerlijk & simpel</p>
             <h2 className="mt-3 text-4xl font-black md:text-5xl">Betaal enkel voor je tijd</h2>
           </Reveal>
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { name: "Losse sessie", price: "€ 15", per: "/ sessie", items: ["1 uur in de zaal", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
-              { name: "10-beurtenkaart", price: "€ 150", per: "/ 11 sessies", items: ["10 + 1 gratis (€ 13,64/sessie)", "6 maanden geldig", "Of word member voor € 12"], cta: "Bekijk opties", href: "/lidmaatschap", hot: true },
-              { name: "Personal training", price: "€ 60", per: "/ sessie 1-op-1", items: ["1-op-2 € 35 pp", "1-op-3 € 30 pp", "Gratis intake"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
+              { name: "10-beurtenkaart", price: "€ 150", per: "/ 11 sessies", items: ["10 + 1 gratis sessie", "6 maanden geldig", "Tot 3 vrienden mee"], cta: "Koop kaart", href: "/lidmaatschap", hot: false },
+              { name: "Member-abonnement", price: "€ 12", per: "/ maand", items: ["1 sessie / maand inbegrepen", "Alle sessies aan € 12", "Maandelijks opzegbaar"], cta: "Word member", href: "/lidmaatschap", hot: true },
+              { name: "Personal training", price: "€ 60", per: "/ 1-op-1", items: ["1-op-2 € 35 pp", "1-op-3 € 30 pp", "Gratis intake"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
             ].map((p, i) => (
               <Reveal key={p.name} delay={i * 90} className="h-full">
                 <div className={"relative flex h-full flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 " + (p.hot ? "border-accent bg-brand text-white shadow-xl shadow-brand/20" : "border-borderc bg-white hover:shadow-xl hover:shadow-brand/5")}>
-                  {p.hot && <span className="absolute -top-3 left-8 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">Populairst</span>}
+                  {p.hot && <span className="absolute -top-3 left-8 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">Beste prijs / sessie</span>}
                   <p className={"text-xs font-black uppercase tracking-widest " + (p.hot ? "text-accent" : "text-lav")}>{p.name}</p>
                   <p className="mt-3 text-4xl font-black">{p.price}<span className={"text-base font-bold " + (p.hot ? "text-white/50" : "text-brand/40")}> {p.per}</span></p>
                   <ul className="mt-6 flex-1 space-y-3 text-sm">
