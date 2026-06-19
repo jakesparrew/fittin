@@ -165,6 +165,10 @@ export async function coachAssignProgram(formData) {
     }
   }
 
+  // Make the assigned plan the client's active one so it shows immediately in "Mijn training".
+  await supabase.from("programs").update({ is_active: false }).eq("member_id", memberId);
+  await supabase.from("programs").update({ is_active: true }).eq("id", copy.id);
+
   const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", memberId).single();
   await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "program", summary: `Programma toegewezen aan ${cl?.full_name || "client"}`, refId: copy.id });
   const { data: co } = await supabase.from("profiles").select("full_name").eq("id", userId).single();

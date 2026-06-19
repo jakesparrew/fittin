@@ -47,14 +47,14 @@ export default async function BoekenPage({ searchParams }) {
     supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from.toISOString(), p_to: to.toISOString() }),
     getPublicCoachesCached(gym.id),
     getCoachAvailabilityCached(gym.id),
-    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", nowIso),
+    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", nowIso),
     admin.rpc("referral_points", { p_gym: gym.id, p_since: monthStart.toISOString() }),
     admin.from("events").select("id, title, description, image_url, faq, starts_at, ends_at, capacity, price_cents, event_signups(user_id, paid)").eq("gym_id", gym.id).eq("status", "approved").gte("starts_at", nowIso).order("starts_at").limit(50),
   ]);
 
   // Monthly leaderboard (sessions + referral bonus points).
   const lbCounts = {};
-  for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0, pts: 0 }).n++; }
+  for (const b of boardRows || []) { if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0, pts: 0 }).n++; }
   for (const r of refPts || []) { if (r.referrer_id) { (lbCounts[r.referrer_id] ||= { name: "Lid", n: 0, pts: 0 }).pts = r.points; } }
   const missing = Object.keys(lbCounts).filter((id) => lbCounts[id].name === "Lid");
   if (missing.length) {

@@ -1,5 +1,6 @@
 import { getGymCached, getExercisesCached } from "@/lib/cache";
 import ExerciseLibrary from "@/components/exercises/ExerciseLibrary";
+import { searchLibrary } from "./actions";
 
 export const metadata = {
   title: "Oefeningenbibliotheek | Fittin'",
@@ -11,7 +12,9 @@ export const revalidate = 300;
 
 export default async function OefeningenPage() {
   const gym = await getGymCached();
-  const exercises = gym ? await getExercisesCached(gym.id) : [];
+  const all = gym ? await getExercisesCached(gym.id) : [];
+  const categories = ["alle", ...Array.from(new Set(all.map((e) => e.category).filter(Boolean))).sort()];
+  const initial = all.slice(0, 48); // small initial payload; search/filter queries the server
 
   return (
     <main className="bg-paper min-h-screen">
@@ -23,8 +26,8 @@ export default async function OefeningenPage() {
           Je coach stelt hiermee jouw persoonlijke schema samen.
         </p>
         <div className="mt-8">
-          {exercises.length > 0 ? (
-            <ExerciseLibrary exercises={exercises} />
+          {all.length > 0 ? (
+            <ExerciseLibrary initial={initial} total={all.length} categories={categories} onSearch={searchLibrary} />
           ) : (
             <div className="rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
               <p className="font-semibold text-brand/70">De bibliotheek wordt binnenkort gevuld.</p>

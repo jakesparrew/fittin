@@ -99,6 +99,36 @@ export default async function CoachDashboard({ searchParams }) {
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
 
+      {/* PRIMARY ACTION — book a session with a client */}
+      <section id="boeken" className="mt-6 scroll-mt-8 rounded-3xl border-2 border-accent bg-white p-6 shadow-sm shadow-accent/10">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-xl font-black text-brand">Sessie boeken met een client</h2>
+          <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-black text-accentdark">Hoofdactie</span>
+        </div>
+        <p className="mt-1 text-sm text-brand/60">Kies je client, sessie en moment. Elke boeking gebruikt 1 sessietegoed (€ 12 / sessie).</p>
+        <form action={coachBookSession} className="mt-4 flex flex-wrap items-end gap-3">
+          <Lbl t="Client">
+            <SearchSelect name="clientId" required placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+          </Lbl>
+          <Lbl t="Sessie">
+            <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
+              {(services || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </Lbl>
+          <Lbl t="Datum"><input name="date" type="date" required defaultValue={todayStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+          <Lbl t="Uur">
+            <select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select>
+          </Lbl>
+          <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+          <label className="flex items-center gap-2 pb-1.5 text-xs font-bold text-brand/70">
+            <input type="checkbox" name="use_client_credit" className="h-4 w-4 accent-[#5fda6b]" />
+            Gebruik sessietegoed van client
+          </label>
+          <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
+        </form>
+        {(!members || members.length === 0) && <p className="mt-3 text-xs text-brand/40">Nog geen clienten/leden in de gym.</p>}
+      </section>
+
       {/* Billing summary */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Aankomende sessies" value={upcoming.length} />
@@ -199,11 +229,11 @@ export default async function CoachDashboard({ searchParams }) {
               <p className="text-lg font-black text-brand">Coach-sessies kopen</p>
             </div>
             <p className="mt-1 text-sm text-brand/60">
-              Reken nu af met je kaart{profile.coach_session_price_cents ? ` — € ${(profile.coach_session_price_cents / 100).toFixed(2).replace(".", ",")} per sessie` : ""}. Je betaalt voor het gebruik van de zaal; daarna boek je je clienten met dit saldo.
+              Coaches betalen altijd <strong className="text-brand">€ 12 per sessie</strong>. Koop 1 tot 100 sessies vooraf en boek daarna je clienten met dit saldo.
             </p>
             <form action={buyCoachCredits} className="mt-3 flex flex-wrap items-end gap-3">
-              <label className="block text-xs font-bold text-lav">Aantal sessies
-                <input name="qty" type="number" defaultValue="10" min="1" className="mt-1 block w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+              <label className="block text-xs font-bold text-lav">Aantal sessies (1–100)
+                <input name="qty" type="number" defaultValue="10" min="1" max="100" className="mt-1 block w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </label>
               <SubmitButton className="rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand">Naar de kassa →</SubmitButton>
             </form>
@@ -213,7 +243,7 @@ export default async function CoachDashboard({ searchParams }) {
             <p className="mt-0.5 text-xs text-brand/50">De beheerder keurt goed en factureert je later.</p>
             <form action={requestCoachSessions} className="mt-3 flex flex-wrap items-end gap-2">
               <label className="text-xs font-bold text-lav">Aantal
-                <input name="qty" type="number" defaultValue="10" min="1" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                <input name="qty" type="number" defaultValue="10" min="1" max="100" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
               </label>
               <input name="note" placeholder="notitie (optioneel)" className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
               <SubmitButton className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</SubmitButton>
@@ -245,32 +275,6 @@ export default async function CoachDashboard({ searchParams }) {
         </div>
         <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={services || []} />
       </div>
-
-      {/* Book a session with a client (quick form, alternative to the grid) */}
-      <section id="boeken" className="mt-8 scroll-mt-8 rounded-3xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Sessie boeken met een client</h2>
-        <form action={coachBookSession} className="mt-4 flex flex-wrap items-end gap-3">
-          <Lbl t="Client">
-            <SearchSelect name="clientId" required placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
-          </Lbl>
-          <Lbl t="Sessie">
-            <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-              {(services || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-          </Lbl>
-          <Lbl t="Datum"><input name="date" type="date" required defaultValue={todayStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <Lbl t="Uur">
-            <select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select>
-          </Lbl>
-          <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <label className="flex items-center gap-2 pb-1.5 text-xs font-bold text-brand/70">
-            <input type="checkbox" name="use_client_credit" className="h-4 w-4 accent-[#5fda6b]" />
-            Gebruik sessietegoed van client
-          </label>
-          <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
-        </form>
-        {(!members || members.length === 0) && <p className="mt-3 text-xs text-brand/40">Nog geen clienten/leden in de gym.</p>}
-      </section>
 
       {/* Upcoming sessions */}
       <section className="mt-8">

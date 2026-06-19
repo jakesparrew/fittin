@@ -39,12 +39,16 @@ export async function buyPackage(formData) {
   }
 
   if (pkg.kind === "abonnement") {
-    if (!pkg.stripe_price_id) return { error: "Abonnement nog niet geconfigureerd." };
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer,
       ...bizCustomer,
-      line_items: [{ price: pkg.stripe_price_id, quantity: 1 }],
+      // Inline recurring price from the DB (price_cents) — no pre-created Stripe Price needed,
+      // so the abo amount is always whatever the package row says (€12/maand).
+      line_items: [{
+        quantity: 1,
+        price_data: { currency: "eur", unit_amount: pkg.price_cents, recurring: { interval: "month" }, product_data: { name: `${pkg.name} — Fittin'` } },
+      }],
       metadata: { kind: "subscription", package_id: pkg.id, user_id: user.id },
       subscription_data: { metadata: { user_id: user.id, package_id: pkg.id, credits: String(pkg.credits) } },
       success_url: `${siteUrl()}/account?abo=1`,

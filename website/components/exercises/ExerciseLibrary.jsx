@@ -1,30 +1,25 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
 import ExerciseMedia from "./ExerciseMedia";
 
 const DIFF = { beginner: "Beginner", intermediate: "Gemiddeld", gevorderd: "Gevorderd" };
 
-// Searchable/filterable grid of the gym's exercise library. Client-side filtering (the library
-// is small — tens of rows). Each card links to the detail page with the demo + instructions.
-export default function ExerciseLibrary({ exercises }) {
+// Library grid. Renders an initial server-provided slice and queries the server (searchLibrary)
+// on search/filter — so the client never has to hold the whole ~900-exercise library.
+export default function ExerciseLibrary({ initial, total, categories, onSearch }) {
   const [q, setQ] = useState("");
   const [cat, setCat] = useState("alle");
+  const [results, setResults] = useState(initial || []);
+  const [pending, startTransition] = useTransition();
 
-  const categories = useMemo(() => {
-    const set = new Set((exercises || []).map((e) => e.category).filter(Boolean));
-    return ["alle", ...Array.from(set).sort()];
-  }, [exercises]);
+  useEffect(() => {
+    if (!q.trim() && cat === "alle") { setResults(initial || []); return; }
+    const t = setTimeout(() => startTransition(async () => setResults(await onSearch(q, cat))), 250);
+    return () => clearTimeout(t);
+  }, [q, cat, initial, onSearch]);
 
-  const shown = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return (exercises || []).filter((e) => {
-      if (cat !== "alle" && e.category !== cat) return false;
-      if (!term) return true;
-      const hay = [e.name, e.muscle, e.equipment, ...(e.primary_muscles || [])].join(" ").toLowerCase();
-      return hay.includes(term);
-    });
-  }, [exercises, q, cat]);
+  const browsingAll = !q.trim() && cat === "alle";
 
   return (
     <div>
@@ -37,7 +32,7 @@ export default function ExerciseLibrary({ exercises }) {
           className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 text-sm text-brand outline-none transition focus:border-accent"
         />
         <div className="mt-3 flex flex-wrap gap-2">
-          {categories.map((c) => (
+          {(categories || ["alle"]).map((c) => (
             <button
               key={c}
               onClick={() => setCat(c)}
@@ -50,8 +45,12 @@ export default function ExerciseLibrary({ exercises }) {
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        {shown.map((ex) => (
+      <p className="mt-4 text-xs font-bold text-brand/40">
+        {browsingAll ? `${total} oefeningen — typ of filter om te zoeken` : pending ? "Zoeken…" : `${results.length} resultaten`}
+      </p>
+
+      <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        {results.map((ex) => (
           <Link key={ex.id} href={`/oefeningen/${ex.slug}`} className="group rounded-3xl border border-borderc bg-white p-2 transition hover:-translate-y-0.5 hover:shadow-md">
             <ExerciseMedia exercise={ex} thumb className="aspect-square w-full" rounded="rounded-2xl" />
             <div className="px-2 pb-2 pt-3">
@@ -65,9 +64,7 @@ export default function ExerciseLibrary({ exercises }) {
         ))}
       </div>
 
-      {shown.length === 0 && (
-        <p className="mt-10 text-center text-sm text-brand/50">Geen oefeningen gevonden.</p>
-      )}
+      {!pending && results.length === 0 && <p className="mt-10 text-center text-sm text-brand/50">Geen oefeningen gevonden.</p>}
     </div>
   );
 }

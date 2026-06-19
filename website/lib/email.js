@@ -282,6 +282,26 @@ export async function sendSessionInvite({ to, name, fromName, serviceName, start
   );
 }
 
+// ---- Invite a NON-member by e-mail: session invite + a make-an-account CTA ----
+export async function sendEmailInvite({ to, fromName, serviceName, startsAt, endsAt, signupUrl }) {
+  await send(
+    to,
+    `${fromName} nodigt je uit om te trainen bij Fittin'`,
+    shell({
+      title: "Je bent uitgenodigd om te trainen 💪",
+      intro: `${fromName} heeft je uitgenodigd voor een sessie bij Fittin' (Gent). Maak gratis een account om je plek te bevestigen:`,
+      rows: [
+        ["Sessie", serviceName],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt, endsAt)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Een account maken is gratis en duurt 30 seconden. Daarna verschijnt de sessie in je account.</p>`,
+      cta: { href: signupUrl || `${SITE}/login?mode=signup`, label: "Maak je gratis account" },
+    }),
+    FROM_BOOKING
+  );
+}
+
 // ---- Buddy asks you to come train with them ----
 export async function sendBuddyJoinAsk({ to, name, fromName, serviceName, startsAt, endsAt }) {
   await send(

@@ -17,12 +17,16 @@ export default function NextSessionTimer({ startsAt, name }) {
   const m = Math.floor((ms % 3600000) / 60000);
   const s = Math.floor((ms % 60000) / 1000);
   const soon = ms < 3600000; // < 1h
+  const when = new Intl.DateTimeFormat("nl-BE", {
+    timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
+  }).format(new Date(startsAt));
 
   return (
     <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand p-6 text-white">
       <div>
         <p className="text-xs font-bold uppercase tracking-widest text-lav">Je volgende sessie</p>
         <p className="mt-1 text-lg font-black">{name || "Sessie"}</p>
+        <p className="mt-0.5 text-sm capitalize text-lav">{when}</p>
       </div>
       <div className="flex items-center gap-2 tabular-nums">
         {d > 0 && <Unit n={d} label="d" />}

@@ -13,7 +13,8 @@ export default function WorkoutPlayer({ days }) {
   const [openDetail, setOpenDetail] = useState(null);
   const [rest, setRest] = useState(null); // { left, total }
   const [feedback, setFeedback] = useState({});
-  const [pending, startTransition] = useTransition();
+  const [busyPe, setBusyPe] = useState(null);
+  const [, startTransition] = useTransition();
 
   // Prefill set inputs from the last session (or the target) so logging is fast.
   const [entries, setEntries] = useState(() => {
@@ -37,23 +38,26 @@ export default function WorkoutPlayer({ days }) {
   }, [rest]);
 
   const setRow = (peId, i, field, val) =>
-    setEntries((e) => ({ ...e, [peId]: e[peId].map((r, idx) => (idx === i ? { ...r, [field]: val } : r)) }));
-  const addRow = (peId) => setEntries((e) => ({ ...e, [peId]: [...e[peId], { reps: "", weight_kg: "" }] }));
-  const removeRow = (peId) => setEntries((e) => ({ ...e, [peId]: e[peId].length > 1 ? e[peId].slice(0, -1) : e[peId] }));
+    setEntries((e) => ({ ...e, [peId]: (e[peId] || []).map((r, idx) => (idx === i ? { ...r, [field]: val } : r)) }));
+  const addRow = (peId) => setEntries((e) => ({ ...e, [peId]: [...(e[peId] || []), { reps: "", weight_kg: "" }] }));
+  const removeRow = (peId) => setEntries((e) => ({ ...e, [peId]: (e[peId] || []).length > 1 ? e[peId].slice(0, -1) : e[peId] || [] }));
 
   const doLog = (peId) => {
     const fd = new FormData();
     fd.set("peId", peId);
     fd.set("sets_json", JSON.stringify(entries[peId] || []));
+    setBusyPe(peId);
     startTransition(async () => {
       const res = await logExercise(fd);
       setFeedback((f) => ({ ...f, [peId]: res?.error ? res.error : res?.pr ? "🏆 Nieuw PR!" : "Gelogd ✓" }));
+      setBusyPe(null);
     });
   };
   const doToggle = (peId) => {
     const fd = new FormData();
     fd.set("peId", peId);
-    startTransition(() => toggleExerciseDone(fd));
+    setBusyPe(peId);
+    startTransition(async () => { await toggleExerciseDone(fd); setBusyPe(null); });
   };
 
   return (
@@ -71,6 +75,7 @@ export default function WorkoutPlayer({ days }) {
                 const open = openDetail === pe.peId;
                 const rows = entries[pe.peId] || [];
                 const last = fmtSets(pe.lastSets);
+                const topLast = (pe.lastSets || []).reduce((m, s) => Math.max(m, s.weight_kg || 0), 0);
                 return (
                   <div key={pe.peId} className={"rounded-2xl border p-4 transition " + (pe.doneToday ? "border-accent/40 bg-accent/5" : "border-borderc bg-paper")}>
                     <div className="flex items-start gap-3">
@@ -87,7 +92,12 @@ export default function WorkoutPlayer({ days }) {
                           doel: {pe.sets ?? "–"} × {pe.reps ?? "–"}{pe.rest_sec ? ` · ${pe.rest_sec}s rust` : ""}
                           {pe.exercise?.primary_muscles?.[0] ? ` · ${pe.exercise.primary_muscles[0]}` : pe.exercise?.muscle ? ` · ${pe.exercise.muscle}` : ""}
                         </p>
-                        {last && <p className="mt-0.5 text-xs text-brand/40">vorige keer: {last}</p>}
+                        {last && (
+                          <p className="mt-0.5 text-xs text-brand/40">
+                            vorige keer: {last}
+                            {topLast > 0 && <span className="font-bold text-accentdark"> · probeer {topLast + 2.5} kg →</span>}
+                          </p>
+                        )}
                         <button onClick={() => setOpenDetail(open ? null : pe.peId)} className="mt-1 text-xs font-bold text-accentdark hover:underline">
                           {open ? "Verberg uitvoering" : "Bekijk uitvoering →"}
                         </button>
@@ -112,8 +122,8 @@ export default function WorkoutPlayer({ days }) {
                         <button onClick={() => addRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand">+ set</button>
                         {rows.length > 1 && <button onClick={() => removeRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/40 hover:text-brand">− set</button>}
                         {pe.rest_sec ? <button onClick={() => setRest({ left: pe.rest_sec, total: pe.rest_sec })} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand">⏱ rust {pe.rest_sec}s</button> : null}
-                        <button disabled={pending} onClick={() => doLog(pe.peId)} className="rounded-full bg-accent px-5 py-1.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">Log{rows.length > 1 ? " sets" : ""}</button>
-                        <button disabled={pending} onClick={() => doToggle(pe.peId)} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-lav disabled:opacity-50">{pe.doneToday ? "Ongedaan" : "Klaar ✓"}</button>
+                        <button disabled={busyPe === pe.peId} onClick={() => doLog(pe.peId)} className="rounded-full bg-accent px-5 py-1.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">Log{rows.length > 1 ? " sets" : ""}</button>
+                        <button disabled={busyPe === pe.peId} onClick={() => doToggle(pe.peId)} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-lav disabled:opacity-50">{pe.doneToday ? "Ongedaan" : "Klaar ✓"}</button>
                         {feedback[pe.peId] && <span className="text-xs font-bold text-accentdark">{feedback[pe.peId]}</span>}
                       </div>
                     </div>

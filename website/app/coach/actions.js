@@ -294,17 +294,17 @@ export async function buyCoachCredits(formData) {
   const { supabase, userId, email, error } = await requireCoach();
   if (error) return { error };
   if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };
-  const qty = num(formData.get("qty"), 10);
-  const { data: me } = await supabase.from("profiles").select("coach_session_price_cents").eq("id", userId).single();
-  // Coaches pay a flat rate per session (default € 15) — no bulk/volume discount, no subscription.
-  const unit = me?.coach_session_price_cents || 1500;
+  // Coaches always pay a flat € 12 per session — no volume discount, no subscription. They buy
+  // 1–100 session-credits up front and spend them when booking client sessions.
+  const qty = Math.min(100, Math.max(1, num(formData.get("qty"), 10)));
+  const unit = 1200;
   const customer = await getOrCreateCustomer(supabase, userId, email);
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer,
     ...bizCustomer,
     line_items: [
-      { quantity: qty, price_data: { currency: "eur", unit_amount: unit, product_data: { name: `Coach-sessie — Fittin' (€ ${(unit / 100).toFixed(2)}/sessie)` } } },
+      { quantity: qty, price_data: { currency: "eur", unit_amount: unit, product_data: { name: "Coach-sessie — Fittin' (€ 12,00/sessie)" } } },
     ],
     metadata: { kind: "coach_credits", coach_id: userId, credits: String(qty) },
     success_url: `${siteUrl()}/coach?gekocht=1`,

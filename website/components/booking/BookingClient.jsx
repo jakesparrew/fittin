@@ -41,6 +41,8 @@ export default function BookingClient({
   const [invitees, setInvitees] = useState([]); // [{id,name}] members to bring along
   const [memberQuery, setMemberQuery] = useState("");
   const [memberResults, setMemberResults] = useState([]);
+  const [emailInvitees, setEmailInvitees] = useState([]); // [email] non-members invited by e-mail
+  const [emailInput, setEmailInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmed, setConfirmed] = useState(null);
@@ -70,10 +72,10 @@ export default function BookingClient({
     for (let h = gym.open_hour; h < gym.close_hour; h++) list.push(h);
     return list;
   }, [gym.open_hour, gym.close_hour]);
-  // 24/7 gyms have 24 rows — show daytime by default with a toggle for night hours, so the
-  // grid fits without a nested scrollbar.
-  const hasNight = allHours.some((h) => h < 7 || h >= 22);
-  const hours = showNight ? allHours : allHours.filter((h) => h >= 7 && h < 22);
+  // Very-long (24/7) ranges get a daytime default + night toggle so the grid fits; normal
+  // opening hours (e.g. 6–23) just show every bookable hour.
+  const hasNight = allHours.some((h) => h < 6 || h >= 23);
+  const hours = !hasNight || showNight ? allHours : allHours.filter((h) => h >= 7 && h < 22);
 
   function coachOpen(dateStr, h) {
     if (!isPT || !coachId) return true;
@@ -96,12 +98,23 @@ export default function BookingClient({
 
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
-  const durFactor = duration >= 4 ? 0.9 : duration === 3 ? 0.92 : duration === 2 ? 0.95 : 1;
+  const durFactor = 1; // geen korting op langere sessies — je betaalt (en gebruikt) 1 credit per uur
   // Members book Fit60 at the member price; PT uses the chosen coach's own rate (matches the server).
   const memberRate = isFit60 && isMember && service?.member_price_cents != null;
   const coachPtRate = isPT && coachId ? coaches.find((c) => c.id === coachId)?.coach_pt_price_cents : null;
   const unitCents = memberRate ? service.member_price_cents : (coachPtRate != null ? coachPtRate : (service?.price_cents ?? 0));
   const priceCents = welcomeApplies || creditApplies ? 0 : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
+
+  // Invite slots = the booking's free spots (persons − you). Members + e-mail invites share them.
+  const inviteSlots = isFit60 ? Math.max(0, persons - 1) : 0;
+  const usedInvites = invitees.length + emailInvitees.length;
+  const addEmailInvite = () => {
+    const e = emailInput.trim().toLowerCase();
+    if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && usedInvites < inviteSlots && !emailInvitees.includes(e)) {
+      setEmailInvitees((s) => [...s, e]);
+      setEmailInput("");
+    }
+  };
 
   async function submit() {
     if (!selected || !service) return;
@@ -118,6 +131,7 @@ export default function BookingClient({
       useCredit: creditApplies,
       discountCode: !welcomeApplies && !creditApplies ? discountCode.trim() : "",
       participantIds: invitees.map((i) => i.id),
+      emailInvites: emailInvitees,
     });
     if (res?.error) {
       setBusy(false);
@@ -175,7 +189,7 @@ export default function BookingClient({
             <span className="rounded-full bg-brand px-3 py-0.5 font-bold text-accent">FittinWelcome</span>.
           </p>
         ) : (
-          <p className="mt-3 max-w-xl text-brand/70">De zaal is 24/7 van jou tijdens je boeking — kies je moment.</p>
+          <p className="mt-3 max-w-xl text-brand/70">De hele zaal is van jou tijdens je boeking — open van {gym.open_hour}u tot {gym.close_hour}u, kies je moment.</p>
         )}
         {paymentCanceled && (
           <p className="mt-4 rounded-2xl bg-accent/10 p-4 text-sm font-semibold text-accentdark">
@@ -307,21 +321,75 @@ export default function BookingClient({
                 </div>
                 <p className="mt-3 text-xs text-brand/50">Zelfde prijs, ook met vrienden — geen extra kosten.</p>
 
+                {/* Invite friends — members by name, or non-members straight by e-mail */}
+                {isLoggedIn && persons >= 2 && (
+                  <div className="mt-4 rounded-2xl border border-borderc bg-paper p-4">
+                    <p className="text-sm font-black text-brand">Nodig vrienden uit ({usedInvites}/{inviteSlots})</p>
+                    <p className="mt-0.5 text-xs text-brand/50">Leden: hun bezoek telt mee voor hun stats. Nog geen account? Nodig ze uit via e-mail — ze krijgen een uitnodiging + link om een account te maken.</p>
+
+                    {(invitees.length > 0 || emailInvitees.length > 0) && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {invitees.map((m) => (
+                          <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">{m.name}<button type="button" onClick={() => setInvitees((s) => s.filter((x) => x.id !== m.id))} className="text-brand/60 hover:text-brand">×</button></span>
+                        ))}
+                        {emailInvitees.map((e) => (
+                          <span key={e} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white">{e}<button type="button" onClick={() => setEmailInvitees((s) => s.filter((x) => x !== e))} className="text-white/60 hover:text-white">×</button></span>
+                        ))}
+                      </div>
+                    )}
+
+                    {usedInvites < inviteSlots && buddies.filter((b) => !invitees.some((i) => i.id === b.id)).length > 0 && (
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {buddies.filter((b) => !invitees.some((i) => i.id === b.id)).map((b) => (
+                          <button key={b.id} type="button" onClick={() => setInvitees((s) => (usedInvites < inviteSlots ? [...s, { id: b.id, name: b.name }] : s))} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand/70 transition hover:bg-accent/15">+ {b.name}</button>
+                        ))}
+                      </div>
+                    )}
+
+                    {usedInvites < inviteSlots && (
+                      <div className="relative mt-3">
+                        <input
+                          value={memberQuery}
+                          onChange={async (e) => {
+                            const q = e.target.value;
+                            setMemberQuery(q);
+                            if (q.trim().length >= 2) {
+                              const r = await searchMembersAction(q);
+                              setMemberResults(r.filter((m) => !invitees.some((i) => i.id === m.id)));
+                            } else setMemberResults([]);
+                          }}
+                          placeholder="Zoek een lid op naam…"
+                          className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent"
+                        />
+                        {memberResults.length > 0 && (
+                          <div className="absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-borderc bg-white shadow-lg">
+                            {memberResults.map((m) => (
+                              <button key={m.id} type="button" onClick={() => { setInvitees((s) => (usedInvites < inviteSlots ? [...s, m] : s)); setMemberQuery(""); setMemberResults([]); }} className="block w-full px-3 py-2 text-left text-sm text-brand transition hover:bg-paper">{m.name}</button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {usedInvites < inviteSlots && (
+                      <div className="mt-2 flex gap-2">
+                        <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEmailInvite(); } }} placeholder="Geen account? E-mailadres…" className="min-w-0 flex-1 rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+                        <button type="button" onClick={addEmailInvite} className="shrink-0 rounded-xl bg-white px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">Uitnodigen</button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="mt-5 border-t border-borderc pt-4">
                   <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
                   <div className="flex flex-wrap gap-2">
-                    {[1, 2, 3, 4].map((n) => {
-                      const f = n >= 4 ? 0.9 : n === 3 ? 0.92 : n === 2 ? 0.95 : 1;
-                      const off = Math.round((1 - f) * 100);
-                      return (
-                        <button key={n} onClick={() => setDuration(n)} className={"rounded-2xl border-2 px-4 py-2.5 text-left transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                          <span className="block text-sm font-black text-brand">{n} uur</span>
-                          {off > 0 && <span className="block text-[11px] font-bold text-accentdark">−{off}%</span>}
-                        </button>
-                      );
-                    })}
+                    {[1, 2, 3, 4].map((n) => (
+                      <button key={n} onClick={() => setDuration(n)} className={"rounded-2xl border-2 px-4 py-2.5 text-center transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                        <span className="block text-sm font-black text-brand">{n} uur</span>
+                      </button>
+                    ))}
                   </div>
-                  {duration > 1 && <p className="mt-2 text-xs text-brand/50">Langere sessie = voordeligere prijs per uur. De zaal is exclusief van jou de volledige duur.</p>}
+                  {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration} uur kost {duration} sessies.</p>}
                 </div>
               </Card>
             )}
@@ -352,58 +420,6 @@ export default function BookingClient({
               </label>
             )}
 
-            {isLoggedIn && isFit60 && persons >= 2 && (
-              <div className="mt-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-lav">Nodig vrienden uit ({invitees.length}/{persons - 1})</p>
-
-                {invitees.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {invitees.map((m) => (
-                      <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">
-                        {m.name}
-                        <button type="button" onClick={() => setInvitees((s) => s.filter((x) => x.id !== m.id))} className="text-brand/60 hover:text-brand">×</button>
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {invitees.length < persons - 1 && buddies.filter((b) => !invitees.some((i) => i.id === b.id)).length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {buddies.filter((b) => !invitees.some((i) => i.id === b.id)).map((b) => (
-                      <button key={b.id} type="button" onClick={() => setInvitees((s) => (s.length < persons - 1 ? [...s, { id: b.id, name: b.name }] : s))} className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold text-lav transition hover:bg-white/20">+ {b.name}</button>
-                    ))}
-                  </div>
-                )}
-
-                {invitees.length < persons - 1 && (
-                  <div className="relative mt-2">
-                    <input
-                      value={memberQuery}
-                      onChange={async (e) => {
-                        const q = e.target.value;
-                        setMemberQuery(q);
-                        if (q.trim().length >= 2) {
-                          const r = await searchMembersAction(q);
-                          setMemberResults(r.filter((m) => !invitees.some((i) => i.id === m.id)));
-                        } else setMemberResults([]);
-                      }}
-                      placeholder="Zoek een lid op naam…"
-                      className="w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm text-white placeholder:text-lav/60 outline-none focus:border-accent"
-                    />
-                    {memberResults.length > 0 && (
-                      <div className="absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-white/15 bg-brand shadow-lg">
-                        {memberResults.map((m) => (
-                          <button key={m.id} type="button" onClick={() => { setInvitees((s) => (s.length < persons - 1 ? [...s, m] : s)); setMemberQuery(""); setMemberResults([]); }} className="block w-full px-3 py-2 text-left text-sm text-lav transition hover:bg-white/10">
-                            {m.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-                <p className="mt-1 text-[11px] text-lav/70">Ze krijgen een uitnodiging per mail; hun bezoek telt mee voor hun stats.</p>
-              </div>
-            )}
 
             {isLoggedIn && !welcomeApplies && !creditApplies && (
               <div className="mt-4">

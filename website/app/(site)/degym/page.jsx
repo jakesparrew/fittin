@@ -59,7 +59,7 @@ const localBusinessLd = {
   priceRange: "€€",
   address: { "@type": "PostalAddress", streetAddress: "Aannemersstraat 186", postalCode: "9040", addressLocality: "Gent", addressCountry: "BE" },
   geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },
-  openingHours: "Mo-Su 00:00-24:00",
+  openingHours: "Mo-Su 06:00-23:00",
   hasMap: "https://www.google.com/maps?q=Aannemersstraat+186,+9040+Gent",
 };
 

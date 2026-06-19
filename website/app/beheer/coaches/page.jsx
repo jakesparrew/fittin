@@ -211,17 +211,12 @@ export default async function Coaches() {
               <details className="mt-5 rounded-xl bg-paper/60 p-4">
                 <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Facturatie & beschikbaarheid</summary>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <form action={setCoachBilling} className="flex flex-wrap items-end gap-2 rounded-xl bg-white p-4">
+                  <form action={setCoachBilling} className="rounded-xl bg-white p-4">
                     <input type="hidden" name="coachId" value={c.id} />
-                    <Lbl t="Facturatie">
-                      <select name="mode" defaultValue={c.coach_billing_mode} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-                        <option value="free">Gratis</option>
-                        <option value="credit">Sessietegoed</option>
-                        <option value="invoice">Maandfactuur</option>
-                      </select>
-                    </Lbl>
-                    <Lbl t="Tarief/sessie (€)"><input name="price_eur" defaultValue={eur(c.coach_session_price_cents)} className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">Opslaan</button>
+                    <p className="text-sm text-brand/70">Facturatie: <strong className="text-brand">vast € 12 / sessie</strong> via sessietegoed. Coaches kopen 1–100 sessies vooraf — geen gratis, maandfactuur of abonnement.</p>
+                    {(c.coach_billing_mode !== "credit" || c.coach_session_price_cents !== 1200) && (
+                      <button className="mt-2 rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand">Standaard toepassen (€ 12 / sessietegoed)</button>
+                    )}
                   </form>
                   <form action={grantCoachCredits} className="flex flex-wrap items-end gap-2 rounded-xl bg-white p-4">
                     <input type="hidden" name="coachId" value={c.id} />

@@ -37,15 +37,17 @@ const num = (v, d = 0) => {
 export async function updateGymSettings(formData) {
   const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
+  // Bookable window. Last session starts at close_hour-1 (e.g. 6–23 → last start 22:00).
+  const openH = Math.min(23, Math.max(0, num(formData.get("open_hour"), 6)));
+  const closeH = Math.min(24, Math.max(openH + 1, num(formData.get("close_hour"), 23)));
   const patch = {
     name: formData.get("name") || undefined,
     address: formData.get("address") || undefined,
     slot_minutes: num(formData.get("slot_minutes"), 60),
     cancel_hours: Math.max(0, num(formData.get("cancel_hours"), 1)),
-    // Gym is open 24/7; daluur disabled for now.
-    open_hour: 0,
-    close_hour: 24,
-    daluur_until_hour: 0,
+    open_hour: openH,
+    close_hour: closeH,
+    daluur_until_hour: 0, // daluur disabled for now
   };
   const { error: e } = await supabase.from("gyms").update(patch).eq("id", profile.gym_id);
   if (e) return { error: e.message };
@@ -242,12 +244,10 @@ export async function adminAdjustCredits(formData) {
 export async function setCoachBilling(formData) {
   const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
+  // Coach billing is fixed: always € 12/sessie via prepaid sessietegoed (no free/invoice, no abo).
   await supabase
     .from("profiles")
-    .update({
-      coach_billing_mode: formData.get("mode") || "invoice",
-      coach_session_price_cents: Math.round(parseFloat(String(formData.get("price_eur") || "0").replace(",", ".")) * 100),
-    })
+    .update({ coach_billing_mode: "credit", coach_session_price_cents: 1200 })
     .eq("id", formData.get("coachId"))
     .eq("gym_id", profile.gym_id);
   revalidatePath("/beheer/coaches");

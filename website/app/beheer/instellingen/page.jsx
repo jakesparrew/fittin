@@ -26,13 +26,13 @@ export default async function Instellingen() {
         <Field name="slot_minutes" label="Duur van een sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
         <Field name="cancel_hours" label="Annuleren tot (uren voor de sessie)" type="number" defaultValue={gym.cancel_hours ?? 1} min={0} max={72} />
 
-        <div className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
-          <p className="font-bold text-brand">🕑 24/7 open</p>
-          <p className="mt-1">
-            De gym is dag en nacht beschikbaar — leden kunnen elk uur boeken. Openingsuren en
-            dalurentarieven staan uit. (Prijzen per sessie beheer je bij <b>Diensten &amp; prijzen</b>.)
-          </p>
+        <div className="grid grid-cols-2 gap-4">
+          <Field name="open_hour" label="Eerste boekbaar uur" type="number" defaultValue={gym.open_hour ?? 6} min={0} max={23} />
+          <Field name="close_hour" label="Sluitingsuur (laatste start = sluiting − 1)" type="number" defaultValue={gym.close_hour ?? 23} min={1} max={24} />
         </div>
+        <p className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
+          🕑 Leden kunnen boeken van <b>{gym.open_hour ?? 6}u</b> tot <b>{gym.close_hour ?? 23}u</b> — de laatste sessie start om {(gym.close_hour ?? 23) - 1}u. (Prijzen per sessie beheer je bij <b>Diensten &amp; prijzen</b>.)
+        </p>
 
         <button
           disabled={readOnly}

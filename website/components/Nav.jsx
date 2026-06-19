@@ -17,6 +17,7 @@ const links = [
 const memberLinks = [
   { href: "/boeken", label: "Online boeken" },
   { href: "/training", label: "Training" },
+  { href: "/plannen", label: "Plannen" },
   { href: "/oefeningen", label: "Oefeningen" },
   { href: "/community", label: "Community" },
 ];
@@ -27,12 +28,11 @@ export default function Nav() {
 
   useEffect(() => {
     let active = true;
-    // Logged-out marketing visitors (no auth cookie) → skip the /api/me serverless+DB round-trip
-    // entirely. Only logged-in users hit the endpoint (which also refreshes the session cookie).
-    const hasAuthCookie = document.cookie.split(";").some((c) => /sb-.*-auth-token/.test(c.trim()));
-    if (!hasAuthCookie) return;
-    // Instant logged-in hint so the nav doesn't flash "Inloggen".
-    setAccount((a) => a || { name: "Account", role: "lid", home: "/account" });
+    // Optimistic logged-in hint from a visible Supabase cookie so the nav doesn't flash "Inloggen".
+    // We ALWAYS confirm with /api/me — the auth-token cookie can be httpOnly/chunked and invisible
+    // to document.cookie, so a logged-in member must still reliably get the member nav.
+    const hasSbCookie = document.cookie.split(";").some((c) => c.trim().startsWith("sb-"));
+    if (hasSbCookie) setAccount((a) => a || { name: "Account", role: "lid", home: "/account" });
 
     fetch("/api/me", { cache: "no-store" })
       .then((r) => r.json())

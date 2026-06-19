@@ -32,7 +32,7 @@ export default async function OG() {
           Privé fitness &amp; personal training — reserveer de zaal voor jezelf.
         </div>
         <div style={{ marginTop: 40, display: "flex", gap: 16 }}>
-          {["24/7 open", "€ 15 / sessie", "geen lidgeld"].map((t) => (
+          {["elke dag 6–23u", "€ 15 / sessie", "geen lidgeld"].map((t) => (
             <div key={t} style={{ background: "rgba(255,255,255,0.1)", borderRadius: 999, padding: "12px 26px", fontSize: 28, fontWeight: 700 }}>{t}</div>
           ))}
         </div>

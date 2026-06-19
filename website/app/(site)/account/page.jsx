@@ -4,7 +4,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { cancelBookingAction, payCoachRequest, respondJoinRequest, logBodyMetrics } from "./actions";
+import { cancelBookingAction, payCoachRequest, respondJoinRequest, logBodyMetrics, setLeaderboardOptIn } from "./actions";
 import WeightChart from "@/components/WeightChart";
 import ActionForm from "@/components/ui/ActionForm";
 import { resumeCheckoutAction } from "../boeken/actions";
@@ -17,6 +17,7 @@ import BuddyJoin from "@/components/booking/BuddyJoin";
 import ShareRank from "@/components/ShareRank";
 import AccountSettings from "@/components/account/AccountSettings";
 import AccountLinking from "@/components/account/AccountLinking";
+import BodyMetricsForm from "@/components/account/BodyMetricsForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -77,7 +78,7 @@ export default async function AccountPage({ searchParams }) {
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
     admin.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("client_id", user.id).maybeSingle(),
     supabase.from("coach_payment_requests").select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)").eq("client_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
-    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthIso).lt("starts_at", nowIso),
+    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthIso).lt("starts_at", nowIso),
     admin.from("buddies").select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)").eq("status", "accepted").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
     supabase.from("booking_join_requests").select("booking_id, to_user").eq("from_user", user.id),
     admin.from("booking_join_requests").select("id, booking:bookings(starts_at, ends_at, services(name)), from:profiles!booking_join_requests_from_user_fkey(full_name)").eq("to_user", user.id).eq("status", "pending"),
@@ -94,7 +95,9 @@ export default async function AccountPage({ searchParams }) {
   const myCoach = coachLink?.coach || null;
 
   const lbCounts = {};
-  for (const b of boardRows || []) { const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
+  // Coaches/beheerders never appear; members who opted out are excluded. PT sessions count
+  // because the booking's user_id is the member.
+  for (const b of boardRows || []) { if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
   const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
   const myRank = leaderboard.findIndex((r) => r.id === user.id);
 
@@ -107,7 +110,10 @@ export default async function AccountPage({ searchParams }) {
       now <= new Date(b.ends_at).getTime()
   );
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now);
-  const nextSession = upcoming[0]; // upcoming is sorted ascending by starts_at
+  // A session only counts as "booked" once it's paid — credit/abo/free/invite count as paid; an
+  // unpaid 'los' checkout-in-progress lives in the pending-payment banner, not in the list.
+  const upcomingPaid = upcoming.filter((b) => b.paid || b.price_cents === 0 || b.payment_source !== "los");
+  const nextSession = upcomingPaid[0]; // sorted ascending by starts_at
   const bookedCount = all.filter((b) => b.status === "bevestigd").length; // lifetime confirmed (scoreboard)
   // Pending payment: confirmed-but-unpaid 'los' bookings (20-min window from creation).
   const pendingPay = upcoming
@@ -164,16 +170,59 @@ export default async function AccountPage({ searchParams }) {
           </form>
         </div>
 
+        {/* Primary CTA — drive bookings */}
+        <section className="mt-8 rounded-3xl bg-brand p-7 text-white md:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="max-w-md">
+              <p className="text-xs font-bold uppercase tracking-widest text-accent">Klaar om te trainen</p>
+              <h2 className="mt-1 text-2xl font-black md:text-3xl">Boek jouw volgende sessie</h2>
+              <p className="mt-2 text-sm leading-relaxed text-lav">
+                {credits > 0 ? (
+                  <>Je hebt <span className="font-black text-white">{credits} sessie{credits === 1 ? "" : "s"}</span> op je saldo — kies meteen een moment.</>
+                ) : profile?.welcome_status === "eligible" && !profile?.welcome_code_used ? (
+                  <>Je <span className="font-black text-white">gratis sessie</span> staat klaar. Reserveer de hele zaal voor jezelf.</>
+                ) : (
+                  <>Reserveer de hele zaal voor jou en je vrienden — <span className="font-black text-white">€ 15</span> per sessie van 1 uur.</>
+                )}
+              </p>
+            </div>
+            <Link href="/boeken" className="shrink-0 rounded-full bg-accent px-8 py-4 text-base font-black text-brand shadow-lg shadow-accent/25 transition hover:-translate-y-0.5 hover:opacity-95">
+              Boek jouw volgende sessie →
+            </Link>
+          </div>
+
+          {/* Buy more sessions — bundles + membership */}
+          <div className="mt-6 grid gap-3 border-t border-white/10 pt-5 sm:grid-cols-3">
+            <Link href="/lidmaatschap" className="rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
+              <p className="text-sm font-black text-white">10-beurtenkaart</p>
+              <p className="mt-0.5 text-xs text-lav">€ 150 · 11 sessies (10 + 1 gratis)</p>
+            </Link>
+            {membership ? (
+              <div className="rounded-2xl bg-accent/15 p-4">
+                <p className="text-sm font-black text-accent">Je bent member ✓</p>
+                <p className="mt-0.5 text-xs text-lav">Voordeeltarief + voorrang bij piekuren</p>
+              </div>
+            ) : (
+              <Link href="/lidmaatschap" className="rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
+                <p className="text-sm font-black text-white">Word member</p>
+                <p className="mt-0.5 text-xs text-lav">€ 12/maand · 1 sessie incl. + alles aan € 12</p>
+              </Link>
+            )}
+            <Link href="/boeken" className="rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
+              <p className="text-sm font-black text-white">Losse sessie</p>
+              <p className="mt-0.5 text-xs text-lav">€ 15 · 1 uur, de hele zaal voor jou</p>
+            </Link>
+          </div>
+        </section>
+
         {/* Stat row */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Aankomende sessies" value={upcoming.length} />
+          <Stat label="Aankomende sessies" value={upcomingPaid.length} />
           <Stat label="Sessies (saldo)" value={credits} />
           <Stat label="Totaal geboekt" value={bookedCount} />
-          <Stat
-            label="Welkomstsessie"
-            value={profile?.welcome_code_used ? "Gebruikt" : "Beschikbaar"}
-            accent={!profile?.welcome_code_used}
-          />
+          {!profile?.welcome_code_used && profile?.welcome_status !== "used" && (
+            <Stat label="Welkomstsessie" value="Beschikbaar" accent />
+          )}
         </div>
 
         {nextSession && <NextSessionTimer startsAt={nextSession.starts_at} name={nextSession.services?.name} />}
@@ -239,6 +288,12 @@ export default async function AccountPage({ searchParams }) {
             </div>
             {myRank >= 0 && <ShareRank />}
           </div>
+          <ActionForm action={setLeaderboardOptIn} success={profile?.leaderboard_opt_in === false ? "Je staat nu op de leaderboard ✓" : "Je staat niet meer op de leaderboard."} className="mt-2">
+            <input type="hidden" name="opt_in" value={profile?.leaderboard_opt_in === false ? "true" : "false"} />
+            <button className="text-xs font-bold text-brand/50 transition hover:text-brand">
+              {profile?.leaderboard_opt_in === false ? "→ Doe weer mee aan de leaderboard" : "Mij verbergen van de leaderboard"}
+            </button>
+          </ActionForm>
           <div className="mt-4 space-y-2">
             {leaderboard.slice(0, 5).map((r, i) => (
               <div key={r.id} className={"flex items-center justify-between rounded-xl px-3 py-2 text-sm " + (r.id === user.id ? "bg-brand text-white" : "bg-paper")}>
@@ -279,10 +334,9 @@ export default async function AccountPage({ searchParams }) {
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold">
           <Link href="/boeken" className="rounded-full bg-accent px-5 py-2.5 text-brand transition hover:opacity-90">+ Boek een sessie</Link>
-          {!membership && <Link href="/lidmaatschap" className="rounded-full bg-brand px-5 py-2.5 text-white transition hover:opacity-90">Word member · € 10/maand</Link>}
-          <Link href="/lidmaatschap" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Beurtenkaart kopen</Link>
           <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Mijn training</Link>
-          <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Leaderboard</Link>
+          <Link href="/oefeningen" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Oefeningen</Link>
+          <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Community</Link>
         </div>
 
         {sp.betaald === "1" && (
@@ -302,7 +356,7 @@ export default async function AccountPage({ searchParams }) {
               <p className="font-black">✓ Member-abonnement actief</p>
               <p className="mt-1 text-sm text-lav">
                 {membership.cancel_at_period_end ? "Loopt af op " : "Verlengt op "}
-                {membership.current_period_end ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(membership.current_period_end)) : "—"} · je boekt aan € 10
+                {membership.current_period_end ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(membership.current_period_end)) : "—"} · je boekt aan € 12
               </p>
             </div>
             <form action={openBillingPortal}>
@@ -329,12 +383,7 @@ export default async function AccountPage({ searchParams }) {
             {bmi && <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">BMI {bmi}</span>}
           </div>
 
-          <ActionForm action={logBodyMetrics} success="Opgeslagen ✓" className="mt-4 flex flex-wrap items-end gap-3">
-            <Lbl t="Lengte (cm)"><input name="height_cm" type="number" defaultValue={bodyProfile?.height_cm || ""} placeholder="178" className="w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-            <Lbl t="Gewicht vandaag (kg)"><input name="weight_kg" type="number" step="0.1" placeholder="78.5" className="w-28 rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-            <Lbl t="Doelgewicht (kg)"><input name="goal_weight_kg" type="number" step="0.1" defaultValue={bodyProfile?.goal_weight_kg || ""} placeholder="75" className="w-28 rounded-lg border-2 border-borderc px-3 py-2 text-sm" /></Lbl>
-            <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">Opslaan</button>
-          </ActionForm>
+          <BodyMetricsForm heightCm={bodyProfile?.height_cm} goalKg={bodyProfile?.goal_weight_kg} />
 
           <div className="mt-6">
             <WeightChart points={(weights || []).map((w) => ({ logged_on: w.logged_on, weight_kg: w.weight_kg }))} goal={bodyProfile?.goal_weight_kg ? Number(bodyProfile.goal_weight_kg) : null} />
@@ -377,7 +426,7 @@ export default async function AccountPage({ searchParams }) {
             </Link>
           </div>
 
-          {upcoming.length === 0 ? (
+          {upcomingPaid.length === 0 ? (
             <div className="mt-5 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
               <p className="font-semibold text-brand/70">Je hebt nog geen sessies geboekt.</p>
               <Link
@@ -389,7 +438,7 @@ export default async function AccountPage({ searchParams }) {
             </div>
           ) : (
             <div className="mt-5 space-y-3">
-              {upcoming.map((b) => (
+              {upcomingPaid.map((b) => (
                 <div
                   key={b.id}
                   className="rounded-2xl border border-borderc bg-white p-5"

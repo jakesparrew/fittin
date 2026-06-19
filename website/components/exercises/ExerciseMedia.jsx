@@ -1,9 +1,17 @@
 // Renders the best available exercise demo: looping MP4/WebM > GIF/image > still image > a clean
 // branded placeholder. Plain component (no client JS needed — autoplay loop is native HTML).
+"use client";
+import FrameAnimator from "./FrameAnimator";
+
 export default function ExerciseMedia({ exercise, className = "", rounded = "rounded-2xl", thumb = false }) {
-  const { animation_url, image_url, name } = exercise || {};
+  const { animation_url, image_url, frames, name } = exercise || {};
   const base = `relative overflow-hidden bg-paper ${rounded} ${className}`;
   const isVideo = animation_url && /\.(mp4|webm|mov)(\?|#|$)/i.test(animation_url);
+
+  // Multi-frame demo (e.g. start/end photos) → cross-fade loop. Grid thumbnails stay static (perf).
+  if (frames && frames.length > 1 && !thumb) {
+    return <div className={base}><FrameAnimator frames={frames} alt={name} className="h-full w-full" /></div>;
+  }
 
   // Grid thumbnails never autoplay a <video> (perf): fall back to the poster image or placeholder.
   if (isVideo && !thumb) {
@@ -22,12 +30,12 @@ export default function ExerciseMedia({ exercise, className = "", rounded = "rou
       </div>
     );
   }
-  const still = (isVideo ? null : animation_url) || image_url; // GIF or static image (never a video URL)
+  const still = (isVideo ? null : animation_url) || image_url || (frames && frames[0]); // GIF/poster/first frame
   if (still) {
     return (
       <div className={base}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={still} alt={name || "Oefening"} loading="lazy" className="h-full w-full object-cover" />
+        <img src={still} alt={name || "Oefening"} loading="lazy" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} className="h-full w-full object-cover" />
       </div>
     );
   }

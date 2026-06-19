@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
-import { sendBookingConfirmation, sendSessionInvite } from "@/lib/email";
+import { sendBookingConfirmation, sendSessionInvite, sendEmailInvite } from "@/lib/email";
 import { validateDiscount } from "@/lib/discounts";
 
 // Search gym members to invite to a session (name + id only — no contact details exposed).
@@ -42,7 +42,7 @@ function checkoutParams(booking, email, chargeCents, codeId) {
 }
 
 // Creates the booking (slot held immediately). Free → confirm + email. Paid → Stripe Checkout URL.
-export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit, discountCode, buddyIds, participantIds, hours }) {
+export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit, discountCode, buddyIds, participantIds, emailInvites, hours }) {
   const supabase = await createClient();
   const {
     data: { user },
@@ -77,6 +77,35 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
       const fromName = user.user_metadata?.full_name || "Een Fittin'-lid";
       for (const p of people || []) {
         if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at });
+      }
+    } catch {}
+  }
+
+  // Invite NON-members by e-mail. Anti-abuse: capped at the booking's free spots, e-mail-validated,
+  // de-duped, members added directly (not e-mailed), and a 20/day per-inviter cap (no mass mailing).
+  const emails = Array.isArray(emailInvites) ? emailInvites : [];
+  const freeSpots = Math.max(0, (parseInt(persons, 10) || 1) - 1 - invitees.length);
+  if (emails.length && booking && freeSpots > 0) {
+    try {
+      const admin = createAdminClient();
+      const fromName = user.user_metadata?.full_name || "Een Fittin'-lid";
+      const clean = [...new Set(emails.map((e) => String(e || "").trim().toLowerCase()))]
+        .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && e !== (user.email || "").toLowerCase())
+        .slice(0, freeSpots);
+      const since = new Date(Date.now() - 86400000).toISOString();
+      const { count: sentToday } = await admin.from("email_invites").select("id", { count: "exact", head: true }).eq("inviter_id", user.id).gte("created_at", since);
+      let budget = Math.max(0, 20 - (sentToday || 0));
+      for (const email of clean) {
+        if (budget <= 0) break;
+        const { data: member } = await admin.from("profiles").select("id").eq("email", email).eq("gym_id", booking.gym_id).maybeSingle();
+        if (member) {
+          await supabase.rpc("add_booking_participants", { p_booking: booking.id, p_users: [member.id] });
+          await sendSessionInvite({ to: email, fromName, serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at });
+        } else {
+          await sendEmailInvite({ to: email, fromName, serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at, signupUrl: `${siteUrl()}/login?mode=signup&next=/boeken` });
+          await admin.from("email_invites").insert({ gym_id: booking.gym_id, inviter_id: user.id, email, booking_id: booking.id });
+          budget--;
+        }
       }
     } catch {}
   }

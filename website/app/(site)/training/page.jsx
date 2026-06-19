@@ -13,7 +13,7 @@ const asArray = (sj) =>
   Array.isArray(sj) ? sj : sj && typeof sj === "object" && (sj.reps != null || sj.weight_kg != null) ? [sj] : [];
 const topW = (sj) => asArray(sj).reduce((m, s) => Math.max(m, s?.weight_kg || 0), 0);
 
-const EX_FIELDS = "id, name, slug, muscle, category, primary_muscles, secondary_muscles, equipment, difficulty, instructions, tips, image_url, animation_url, video_url";
+const EX_FIELDS = "id, name, slug, muscle, category, primary_muscles, secondary_muscles, equipment, difficulty, instructions, tips, image_url, animation_url, video_url, frames";
 
 export default async function Training() {
   if (!isSupabaseConfigured) redirect("/");
@@ -26,6 +26,7 @@ export default async function Training() {
       .from("programs")
       .select(`id, name, coach:profiles!programs_coach_id_fkey(full_name), program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, exercises(${EX_FIELDS})))`)
       .eq("member_id", user.id)
+      .order("is_active", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
@@ -63,7 +64,8 @@ export default async function Training() {
       .map((pe) => {
         const peLogs = byPe[pe.id] || [];
         const doneToday = peLogs.some((l) => l.logged_on === today);
-        const lastLog = peLogs.find((l) => l.logged_on !== today) || (doneToday ? null : peLogs[0]);
+        // Prefer the most recent prior session that actually logged sets (not a bare done-toggle).
+        const lastLog = peLogs.find((l) => l.logged_on !== today && asArray(l.sets_json).length) || peLogs.find((l) => l.logged_on !== today);
         const pr = peLogs.reduce((m, l) => Math.max(m, topW(l.sets_json)), 0);
         return {
           peId: pe.id,
@@ -88,7 +90,10 @@ export default async function Training() {
       <div className="mx-auto max-w-4xl px-5 py-16">
         <Link href="/account" className="inline-flex items-center gap-1.5 text-sm font-bold text-brand/60 transition hover:text-brand">← Terug naar account</Link>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.25em] text-lav">Mijn training</p>
-        <h1 className="mt-2 text-3xl font-black md:text-4xl">{program ? program.name : "Nog geen programma"}</h1>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-black md:text-4xl">{program ? program.name : "Nog geen programma"}</h1>
+          <Link href="/plannen" className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-accent">Mijn plannen →</Link>
+        </div>
         {coachName && <p className="mt-2 text-sm text-brand/60">Samengesteld door {coachName}</p>}
 
         {myCoachId && (

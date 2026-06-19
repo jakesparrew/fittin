@@ -41,7 +41,7 @@ export default async function Community() {
     supabase.from("referrals").select("id").eq("referred_id", user.id).maybeSingle(),
     supabase.from("bookings").select("starts_at").eq("user_id", user.id).eq("status", "bevestigd"),
     supabase.from("challenges").select("*").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }),
-    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", now.toISOString()),
+    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", now.toISOString()),
     admin.from("events").select("*, event_signups(id, user_id, paid)").eq("gym_id", profile.gym_id).eq("status", "approved").gte("starts_at", today.toISOString()).order("starts_at"),
     admin.from("bookings").select("user_id, starts_at, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 120 * 86400000).toISOString()),
     admin.from("buddies").select("id, status, requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(full_name), addressee:profiles!buddies_addressee_id_fkey(full_name)").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
@@ -62,6 +62,7 @@ export default async function Community() {
   // Leaderboard
   const counts = {};
   for (const b of monthAgg.data || []) {
+    if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; // no coaches, respect opt-out
     const k = b.user_id;
     if (!counts[k]) counts[k] = { name: b.member?.full_name || "Lid", n: 0 };
     counts[k].n++;

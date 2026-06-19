@@ -9,6 +9,18 @@ import { notify, notifyMany } from "@/lib/notify";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
+// Toggle whether the member appears on the monthly leaderboard (profile setting).
+export async function setLeaderboardOptIn(formData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const optIn = formData.get("opt_in") === "true";
+  const { error } = await supabase.from("profiles").update({ leaderboard_opt_in: optIn }).eq("id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/account");
+  return { ok: true, message: optIn ? "Je staat nu op de leaderboard ✓" : "Je staat niet meer op de leaderboard." };
+}
+
 // Member pays a coach's payment request via Stripe.
 export async function payCoachRequest(formData) {
   const id = formData.get("requestId");

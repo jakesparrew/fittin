@@ -6,7 +6,7 @@ const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 export const metadata = {
   title: "Fittin' — privégym & personal training in Gent",
-  description: "Reserveer de hele zaal voor jezelf, je vrienden of met een coach. 24/7 open in Gent, geen lidgeld — je betaalt enkel voor je tijd.",
+  description: "Reserveer de hele zaal voor jezelf, je vrienden of met een coach. Elke dag van 6u tot 23u in Gent, geen lidgeld — je betaalt enkel voor je tijd.",
   alternates: { canonical: SITE },
 };
 
@@ -14,7 +14,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "HealthClub",
   name: "Fittin'",
-  description: "Privé fitness & personal training in Gent. Reserveer de zaal voor jezelf of train met een coach. 24/7 open.",
+  description: "Privé fitness & personal training in Gent. Reserveer de zaal voor jezelf of train met een coach. Elke dag van 6u tot 23u.",
   url: "https://fittin.be",
   email: "info@fittin.be",
   image: "https://fittin.be/opengraph-image",
@@ -22,12 +22,12 @@ const jsonLd = {
   address: { "@type": "PostalAddress", streetAddress: "Aannemersstraat 186", addressLocality: "Gent", postalCode: "9040", addressCountry: "BE" },
   geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },
   sameAs: ["https://www.instagram.com/fittin_gent/", "https://www.facebook.com/fittingent"],
-  openingHours: "Mo-Su 00:00-24:00",
+  openingHours: "Mo-Su 06:00-23:00",
 };
 
 const usps = [
   ["Volledige privacy", "Alleen, met vrienden of met coach — de zaal is helemaal van jou.", "lock"],
-  ["24/7 open", "Train wanneer het jou uitkomt. De app opent de deur tijdens je sessie.", "clock"],
+  ["Elke dag 6–23u", "Train wanneer het jou uitkomt — de app opent de deur tijdens je sessie.", "clock"],
   ["Geen wachttijden", "Alle toestellen zijn altijd vrij. Jij bent de enige groep.", "bolt"],
   ["Geen lidgeld", "Je betaalt enkel voor de tijd dat je traint. Zo simpel is het.", "euro"],
 ];
@@ -82,7 +82,7 @@ export default function Home() {
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl">
               Een modern uitgeruste zaal, exclusief voor jou. Reserveer per uur, open de deur met de
-              app en train 24/7 — met je personal coach of helemaal alleen.
+              app en train wanneer het jou past — met je personal coach of helemaal alleen.
             </p>
           </Reveal>
           <Reveal delay={240}>
@@ -100,7 +100,7 @@ export default function Home() {
           </Reveal>
           <Reveal delay={320}>
             <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-3 text-sm font-bold text-white/60">
-              {["€ 15 per sessie", "1 uur per sessie", "1 tot 4 personen", "24/7 open", "geen lidgeld"].map((t, i) => (
+              {["€ 15 per sessie", "1 uur per sessie", "1 tot 4 personen", "elke dag 6–23u", "geen lidgeld"].map((t, i) => (
                 <span key={t} className="flex items-center gap-3">
                   {i > 0 && <span className="h-1 w-1 rounded-full bg-accent" />}
                   <span className="rounded-full bg-white/5 px-3 py-1.5 ring-1 ring-white/10">{t}</span>
@@ -124,7 +124,7 @@ export default function Home() {
           <div className="marquee-track flex shrink-0 items-center gap-8 whitespace-nowrap pr-8 text-lg font-black uppercase tracking-wide text-brand/30 md:text-xl">
             {[...Array(2)].map((_, k) => (
               <span key={k} className="flex items-center gap-8">
-                {["Privé", "24/7", "Geen lidgeld", "Personal coaching", "Open de deur met de app", "Train met vrienden", "In Gent"].map((w) => (
+                {["Privé", "7 dagen op 7", "Geen lidgeld", "Personal coaching", "Open de deur met de app", "Train met vrienden", "In Gent"].map((w) => (
                   <span key={w} className="flex items-center gap-8">
                     {w} <span className="inline-block h-1.5 w-1.5 rotate-45 bg-accent align-middle" />
                   </span>
@@ -275,7 +275,7 @@ export default function Home() {
           <div className="mt-12 grid gap-5 md:grid-cols-3">
             {[
               { name: "Losse sessie", price: "€ 15", per: "/ sessie", items: ["1 uur in de zaal", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
-              { name: "10-beurtenkaart", price: "€ 100", per: "/ 10 sessies", items: ["€ 10 per sessie", "6 maanden geldig", "Deel met vrienden"], cta: "Koop sessies", href: "/lidmaatschap", hot: true },
+              { name: "10-beurtenkaart", price: "€ 150", per: "/ 11 sessies", items: ["10 + 1 gratis (€ 13,64/sessie)", "6 maanden geldig", "Of word member voor € 12"], cta: "Bekijk opties", href: "/lidmaatschap", hot: true },
               { name: "Personal training", price: "€ 60", per: "/ sessie 1-op-1", items: ["1-op-2 € 35 pp", "1-op-3 € 30 pp", "Gratis intake"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
             ].map((p, i) => (
               <Reveal key={p.name} delay={i * 90} className="h-full">
