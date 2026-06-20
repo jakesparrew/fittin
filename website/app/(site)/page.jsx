@@ -280,18 +280,28 @@ export default function Home() {
       {/* ============ ALLES IN ÉÉN APP ============ */}
       <section className="bg-white">
         <div className="mx-auto max-w-6xl px-5 py-24">
-          <Reveal>
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Alles in één app</p>
-            <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight md:text-5xl">
-              Boeken, trainen én opvolgen — <span className="text-accentdark">alles op fittin.be</span>
-            </h2>
-            <p className="mt-4 max-w-2xl leading-relaxed text-brand/60">
-              Fittin&rsquo; is meer dan een privézaal die je per uur reserveert. In je account zit een complete
-              trainingsapp: kant-en-klare workouts met demo&rsquo;s en rusttimer, ~800 oefeningen, je eigen plannen
-              of een AI-generator, training loggen met PR&rsquo;s, een community met leaderboard én je coaching.
-            </p>
-          </Reveal>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            <Reveal>
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Alles in één app</p>
+              <h2 className="mt-3 text-4xl font-black leading-tight md:text-5xl">
+                Boeken, trainen én opvolgen — <span className="text-accentdark">alles op fittin.be</span>
+              </h2>
+              <p className="mt-4 leading-relaxed text-brand/60">
+                Fittin&rsquo; is meer dan een privézaal die je per uur reserveert. In je account zit een complete
+                trainingsapp: kant-en-klare workouts met demo&rsquo;s en rusttimer, ~800 oefeningen, je eigen plannen
+                of een AI-generator, training loggen met PR&rsquo;s, een community met leaderboard én je coaching.
+              </p>
+              <div className="mt-8 flex flex-wrap items-center gap-4">
+                <Link href="/workouts" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">Ontdek de workouts →</Link>
+                <Link href="/login?mode=signup" className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-accent">Maak gratis account</Link>
+              </div>
+              <p className="mt-4 text-sm font-semibold text-brand/50">Eén login, alles erin — van je gratis eerste sessie tot je honderdste PR.</p>
+            </Reveal>
+            <Reveal delay={120}>
+              <PhoneMockup />
+            </Reveal>
+          </div>
+          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {appFeatures.map((f, i) => (
               <Reveal key={f.title} delay={i * 70}>
                 <div className="group h-full rounded-3xl border border-borderc bg-paper p-6 transition hover:-translate-y-1.5 hover:bg-white hover:shadow-xl hover:shadow-brand/5">
@@ -304,13 +314,6 @@ export default function Home() {
               </Reveal>
             ))}
           </div>
-          <Reveal delay={120}>
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <Link href="/workouts" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">Ontdek de workouts →</Link>
-              <Link href="/login?mode=signup" className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-accent">Maak gratis account</Link>
-              <span className="text-sm font-semibold text-brand/50">Eén login, alles erin — van je gratis eerste sessie tot je honderdste PR.</span>
-            </div>
-          </Reveal>
         </div>
       </section>
 
@@ -394,4 +397,83 @@ function FeatureIcon({ name }) {
     key: "M21 2l-9.5 9.5M15.5 7.5l3 3M11.5 11.5a4.5 4.5 0 1 1-6.36 6.36 4.5 4.5 0 0 1 6.36-6.36z",
   };
   return <svg {...c}><path d={P[name] || P.list} /></svg>;
+}
+
+function PhoneMockup() {
+  const tab = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
+  const rows = [
+    { name: "Bench press", sets: "4 × 8", done: true },
+    { name: "Barbell row", sets: "4 × 10", done: true },
+    { name: "Schouderpers", sets: "3 × 12", done: false },
+  ];
+  return (
+    <div className="relative mx-auto w-[270px] select-none">
+      {/* glow */}
+      <div className="absolute -inset-8 -z-10 rounded-[3.5rem] bg-accent/20 blur-3xl" />
+      <div className="absolute -right-6 top-10 -z-10 h-40 w-40 rounded-full bg-accent/30 blur-2xl" />
+      {/* device */}
+      <div className="relative rounded-[2.8rem] border-[11px] border-brand bg-brand shadow-2xl shadow-brand/30">
+        {/* notch */}
+        <div className="absolute left-1/2 top-0 z-20 h-6 w-28 -translate-x-1/2 rounded-b-2xl bg-brand" />
+        {/* screen */}
+        <div className="relative overflow-hidden rounded-[2.1rem] bg-paper">
+          {/* header */}
+          <div className="bg-brand px-5 pb-6 pt-4 text-white">
+            <div className="flex items-center justify-between text-[10px] font-bold text-white/50">
+              <span>9:41</span>
+              <span className="tracking-wide">fittin&rsquo;</span>
+            </div>
+            <p className="mt-4 text-xs text-white/55">Welkom terug, Yoshe</p>
+            <p className="text-xl font-black leading-tight">Klaar om te trainen?</p>
+          </div>
+          {/* body */}
+          <div className="-mt-3 space-y-3 rounded-t-3xl bg-paper px-4 pb-3 pt-4">
+            {/* featured workout */}
+            <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-brand/5">
+              <div className="relative flex h-20 items-start justify-between bg-gradient-to-br from-accentdark to-accent p-3">
+                <span className="rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-black text-brand">VANDAAG</span>
+                <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[9px] font-black text-white">45 min</span>
+              </div>
+              <div className="p-3">
+                <p className="text-sm font-black text-brand">Full Body — Kracht</p>
+                <p className="text-[10px] font-semibold text-brand/45">8 oefeningen · push / pull / legs</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <div className="h-1.5 flex-1 rounded-full bg-borderc">
+                    <div className="h-1.5 w-2/3 rounded-full bg-accent" />
+                  </div>
+                  <span className="text-[9px] font-black text-accentdark">66%</span>
+                </div>
+              </div>
+            </div>
+            {/* exercise rows */}
+            <div className="space-y-2">
+              {rows.map((r) => (
+                <div key={r.name} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm shadow-brand/5">
+                  <span className={"flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black " + (r.done ? "bg-accent text-brand" : "border-2 border-borderc text-brand/30")}>{r.done ? "✓" : ""}</span>
+                  <div className="flex-1">
+                    <p className="text-[11px] font-bold text-brand">{r.name}</p>
+                    <p className="text-[9px] font-semibold text-brand/40">{r.sets}</p>
+                  </div>
+                  <span className="text-brand/20">›</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* bottom tab bar */}
+          <div className="flex items-center justify-around border-t border-borderc bg-white px-2 py-2.5">
+            {[
+              { d: "M3 11l9-8 9 8M5 10v10h14V10", active: false },
+              { d: "M4 7v10M8 5v14M16 5v14M20 7v10M8 12h8", active: true },
+              { d: "M3 3v18h18M19 9l-5 5-3-3-4 4", active: false },
+              { d: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M3 21a6 6 0 0 1 12 0", active: false },
+            ].map((t, i) => (
+              <span key={i} className={t.active ? "text-accentdark" : "text-brand/25"}>
+                <svg {...tab}><path d={t.d} /></svg>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
