@@ -18,6 +18,21 @@ export async function searchMembersAction(q) {
   return (data || []).map((p) => ({ id: p.id, name: p.full_name || "Lid" }));
 }
 
+// Live discount preview for the checkout panel. The server re-validates at booking time too, so this
+// is display-only confidence — the authoritative discount is recomputed in createBookingAction.
+export async function validateDiscountAction(code, baseCents) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Log eerst in." };
+  const { data: prof } = await supabase.from("profiles").select("gym_id").eq("id", user.id).single();
+  if (!prof?.gym_id) return { error: "Geen profiel gevonden." };
+  const base = Math.max(0, parseInt(baseCents, 10) || 0);
+  const d = await validateDiscount(prof.gym_id, user.id, String(code || ""), base);
+  if (d.error) return { error: d.error };
+  if (d.none) return { error: "Geef een kortingscode in." };
+  return { ok: true, cents: d.cents, off: base - d.cents, label: d.label };
+}
+
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
 function checkoutParams(booking, email, chargeCents, codeId) {

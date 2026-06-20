@@ -13,13 +13,17 @@ export async function createDiscount(formData) {
   if (error) return { error };
   const code = String(formData.get("code") || "").trim().toUpperCase().replace(/\s+/g, "");
   const percent = num(formData.get("percent"), 0);
+  const amountEur = parseFloat(formData.get("amount_eur"));
+  const amountCents = Number.isFinite(amountEur) && amountEur > 0 ? Math.round(amountEur * 100) : null;
   if (!code) return { error: "Geef een code." };
-  if (percent < 1 || percent > 100) return { error: "Korting moet tussen 1 en 100% zijn." };
+  // Amount wins when set; otherwise a 1–100% percentage is required.
+  if (!amountCents && (percent < 1 || percent > 100)) return { error: "Geef een percentage (1–100%) of een vast bedrag (€)." };
   const expires = formData.get("expires_at");
   const { error: e } = await supabase.from("discount_codes").insert({
     gym_id: profile.gym_id,
     code,
-    percent,
+    percent: amountCents ? 0 : percent,
+    amount_cents: amountCents,
     max_uses: num(formData.get("max_uses")) || null,
     per_user_once: formData.get("per_user_once") === "on",
     expires_at: expires ? new Date(expires).toISOString() : null,

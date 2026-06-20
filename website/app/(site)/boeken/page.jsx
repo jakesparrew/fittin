@@ -94,7 +94,7 @@ export default async function BoekenPage({ searchParams }) {
     <>
       <BookingClient
         gym={gym}
-        services={(services || []).filter((s) => s.type !== "event")}
+        services={(services || []).filter((s) => s.type !== "event" && s.type !== "pt")}
         takenSlots={(taken || []).map((t) => t.starts_at)}
         coaches={coaches || []}
         availability={availability || []}

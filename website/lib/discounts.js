@@ -15,8 +15,13 @@ export async function validateDiscount(gymId, userId, rawCode, baseCents) {
     const { count } = await admin.from("discount_redemptions").select("id", { count: "exact", head: true }).eq("code_id", dc.id).eq("user_id", userId);
     if (count) return { error: "Je hebt deze code al gebruikt." };
   }
-  const cents = Math.max(0, Math.round(baseCents * (1 - dc.percent / 100)));
-  return { ok: true, codeId: dc.id, percent: dc.percent, cents, label: `${dc.percent}% korting` };
+  const cents = dc.amount_cents != null
+    ? Math.max(0, baseCents - dc.amount_cents)
+    : Math.max(0, Math.round(baseCents * (1 - (dc.percent || 0) / 100)));
+  const label = dc.amount_cents != null
+    ? `€ ${(dc.amount_cents / 100).toFixed(2).replace(".", ",")} korting`
+    : `${dc.percent}% korting`;
+  return { ok: true, codeId: dc.id, percent: dc.percent, amountCents: dc.amount_cents, cents, label };
 }
 
 // Record a redemption + bump the use counter (called once the discounted checkout is created).

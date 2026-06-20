@@ -76,6 +76,7 @@ export default async function Diensten() {
       <ActionForm action={createDiscount} success="Kortingscode aangemaakt ✓" className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
         <Col label="Code"><In name="code" defaultValue="" /></Col>
         <Col label="Korting (%)"><In name="percent" type="number" defaultValue="20" /></Col>
+        <Col label="of vast bedrag (€)"><In name="amount_eur" type="number" defaultValue="" /></Col>
         <Col label="Max. keer (leeg = ∞)"><In name="max_uses" type="number" defaultValue="" /></Col>
         <Col label="Vervalt op"><In name="expires_at" type="date" defaultValue="" /></Col>
         <label className="flex items-center gap-2 pb-2.5 text-xs font-bold text-brand/70">
@@ -88,7 +89,7 @@ export default async function Diensten() {
         {(codes || []).map((c) => (
           <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
             <div>
-              <p className="font-black text-brand">{c.code} <span className="ml-1 text-accentdark">−{c.percent}%</span></p>
+              <p className="font-black text-brand">{c.code} <span className="ml-1 text-accentdark">{c.amount_cents != null ? `−€ ${(c.amount_cents / 100).toFixed(2).replace(".", ",")}` : `−${c.percent}%`}</span></p>
               <p className="text-xs text-brand/50">
                 {c.used_count}{c.max_uses ? `/${c.max_uses}` : ""} gebruikt
                 {c.per_user_once ? " · 1× per lid" : ""}

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBookingAction, searchMembersAction } from "@/app/(site)/boeken/actions";
+import { createBookingAction, searchMembersAction, validateDiscountAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel, fmtHour } from "@/lib/time";
 import EventsBooking from "@/components/booking/EventsBooking";
 
@@ -37,6 +37,8 @@ export default function BookingClient({
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
   const [useCredit, setUseCredit] = useState(false);
   const [discountCode, setDiscountCode] = useState("");
+  const [discountInfo, setDiscountInfo] = useState(null); // {ok,cents,off,label} | {error}
+  const [applyingCode, setApplyingCode] = useState(false);
   const [buddySel, setBuddySel] = useState([]);
   const [invitees, setInvitees] = useState([]); // [{id,name}] members to bring along
   const [memberQuery, setMemberQuery] = useState("");
@@ -229,7 +231,7 @@ export default function BookingClient({
                     {s.type === "fit60" && isMember && s.member_price_cents != null ? (
                       <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · <span className="font-bold text-accentdark">{euro(s.member_price_cents)}</span> <span className="text-brand/40 line-through">{euro(s.price_cents)}</span> <span className="font-bold text-accentdark">ledenprijs</span></p>
                     ) : (
-                      <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "vanaf " + euro(s.price_cents)}</p>
+                      <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "op aanvraag"}</p>
                     )}
                   </button>
                 ))}
@@ -493,15 +495,30 @@ export default function BookingClient({
             {isLoggedIn && !welcomeApplies && !creditApplies && (
               <div className="mt-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-lav">Kortingscode</p>
-                <input value={discountCode} onChange={(e) => setDiscountCode(e.target.value)} placeholder="bv. TERUG50"
-                  className="mt-2 w-full rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm uppercase text-white placeholder:text-lav/60 outline-none focus:border-accent" />
+                <div className="mt-2 flex gap-2">
+                  <input value={discountCode} onChange={(e) => { setDiscountCode(e.target.value); setDiscountInfo(null); }} placeholder="bv. TERUG50"
+                    className="min-w-0 flex-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm uppercase text-white placeholder:text-lav/60 outline-none focus:border-accent" />
+                  <button type="button" disabled={!discountCode.trim() || applyingCode}
+                    onClick={async () => {
+                      setApplyingCode(true);
+                      setDiscountInfo(null);
+                      const r = await validateDiscountAction(discountCode.trim(), priceCents);
+                      setApplyingCode(false);
+                      setDiscountInfo(r);
+                    }}
+                    className="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-bold text-brand transition hover:opacity-90 disabled:opacity-40">
+                    {applyingCode ? "…" : "Toepassen"}
+                  </button>
+                </div>
+                {discountInfo?.error && <p className="mt-1.5 text-xs font-semibold text-red-200">{discountInfo.error}</p>}
+                {discountInfo?.ok && <p className="mt-1.5 text-xs font-semibold text-accent">✓ {discountInfo.label} — je betaalt {euro(discountInfo.cents)}</p>}
               </div>
             )}
 
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">
               <span className="text-lav">Totaal</span>
               <span className="text-3xl font-black text-accent">
-                {welcomeApplies ? "Gratis" : creditApplies ? "1 sessie" : euro(priceCents)}
+                {welcomeApplies ? "Gratis" : creditApplies ? "1 sessie" : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}
               </span>
             </div>
 
