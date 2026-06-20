@@ -113,19 +113,17 @@ export default async function Analytics() {
       <h1 className="text-3xl font-black text-brand">Analytics</h1>
       <p className="mt-1 text-sm text-brand/50">De gezondheid van je business in één oogopslag — omzet, groei, retentie en bezetting.</p>
 
-      {/* Websiteverkeer via Vercel Web Analytics (bezoekers/paginaweergaves) — data leeft op Vercel */}
-      <a
-        href="https://vercel.com/dashboard"
-        target="_blank"
-        rel="noopener noreferrer"
+      {/* In-app first-party traffic analytics (own DB, privacy-friendly) */}
+      <Link
+        href="/beheer/verkeer"
         className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent"
       >
         <div>
-          <p className="font-black text-brand">🌐 Websiteverkeer (Vercel Analytics)</p>
-          <p className="mt-0.5 text-sm text-brand/55">Bezoekers, paginaweergaves en herkomst worden gemeten op elke pagina. Bekijk de cijfers op Vercel → je project → <b>Analytics</b>.</p>
+          <p className="font-black text-brand">🌐 Websiteverkeer</p>
+          <p className="mt-0.5 text-sm text-brand/55">Bezoekers, paginaweergaves, populairste pagina's en herkomst — live in je eigen dashboard, zonder cookies of externe tracker.</p>
         </div>
-        <span className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">Open in Vercel →</span>
-      </a>
+        <span className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">Bekijk verkeer →</span>
+      </Link>
 
       {/* KPI row */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">

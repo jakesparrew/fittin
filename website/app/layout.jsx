@@ -3,6 +3,7 @@ import { Lato, Bricolage_Grotesque } from "next/font/google";
 import PWARegister from "../components/PWARegister";
 import PWAInstallPrompt from "../components/PWAInstallPrompt";
 import { Analytics } from "@vercel/analytics/next";
+import PageView from "../components/analytics/PageView";
 
 const lato = Lato({
   subsets: ["latin"],
@@ -62,6 +63,7 @@ export default function RootLayout({ children }) {
         {children}
         <PWAInstallPrompt />
         <Analytics />
+        <PageView />
       </body>
     </html>
   );

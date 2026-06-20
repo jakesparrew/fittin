@@ -3,7 +3,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const groups = [
-  { items: [{ href: "/beheer", label: "Dashboard", icon: "▦" }, { href: "/beheer/analytics", label: "Analytics", icon: "▰" }, { href: "/beheer/notificaties", label: "Notificaties", icon: "🔔" }, { href: "/beheer/inbox", label: "Inbox", icon: "✉" }] },
+  { items: [{ href: "/beheer", label: "Dashboard", icon: "▦" }, { href: "/beheer/analytics", label: "Analytics", icon: "▰" }, { href: "/beheer/verkeer", label: "Websiteverkeer", icon: "🌐" }, { href: "/beheer/notificaties", label: "Notificaties", icon: "🔔" }, { href: "/beheer/inbox", label: "Inbox", icon: "✉" }] },
   { title: "Gym", items: [
     { href: "/beheer/boekingen", label: "Boekingen", icon: "▤" },
     { href: "/beheer/leden", label: "Leden", icon: "◍" },
