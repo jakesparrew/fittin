@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingConfirmation, sendSessionInvite, sendEmailInvite } from "@/lib/email";
-import { validateDiscount } from "@/lib/discounts";
+import { validateDiscount, recordRedemption } from "@/lib/discounts";
 
 // Search gym members to invite to a session (name + id only — no contact details exposed).
 // Uses an RLS-safe security-definer RPC (search_members) scoped to the caller's own gym,
@@ -140,6 +140,29 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     const d = await validateDiscount(booking.gym_id, user.id, discountCode, booking.price_cents);
     if (d.error) return { error: d.error };
     if (d.ok) { chargeCents = d.cents; codeId = d.codeId; }
+  }
+
+  // A 100%-off code brings the charge to €0. Stripe Checkout cannot bill €0, so confirm the
+  // booking as free directly (mark paid, record the one-time redemption, e-mail the confirmation)
+  // instead of handing off to Stripe.
+  if (codeId && chargeCents === 0) {
+    const admin = createAdminClient();
+    await admin.from("bookings").update({ paid: true, charge_cents: 0, discount_code_id: codeId }).eq("id", booking.id);
+    try { await recordRedemption(booking.gym_id, codeId, user.id, booking.id); } catch {}
+    try {
+      await sendBookingConfirmation({
+        to: user.email,
+        name: user.user_metadata?.full_name,
+        serviceName: booking.services?.name || "Sessie",
+        startsAt: booking.starts_at,
+        endsAt: booking.ends_at,
+        persons: booking.persons || 1,
+        free: true,
+      });
+    } catch {}
+    revalidatePath("/account");
+    revalidatePath("/boeken");
+    return { ok: true, free: true };
   }
 
   // Paid: hand off to Stripe Checkout. If Stripe isn't set up, confirm unpaid (dev).
