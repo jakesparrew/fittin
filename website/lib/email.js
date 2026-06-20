@@ -66,22 +66,41 @@ async function send(to, subject, html, from = FROM) {
 }
 
 // ---- Member: booking confirmed ----
-export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free }) {
+export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address }) {
+  const addr = address || "Aannemersstraat 186, 9040 Gent";
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`;
   const rows = [
     ["Sessie", serviceName],
     ["Wanneer", dayLabel(startsAt)],
     ["Uur", timeRange(startsAt, endsAt)],
     ["Personen", persons],
+    ["Adres", addr],
   ];
   if (free) rows.push(["Prijs", `<span style="color:#33B24A">Gratis (FittinWelcome)</span>`]);
   await send(
     to,
-    "Je Fittin'-boeking is bevestigd",
+    "Je Fittin'-boeking is bevestigd ✅",
     shell({
       title: "Je boeking is bevestigd ✅",
-      intro: `Hallo ${name || "daar"}, je sessie staat vast. Tot binnenkort in de zaal!`,
+      intro: `Hallo ${name || "daar"}, je sessie staat vast. Hier is alvast alles wat je moet weten:`,
       rows,
-      body: `<p style="font-size:14px;color:#6b6685;margin-top:14px">Je ontvangt je toegangscode automatisch ± 5 minuten voor je sessie start. Verplaatsen kan tot 6u vooraf in je account.</p>`,
+      body: `
+        <div style="text-align:center"><a href="${mapsUrl}" style="display:inline-block;margin:6px 0;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px;font-size:14px">📍 Navigeer naar de gym</a></div>
+        <div style="margin-top:16px;border-top:1px solid #ece9f5;padding-top:14px">
+          <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo kom je binnen</p>
+          <ol style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.6">
+            <li>Je krijgt je <b>persoonlijke toegangscode ± 5 minuten voor je sessie</b> — per mail én in de app.</li>
+            <li>Toets de code in op het paneel naast de voordeur, of open de deur met de knop in je account.</li>
+            <li>De toegang werkt enkel tijdens jouw tijdslot.</li>
+          </ol>
+          <p style="font-size:14px;font-weight:bold;color:#22194F;margin:14px 0 6px">Voor je weer vertrekt</p>
+          <ul style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.6">
+            <li>Veeg de toestellen die je gebruikte schoon (spray + doek staan klaar).</li>
+            <li>Leg gewichten en materiaal terug op hun vaste plaats.</li>
+            <li>Doe de lichten uit en controleer of de deur dicht is.</li>
+          </ul>
+          <p style="font-size:13px;color:#6b6685;margin-top:14px">Verplaatsen kan tot 6u vooraf in je account. We sturen je dag op voorhand nog een herinnering.</p>
+        </div>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
     }),
     FROM_BOOKING
