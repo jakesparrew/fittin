@@ -4,6 +4,7 @@ import { slotInstant, brusselsDateStr, fmtHour } from "@/lib/time";
 import { adminCreateBooking } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
+import BookingsList from "@/components/admin/BookingsList";
 import SubmitButton from "@/components/ui/SubmitButton";
 
 export const dynamic = "force-dynamic";
@@ -31,12 +32,20 @@ export default async function Boekingen({ searchParams }) {
   const from = slotInstant(days[0].dateStr, 0).toISOString();
   const to = new Date(slotInstant(days[6].dateStr, 23).getTime() + 3600000).toISOString();
 
-  const [{ data: bookings }, { data: blocks }, { data: members }, { data: services }] = await Promise.all([
+  const listFrom = new Date(Date.now() - 30 * 86400000).toISOString(); // overview: last 30 days + all upcoming
+  const [{ data: bookings }, { data: blocks }, { data: members }, { data: services }, { data: allBookings }] = await Promise.all([
     supabase.from("bookings").select("id, starts_at, status, persons, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", from).lt("starts_at", to),
     supabase.from("slot_blocks").select("id, starts_at, reason").eq("gym_id", gym.id).gte("starts_at", from).lt("starts_at", to),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).order("full_name"),
     supabase.from("services").select("id, name").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
+    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
   ]);
+
+  const bookingRows = (allBookings || []).map((b) => ({
+    id: b.id, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status, persons: b.persons,
+    paid: b.paid, price_cents: b.price_cents, payment_source: b.payment_source,
+    member_name: b.member?.full_name || b.member?.email, coach_name: b.coach?.full_name, service_name: b.services?.name,
+  }));
 
   const hours = [];
   for (let h = gym.open_hour; h < gym.close_hour; h += 0.5) hours.push(h);
@@ -86,6 +95,8 @@ export default async function Boekingen({ searchParams }) {
         members={memberOpts}
         services={serviceOpts}
       />
+
+      <BookingsList bookings={bookingRows} />
     </div>
   );
 }
