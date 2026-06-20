@@ -82,7 +82,7 @@ export default function Home() {
           <Reveal delay={160}>
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl">
               Een modern uitgeruste zaal, exclusief voor jou. Reserveer per uur, open de deur met de
-              app en train wanneer het jou past — met je personal coach of helemaal alleen.
+              app en train wanneer het jou past — alleen, met je coach of met je vrienden.
             </p>
           </Reveal>
           <Reveal delay={240}>
