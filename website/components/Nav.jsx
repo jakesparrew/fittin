@@ -21,6 +21,15 @@ const memberLinks = [
   { href: "/community", label: "Community" },
 ];
 
+// Coaches/beheerders: keep the bar useful (matches the mobile bottom-bar) — they also have a
+// dashboard button on the right. Without this the logged-in staff nav was empty in the middle.
+const staffLinks = [
+  { href: "/boeken", label: "Boeken" },
+  { href: "/workouts", label: "Workouts" },
+  { href: "/oefeningen", label: "Oefeningen" },
+  { href: "/community", label: "Community" },
+];
+
 export default function Nav() {
   const [open, setOpen] = useState(false);
   const [account, setAccount] = useState(null);
@@ -46,8 +55,8 @@ export default function Nav() {
   const isStaff = account && ["coach", "beheerder"].includes(account.role);
   const staffLabel = account?.role === "beheerder" ? "Beheer" : "Coach";
   const home = account?.home || "/account";
-  // Logged-out → marketing links; member → trimmed links; staff → none (they use their dashboard button).
-  const navLinks = !account ? links : isStaff ? [] : memberLinks;
+  // Logged-out → marketing links; member → member app links; staff → a useful subset (+ dashboard button).
+  const navLinks = !account ? links : isStaff ? staffLinks : memberLinks;
 
   return (
     <header className="sticky top-0 z-50 border-b border-borderc/70 bg-white/80 backdrop-blur-xl">
