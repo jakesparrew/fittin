@@ -16,10 +16,11 @@ export default async function Boekingen({ searchParams }) {
   const sp = (await searchParams) || {};
   const weekOffset = parseInt(sp.w || "0", 10) || 0;
 
-  // 7 days from today + offset weeks
+  // Calendar week starting on MONDAY (+ offset weeks).
   const base = new Date();
   base.setHours(0, 0, 0, 0);
-  base.setDate(base.getDate() + weekOffset * 7);
+  const dow = (base.getDay() + 6) % 7; // days since Monday (0=Mon … 6=Sun)
+  base.setDate(base.getDate() - dow + weekOffset * 7);
   const days = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date(base.getTime() + i * 86400000);
