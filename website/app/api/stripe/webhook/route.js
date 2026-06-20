@@ -183,6 +183,58 @@ async function handleWelcomeSetup(admin, session) {
   }
 }
 
+// Reverse positive grants tied to a refunded payment (idempotent per charge+row).
+async function reverseLedger(admin, table, ref, chargeId) {
+  const { data: rows } = await admin.from(table).select("*").eq("stripe_ref", ref);
+  for (const row of rows || []) {
+    if (!(row.delta > 0)) continue;
+    const revRef = `refund:${chargeId}:${row.id}`;
+    const { data: done } = await admin.from(table).select("id").eq("stripe_ref", revRef).maybeSingle();
+    if (done) continue;
+    const ins = { gym_id: row.gym_id, delta: -row.delta, reason: "refund", stripe_ref: revRef };
+    if (row.user_id) ins.user_id = row.user_id;
+    if (row.coach_id) ins.coach_id = row.coach_id;
+    if (row.client_id) ins.client_id = row.client_id;
+    await admin.from(table).insert(ins);
+  }
+}
+
+// Refund: a FULL refund cancels the matching booking (frees the slot) + reverses credit/coach grants
+// keyed on the originating checkout session(s) or subscription invoice. Partial refunds only alert the
+// beheerders (manual review), so we never wrongly wipe partially-used credits.
+async function handleRefund(admin, charge) {
+  const pi = typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  const invoiceId = typeof charge.invoice === "string" ? charge.invoice : charge.invoice?.id;
+  const fully = charge.refunded === true;
+
+  if (fully) {
+    if (pi) {
+      await admin.from("bookings")
+        .update({ status: "geannuleerd", paid: false, cancelled_at: new Date().toISOString() })
+        .eq("stripe_payment_intent", pi).eq("status", "bevestigd");
+    }
+    const refs = [];
+    if (pi) { try { const list = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 10 }); for (const s of list.data || []) refs.push(s.id); } catch {} }
+    if (invoiceId) refs.push(invoiceId);
+    for (const ref of refs) {
+      await reverseLedger(admin, "credits_ledger", ref, charge.id);
+      await reverseLedger(admin, "coach_ledger", ref, charge.id);
+      await reverseLedger(admin, "coach_credit_ledger", ref, charge.id);
+    }
+  }
+
+  try {
+    const { data: gym } = await admin.from("gyms").select("id").order("created_at").limit(1).single();
+    if (gym) {
+      const amt = ((charge.amount_refunded || 0) / 100).toFixed(2);
+      const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", gym.id).eq("role", "beheerder");
+      for (const a of admins || []) {
+        await admin.from("notifications").insert({ gym_id: gym.id, user_id: a.id, type: "system", title: `Terugbetaling € ${amt}`, body: fully ? "Volledige terugbetaling — boeking/credits automatisch teruggedraaid." : "Gedeeltelijke terugbetaling — controleer credits/boeking handmatig.", link: "/beheer/betalingen" });
+      }
+    }
+  } catch {}
+}
+
 async function handleEvent(event, admin) {
   const obj = event.data.object;
   switch (event.type) {
@@ -271,6 +323,21 @@ async function handleEvent(event, admin) {
       } catch {}
       return;
     }
+    case "invoice.payment_failed": {
+      const reason = obj.billing_reason || "";
+      if (reason && !reason.startsWith("subscription")) return;
+      const prof = await profileFromCustomer(admin, obj.customer);
+      if (!prof) return;
+      // Belt-and-suspenders: subscription.updated also flips status, but flag + nudge the member here.
+      await admin.from("memberships").update({ status: "past_due" }).eq("user_id", prof.id).eq("status", "actief");
+      try {
+        await admin.from("notifications").insert({ gym_id: prof.gym_id, user_id: prof.id, type: "system", title: "Betaling mislukt", body: "Je maandbetaling lukte niet. Werk je betaalmethode bij via je account om member te blijven.", link: "/account" });
+      } catch {}
+      return;
+    }
+    case "charge.refunded":
+      await handleRefund(admin, obj);
+      return;
     default:
       return;
   }

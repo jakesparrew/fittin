@@ -3,7 +3,9 @@ import Stripe from "stripe";
 // Server-side Stripe client. SERVER ONLY. Null until the secret key is set.
 const key = process.env.STRIPE_SECRET_KEY;
 export const isStripeConfigured = Boolean(key);
-export const stripe = key ? new Stripe(key) : null;
+// Pin the API version (matches the installed SDK default) so a future SDK bump can't silently
+// change Checkout/Subscription/webhook behavior in production.
+export const stripe = key ? new Stripe(key, { apiVersion: "2026-05-27.dahlia" }) : null;
 
 // Let people pay as a business: a "Purchasing as a business?" checkbox + VAT/company tax id
 // field on the Stripe Checkout page (so company purchases get a proper invoice).

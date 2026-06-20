@@ -31,18 +31,18 @@ for (let i = 0; i < 8; i++) {
 }
 console.log("STRIPE_WEBHOOK_SECRET=" + ep.secret);
 
-// --- Subscription product + monthly price (€10) ---
+// --- Subscription product + monthly price (€12) — informatief; de app rekent met inline price_data ---
 const products = await stripe.products.list({ limit: 100 });
 let product = products.data.find((p) => p.metadata?.fittin === "member-sub");
 if (!product) {
   product = await stripe.products.create({ name: "Fittin' Member", metadata: { fittin: "member-sub" } });
 }
 const prices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
-let price = prices.data.find((p) => p.recurring?.interval === "month" && p.unit_amount === 1000);
+let price = prices.data.find((p) => p.recurring?.interval === "month" && p.unit_amount === 1200);
 if (!price) {
   price = await stripe.prices.create({
     product: product.id,
-    unit_amount: 1000,
+    unit_amount: 1200,
     currency: "eur",
     recurring: { interval: "month" },
   });
