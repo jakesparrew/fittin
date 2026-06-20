@@ -38,6 +38,18 @@ const steps = [
   ["Open de deur & train", "Je boeking opent de deur via de app. De hele zaal voor jou — alleen, met vrienden of met coach.", "03"],
 ];
 
+// Homepage "alles in één app" feature showcase.
+const appFeatures = [
+  { title: "Kant-en-klare workouts", icon: "dumbbell", desc: "Follow-along programma's zoals Borst, Schouders en Rug: per oefening een bewegende demo, je sets, reps en rust. Druk op start en volg mee." },
+  { title: "Rusttimer & voortgang", icon: "chart", desc: "De rusttimer telt voor je af en je voortgang per oefening wordt bijgehouden. Jij focust op de set, de app houdt de rest bij." },
+  { title: "~800 oefeningen met demo's", icon: "book", desc: "Een volledige oefeningenbibliotheek met bewegende demo-beelden, de juiste spieren en heldere uitleg. Altijd perfecte techniek." },
+  { title: "Eigen plannen + AI-generator", icon: "ai", desc: "Stel je eigen workout-plannen samen, of laat de AI-generator in enkele tikken een schema op maat opzetten voor jouw doel." },
+  { title: "Training loggen met PR's", icon: "list", desc: "Log je sets en gewicht, krijg een melding bij elk nieuw persoonlijk record en volg je progressie week na week." },
+  { title: "Community & leaderboard", icon: "trophy", desc: "Klim in de ranking, doe mee aan challenges en events, train met je buddies en volg de activiteitenfeed." },
+  { title: "Persoonlijke coaching", icon: "coach", desc: "Je coach bouwt je programma in de app — jij volgt het onder 'Training', je coach volgt jouw opvolging op. Begeleiding op maat." },
+  { title: "Slimme toegang & boeken", icon: "key", desc: "Boek elke dag van 6 tot 23u de hele zaal privé. Je toegangscode komt automatisch ± 5 min vooraf en de deur opent via de app." },
+];
+
 export default function Home() {
   return (
     <main className="overflow-hidden">
@@ -265,6 +277,43 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ============ ALLES IN ÉÉN APP ============ */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-6xl px-5 py-24">
+          <Reveal>
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Alles in één app</p>
+            <h2 className="mt-3 max-w-3xl text-4xl font-black leading-tight md:text-5xl">
+              Boeken, trainen én opvolgen — <span className="text-accentdark">alles op fittin.be</span>
+            </h2>
+            <p className="mt-4 max-w-2xl leading-relaxed text-brand/60">
+              Fittin&rsquo; is meer dan een privézaal die je per uur reserveert. In je account zit een complete
+              trainingsapp: kant-en-klare workouts met demo&rsquo;s en rusttimer, ~800 oefeningen, je eigen plannen
+              of een AI-generator, training loggen met PR&rsquo;s, een community met leaderboard én je coaching.
+            </p>
+          </Reveal>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {appFeatures.map((f, i) => (
+              <Reveal key={f.title} delay={i * 70}>
+                <div className="group h-full rounded-3xl border border-borderc bg-paper p-6 transition hover:-translate-y-1.5 hover:bg-white hover:shadow-xl hover:shadow-brand/5">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accentdark transition group-hover:bg-accent group-hover:text-brand">
+                    <FeatureIcon name={f.icon} />
+                  </div>
+                  <h3 className="mt-5 font-black text-brand">{f.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-brand/60">{f.desc}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+          <Reveal delay={120}>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <Link href="/workouts" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">Ontdek de workouts →</Link>
+              <Link href="/login?mode=signup" className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-accent">Maak gratis account</Link>
+              <span className="text-sm font-semibold text-brand/50">Eén login, alles erin — van je gratis eerste sessie tot je honderdste PR.</span>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
       {/* ============ PRICING TEASER ============ */}
       <section className="bg-paper">
         <div className="mx-auto max-w-6xl px-5 py-24">
@@ -330,4 +379,19 @@ function Icon({ name }) {
   if (name === "clock") return <svg {...common}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>;
   if (name === "bolt") return <svg {...common}><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8z" /></svg>;
   return <svg {...common}><path d="M18 7c-1.5-1.5-4-2-6-2-4 0-7 2-7 5s3 4 7 4c4 0 7 1 7 4s-3 5-7 5c-2 0-4.5-.5-6-2" /><path d="M12 2v20" /></svg>;
+}
+
+function FeatureIcon({ name }) {
+  const c = { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
+  const P = {
+    dumbbell: "M4 7v10M8 5v14M16 5v14M20 7v10M8 12h8",
+    chart: "M3 3v18h18M19 9l-5 5-3-3-4 4",
+    book: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z",
+    ai: "M12 2l2.2 5.8L20 10l-5.8 2.2L12 18l-2.2-5.8L4 10l5.8-2.2z",
+    list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+    trophy: "M8 21h8M12 17v4M6 4h12v5a6 6 0 0 1-12 0zM6 4H3v2a3 3 0 0 0 3 3M18 4h3v2a3 3 0 0 1-3 3",
+    coach: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M3 21a6 6 0 0 1 12 0M16 3.2a4 4 0 0 1 0 7.6M21 21a6 6 0 0 0-5-5.8",
+    key: "M21 2l-9.5 9.5M15.5 7.5l3 3M11.5 11.5a4.5 4.5 0 1 1-6.36 6.36 4.5 4.5 0 0 1 6.36-6.36z",
+  };
+  return <svg {...c}><path d={P[name] || P.list} /></svg>;
 }
