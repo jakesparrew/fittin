@@ -186,7 +186,7 @@ export async function uploadCoachPhoto(formData) {
   const { error: upErr } = await admin.storage.from("coach-photos").upload(path, buf, { contentType: file.type, upsert: true });
   if (upErr) return { error: upErr.message };
   const { data: pub } = admin.storage.from("coach-photos").getPublicUrl(path);
-  await supabase.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", userId);
+  await admin.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", userId);
   revalidateTag("coaches"); // keep the cached public coach list/photo in sync
   revalidatePath("/coach/profiel");
   revalidatePath("/coaches");
@@ -195,16 +195,24 @@ export async function uploadCoachPhoto(formData) {
 
 // Save the coach's public profile (shown on the site at /coaches).
 export async function saveCoachProfile(formData) {
-  const { supabase, userId, error } = await requireCoach();
+  const { userId, error } = await requireCoach();
   if (error) return { error };
-  const { error: e } = await supabase
+  // coach_* columns aren't writable by 'authenticated' (0015 grants) → write via service role
+  // after the requireCoach identity check, scoped to the caller's own row.
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  const eur = (v) => { const s = String(v ?? "").trim(); return s ? cents(s) : null; };
+  const name = String(formData.get("full_name") ?? "").trim();
+  const { error: e } = await admin
     .from("profiles")
     .update({
+      ...(name ? { full_name: name } : {}),
       coach_bio: formData.get("bio") || null,
       coach_specialty: formData.get("specialty") || null,
-      coach_photo_url: formData.get("photo_url") || null,
       coach_pricelist: formData.get("pricelist") || null,
-      coach_pt_price_cents: formData.get("pt_price_eur") ? cents(formData.get("pt_price_eur")) : null,
+      coach_pt_price_cents: eur(formData.get("pt1_eur")),
+      coach_pt2_price_cents: eur(formData.get("pt2_eur")),
+      coach_pt3_price_cents: eur(formData.get("pt3_eur")),
       coach_public: formData.get("public") === "on",
     })
     .eq("id", userId);

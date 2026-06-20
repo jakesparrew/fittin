@@ -35,9 +35,10 @@ export const getPublicCoachesCached = unstable_cache(
     const admin = createAdminClient();
     const { data } = await admin
       .from("profiles")
-      .select("id, full_name, coach_pt_price_cents")
+      .select("id, full_name, coach_specialty, coach_photo_url, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents")
       .eq("gym_id", gymId)
       .eq("role", "coach")
+      .eq("coach_public", true)
       .order("full_name");
     return data || [];
   },

@@ -5,6 +5,7 @@ import ActionForm from "@/components/ui/ActionForm";
 import PhotoUpload from "@/components/coach/PhotoUpload";
 
 export const dynamic = "force-dynamic";
+const eur = (c) => (c != null ? (c / 100).toFixed(2).replace(".", ",") : "");
 
 export default async function CoachProfiel() {
   const ctx = await getCoachContext();
@@ -12,7 +13,7 @@ export default async function CoachProfiel() {
   const { supabase, userId } = ctx;
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_pt_price_cents, coach_public")
+    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_public")
     .eq("id", userId)
     .single();
 
@@ -35,15 +36,23 @@ export default async function CoachProfiel() {
           <input type="checkbox" name="public" defaultChecked={me?.coach_public} className="h-4 w-4 accent-[#5fda6b]" />
           Toon mijn profiel publiek op fittin.be/coaches
         </label>
+        <Field name="full_name" label="Naam" defaultValue={me?.full_name} placeholder="Voornaam Naam" />
         <Field name="specialty" label="Specialiteit" defaultValue={me?.coach_specialty} placeholder="bv. Krachttraining · afvallen · revalidatie" />
-        <Field name="pt_price_eur" label="PT-tarief per sessie (€)" defaultValue={me?.coach_pt_price_cents != null ? (me.coach_pt_price_cents / 100).toFixed(2).replace(".", ",") : ""} placeholder="bv. 60 — leeg = standaardtarief" />
-        <Field name="photo_url" label="Foto-URL" defaultValue={me?.coach_photo_url} placeholder="https://… (link naar je foto)" />
+        <div>
+          <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Personal-training tarieven</span>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Field name="pt1_eur" label="1-op-1 (€ / sessie)" defaultValue={eur(me?.coach_pt_price_cents)} placeholder="bv. 60" />
+            <Field name="pt2_eur" label="1-op-2 (€ pp)" defaultValue={eur(me?.coach_pt2_price_cents)} placeholder="bv. 40" />
+            <Field name="pt3_eur" label="1-op-3 (€ pp)" defaultValue={eur(me?.coach_pt3_price_cents)} placeholder="bv. 30" />
+          </div>
+          <p className="mt-1 text-xs text-brand/40">Leeg = niet aangeboden. Deze tarieven verschijnen op je profiel én in de boeking (1-op-2/1-op-3 zijn prijs per persoon).</p>
+        </div>
         <label className="block">
           <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Over mij</span>
           <textarea name="bio" rows={5} defaultValue={me?.coach_bio || ""} placeholder="Vertel iets over jezelf, je aanpak en ervaring…" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Prijslijst</span>
+          <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Extra prijsinfo / notities (optioneel)</span>
           <textarea name="pricelist" rows={3} defaultValue={me?.coach_pricelist || ""} placeholder="bv. 1 sessie € 40 · 10-beurtenkaart € 350" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
         </label>
         <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand">Opslaan</button>

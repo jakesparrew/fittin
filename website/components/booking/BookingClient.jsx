@@ -51,6 +51,8 @@ export default function BookingClient({
   const service = services.find((s) => s.id === serviceId) || services[0];
   const isFit60 = service?.type === "fit60";
   const isPT = service?.type === "pt";
+  // Reset the person count when the service changes (gym-persons vs PT-formule mean different things).
+  useEffect(() => { setPersons(1); }, [serviceId]);
 
   const days = useMemo(() => {
     const out = [];
@@ -101,11 +103,16 @@ export default function BookingClient({
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
   const durFactor = 1; // geen korting op langere sessies — je betaalt (en gebruikt) 1 credit per uur
-  // Members book Fit60 at the member price; PT uses the chosen coach's own rate (matches the server).
+  // Members book Fit60 at the member price; PT uses the chosen coach's per-formule rate (matches the
+  // server): 1-op-1 = coach_pt_price_cents, 1-op-2/1-op-3 = prijs per persoon → totaal = tarief × personen.
   const memberRate = isFit60 && isMember && service?.member_price_cents != null;
-  const coachPtRate = isPT && coachId ? coaches.find((c) => c.id === coachId)?.coach_pt_price_cents : null;
-  const unitCents = memberRate ? service.member_price_cents : (coachPtRate != null ? coachPtRate : (service?.price_cents ?? 0));
-  const priceCents = welcomeApplies || creditApplies ? 0 : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
+  const ptCoach = isPT && coachId ? coaches.find((c) => c.id === coachId) : null;
+  const ptByPersons = ptCoach ? (persons >= 3 ? ptCoach.coach_pt3_price_cents : persons === 2 ? ptCoach.coach_pt2_price_cents : ptCoach.coach_pt_price_cents) : null;
+  const ptUnit = (ptByPersons != null ? ptByPersons : ptCoach?.coach_pt_price_cents) ?? (service?.price_cents ?? 0);
+  const unitCents = memberRate ? service.member_price_cents : (isPT ? ptUnit : (service?.price_cents ?? 0));
+  const priceCents = welcomeApplies || creditApplies ? 0
+    : isPT ? Math.round(ptUnit * persons * duration)
+    : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
 
   // Invite slots = the booking's free spots (persons − you). Members + e-mail invites share them.
   const inviteSlots = isFit60 ? Math.max(0, persons - 1) : 0;
@@ -127,7 +134,7 @@ export default function BookingClient({
       date: selected.dateStr,
       hour: selected.hour,
       hours: isFit60 ? duration : 1,
-      persons: isFit60 ? persons : 1,
+      persons: isFit60 || isPT ? persons : 1,
       useWelcome: welcomeApplies,
       coachId: isPT ? coachId : null,
       useCredit: creditApplies,
@@ -151,7 +158,7 @@ export default function BookingClient({
       service: service.name,
       day: day ? `${day.weekday} ${day.dayMonth}` : selected.dateStr,
       range: slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60),
-      persons: isFit60 ? persons : 1,
+      persons: isFit60 || isPT ? persons : 1,
       free: welcomeApplies,
     });
     router.refresh();
@@ -347,6 +354,33 @@ export default function BookingClient({
                 )}
               </div>
             </Card>
+
+            {/* PT formule (1-op-1 / 1-op-2 / 1-op-3) met het tarief van de gekozen coach */}
+            {isPT && (
+              <Card step="3" title="Kies je formule">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { n: 1, label: "1-op-1", price: ptCoach?.coach_pt_price_cents, per: "" },
+                    { n: 2, label: "1-op-2", price: ptCoach?.coach_pt2_price_cents, per: "p.p." },
+                    { n: 3, label: "1-op-3", price: ptCoach?.coach_pt3_price_cents, per: "p.p." },
+                  ].map((f) => {
+                    const offered = !ptCoach || f.n === 1 || f.price != null;
+                    return (
+                      <button key={f.n} type="button" disabled={!offered} onClick={() => offered && setPersons(f.n)}
+                        className={"rounded-2xl border-2 p-4 text-left transition disabled:opacity-40 " + (persons === f.n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                        <span className="block text-sm font-black text-brand">{f.label}</span>
+                        <span className="mt-0.5 block text-xs text-brand/55">{f.price != null ? `${euro(f.price)}${f.per ? " " + f.per : ""}` : (ptCoach ? "op aanvraag" : "—")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {ptCoach && (
+                  <p className="mt-3 text-xs text-brand/50">
+                    1-op-2 en 1-op-3 zijn prijs per persoon. Totaal: <span className="font-bold text-brand">{euro(priceCents)}</span> voor {persons} {persons === 1 ? "persoon" : "personen"}.
+                  </p>
+                )}
+              </Card>
+            )}
 
             {/* Persons */}
             {isFit60 && (
