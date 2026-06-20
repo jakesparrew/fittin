@@ -32,6 +32,11 @@ const num = (v, d = 0) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
 };
+// Half-hour-aware (6.5 = 06:30) for slot-start / availability fields.
+const numF = (v, d = 0) => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : d;
+};
 
 // ---- Gym schedule / settings ----
 export async function updateGymSettings(formData) {
@@ -116,7 +121,7 @@ export async function adminCreateBooking(formData) {
     p_member: memberId,
     p_service: formData.get("serviceId"),
     p_date: formData.get("date"),
-    p_hour: num(formData.get("hour")),
+    p_hour: numF(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
     p_use_credit: formData.get("useCredit") === "on",
   });
@@ -144,12 +149,12 @@ export async function adminBlockRange(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const date = formData.get("date");
-  const from = num(formData.get("from_hour"));
-  const to = num(formData.get("to_hour"));
+  const from = numF(formData.get("from_hour"));
+  const to = numF(formData.get("to_hour"));
   const reason = formData.get("reason") || null;
   if (!date || from == null || to == null || to <= from) return { error: "Kies een geldige periode (tot > van)." };
   let blocked = 0;
-  for (let h = from; h < to; h++) {
+  for (let h = from; h < to; h += 0.5) {
     const { error: e } = await supabase.rpc("admin_block_slot", { p_date: date, p_hour: h, p_reason: reason });
     if (!e) blocked++;
   }
@@ -163,7 +168,7 @@ export async function adminBlockSlot(formData) {
   if (error) return { error };
   const { error: e } = await supabase.rpc("admin_block_slot", {
     p_date: formData.get("date"),
-    p_hour: num(formData.get("hour")),
+    p_hour: numF(formData.get("hour")),
     p_reason: formData.get("reason") || null,
   });
   if (e) return { error: e.message };

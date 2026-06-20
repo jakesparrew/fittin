@@ -1,5 +1,6 @@
 import { getCoachContext } from "@/lib/coach";
 import { addOwnAvailability, deleteOwnAvailability } from "../actions";
+import { fmtHour } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
@@ -19,7 +20,7 @@ export default async function Beschikbaarheid() {
   const byDay = {};
   for (const a of avail || []) (byDay[a.weekday] ||= []).push(a);
   const hours = [];
-  for (let h = gym.open_hour; h <= gym.close_hour; h++) hours.push(h);
+  for (let h = gym.open_hour; h <= gym.close_hour; h += 0.5) hours.push(h);
 
   return (
     <div className="px-8 py-8">
@@ -32,8 +33,8 @@ export default async function Beschikbaarheid() {
             {WD_FULL.map((d, i) => <option key={i} value={i}>{d}</option>)}
           </select>
         </Lbl>
-        <Lbl t="Van"><select name="from_hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select></Lbl>
-        <Lbl t="Tot"><select name="to_hour" defaultValue={18} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select></Lbl>
+        <Lbl t="Van"><select name="from_hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
+        <Lbl t="Tot"><select name="to_hour" defaultValue={18} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
         <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Toevoegen</button>
       </form>
 
@@ -44,7 +45,7 @@ export default async function Beschikbaarheid() {
             <div className="mt-2 space-y-2">
               {(byDay[wd] || []).map((a) => (
                 <div key={a.id} className="flex items-center justify-between rounded-lg bg-paper px-3 py-1.5 text-sm">
-                  <span className="font-bold text-brand">{a.from_hour}:00 – {a.to_hour}:00</span>
+                  <span className="font-bold text-brand">{fmtHour(a.from_hour)} – {fmtHour(a.to_hour)}</span>
                   <form action={deleteOwnAvailability}>
                     <input type="hidden" name="id" value={a.id} />
                     <button className="text-xs font-bold text-red-500 hover:underline">×</button>

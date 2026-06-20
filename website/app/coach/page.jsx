@@ -3,6 +3,7 @@ import { getCoachContext } from "@/lib/coach";
 import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import CoachScheduler from "@/components/coach/CoachScheduler";
+import { fmtHour } from "@/lib/time";
 import SubmitButton from "@/components/ui/SubmitButton";
 import ActionForm from "@/components/ui/ActionForm";
 
@@ -62,15 +63,16 @@ export default async function CoachDashboard({ searchParams }) {
     .reduce((a, b) => a + (b.coach_charge_cents || 0), 0);
 
   const hours = [];
-  for (let h = gym.open_hour; h < gym.close_hour; h++) hours.push(h);
+  for (let h = gym.open_hour; h < gym.close_hour; h += 0.5) hours.push(h);
   const mode = profile.coach_billing_mode;
 
   // ---- Interactive 14-day planner data (gym-wide taken slots + my own sessions) ----
   const keyOf = (iso) => {
-    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false }).formatToParts(new Date(iso));
+    const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(iso));
     const get = (t) => parts.find((x) => x.type === t)?.value;
     let hh = get("hour"); if (hh === "24") hh = "0";
-    return `${get("year")}-${get("month")}-${get("day")}:${parseInt(hh, 10)}`;
+    const dec = parseInt(hh, 10) + (parseInt(get("minute"), 10) >= 30 ? 0.5 : 0);
+    return `${get("year")}-${get("month")}-${get("day")}:${dec}`;
   };
   const takenKeys = (takenRows || []).map((t) => keyOf(t.starts_at));
   const mineMap = {};
@@ -117,7 +119,7 @@ export default async function CoachDashboard({ searchParams }) {
           </Lbl>
           <Lbl t="Datum"><input name="date" type="date" required defaultValue={todayStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <Lbl t="Uur">
-            <select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select>
+            <select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select>
           </Lbl>
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <label className="flex items-center gap-2 pb-1.5 text-xs font-bold text-brand/70">

@@ -2,6 +2,7 @@
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { coachBookSession } from "@/app/coach/actions";
+import { fmtHour, slotInstant } from "@/lib/time";
 
 // Interactive week schedule for coaches: see gym-wide taken slots + your own planned sessions,
 // click a free slot → modal to pick a client/service → books via coachBookSession.
@@ -22,7 +23,7 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
     if (state?.ok) { setSlot(null); router.refresh(); }
   }, [state, router]);
 
-  const hourLabel = (h) => `${String(h).padStart(2, "0")}:00`;
+  const hourLabel = fmtHour;
 
   return (
     <section className="rounded-3xl border border-borderc bg-white p-6">
@@ -55,7 +56,7 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
                 const key = `${d.dateStr}:${h}`;
                 const own = mine[key];
                 const isTaken = takenSet.has(key);
-                const past = new Date(`${d.dateStr}T${String(h).padStart(2, "0")}:00:00`) < new Date();
+                const past = slotInstant(d.dateStr, h).getTime() < Date.now();
                 if (own) {
                   return <div key={key} className="m-0.5 rounded-md bg-accent/25 px-1 py-1 text-center text-[10px] font-bold leading-tight text-accentdark" title={`${own.name} · ${own.service}`}>{own.name?.split(" ")[0] || "Client"}</div>;
                 }

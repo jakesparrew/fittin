@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
 import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import { fmtHour } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 const WD_FULL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
@@ -56,7 +57,7 @@ export default async function Coaches() {
   for (const s of sessions || []) (sessOf[s.coach_id] ||= []).push(s);
 
   const hours = [];
-  for (let h = gym.open_hour; h <= gym.close_hour; h++) hours.push(h);
+  for (let h = gym.open_hour; h <= gym.close_hour; h += 0.5) hours.push(h);
 
   const totalLinks = (links || []).length;
   const sessThisMonth = (sessions || []).filter((s) => s.status === "bevestigd" && new Date(s.starts_at) >= monthStart && new Date(s.starts_at) < now).length;
@@ -228,7 +229,7 @@ export default async function Coaches() {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(byCoachAvail[c.id] || []).map((a) => (
                     <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand">
-                      {WD_FULL[a.weekday].slice(0, 2)} {a.from_hour}:00–{a.to_hour}:00
+                      {WD_FULL[a.weekday].slice(0, 2)} {fmtHour(a.from_hour)}–{fmtHour(a.to_hour)}
                       <form action={deleteCoachAvailability} className="inline">
                         <input type="hidden" name="id" value={a.id} />
                         <button className="text-red-500 hover:underline">×</button>
@@ -240,8 +241,8 @@ export default async function Coaches() {
                 <form action={addCoachAvailability} className="mt-3 flex flex-wrap items-end gap-2">
                   <input type="hidden" name="coachId" value={c.id} />
                   <Lbl t="Dag"><select name="weekday" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{WD_FULL.map((d, i) => <option key={i} value={i}>{d}</option>)}</select></Lbl>
-                  <Lbl t="Van"><select name="from_hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select></Lbl>
-                  <Lbl t="Tot"><select name="to_hour" defaultValue={18} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{h}:00</option>)}</select></Lbl>
+                  <Lbl t="Van"><select name="from_hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
+                  <Lbl t="Tot"><select name="to_hour" defaultValue={18} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
                   <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Beschikbaarheid</button>
                 </form>
               </details>

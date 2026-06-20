@@ -3,6 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
+import { fmtHour } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 const WD = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
@@ -61,7 +62,7 @@ export default async function CoachProfile({ params }) {
                 <p className="text-xs font-bold uppercase tracking-widest text-lav">Beschikbaarheid</p>
                 <div className="mt-2 space-y-1 text-sm text-brand/80">
                   {avail.map((a, i) => (
-                    <p key={i}><span className="font-bold capitalize text-brand">{WD[a.weekday]}</span> · {a.from_hour}:00 – {a.to_hour}:00</p>
+                    <p key={i}><span className="font-bold capitalize text-brand">{WD[a.weekday]}</span> · {fmtHour(a.from_hour)} – {fmtHour(a.to_hour)}</p>
                   ))}
                 </div>
               </div>

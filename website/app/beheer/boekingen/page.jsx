@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
-import { slotInstant, brusselsDateStr } from "@/lib/time";
+import { slotInstant, brusselsDateStr, fmtHour } from "@/lib/time";
 import { adminCreateBooking } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
@@ -39,7 +39,7 @@ export default async function Boekingen({ searchParams }) {
   ]);
 
   const hours = [];
-  for (let h = gym.open_hour; h < gym.close_hour; h++) hours.push(h);
+  for (let h = gym.open_hour; h < gym.close_hour; h += 0.5) hours.push(h);
 
   const memberOpts = (members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }));
   const serviceOpts = services || [];
@@ -101,7 +101,7 @@ function Lbl({ t, children }) {
 function HourSelect({ name, hours }) {
   return (
     <select name={name} required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-      {hours.map((h) => <option key={h} value={h}>{h}:00</option>)}
+      {hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}
     </select>
   );
 }

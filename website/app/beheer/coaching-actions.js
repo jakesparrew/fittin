@@ -123,8 +123,8 @@ export async function addCoachAvailability(formData) {
     gym_id: profile.gym_id,
     coach_id: formData.get("coachId"),
     weekday: num(formData.get("weekday"), 1),
-    from_hour: num(formData.get("from_hour"), 9),
-    to_hour: num(formData.get("to_hour"), 18),
+    from_hour: parseFloat(formData.get("from_hour")) || 9,
+    to_hour: parseFloat(formData.get("to_hour")) || 18,
   });
   revalidateTag("coaches");
   revalidatePath("/beheer/coaches");

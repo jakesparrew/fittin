@@ -1,7 +1,7 @@
 "use client";
 import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { slotInstant } from "@/lib/time";
+import { slotInstant, fmtHour } from "@/lib/time";
 import { adminCreateBooking, adminBlockSlot, adminBlockRange, adminCancelBooking, adminUnblock } from "@/app/beheer/actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 
@@ -26,8 +26,8 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
           const hi = Math.max(d.from, d.to);
           const day = days.find((x) => x.dateStr === d.date);
           const lbl = day ? `${day.weekday} ${day.dayMonth}` : d.date;
-          if (lo === hi) setPlanModal({ date: d.date, hour: lo, label: `${lbl} · ${lo}:00` });
-          else setRangeModal({ date: d.date, from: lo, to: hi + 1, label: `${lbl} · ${lo}:00 – ${hi + 1}:00` });
+          if (lo === hi) setPlanModal({ date: d.date, hour: lo, label: `${lbl} · ${fmtHour(lo)}` });
+          else setRangeModal({ date: d.date, from: lo, to: hi + 0.5, label: `${lbl} · ${fmtHour(lo)} – ${fmtHour(hi + 0.5)}` });
         }
         return null;
       });
@@ -56,7 +56,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
         <tbody className="select-none">
           {hours.map((h) => (
             <tr key={h} className="border-b border-borderc/60">
-              <td className="px-2 py-1 text-right font-bold text-brand/40">{h}:00</td>
+              <td className="px-2 py-1 text-right font-bold text-brand/40">{fmtHour(h)}</td>
               {days.map((d) => {
                 const t = slotInstant(d.dateStr, h).getTime();
                 const bk = bookMap.get(t);
@@ -203,7 +203,7 @@ function RangeBlockModal({ modal, onClose, onDone }) {
           </label>
           {state?.error && <p className="text-sm font-semibold text-red-600">{state.error}</p>}
           <button disabled={pending} className="w-full rounded-full bg-brand px-5 py-2.5 font-black text-white transition hover:opacity-90 disabled:opacity-50">
-            {pending ? "Bezig…" : `Blokkeer ${modal.to - modal.from} uur`}
+            {pending ? "Bezig…" : `Blokkeer ${modal.to - modal.from} uur`.replace(".5", "½")}
           </button>
         </form>
       </div>

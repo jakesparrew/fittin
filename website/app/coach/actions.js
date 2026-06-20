@@ -15,6 +15,11 @@ const num = (v, d = 0) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
 };
+// Half-hour-aware (6.5 = 06:30) for slot-start / availability fields.
+const numF = (v, d = 0) => {
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : d;
+};
 
 async function requireCoach() {
   const supabase = await createClient();
@@ -34,7 +39,7 @@ export async function coachBookSession(formData) {
     p_client: formData.get("clientId"),
     p_service: formData.get("serviceId"),
     p_date: formData.get("date"),
-    p_hour: num(formData.get("hour")),
+    p_hour: numF(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
     p_use_client_credit: formData.get("use_client_credit") === "on",
   });
@@ -76,7 +81,7 @@ export async function coachBulkBook(formData) {
   const clientId = formData.get("clientId");
   const serviceId = formData.get("serviceId");
   const weekday = num(formData.get("weekday"), 1); // 0=zo..6=za
-  const hour = num(formData.get("hour"), 9);
+  const hour = numF(formData.get("hour"), 9);
   const weeks = Math.min(26, Math.max(1, num(formData.get("weeks"), 4)));
   const persons = num(formData.get("persons"), 1);
   if (!clientId || !serviceId) return { error: "Kies een client en een sessie." };
@@ -282,8 +287,8 @@ export async function addOwnAvailability(formData) {
     gym_id: profile.gym_id,
     coach_id: userId,
     weekday: num(formData.get("weekday"), 1),
-    from_hour: num(formData.get("from_hour"), 9),
-    to_hour: num(formData.get("to_hour"), 18),
+    from_hour: numF(formData.get("from_hour"), 9),
+    to_hour: numF(formData.get("to_hour"), 18),
   });
   revalidateTag("coaches");
   revalidatePath("/coach/beschikbaarheid");
