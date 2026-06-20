@@ -2,6 +2,7 @@ import "./globals.css";
 import { Lato, Bricolage_Grotesque } from "next/font/google";
 import PWARegister from "../components/PWARegister";
 import PWAInstallPrompt from "../components/PWAInstallPrompt";
+import { Analytics } from "@vercel/analytics/next";
 
 const lato = Lato({
   subsets: ["latin"],
@@ -60,6 +61,7 @@ export default function RootLayout({ children }) {
         <PWARegister />
         {children}
         <PWAInstallPrompt />
+        <Analytics />
       </body>
     </html>
   );
