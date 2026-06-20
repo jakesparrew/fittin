@@ -17,12 +17,19 @@ export function brusselsOffsetMinutes(date) {
   return Math.round((asUTC - date.getTime()) / 60000);
 }
 
-// The UTC instant whose Brussels wall-clock time is `dateStr` at `hour`:00.
+// The UTC instant whose Brussels wall-clock time is `dateStr` at `hour` (decimal: 6.5 = 06:30).
 export function slotInstant(dateStr, hour) {
   const [y, m, d] = dateStr.split("-").map(Number);
-  const guess = Date.UTC(y, m - 1, d, hour, 0, 0);
+  const guess = Date.UTC(y, m - 1, d, 0, Math.round(hour * 60), 0);
   const off = brusselsOffsetMinutes(new Date(guess));
   return new Date(guess - off * 60000);
+}
+
+// "06:30" for a decimal hour (6.5 → "06:30").
+export function fmtHour(hour) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const total = Math.round(hour * 60);
+  return `${pad(Math.floor(total / 60) % 24)}:${pad(total % 60)}`;
 }
 
 // YYYY-MM-DD for a Date, in Brussels.
@@ -35,11 +42,10 @@ export function brusselsDateStr(date) {
   }).format(date);
 }
 
-// "18:00 – 19:15" for a start hour + duration in minutes.
+// "18:30 – 19:30" for a decimal start hour + duration in minutes.
 export function slotRangeLabel(hour, durationMin) {
-  const endTotal = hour * 60 + durationMin;
-  const eh = Math.floor(endTotal / 60) % 24;
-  const em = endTotal % 60;
   const pad = (n) => String(n).padStart(2, "0");
-  return `${pad(hour)}:00 – ${pad(eh)}:${pad(em)}`;
+  const startTotal = Math.round(hour * 60);
+  const endTotal = startTotal + durationMin;
+  return `${pad(Math.floor(startTotal / 60) % 24)}:${pad(startTotal % 60)} – ${pad(Math.floor(endTotal / 60) % 24)}:${pad(endTotal % 60)}`;
 }

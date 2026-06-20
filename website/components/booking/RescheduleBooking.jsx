@@ -21,7 +21,7 @@ export default function RescheduleBooking({ bookingId, startsAt, openHour = 6, c
 
   const locked = Date.now() > new Date(startsAt).getTime() - 6 * 3600000;
   const hours = [];
-  for (let h = openHour; h < closeHour; h++) hours.push(h);
+  for (let h = openHour; h < closeHour; h += 0.5) hours.push(h);
 
   if (locked) {
     return <span className="text-xs text-brand/40">Verplaatsen kan tot 6u vooraf</span>;
@@ -68,7 +68,7 @@ export default function RescheduleBooking({ bookingId, startsAt, openHour = 6, c
       >
         <option value="">Uur…</option>
         {hours.map((h) => (
-          <option key={h} value={h}>{pad(h)}:00</option>
+          <option key={h} value={h}>{pad(Math.floor(h))}:{h % 1 ? "30" : "00"}</option>
         ))}
       </select>
       <button

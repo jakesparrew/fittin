@@ -54,7 +54,7 @@ export async function payCoachRequest(formData) {
 export async function rescheduleBookingAction(formData) {
   const id = formData.get("bookingId");
   const date = formData.get("date"); // YYYY-MM-DD
-  const hour = parseInt(formData.get("hour"), 10);
+  const hour = parseFloat(formData.get("hour"));
   if (!id || !date || !Number.isFinite(hour)) return { error: "Kies een nieuwe dag en uur." };
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

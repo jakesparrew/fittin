@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBookingAction, searchMembersAction } from "@/app/(site)/boeken/actions";
-import { slotInstant, brusselsDateStr, slotRangeLabel } from "@/lib/time";
+import { slotInstant, brusselsDateStr, slotRangeLabel, fmtHour } from "@/lib/time";
 import EventsBooking from "@/components/booking/EventsBooking";
 
 const euro = (cents) => "€ " + (cents / 100).toFixed(2).replace(".", ",");
@@ -30,8 +30,7 @@ export default function BookingClient({
   const [weekOffset, setWeekOffset] = useState(0);
   const [showNight, setShowNight] = useState(false);
   const [mobileDay, setMobileDay] = useState(null);
-  const [dragStart, setDragStart] = useState(null); // { dateStr, hour } while drag-selecting hours
-  const [selected, setSelected] = useState(null); // { dateStr, hour }
+  const [selected, setSelected] = useState(null); // { dateStr, hour } — hour is decimal (6.5 = 06:30)
   const [persons, setPersons] = useState(1);
   const [duration, setDuration] = useState(1);
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
@@ -72,7 +71,7 @@ export default function BookingClient({
 
   const allHours = useMemo(() => {
     const list = [];
-    for (let h = gym.open_hour; h < gym.close_hour; h++) list.push(h);
+    for (let h = gym.open_hour; h < gym.close_hour; h += 0.5) list.push(h);
     return list;
   }, [gym.open_hour, gym.close_hour]);
   // Very-long (24/7) ranges get a daytime default + night toggle so the grid fits; normal
@@ -87,18 +86,18 @@ export default function BookingClient({
     return availability.some((a) => a.coach_id === coachId && a.weekday === wd && a.from_hour <= h && h < a.to_hour);
   }
 
-  // Is one hour bookable (free + open + future)?
+  // Is one 30-min slot bookable (free + open + future)?
   function slotFree(dateStr, h) {
     const t = slotInstant(dateStr, h).getTime();
     return !takenSet.has(t) && t >= Date.now() && coachOpen(dateStr, h);
   }
-  // End any drag when the mouse is released anywhere.
-  useEffect(() => {
-    const up = () => setDragStart(null);
-    window.addEventListener("mouseup", up);
-    window.addEventListener("touchend", up);
-    return () => { window.removeEventListener("mouseup", up); window.removeEventListener("touchend", up); };
-  }, []);
+  // Can a booking of `dur` whole hours START at half-hour slot h? Every 30-min slice in
+  // [h, h+dur) must be free and the whole thing must fit before closing time.
+  function canBook(dateStr, h, dur) {
+    if (h + dur > gym.close_hour) return false;
+    for (let s = h; s < h + dur - 1e-9; s += 0.5) if (!slotFree(dateStr, s)) return false;
+    return true;
+  }
 
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
@@ -281,13 +280,14 @@ export default function BookingClient({
                     const taken = takenSet.has(t);
                     const past = t < Date.now();
                     const closed = !coachOpen(activeDay, h);
-                    const inRange = isFit60 && selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + duration;
+                    const inRange = selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
                     const isSel = selected && selected.dateStr === activeDay && selected.hour === h;
-                    const label = String(h).padStart(2, "0") + ":00";
+                    const label = fmtHour(h);
                     if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/25">{label}</div>;
                     if (taken) return <div key={h} className="rounded-xl bg-borderc/40 py-3 text-center text-[10px] font-bold leading-tight text-brand/35">{label}<br />vol</div>;
+                    if (!inRange && !canBook(activeDay, h, 1)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/20">{label}</div>;
                     return (
-                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); if (isFit60) setDuration(1); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
+                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); setDuration(1); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
                         {label}{isSel ? " ✓" : ""}
                       </button>
                     );
@@ -313,27 +313,21 @@ export default function BookingClient({
                   <div>
                     {hours.map((h) => (
                       <div key={h} className="grid grid-cols-[44px_repeat(7,1fr)] gap-1 py-0.5">
-                        <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-brand/30">{String(h).padStart(2, "0")}:00</div>
+                        <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-brand/30">{fmtHour(h)}</div>
                         {days.map((d) => {
                           const t = slotInstant(d.dateStr, h).getTime();
                           const taken = takenSet.has(t);
                           const past = t < Date.now();
                           const closed = !coachOpen(d.dateStr, h);
-                          const inRange = isFit60 && selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + duration;
+                          const inRange = selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
                           const isSel = selected && selected.dateStr === d.dateStr && selected.hour === h;
                           if (past || closed) return <div key={d.dateStr} className="h-7 rounded-md bg-paper" />;
                           if (taken) return <div key={d.dateStr} className="flex h-7 items-center justify-center rounded-md bg-borderc/40 text-[9px] font-bold text-brand/30">vol</div>;
+                          if (!inRange && !canBook(d.dateStr, h, 1)) return <div key={d.dateStr} className="h-7 rounded-md bg-paper/60" />;
                           return (
                             <button
                               key={d.dateStr}
-                              onMouseDown={(e) => { e.preventDefault(); setSelected({ dateStr: d.dateStr, hour: h }); if (isFit60) { setDuration(1); setDragStart({ dateStr: d.dateStr, hour: h }); } }}
-                              onMouseEnter={() => {
-                                if (!dragStart || !isFit60 || dragStart.dateStr !== d.dateStr || h < dragStart.hour) return;
-                                let ok = true;
-                                for (let hh = dragStart.hour; hh <= h; hh++) if (!slotFree(d.dateStr, hh)) { ok = false; break; }
-                                if (ok) setDuration(Math.min(4, h - dragStart.hour + 1));
-                              }}
-                              onClick={() => { if (!dragStart) setSelected({ dateStr: d.dateStr, hour: h }); }}
+                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); setDuration(1); }}
                               className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
                             >
                               {isSel ? "✓" : inRange ? "•" : ""}
@@ -454,12 +448,16 @@ export default function BookingClient({
                 <div className="mt-5 border-t border-borderc pt-4">
                   <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
                   <div className="flex flex-wrap gap-2">
-                    {[1, 2, 3, 4].map((n) => (
-                      <button key={n} onClick={() => setDuration(n)} className={"rounded-2xl border-2 px-4 py-2.5 text-center transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                        <span className="block text-sm font-black text-brand">{n} uur</span>
-                      </button>
-                    ))}
+                    {[1, 2, 3, 4].map((n) => {
+                      const ok = selected && canBook(selected.dateStr, selected.hour, n);
+                      return (
+                        <button key={n} disabled={!ok} onClick={() => setDuration(n)} className={"rounded-2xl border-2 px-4 py-2.5 text-center transition disabled:opacity-30 " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                          <span className="block text-sm font-black text-brand">{n} uur</span>
+                        </button>
+                      );
+                    })}
                   </div>
+                  {!selected && <p className="mt-2 text-xs text-brand/40">Kies eerst een startmoment hierboven.</p>}
                   {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration} uur kost {duration} sessies.</p>}
                 </div>
               </Card>
