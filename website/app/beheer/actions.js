@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted } from "@/lib/email";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { notify } from "@/lib/notify";
+import { testNuki } from "@/lib/nuki";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -61,6 +62,41 @@ export async function updateGymSettings(formData) {
   revalidatePath("/beheer/instellingen");
   revalidatePath("/boeken");
   return { ok: true };
+}
+
+// ---- Nuki smart lock (per-booking keypad codes) ----
+// Config lives in the service-role-only gym_integrations table — the API token is a secret and must
+// never sit on the world-readable gyms table.
+export async function updateNukiSettings(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const patch = {
+    gym_id: profile.gym_id,
+    nuki_enabled: formData.get("nuki_enabled") === "on",
+    nuki_smartlock_id: (formData.get("nuki_smartlock_id") || "").trim() || null,
+    keypad_lead_min: Math.min(60, Math.max(0, num(formData.get("keypad_lead_min"), 5))),
+    keypad_grace_min: Math.min(180, Math.max(0, num(formData.get("keypad_grace_min"), 15))),
+    updated_at: new Date().toISOString(),
+  };
+  // Only overwrite the token when a new value is typed; a blank field keeps the stored token.
+  const token = (formData.get("nuki_api_token") || "").trim();
+  if (token) patch.nuki_api_token = token;
+  const { error: e } = await admin.from("gym_integrations").upsert(patch, { onConflict: "gym_id" });
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/instellingen");
+  return { ok: true };
+}
+
+export async function testNukiConnection() {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const { data: row } = await admin.from("gym_integrations").select("nuki_api_token, nuki_smartlock_id").eq("gym_id", profile.gym_id).maybeSingle();
+  const token = (row?.nuki_api_token || process.env.NUKI_API_TOKEN || "").trim();
+  const lock = (row?.nuki_smartlock_id || process.env.NUKI_SMARTLOCK_ID || "").trim();
+  if (!token) return { error: "Geen Nuki-token ingesteld — sla eerst je token op." };
+  return testNuki(token, lock);
 }
 
 // ---- Services / pricing ----

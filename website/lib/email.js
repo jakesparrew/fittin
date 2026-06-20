@@ -129,9 +129,13 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
 }
 
 // ---- Member: access code, sent ~5 minutes before the session starts ----
-export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, address, mapsUrl }) {
+export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl }) {
+  const codeCaption = personal ? "Jouw persoonlijke code" : "Toegangscode";
+  const codeNote = personal
+    ? `<div style="font-size:11px;color:#6b6685;margin-top:8px">Deze code is voor jou en werkt enkel tijdens je sessie.</div>`
+    : "";
   const codeHtml = accessCode
-    ? `<div style="margin:6px 0 4px;text-align:center"><div style="font-size:12px;color:#6b6685;letter-spacing:.08em;text-transform:uppercase">Toegangscode</div><div style="font-size:34px;font-weight:800;letter-spacing:.18em;color:#22194F;background:#f0effa;border-radius:14px;padding:14px 0;margin-top:6px">${accessCode}</div></div>`
+    ? `<div style="margin:6px 0 4px;text-align:center"><div style="font-size:12px;color:#6b6685;letter-spacing:.08em;text-transform:uppercase">${codeCaption}</div><div style="font-size:34px;font-weight:800;letter-spacing:.18em;color:#22194F;background:#f0effa;border-radius:14px;padding:14px 0;margin-top:6px">${accessCode}</div>${codeNote}</div>`
     : `<p style="font-size:14px;color:#6b6685">Open de deur met de knop in je account zodra je sessie begint.</p>`;
   const navHtml = mapsUrl
     ? `<div style="text-align:center"><a href="${mapsUrl}" style="display:inline-block;margin:6px 0;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px;font-size:14px">📍 Navigeer naar de gym</a></div>`

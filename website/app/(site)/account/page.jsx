@@ -73,7 +73,7 @@ export default async function AccountPage({ searchParams }) {
     { data: weights },
   ] = await Promise.all([
     supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
-    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
+    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
     supabase.from("credits_ledger").select("delta").eq("user_id", user.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
     supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
@@ -469,6 +469,16 @@ export default async function AccountPage({ searchParams }) {
                     )}
                   </div>
                   </div>
+                  {b.nuki_code && (
+                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-accent/10 px-4 py-3">
+                      <span className="text-xl">🔑</span>
+                      <div>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-accentdark">Jouw deurcode</p>
+                        <p className="text-2xl font-black tracking-[0.2em] text-brand">{b.nuki_code}</p>
+                      </div>
+                      <span className="ml-auto text-xs text-brand/45">werkt tijdens je sessie</span>
+                    </div>
+                  )}
                   {!b.invited && b.persons > 1 && (
                     <BookingBuddies bookingId={b.id} capacity={b.persons} participants={partMap[b.id] || []} paid={b.paid || b.price_cents === 0} />
                   )}

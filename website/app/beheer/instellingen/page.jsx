@@ -1,5 +1,7 @@
 import { getAdminContext } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { updateGymSettings } from "../actions";
+import NukiSettings from "@/components/admin/NukiSettings";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +10,21 @@ export default async function Instellingen() {
   if (!ctx) return null;
   const { gym, profile } = ctx;
   const readOnly = profile.role !== "beheerder";
+
+  // Nuki config lives in the service-role-only gym_integrations table; read it server-side and pass
+  // only non-secret values to the client (whether a token is stored — never the token itself).
+  let nukiRow = null;
+  try {
+    const { data } = await createAdminClient().from("gym_integrations").select("nuki_enabled, nuki_smartlock_id, keypad_lead_min, keypad_grace_min, nuki_api_token").eq("gym_id", gym.id).maybeSingle();
+    nukiRow = data;
+  } catch {}
+  const nukiInitial = {
+    enabled: !!nukiRow?.nuki_enabled,
+    smartlockId: nukiRow?.nuki_smartlock_id || "",
+    leadMin: nukiRow?.keypad_lead_min ?? 5,
+    graceMin: nukiRow?.keypad_grace_min ?? 15,
+  };
+  const tokenSet = !!(nukiRow?.nuki_api_token);
 
   return (
     <div className="px-8 py-8">
@@ -45,6 +62,8 @@ export default async function Instellingen() {
           Opslaan
         </button>
       </form>
+
+      <NukiSettings initial={nukiInitial} tokenSet={tokenSet} envToken={false} readOnly={readOnly} />
     </div>
   );
 }

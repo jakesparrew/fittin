@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingRescheduled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk } from "@/lib/email";
 import { notify, notifyMany } from "@/lib/notify";
+import { getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -214,19 +215,20 @@ export async function logBodyMetrics(formData) {
 // state instead of a false "opened" (so the UI never lies to the member).
 export async function openDoorAction() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
   const { error } = await supabase.rpc("open_door");
   if (error) return { error: error.message }; // e.g. "Je hebt nu geen actieve boeking."
 
-  const token = process.env.NUKI_API_TOKEN;
-  const lock = process.env.NUKI_SMARTLOCK_ID;
-  if (!token || !lock) return { pending: true }; // door hardware not connected yet
+  // Same Nuki config as the per-booking keypad codes (gym_integrations first, env fallback).
+  const admin = createAdminClient();
+  let gymId = null;
+  try { const { data: p } = await admin.from("profiles").select("gym_id").eq("id", user.id).single(); gymId = p?.gym_id; } catch {}
+  const cfg = await getNukiConfig(admin, gymId);
+  if (!cfg.hasToken || !cfg.hasLock) return { pending: true }; // door hardware not connected yet
 
   try {
-    const r = await fetch(`https://api.nuki.io/smartlock/${lock}/action`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ action: 3 }), // 3 = unlatch (open)
-    });
+    const r = await openDoorViaNuki(cfg);
     if (!r.ok) return { error: "De deur reageerde niet. Probeer opnieuw of bel ons even." };
     return { ok: true };
   } catch {

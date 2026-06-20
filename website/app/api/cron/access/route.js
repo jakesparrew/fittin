@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendDueAccessCodes } from "@/lib/reminders";
+import { revokeExpiredKeypadCodes, reconcileKeypadCodes } from "@/lib/nuki";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +16,11 @@ export async function GET(req) {
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return new NextResponse("unauthorized", { status: 401 });
   }
-  let sent = 0;
+  let sent = 0, revoked = 0, swept = 0;
   try { sent = await sendDueAccessCodes(); } catch {}
-  return NextResponse.json({ sent });
+  // Clean up keypad codes for sessions that ended (+grace) or were cancelled, then sweep the lock for
+  // any expired/orphan "Fittin …" codes as a backstop against accumulation.
+  try { revoked = await revokeExpiredKeypadCodes(createAdminClient()); } catch {}
+  try { swept = await reconcileKeypadCodes(createAdminClient()); } catch {}
+  return NextResponse.json({ sent, revoked, swept });
 }
