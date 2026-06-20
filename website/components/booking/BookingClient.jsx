@@ -29,6 +29,7 @@ export default function BookingClient({
   );
   const [weekOffset, setWeekOffset] = useState(0);
   const [showNight, setShowNight] = useState(false);
+  const [mobileDay, setMobileDay] = useState(null);
   const [dragStart, setDragStart] = useState(null); // { dateStr, hour } while drag-selecting hours
   const [selected, setSelected] = useState(null); // { dateStr, hour }
   const [persons, setPersons] = useState(1);
@@ -76,6 +77,7 @@ export default function BookingClient({
   // opening hours (e.g. 6–23) just show every bookable hour.
   const hasNight = allHours.some((h) => h < 6 || h >= 23);
   const hours = !hasNight || showNight ? allHours : allHours.filter((h) => h >= 7 && h < 22);
+  const activeDay = (days.find((d) => d.dateStr === mobileDay) || days[0])?.dateStr;
 
   function coachOpen(dateStr, h) {
     if (!isPT || !coachId) return true;
@@ -253,7 +255,42 @@ export default function BookingClient({
                 <button onClick={() => setWeekOffset((w) => Math.min(8, w + 1))} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition hover:border-lav">volgende ›</button>
               </div>
 
-              <div className="overflow-x-auto">
+              {/* Mobiel: dagkiezer + tijdslots in 1 kolom — geen horizontale scroll */}
+              <div className="md:hidden">
+                <div className="grid grid-cols-7 gap-1">
+                  {days.map((d) => {
+                    const act = activeDay === d.dateStr;
+                    return (
+                      <button key={d.dateStr} onClick={() => setMobileDay(d.dateStr)} className={"rounded-xl border-2 py-1.5 text-center transition " + (act ? "border-accent bg-accent/15" : "border-borderc")}>
+                        <span className="block text-[9px] font-bold uppercase text-brand/40">{d.weekday}</span>
+                        <span className="block text-xs font-black text-brand">{d.dayMonth.split(" ")[0]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {hours.map((h) => {
+                    const t = slotInstant(activeDay, h).getTime();
+                    const taken = takenSet.has(t);
+                    const past = t < Date.now();
+                    const closed = !coachOpen(activeDay, h);
+                    const inRange = isFit60 && selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + duration;
+                    const isSel = selected && selected.dateStr === activeDay && selected.hour === h;
+                    const label = String(h).padStart(2, "0") + ":00";
+                    if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/25">{label}</div>;
+                    if (taken) return <div key={h} className="rounded-xl bg-borderc/40 py-3 text-center text-[10px] font-bold leading-tight text-brand/35">{label}<br />vol</div>;
+                    return (
+                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); if (isFit60) setDuration(1); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
+                        {label}{isSel ? " ✓" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+                {hours.length === 0 && <p className="mt-2 text-xs text-brand/40">Geen vrije uren op deze dag.</p>}
+              </div>
+
+              {/* Desktop: volledige weekrooster */}
+              <div className="hidden overflow-x-auto md:block">
                 <div className="min-w-[620px]">
                   {/* header */}
                   <div className="grid grid-cols-[44px_repeat(7,1fr)] gap-1">

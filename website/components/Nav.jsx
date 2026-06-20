@@ -4,14 +4,11 @@ import { useEffect, useState } from "react";
 
 // Marketing nav — shown to logged-out visitors.
 const links = [
-  { href: "/", label: "Home" },
   { href: "/degym", label: "De gym" },
   { href: "/personal-training", label: "Personal training" },
-  { href: "/coaches", label: "Coaches" },
-  { href: "/oefeningen", label: "Oefeningen" },
   { href: "/workouts", label: "Workouts" },
+  { href: "/oefeningen", label: "Oefeningen" },
   { href: "/boeken", label: "Online boeken" },
-  { href: "/calorieen-berekenen", label: "Calorieën berekenen" },
 ];
 
 // Trimmed nav for logged-in members — no homepage/sales links.
