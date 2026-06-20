@@ -88,6 +88,9 @@ async function grantCredits(admin, userId, credits, reason, withPunchcard = fals
 }
 
 async function markBookingPaid(admin, bookingId, paymentIntent, session) {
+  // Don't confirm if the captured amount is below the agreed charge (mismatched/partial session).
+  const { data: pre } = await admin.from("bookings").select("charge_cents, price_cents").eq("id", bookingId).single();
+  if (pre && session?.amount_total != null && session.amount_total < (pre.charge_cents ?? pre.price_cents ?? 0)) return;
   const { data: booking } = await admin
     .from("bookings")
     .update({ paid: true, stripe_payment_intent: paymentIntent })
@@ -238,7 +241,12 @@ async function handleRefund(admin, charge) {
 async function handleEvent(event, admin) {
   const obj = event.data.object;
   switch (event.type) {
+    case "checkout.session.async_payment_succeeded":
     case "checkout.session.completed": {
+      // Only grant value once Stripe confirms the funds are captured. Delayed methods (e.g. SEPA)
+      // fire 'completed' with payment_status 'unpaid'/'processing' first — the real grant arrives on
+      // async_payment_succeeded. Setup/subscription sessions carry no payment_status, so allow those.
+      if (obj.mode === "payment" && obj.payment_status && obj.payment_status !== "paid") return;
       if (obj.metadata?.kind === "punchcard") {
         const credits = parseInt(obj.metadata.credits, 10) || 0;
         await grantCredits(admin, obj.metadata.user_id, credits, "aankoop", true, obj.id);

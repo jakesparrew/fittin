@@ -50,6 +50,7 @@ export async function sendDueAccessCodes() {
     .select("id, gym_id, user_id, starts_at, ends_at, nuki_auth_name, services(name), gym:gyms(access_code, access_info, address), member:profiles!bookings_user_id_fkey(email, full_name)")
     .eq("status", "bevestigd")
     .eq("access_sent", false)
+    .or("paid.eq.true,payment_source.neq.los") // never hand a door code to an unpaid cash booking
     .gte("starts_at", from)
     .lt("starts_at", to);
 

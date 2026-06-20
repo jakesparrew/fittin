@@ -9,7 +9,7 @@ const num = (v, d = null) => {
 
 // Create a discount code / promotion (e.g. WELKOM20 = 20% off a session).
 export async function createDiscount(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const code = String(formData.get("code") || "").trim().toUpperCase().replace(/\s+/g, "");
   const percent = num(formData.get("percent"), 0);
@@ -35,14 +35,14 @@ export async function createDiscount(formData) {
 }
 
 export async function toggleDiscount(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("discount_codes").update({ active: formData.get("active") !== "true" }).eq("id", formData.get("id")).eq("gym_id", profile.gym_id);
   revalidatePath("/beheer/diensten");
 }
 
 export async function deleteDiscount(formData) {
-  const { supabase, profile, error } = await requireStaff();
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   await supabase.from("discount_codes").delete().eq("id", formData.get("id")).eq("gym_id", profile.gym_id);
   revalidatePath("/beheer/diensten");

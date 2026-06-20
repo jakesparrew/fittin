@@ -182,7 +182,7 @@ export async function uploadCoachPhoto(formData) {
   const file = formData.get("photo");
   if (!file || typeof file === "string" || !file.size) return { error: "Kies een afbeelding." };
   if (file.size > 5 * 1024 * 1024) return { error: "Afbeelding mag max. 5 MB zijn." };
-  if (!/^image\//.test(file.type)) return { error: "Alleen afbeeldingen." };
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) return { error: "Enkel JPG, PNG, WebP of GIF (geen SVG)." };
   const { createAdminClient } = await import("@/lib/supabase/admin");
   const admin = createAdminClient();
   const ext = (file.name?.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";

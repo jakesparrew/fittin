@@ -14,7 +14,7 @@ async function me() {
 async function uploadFeedImage(file, gymId) {
   if (!file || typeof file === "string" || !file.size) return null;
   if (file.size > 5 * 1024 * 1024) throw new Error("Afbeelding mag max. 5 MB zijn.");
-  if (!/^image\//.test(file.type)) throw new Error("Alleen afbeeldingen.");
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) throw new Error("Enkel JPG, PNG, WebP of GIF (geen SVG).");
   const admin = createAdminClient();
   const ext = (file.name?.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const path = `${gymId}/${Date.now()}.${ext}`;
