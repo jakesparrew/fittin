@@ -277,7 +277,7 @@ export default function Home() {
               { name: "Losse sessie", price: "€ 15", per: "/ sessie", items: ["1 uur in de zaal", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
               { name: "10-beurtenkaart", price: "€ 150", per: "/ 11 sessies", items: ["10 + 1 gratis sessie", "6 maanden geldig", "Tot 3 vrienden mee"], cta: "Koop kaart", href: "/lidmaatschap", hot: false },
               { name: "Member-abonnement", price: "€ 12", per: "/ maand", items: ["1 sessie / maand inbegrepen", "Alle sessies aan € 12", "Maandelijks opzegbaar"], cta: "Word member", href: "/lidmaatschap", hot: true },
-              { name: "Personal training", price: "€ 60", per: "/ 1-op-1", items: ["1-op-2 € 35 pp", "1-op-3 € 30 pp", "Gratis intake"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
+              { name: "Personal training", price: "Op aanvraag", per: "", items: ["1-op-1, duo of trio", "Schema & opvolging op maat", "Gratis intake + proeftraining"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
             ].map((p, i) => (
               <Reveal key={p.name} delay={i * 90} className="h-full">
                 <div className={"relative flex h-full flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 " + (p.hot ? "border-accent bg-brand text-white shadow-xl shadow-brand/20" : "border-borderc bg-white hover:shadow-xl hover:shadow-brand/5")}>

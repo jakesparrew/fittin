@@ -3,7 +3,7 @@ import Link from "next/link";
 export const metadata = {
   title: "Personal training | Fittin'",
   description:
-    "Personal training op maat in Gent. Gratis intake en proeftraining. 1-op-1 € 60, 1-op-2 € 35 pp, 1-op-3 € 30 pp.",
+    "Personal training op maat in Gent. Gratis intake en proeftraining. Prijs op aanvraag.",
 };
 
 const expect = [
@@ -15,13 +15,13 @@ const expect = [
     title: "Een sessie",
     items: [
       "Duurt 60 minuten",
-      "Kostprijs afhankelijk van het programma",
+      "Prijs op aanvraag — op maat van je doel",
       "Verplaatsbaar tot 6u op voorhand",
     ],
   },
   {
-    title: "Programma's",
-    items: ["1 on 1 — € 60", "1 on 2 — € 35 pp", "1 on 3 — € 30 pp"],
+    title: "Formules",
+    items: ["1-op-1 (privé)", "1-op-2 (duo)", "1-op-3 (kleine groep)"],
   },
 ];
 
