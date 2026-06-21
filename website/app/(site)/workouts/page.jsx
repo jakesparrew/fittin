@@ -15,6 +15,7 @@ const CAT = {
   benen: { label: "Benen", color: "#7c3aed" },
   core: { label: "Core", color: "#0d9488" },
   armen: { label: "Armen", color: "#db2777" },
+  full: { label: "Full body", color: "#475569" },
 };
 const catOf = (c) => CAT[c] || { label: "Workout", color: "#33B24A" };
 

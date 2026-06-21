@@ -3,7 +3,7 @@ import { useState } from "react";
 import { setWorkoutPublic } from "@/app/coach/coaching-actions";
 
 const toast = (type, msg) => { try { window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type, msg } })); } catch {} };
-const CATS = ["borst", "schouders", "rug", "benen", "core", "armen"];
+const CATS = ["borst", "schouders", "rug", "benen", "armen", "core", "full"];
 const LEVELS = ["Beginner", "Gemiddeld", "Gevorderd"];
 
 // Staff panel to publish a (template) program as a public follow-along workout on /workouts.

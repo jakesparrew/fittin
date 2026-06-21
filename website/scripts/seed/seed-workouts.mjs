@@ -1,4 +1,5 @@
-// Seeds the 3 public follow-along workouts (Chest/Shoulder/Back) from scripts/seed/workouts.json.
+// Seeds the public follow-along workouts from scripts/seed/workouts.json (slug/category/sort come
+// from each entry, with a fallback to META for the original chest/shoulder/back keys).
 // Public workout = program with is_public=true + is_template=true (browsable AND copyable).
 // Idempotent: replaces by (gym_id, slug). Run: node scripts/seed/seed-workouts.mjs  (env vars required).
 import { createClient } from "@supabase/supabase-js";
@@ -26,13 +27,16 @@ async function main() {
   const idBySlug = new Map((exs || []).map((e) => [e.slug, e.id]));
 
   for (const w of workouts) {
-    const meta = META[w.key];
-    if (!meta) { console.log("skip unknown key", w.key); continue; }
-    await admin.from("programs").delete().eq("gym_id", gym.id).eq("slug", meta.slug); // cascade days/exercises
+    const meta = META[w.key] || {};
+    const slug = w.slug || meta.slug;
+    const category = w.category || meta.category;
+    const sort = w.sort ?? meta.sort ?? 0;
+    if (!slug) { console.log("skip — geen slug voor", w.key); continue; }
+    await admin.from("programs").delete().eq("gym_id", gym.id).eq("slug", slug); // cascade days/exercises
     const { data: prog, error: pe } = await admin.from("programs").insert({
       gym_id: gym.id, name: w.name, is_template: true, is_public: true, member_id: null, coach_id: null,
-      slug: meta.slug, subtitle: w.subtitle, description: w.intro, level: w.level, est_minutes: w.est_minutes,
-      focus: w.focus, category: meta.category, tips: w.tips || [], sort_order: meta.sort,
+      slug, subtitle: w.subtitle, description: w.intro, level: w.level, est_minutes: w.est_minutes,
+      focus: w.focus, category, tips: w.tips || [], sort_order: sort,
     }).select("id").single();
     if (pe) { console.error("program insert", w.key, pe.message); process.exit(1); }
     const { data: day } = await admin.from("program_days").insert({ program_id: prog.id, day_no: 1, name: w.focus || "Workout" }).select("id").single();
@@ -47,7 +51,7 @@ async function main() {
     if (rows.includes(null)) process.exit(1);
     const { error: ee } = await admin.from("program_exercises").insert(rows);
     if (ee) { console.error("pe insert", w.key, ee.message); process.exit(1); }
-    console.log(`seeded workout: ${w.name} (${meta.slug}) — ${rows.length} exercises`);
+    console.log(`seeded workout: ${w.name} (${slug}) — ${rows.length} exercises`);
   }
   console.log("✓ public workouts seeded");
 }

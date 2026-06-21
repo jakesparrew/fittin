@@ -274,5 +274,115 @@
         "notes": "Gestrekte armen, knijp je lats hard aan onderaan. Hoog tempo, ga voor de pump."
       }
     ]
+  },
+  {
+    "key": "legs",
+    "slug": "benen",
+    "category": "benen",
+    "sort": 4,
+    "name": "Benen: Kracht & Volume",
+    "subtitle": "Zware compounds voor de hele onderkant, afgewerkt met gerichte opbouw en een kuitenfinisher.",
+    "level": "Gemiddeld",
+    "est_minutes": 60,
+    "focus": "Kracht + spiermassa benen",
+    "intro": "Een complete beensessie: je traint quadriceps, hamstrings, bilspieren en kuiten. Je start met de zwaarste samengestelde oefeningen voor kracht en massa, en bouwt af naar gerichte isolatie. Hou je techniek strak — bij benen verdien je elke herhaling.",
+    "tips": [
+      "Warm je heupen, knieën en enkels grondig op vóór de zware squats.",
+      "Squat zo diep als je mobiliteit toelaat, met een neutrale rug.",
+      "Adem in bovenaan, span je core aan en hou je romp stevig tijdens elke herhaling.",
+      "Verhoog het gewicht pas als je alle herhalingen met nette techniek haalt."
+    ],
+    "exercises": [
+      { "slug": "bodyweight-squat", "section": "Warming-up", "sets": 2, "rep_text": "15", "rest_sec": 30, "tempo": "", "notes": "Rustig tempo, knieën in lijn met de tenen, romp rechtop. Voel de benen opwarmen." },
+      { "slug": "barbell-squat", "section": "Hoofdoefening", "sets": 4, "rep_text": "5-6", "rest_sec": 150, "tempo": "3-1-1", "notes": "Diep en gecontroleerd zakken, knieën naar buiten duwen, krachtig omhoog. Rug neutraal." },
+      { "slug": "romanian-deadlift", "section": "Hoofdoefening", "sets": 3, "rep_text": "8", "rest_sec": 120, "tempo": "3-0-1", "notes": "Heupscharnier met lichte kniebuiging, stang dicht bij de benen. Voel de hamstrings rekken." },
+      { "slug": "leg-press", "section": "Hoofdoefening", "sets": 3, "rep_text": "10-12", "rest_sec": 105, "tempo": "", "notes": "Voeten op schouderbreedte, knieën niet volledig strekken bovenaan. Volledige controle." },
+      { "slug": "walking-lunge", "section": "Accessoire", "sets": 3, "rep_text": "10 per kant", "rest_sec": 90, "tempo": "", "notes": "Grote pas, achterste knie net boven de grond, romp rechtop." },
+      { "slug": "leg-curl", "section": "Accessoire", "sets": 3, "rep_text": "12", "rest_sec": 75, "tempo": "2-1-1", "notes": "Knijp de hamstrings samen bovenaan, laat gecontroleerd zakken." },
+      { "slug": "barbell-hip-thrust", "section": "Accessoire", "sets": 3, "rep_text": "10", "rest_sec": 90, "tempo": "", "notes": "Volledige heupextensie, knijp de bilspieren 1 sec samen bovenaan. Kin ingetrokken." },
+      { "slug": "barbell-seated-calf-raise", "section": "Finisher", "sets": 4, "rep_text": "15-20", "rest_sec": 45, "tempo": "", "notes": "Volledige rek onderaan, hoog op de tenen bovenaan. Rustig tempo voor maximale pump." }
+    ]
+  },
+  {
+    "key": "arms",
+    "slug": "armen",
+    "category": "armen",
+    "sort": 5,
+    "name": "Armen: Biceps & Triceps",
+    "subtitle": "Biceps en triceps afgewisseld — zwaar beginnen, eindigen met een stevige pump.",
+    "level": "Gemiddeld",
+    "est_minutes": 45,
+    "focus": "Grotere, sterkere armen",
+    "intro": "Een gerichte armsessie die biceps en triceps afwisselt zodat de ene groep rust terwijl de andere werkt. Je start met de zwaarste samengestelde bewegingen en bouwt af naar isolatie en een pump-finisher. Hou je ellebogen stabiel en vermijd zwaaien.",
+    "tips": [
+      "Warm je ellebogen op met een lichte set vóór je zwaar gaat.",
+      "Hou je ellebogen vast langs je lichaam — laat alleen de onderarm bewegen.",
+      "Knijp de spier 1 seconde samen aan het einde van elke herhaling.",
+      "Kwaliteit boven gewicht: armen groeien van spanning, niet van zwaai."
+    ],
+    "exercises": [
+      { "slug": "biceps-curl", "section": "Warming-up", "sets": 2, "rep_text": "15", "rest_sec": 30, "tempo": "", "notes": "Licht gewicht om ellebogen en biceps op te warmen. Ellebogen langs het lichaam." },
+      { "slug": "barbell-curl", "section": "Hoofdoefening", "sets": 3, "rep_text": "8", "rest_sec": 90, "tempo": "2-0-1", "notes": "Ellebogen vast langs je zij, geen zwaai. Volledige rek onderaan, knijp bovenaan." },
+      { "slug": "close-grip-barbell-bench-press", "section": "Hoofdoefening", "sets": 3, "rep_text": "8", "rest_sec": 90, "tempo": "2-1-1", "notes": "Handen op schouderbreedte, ellebogen dicht bij het lichaam. Druk vanuit de triceps." },
+      { "slug": "alternate-hammer-curl", "section": "Accessoire", "sets": 3, "rep_text": "10-12", "rest_sec": 60, "tempo": "", "notes": "Neutrale greep, om beurt. Geen schommel, knijp bovenaan samen." },
+      { "slug": "triceps-pushdown", "section": "Accessoire", "sets": 3, "rep_text": "12", "rest_sec": 60, "tempo": "2-1-1", "notes": "Ellebogen vast, enkel de onderarm beweegt. Strek volledig en knijp de triceps." },
+      { "slug": "cable-preacher-curl", "section": "Accessoire", "sets": 3, "rep_text": "12", "rest_sec": 60, "tempo": "", "notes": "Bovenarm tegen het kussen, volledige controle. Geen ruk onderaan." },
+      { "slug": "cable-rope-overhead-triceps-extension", "section": "Accessoire", "sets": 3, "rep_text": "12", "rest_sec": 60, "tempo": "", "notes": "Ellebogen naast je hoofd, strek het touw uit elkaar bovenaan." },
+      { "slug": "bench-dips", "section": "Finisher", "sets": 2, "rep_text": "max", "rest_sec": 60, "tempo": "", "notes": "Zak tot 90 graden in de ellebogen, druk krachtig omhoog. Ga tot bijna falen." }
+    ]
+  },
+  {
+    "key": "core",
+    "slug": "core",
+    "category": "core",
+    "sort": 6,
+    "name": "Core & Buik",
+    "subtitle": "Volledige core: onderbuik, bovenbuik, schuine buikspieren en stabiliteit.",
+    "level": "Beginner",
+    "est_minutes": 30,
+    "focus": "Sterke core & zichtbare buikspieren",
+    "intro": "Een korte maar complete core-sessie die je hele middenrif raakt: onderbuik, bovenbuik, schuine buikspieren en romp-stabiliteit. Werk gecontroleerd en met spanning — je buikspieren reageren op kwaliteit, niet op snelheid.",
+    "tips": [
+      "Beweeg traag en gecontroleerd; vermijd schommelen met momentum.",
+      "Adem uit en span je buik hard aan op het zwaarste punt van elke herhaling.",
+      "Trek nooit aan je nek bij crunches — laat de buikspieren het werk doen.",
+      "Doe deze sessie 2 à 3× per week, ideaal na een korte cardio."
+    ],
+    "exercises": [
+      { "slug": "dead-bug", "section": "Warming-up", "sets": 2, "rep_text": "10 per kant", "rest_sec": 30, "tempo": "", "notes": "Onderrug tegen de grond, strek tegengestelde arm en been. Rustig en gecontroleerd." },
+      { "slug": "hanging-leg-raise", "section": "Hoofdoefening", "sets": 3, "rep_text": "10-12", "rest_sec": 75, "tempo": "", "notes": "Til de benen gecontroleerd op met je onderbuik, geen schommel. Zak traag terug." },
+      { "slug": "cable-crunch", "section": "Hoofdoefening", "sets": 3, "rep_text": "12-15", "rest_sec": 60, "tempo": "2-1-1", "notes": "Rol je rug op bovenaan, trek met de buikspieren — niet met de armen." },
+      { "slug": "decline-crunch", "section": "Accessoire", "sets": 3, "rep_text": "15", "rest_sec": 45, "tempo": "", "notes": "Volledige buikspiercontractie, schouderbladen los van de bank. Geen nektrek." },
+      { "slug": "cable-russian-twists", "section": "Accessoire", "sets": 3, "rep_text": "12 per kant", "rest_sec": 45, "tempo": "", "notes": "Draai vanuit de romp, heupen stabiel. Voel de schuine buikspieren werken." },
+      { "slug": "cross-body-crunch", "section": "Accessoire", "sets": 3, "rep_text": "15 per kant", "rest_sec": 45, "tempo": "", "notes": "Breng je elleboog naar de tegengestelde knie en knijp samen. Rustig tempo." },
+      { "slug": "plank", "section": "Finisher", "sets": 3, "rep_text": "45-60 sec", "rest_sec": 45, "tempo": "", "notes": "Kaarsrechte lijn van hoofd tot hielen, billen en buik aanspannen, niet doorzakken." }
+    ]
+  },
+  {
+    "key": "fullbody",
+    "slug": "full-body",
+    "category": "full",
+    "sort": 7,
+    "name": "Full Body Kracht",
+    "subtitle": "Het hele lichaam in één efficiënte sessie — ideaal 2 à 3× per week.",
+    "level": "Gemiddeld",
+    "est_minutes": 55,
+    "focus": "Hele lichaam in één sessie",
+    "intro": "Een efficiënte full-body workout die elke grote spiergroep traint met samengestelde oefeningen: benen, borst, rug, schouders en core. Perfect als je 2 à 3 keer per week traint en met weinig oefeningen een maximaal effect wil.",
+    "tips": [
+      "Neem voldoende rust tussen de zware compounds — kwaliteit primeert.",
+      "Hou je core tijdens elke oefening aangespannen voor stabiliteit en veiligheid.",
+      "Begin licht op je eerste set en bouw op naar je werkgewicht.",
+      "Doe deze sessie maximaal om de dag zodat je voldoende herstelt."
+    ],
+    "exercises": [
+      { "slug": "bodyweight-squat", "section": "Warming-up", "sets": 2, "rep_text": "12", "rest_sec": 30, "tempo": "", "notes": "Opwarmen van benen en heupen. Romp rechtop, volledige diepte." },
+      { "slug": "barbell-squat", "section": "Hoofdoefening", "sets": 3, "rep_text": "8", "rest_sec": 120, "tempo": "2-1-1", "notes": "De kernoefening voor de onderkant. Diep en gecontroleerd, rug neutraal." },
+      { "slug": "barbell-bench-press-medium-grip", "section": "Hoofdoefening", "sets": 3, "rep_text": "8", "rest_sec": 120, "tempo": "2-1-1", "notes": "Stang naar de onderborst, schouderbladen ingetrokken, krachtig drukken." },
+      { "slug": "barbell-row", "section": "Hoofdoefening", "sets": 3, "rep_text": "8-10", "rest_sec": 105, "tempo": "", "notes": "Voorovergebogen met rechte rug, trek de stang naar je onderbuik. Knijp je rug samen." },
+      { "slug": "dumbbell-shoulder-press", "section": "Accessoire", "sets": 3, "rep_text": "10", "rest_sec": 90, "tempo": "", "notes": "Druk recht boven je hoofd, ribben laag. Volledige controle omlaag." },
+      { "slug": "romanian-deadlift", "section": "Accessoire", "sets": 3, "rep_text": "10", "rest_sec": 90, "tempo": "3-0-1", "notes": "Heupscharnier voor hamstrings en bilspieren. Stang dicht bij de benen." },
+      { "slug": "plank", "section": "Finisher", "sets": 3, "rep_text": "45 sec", "rest_sec": 45, "tempo": "", "notes": "Sluit af met de core: strakke lijn, billen en buik aangespannen." }
+    ]
   }
 ]
