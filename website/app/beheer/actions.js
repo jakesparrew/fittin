@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted } from "@/lib/email";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { notify } from "@/lib/notify";
-import { testNuki } from "@/lib/nuki";
+import { testNuki, getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
 
@@ -86,6 +86,23 @@ export async function updateNukiSettings(formData) {
   if (e) return { error: e.message };
   revalidatePath("/beheer/instellingen");
   return { ok: true };
+}
+
+// Manual door open by a beheerder (override — no booking required). Logs to door_log.
+export async function adminOpenDoor() {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const cfg = await getNukiConfig(admin, profile.gym_id);
+  if (!cfg.hasToken || !cfg.hasLock) return { error: "Nuki is nog niet ingesteld (token + smartlock)." };
+  try {
+    const r = await openDoorViaNuki(cfg);
+    if (!r.ok) return { error: "De deur reageerde niet. Is het slot online?" };
+    try { await admin.from("door_log").insert({ gym_id: profile.gym_id, user_id: profile.id, result: "ok" }); } catch {}
+    return { ok: true };
+  } catch {
+    return { error: "Kon het deursysteem niet bereiken." };
+  }
 }
 
 export async function testNukiConnection() {

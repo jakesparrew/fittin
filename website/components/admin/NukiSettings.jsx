@@ -1,6 +1,6 @@
 "use client";
 import { useActionState, useState } from "react";
-import { updateNukiSettings, testNukiConnection } from "@/app/beheer/actions";
+import { updateNukiSettings, testNukiConnection, adminOpenDoor } from "@/app/beheer/actions";
 
 // Superadmin settings for the Nuki smart lock + per-booking keypad codes.
 // The API token is write-only: the field shows whether one is stored, never the value.
@@ -11,12 +11,21 @@ export default function NukiSettings({ initial, tokenSet, envToken, readOnly }) 
   }, null);
   const [test, setTest] = useState(null);
   const [testing, setTesting] = useState(false);
+  const [opening, setOpening] = useState(false);
+  const [doorMsg, setDoorMsg] = useState(null);
 
   async function runTest() {
     setTesting(true);
     setTest(null);
     try { setTest(await testNukiConnection()); } catch { setTest({ error: "Test mislukt." }); }
     setTesting(false);
+  }
+
+  async function runOpen() {
+    setOpening(true);
+    setDoorMsg(null);
+    try { setDoorMsg(await adminOpenDoor()); } catch { setDoorMsg({ error: "Openen mislukt." }); }
+    setOpening(false);
   }
 
   return (
@@ -69,7 +78,12 @@ export default function NukiSettings({ initial, tokenSet, envToken, readOnly }) 
         <button type="button" onClick={runTest} disabled={readOnly || testing} className="rounded-full border-2 border-borderc px-6 py-3 font-bold text-brand transition hover:border-accent disabled:opacity-40">
           {testing ? "Testen…" : "Test verbinding"}
         </button>
+        <button type="button" onClick={runOpen} disabled={readOnly || opening} className="rounded-full bg-brand px-6 py-3 font-bold text-white transition hover:opacity-90 disabled:opacity-40">
+          {opening ? "Openen…" : "🚪 Open de deur nu"}
+        </button>
       </div>
+      {doorMsg?.error && <p className="rounded-xl bg-red-500/10 p-3 text-sm font-semibold text-red-600">{doorMsg.error}</p>}
+      {doorMsg?.ok && <p className="rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Deur geopend ✓</p>}
 
       {test?.error && <p className="rounded-xl bg-red-500/10 p-3 text-sm font-semibold text-red-600">{test.error}</p>}
       {test?.ok && (
