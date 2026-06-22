@@ -4,6 +4,18 @@ import { adminCancelBooking } from "@/app/beheer/actions";
 
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+const ago = (iso) => {
+  if (!iso) return "";
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  return d <= 0 ? "vandaag" : d === 1 ? "gisteren" : d < 31 ? `${d}d geleden` : `${Math.floor(d / 30)} mnd geleden`;
+};
+// How the booking came in (the "log"): coach-booked, member online, or via a credit/abo/code.
+const bron = (b) =>
+  b.coach_name ? "Via coach"
+    : b.payment_source === "abo" ? "Abonnement"
+    : b.payment_source === "credit" ? "Beurtenkaart"
+    : b.payment_source === "gratis_code" ? "Gratis code"
+    : "Online";
 
 export default function BookingsList({ bookings = [] }) {
   const [q, setQ] = useState("");
@@ -31,12 +43,14 @@ export default function BookingsList({ bookings = [] }) {
       </div>
 
       <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-white">
-        <table className="w-full min-w-[780px] text-sm">
+        <table className="w-full min-w-[980px] text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
               <th className="px-4 py-3">Wanneer</th>
+              <th className="px-4 py-3">Geboekt op</th>
               <th className="px-4 py-3">Lid</th>
               <th className="px-4 py-3">Sessie</th>
+              <th className="px-4 py-3">Bron</th>
               <th className="px-4 py-3">Coach</th>
               <th className="px-4 py-3">Pers</th>
               <th className="px-4 py-3">Betaald</th>
@@ -51,8 +65,10 @@ export default function BookingsList({ bookings = [] }) {
               return (
                 <tr key={b.id} className={b.status !== "bevestigd" ? "opacity-50" : ""}>
                   <td className="whitespace-nowrap px-4 py-3 capitalize text-brand/70">{fmt(b.starts_at)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-xs text-brand/50">{b.created_at ? <>{fmt(b.created_at)}<span className="block text-brand/35">{ago(b.created_at)}</span></> : "—"}</td>
                   <td className="px-4 py-3 font-semibold text-brand">{b.member_name || "—"}</td>
                   <td className="px-4 py-3 text-brand/70">{b.service_name || "Sessie"}</td>
+                  <td className="px-4 py-3"><span className="rounded-full bg-paper px-2 py-0.5 text-xs font-semibold text-brand/60">{bron(b)}</span></td>
                   <td className="px-4 py-3 text-brand/50">{b.coach_name || "—"}</td>
                   <td className="px-4 py-3">{b.persons}</td>
                   <td className="px-4 py-3">{paid ? <span className="font-bold text-accentdark">✓</span> : <span className="font-bold text-red-500">onbetaald</span>}</td>

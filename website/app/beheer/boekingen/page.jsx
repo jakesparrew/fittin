@@ -40,11 +40,11 @@ export default async function Boekingen({ searchParams }) {
     supabase.from("slot_blocks").select("id, starts_at, reason").eq("gym_id", gym.id).gte("starts_at", from).lt("starts_at", to),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).order("full_name"),
     supabase.from("services").select("id, name").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
-    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
+    supabase.from("bookings").select("id, created_at, starts_at, ends_at, status, persons, paid, price_cents, payment_source, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
   ]);
 
   const bookingRows = (allBookings || []).map((b) => ({
-    id: b.id, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status, persons: b.persons,
+    id: b.id, created_at: b.created_at, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status, persons: b.persons,
     paid: b.paid, price_cents: b.price_cents, payment_source: b.payment_source,
     member_name: b.member?.full_name || b.member?.email, coach_name: b.coach?.full_name, service_name: b.services?.name,
   }));
