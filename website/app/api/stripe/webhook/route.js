@@ -89,12 +89,23 @@ async function grantCredits(admin, userId, credits, reason, withPunchcard = fals
 
 async function markBookingPaid(admin, bookingId, paymentIntent, session) {
   // Don't confirm if the captured amount is below the agreed charge (mismatched/partial session).
-  const { data: pre } = await admin.from("bookings").select("charge_cents, price_cents").eq("id", bookingId).single();
-  if (pre && session?.amount_total != null && session.amount_total < (pre.charge_cents ?? pre.price_cents ?? 0)) return;
+  const { data: pre } = await admin.from("bookings").select("charge_cents, price_cents, status, gym_id, user_id, services(name)").eq("id", bookingId).single();
+  if (!pre) return;
+  if (session?.amount_total != null && session.amount_total < (pre.charge_cents ?? pre.price_cents ?? 0)) return;
+  // RACE GUARD: a slow payment (SCA/Bancontact/bank-app) can land after the slot hold expired and the
+  // slot was released/re-booked. Never deliver a dead booking — refund the charge and tell the member.
+  if (pre.status !== "bevestigd") {
+    try {
+      if (paymentIntent) await stripe.refunds.create({ payment_intent: paymentIntent });
+      await admin.from("notifications").insert({ gym_id: pre.gym_id, user_id: pre.user_id, type: "system", title: "Betaling terugbetaald", body: "Je tijdslot was niet meer vrij toen je betaling binnenkwam — we hebben het bedrag automatisch teruggestort.", link: "/boeken" });
+    } catch (e) { console.error("markBookingPaid race refund failed:", e?.message); }
+    return;
+  }
   const { data: booking } = await admin
     .from("bookings")
-    .update({ paid: true, stripe_payment_intent: paymentIntent })
+    .update({ paid: true, status: "bevestigd", stripe_payment_intent: paymentIntent })
     .eq("id", bookingId)
+    .eq("status", "bevestigd")
     .select("id, gym_id, starts_at, ends_at, persons, user_id, services(name)")
     .single();
   if (!booking) return;

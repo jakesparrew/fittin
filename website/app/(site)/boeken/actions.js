@@ -51,6 +51,9 @@ function checkoutParams(booking, email, chargeCents, codeId) {
       },
     ],
     metadata: { booking_id: booking.id, ...(codeId ? { discount_code_id: codeId } : {}) },
+    // Cap the payment window (~32 min) so it can't outlive the 35-min unpaid-slot hold (migration 0089).
+    // Prevents a slow SCA/Bancontact payment from landing after the slot was freed/re-booked.
+    expires_at: Math.floor(Date.now() / 1000) + 32 * 60,
     success_url: `${siteUrl()}/account?betaald=1`,
     cancel_url: `${siteUrl()}/boeken?geannuleerd=1`,
   };
@@ -180,8 +183,15 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     return { ok: true, free: true };
   }
 
-  // Paid: hand off to Stripe Checkout. If Stripe isn't set up, confirm unpaid (dev).
-  if (!isStripeConfigured) return { ok: true, unpaid: true };
+  // Paid: hand off to Stripe Checkout. In production a missing Stripe key must NOT silently confirm a
+  // free unpaid slot — cancel the held booking and fail loudly. (Dev keeps the unpaid confirm.)
+  if (!isStripeConfigured) {
+    if (process.env.NODE_ENV === "production") {
+      await createAdminClient().from("bookings").update({ status: "geannuleerd", cancelled_at: new Date().toISOString() }).eq("id", booking.id);
+      return { error: "Betalen is tijdelijk niet beschikbaar. Probeer het later opnieuw." };
+    }
+    return { ok: true, unpaid: true };
+  }
 
   const session = await stripe.checkout.sessions.create(checkoutParams(booking, user.email, chargeCents, codeId));
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
