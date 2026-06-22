@@ -153,6 +153,45 @@ export default async function CoachDashboard({ searchParams }) {
         <Stat label="Tarief per sessie" value={mode === "free" ? "—" : euro(profile.coach_session_price_cents)} />
       </div>
 
+      {/* Coach-sessies kopen — bovenaan zodat je je saldo snel kan aanvullen */}
+      {mode === "credit" && (
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border-2 border-accent bg-accent/5 p-5">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">💳</span>
+              <p className="text-lg font-black text-brand">Coach-sessies kopen</p>
+            </div>
+            <p className="mt-1 text-sm text-brand/60">
+              Coaches betalen altijd <strong className="text-brand">€ 12 per sessie</strong>. Koop 1 tot 100 sessies vooraf en boek daarna je clienten met dit saldo.
+            </p>
+            <ActionForm action={buyCoachCredits} className="mt-3 flex flex-wrap items-end gap-3">
+              <label className="block text-xs font-bold text-lav">Aantal sessies (1–100)
+                <input name="qty" type="number" defaultValue="10" min="1" max="100" className="mt-1 block w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+              </label>
+              <SubmitButton className="rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand">Naar de kassa →</SubmitButton>
+            </ActionForm>
+          </div>
+          <div className="rounded-2xl border border-borderc bg-white p-5">
+            <p className="font-bold text-brand">Of vraag sessies aan</p>
+            <p className="mt-0.5 text-xs text-brand/50">De beheerder keurt goed en factureert je later.</p>
+            <ActionForm action={requestCoachSessions} success="Aanvraag verstuurd ✓" className="mt-3 flex flex-wrap items-end gap-2">
+              <label className="text-xs font-bold text-lav">Aantal
+                <input name="qty" type="number" defaultValue="10" min="1" max="100" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+              </label>
+              <input name="note" placeholder="notitie (optioneel)" className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+              <SubmitButton className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</SubmitButton>
+            </ActionForm>
+            {(requests || []).length > 0 && (
+              <div className="mt-3 space-y-1 text-xs">
+                {requests.map((r, i) => (
+                  <p key={i} className="text-brand/50">{r.qty} sessies · <span className={r.status === "approved" ? "font-bold text-accentdark" : r.status === "declined" ? "text-red-500" : "text-brand/60"}>{r.status === "pending" ? "in behandeling" : r.status === "approved" ? "goedgekeurd ✓" : "afgewezen"}</span></p>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Notifications */}
       {(notifs || []).length > 0 && (
         <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
@@ -231,44 +270,6 @@ export default async function CoachDashboard({ searchParams }) {
           <span className="text-accentdark">→</span>
         </Link>
       </div>
-
-      {mode === "credit" && (
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border-2 border-accent bg-accent/5 p-5">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">💳</span>
-              <p className="text-lg font-black text-brand">Coach-sessies kopen</p>
-            </div>
-            <p className="mt-1 text-sm text-brand/60">
-              Coaches betalen altijd <strong className="text-brand">€ 12 per sessie</strong>. Koop 1 tot 100 sessies vooraf en boek daarna je clienten met dit saldo.
-            </p>
-            <form action={buyCoachCredits} className="mt-3 flex flex-wrap items-end gap-3">
-              <label className="block text-xs font-bold text-lav">Aantal sessies (1–100)
-                <input name="qty" type="number" defaultValue="10" min="1" max="100" className="mt-1 block w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
-              </label>
-              <SubmitButton className="rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand">Naar de kassa →</SubmitButton>
-            </form>
-          </div>
-          <div className="rounded-2xl border border-borderc bg-white p-5">
-            <p className="font-bold text-brand">Of vraag sessies aan</p>
-            <p className="mt-0.5 text-xs text-brand/50">De beheerder keurt goed en factureert je later.</p>
-            <ActionForm action={requestCoachSessions} success="Aanvraag verstuurd ✓" className="mt-3 flex flex-wrap items-end gap-2">
-              <label className="text-xs font-bold text-lav">Aantal
-                <input name="qty" type="number" defaultValue="10" min="1" max="100" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-              </label>
-              <input name="note" placeholder="notitie (optioneel)" className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-              <SubmitButton className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</SubmitButton>
-            </ActionForm>
-            {(requests || []).length > 0 && (
-              <div className="mt-3 space-y-1 text-xs">
-                {requests.map((r, i) => (
-                  <p key={i} className="text-brand/50">{r.qty} sessies · <span className={r.status === "approved" ? "font-bold text-accentdark" : r.status === "declined" ? "text-red-500" : "text-brand/60"}>{r.status === "pending" ? "in behandeling" : r.status === "approved" ? "goedgekeurd ✓" : "afgewezen"}</span></p>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Interactive schedule */}
       <div className="mt-8">

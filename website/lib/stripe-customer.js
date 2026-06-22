@@ -9,7 +9,17 @@ export async function getOrCreateCustomer(supabase, userId, email) {
     .select("stripe_customer_id, full_name")
     .eq("id", userId)
     .single();
-  if (profile?.stripe_customer_id) return profile.stripe_customer_id;
+  // Reuse the stored customer, but only if it still exists in the ACTIVE Stripe account/mode. A stale
+  // id (e.g. created under a different test/live key) would make checkout.sessions.create throw
+  // "No such customer" — so validate it and fall through to recreate a fresh one if it's gone.
+  if (profile?.stripe_customer_id) {
+    try {
+      const existing = await stripe.customers.retrieve(profile.stripe_customer_id);
+      if (existing && !existing.deleted) return existing.id;
+    } catch {
+      // invalid/stale id → recreate below
+    }
+  }
 
   const customer = await stripe.customers.create({
     email,

@@ -454,17 +454,24 @@ export async function buyCoachCredits(formData) {
   // 1–100 session-credits up front and spend them when booking client sessions.
   const qty = Math.min(100, Math.max(1, num(formData.get("qty"), 10)));
   const unit = 1200;
-  const customer = await getOrCreateCustomer(supabase, userId, email);
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    customer,
-    ...bizCustomer,
-    line_items: [
-      { quantity: qty, price_data: { currency: "eur", unit_amount: unit, product_data: { name: "Coach-sessie — Fittin' (€ 12,00/sessie)" } } },
-    ],
-    metadata: { kind: "coach_credits", coach_id: userId, credits: String(qty) },
-    success_url: `${siteUrl()}/coach?gekocht=1`,
-    cancel_url: `${siteUrl()}/coach?geannuleerd=1`,
-  });
-  redirect(session.url);
+  let url;
+  try {
+    const customer = await getOrCreateCustomer(supabase, userId, email);
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      customer,
+      ...bizCustomer,
+      line_items: [
+        { quantity: qty, price_data: { currency: "eur", unit_amount: unit, product_data: { name: "Coach-sessie — Fittin' (€ 12,00/sessie)" } } },
+      ],
+      metadata: { kind: "coach_credits", coach_id: userId, credits: String(qty) },
+      success_url: `${siteUrl()}/coach?gekocht=1`,
+      cancel_url: `${siteUrl()}/coach?geannuleerd=1`,
+    });
+    url = session.url;
+  } catch (e) {
+    console.error("buyCoachCredits checkout failed:", e?.message);
+    return { error: "Betaling kon niet gestart worden. Probeer het opnieuw of mail info@fittin.be." };
+  }
+  redirect(url);
 }
