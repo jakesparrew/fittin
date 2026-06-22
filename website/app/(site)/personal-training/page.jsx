@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 
 export const metadata = {
   title: "Personal training in Gent | Fittin'",
@@ -75,33 +76,6 @@ const formules = [
   { name: "1-op-3 (small group)", desc: "Met je kleine vaste groepje. Begeleiding op maat, samen sterker." },
 ];
 
-const coaches = [
-  {
-    name: "Yoshe Willems",
-    tagline: "Op zelfstandige wijze verantwoord leren fitnessen",
-    days: "Di · Do · Za · Zo",
-    email: "willemsyoshe@gmail.com",
-    phone: "+32 483 53 42 44",
-    specials: ["Krachttraining", "Vetverlies", "Conditietraining", "Zelfstandig leren fitnessen", "HIIT"],
-  },
-  {
-    name: "Jelle Vercruysse",
-    tagline: "Functioneel bewegen op maat",
-    days: "Ma · Di · Wo · Do · Za · Zo",
-    email: "coachgent.pt@gmail.com",
-    phone: "+32 474 31 61 01",
-    specials: ["Functioneel trainen", "Sportspecifiek trainen", "Explosieve kracht", "HIIT", "Kracht & hypertrofie"],
-  },
-  {
-    name: "Billy Den Haese",
-    tagline: "Movement and lifestyle",
-    days: "Wo · Do · Vr · Za",
-    email: "denhaesebilly@gmail.com",
-    phone: "+32 492 78 76 72",
-    specials: ["Bokstraining", "Bodyweight training", "Functional training", "Krachttraining", "Small group training"],
-  },
-];
-
 const faq = [
   {
     q: "Wat kost personal training bij Fittin'?",
@@ -142,7 +116,9 @@ const Icon = ({ name }) => {
   return <svg {...common}>{paths[name] || paths.check}</svg>;
 };
 
-export default function PersonalTraining() {
+export default async function PersonalTraining() {
+  const gym = await getGymCached();
+  const coaches = gym ? await getPublicCoachesCached(gym.id) : [];
   return (
     <main>
       {/* Hero */}
@@ -278,36 +254,30 @@ export default function PersonalTraining() {
             Misschien binnenkort jouw sportbuddy
           </h2>
           <p className="mt-4 max-w-2xl leading-relaxed text-brand/70">
-            Drie ervaren coaches, elk met hun eigen specialiteit. Tijdens je gratis intake ontdek je
+            Onze ervaren coaches, elk met hun eigen specialiteit. Tijdens je gratis intake ontdek je
             wie het best bij jou en je doel past.
           </p>
-          <div className="mt-10 grid gap-5 md:grid-cols-3">
-            {coaches.map((coach) => (
-              <div key={coach.name} className="flex flex-col rounded-2xl border border-borderc bg-white p-7">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-lg font-black text-accent">
-                  {coach.name.split(" ").map((n) => n[0]).join("")}
-                </div>
-                <h3 className="mt-4 text-xl font-black">{coach.name}</h3>
-                <p className="mt-1 text-sm font-semibold text-accentdark">{coach.tagline}</p>
-                <p className="mt-3 text-sm text-brand/60">Beschikbaar: {coach.days}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {coach.specials.map((s) => (
-                    <span key={s} className="rounded-full bg-paper px-3 py-1 text-xs font-semibold text-brand/70">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-                <div className="mt-auto space-y-1 pt-5 text-sm">
-                  <a href={"mailto:" + coach.email + "?subject=Personal training"} className="block font-semibold text-brand transition hover:text-accentdark">
-                    {coach.email}
-                  </a>
-                  <a href={"tel:" + coach.phone.replace(/\s/g, "")} className="block font-semibold text-brand transition hover:text-accentdark">
-                    {coach.phone}
-                  </a>
-                </div>
-              </div>
-            ))}
-          </div>
+          {coaches.length > 0 ? (
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {coaches.map((coach) => (
+                <Link key={coach.id} href={`/coaches/${coach.id}`} className="flex flex-col rounded-2xl border border-borderc bg-white p-7 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
+                  {coach.coach_photo_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={coach.coach_photo_url} alt={coach.full_name || "Coach"} className="h-16 w-16 rounded-full object-cover" />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-lg font-black text-accent">
+                      {(coach.full_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                    </div>
+                  )}
+                  <h3 className="mt-4 text-xl font-black">{coach.full_name || "Coach"}</h3>
+                  {coach.coach_specialty && <p className="mt-1 text-sm font-semibold text-accentdark">{coach.coach_specialty}</p>}
+                  <span className="mt-auto pt-5 text-sm font-bold text-brand">Bekijk profiel →</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-10 rounded-2xl border border-dashed border-borderc bg-white p-8 text-center text-brand/50">Onze coaches worden binnenkort voorgesteld.</p>
+          )}
         </div>
       </section>
 
