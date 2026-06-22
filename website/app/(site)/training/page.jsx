@@ -97,7 +97,7 @@ export default async function Training() {
         {coachName && <p className="mt-2 text-sm text-brand/60">Samengesteld door {coachName}</p>}
 
         {myCoachId && (
-          <section className="mt-6 rounded-3xl border border-borderc bg-white p-6">
+          <section id="berichten" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-white p-6">
             <h2 className="font-black text-brand">Berichten met {coachName || "je coach"}</h2>
             <p className="mt-1 text-sm text-brand/60">Stel een vraag of deel je voortgang.</p>
             <div className="mt-4">
