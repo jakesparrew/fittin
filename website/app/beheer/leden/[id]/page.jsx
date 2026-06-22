@@ -5,11 +5,19 @@ import { adminAdjustCredits, assignCoachClient, unassignCoachClient, adminSetRol
 import ActionForm from "@/components/ui/ActionForm";
 import { DeleteUserButton } from "@/components/admin/MemberControls";
 import SearchSelect from "@/components/admin/SearchSelect";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+const fmtDay = (iso) =>
+  new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
+const ago = (iso) => {
+  if (!iso) return "—";
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  return d <= 0 ? "vandaag" : d === 1 ? "gisteren" : d < 31 ? `${d} dagen geleden` : d < 365 ? `${Math.floor(d / 30)} mnd geleden` : `${Math.floor(d / 365)} jr geleden`;
+};
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 const KIND = { booking: "Boeking", beurtenkaart: "Beurtenkaart", abonnement: "Abonnement", coach_credits: "Coach-sessies", overig: "Overig" };
 
@@ -20,29 +28,53 @@ export default async function MemberDetail({ params }) {
   const { supabase, gym, profile: admin } = ctx;
   const isBeheerder = admin.role === "beheerder";
 
-  const [{ data: member }, { data: bookings }, { data: logs }, { data: notes }, { data: ledger }, { data: program }, { data: coachLinks }, { data: coachList }, { data: coachSessions }, { data: payments }] =
-    await Promise.all([
-      supabase.from("profiles").select("*").eq("id", id).eq("gym_id", gym.id).single(),
-      supabase.from("bookings").select("starts_at, status, services(name)").eq("user_id", id).order("starts_at", { ascending: false }).limit(20),
-      supabase.from("workout_logs").select("logged_on, sets_json, program_exercise:program_exercises(exercises(name))").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
-      supabase.from("session_notes").select("body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
-      supabase.from("credits_ledger").select("delta").eq("user_id", id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
-      supabase.from("programs").select("id, name").eq("member_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id).eq("status", "accepted"),
-      supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
-      supabase.from("bookings").select("id, starts_at, status, coach_billing, coach:profiles!bookings_coach_id_fkey(full_name, email), services(name)").eq("user_id", id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(20),
-      supabase.from("payments").select("amount_cents, kind, description, created_at, status").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
-    ]);
+  const adminDb = createAdminClient();
+  const now = new Date();
+  const monthStartIso = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const nowIso = now.toISOString();
+
+  const [
+    { data: member }, { data: bookings }, { data: logs }, { data: notes }, { data: ledger },
+    { data: program }, { data: coachLinks }, { data: coachList }, { data: coachSessions }, { data: payments },
+    authRes, { data: doorRows, count: doorCount }, { data: membership },
+    { count: confTotal }, { count: cancTotal }, { count: monthConf },
+    { data: bodyRows }, { count: logsCount }, { data: allPays },
+  ] = await Promise.all([
+    supabase.from("profiles").select("*").eq("id", id).eq("gym_id", gym.id).single(),
+    supabase.from("bookings").select("starts_at, status, services(name)").eq("user_id", id).order("starts_at", { ascending: false }).limit(20),
+    supabase.from("workout_logs").select("logged_on, sets_json, program_exercise:program_exercises(exercises(name))").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
+    supabase.from("session_notes").select("body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
+    supabase.from("credits_ledger").select("delta").eq("user_id", id).or(`expires_at.is.null,expires_at.gt.${nowIso}`),
+    supabase.from("programs").select("id, name").eq("member_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id).eq("status", "accepted"),
+    supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
+    supabase.from("bookings").select("id, starts_at, status, coach_billing, coach:profiles!bookings_coach_id_fkey(full_name, email), services(name)").eq("user_id", id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(20),
+    supabase.from("payments").select("amount_cents, kind, description, created_at, status").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
+    // service-role reads for the full profile: last login (auth), real gym visits (door_log), lifetime counts
+    adminDb.auth.admin.getUserById(id),
+    adminDb.from("door_log").select("opened_at", { count: "exact" }).eq("user_id", id).eq("result", "ok").order("opened_at", { ascending: false }).limit(1),
+    adminDb.from("memberships").select("status, current_period_end").eq("user_id", id).eq("status", "actief").maybeSingle(),
+    adminDb.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", id).eq("status", "bevestigd"),
+    adminDb.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", id).eq("status", "geannuleerd"),
+    adminDb.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", id).eq("status", "bevestigd").gte("starts_at", monthStartIso).lt("starts_at", nowIso),
+    adminDb.from("body_metrics").select("weight_kg, logged_on").eq("user_id", id).order("logged_on", { ascending: false }).limit(1),
+    adminDb.from("workout_logs").select("id", { count: "exact", head: true }).eq("user_id", id),
+    adminDb.from("payments").select("amount_cents, status").eq("user_id", id),
+  ]);
 
   if (!member) return <div className="px-8 py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
 
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
-  const sessionsThisMonth = confirmed.filter((b) => new Date(b.starts_at) >= monthStart && new Date(b.starts_at) < now).length;
-  const lastActivity = logs?.[0]?.logged_on || (confirmed[0] ? confirmed[0].starts_at.slice(0, 10) : null);
   const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+  const sessionsThisMonth = monthConf || 0;
   const onTrack = sessionsThisMonth >= 4;
+  const authUser = authRes?.data?.user || null;
+  const lastLogin = authUser?.last_sign_in_at || null;
+  const emailConfirmed = !!authUser?.email_confirmed_at;
+  const lastVisit = doorRows?.[0]?.opened_at || null;
+  const latestWeight = bodyRows?.[0]?.weight_kg ?? null;
+  const totalSpent = (allPays || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
+  const memberSince = member.created_at || null;
 
   return (
     <div className="px-8 py-8">
@@ -68,12 +100,32 @@ export default async function MemberDetail({ params }) {
         )}
       </div>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-4">
-        <Stat label="Sessies deze maand" value={sessionsThisMonth} />
-        <Stat label="Status" value={onTrack ? "On track" : "Haakt af"} accent={onTrack} />
-        <Stat label="Sessies" value={credits} />
-        <Stat label="Laatste activiteit" value={lastActivity || "—"} />
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Stat label="Gym-bezoeken (deur)" value={doorCount || 0} />
+        <Stat label="Sessies (totaal)" value={confTotal || 0} />
+        <Stat label="Sessies deze maand" value={sessionsThisMonth} accent={onTrack} />
+        <Stat label="Geannuleerd" value={cancTotal || 0} />
+        <Stat label="Sessietegoed" value={credits} />
+        <Stat label="Abonnement" value={membership ? "Actief" : "—"} accent={!!membership} />
+        <Stat label="Totaal besteed" value={euro(totalSpent)} />
+        <Stat label="Laatste bezoek" value={lastVisit ? ago(lastVisit) : "—"} />
       </div>
+
+      {/* Account & gebruik */}
+      <section className="mt-6 rounded-2xl border border-borderc bg-white p-6">
+        <h2 className="font-black text-brand">Account &amp; gebruik</h2>
+        <div className="mt-3 grid gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2 lg:grid-cols-3">
+          <Info label="Lid sinds" value={memberSince ? fmtDay(memberSince) : "—"} />
+          <Info label="Laatste login" value={lastLogin ? `${fmtDay(lastLogin)} · ${ago(lastLogin)}` : "Nog nooit ingelogd"} />
+          <Info label="Laatste gym-bezoek" value={lastVisit ? `${fmtDay(lastVisit)} · ${ago(lastVisit)}` : "—"} />
+          <Info label="E-mail bevestigd" value={emailConfirmed ? "Ja ✓" : "Nee"} />
+          <Info label="Trainingen gelogd" value={logsCount || 0} />
+          <Info label="Laatste gewicht" value={latestWeight != null ? `${latestWeight} kg` : "—"} />
+          <Info label="Gratis sessie" value={member.welcome_code_used ? "Gebruikt" : member.welcome_status === "eligible" ? "Beschikbaar" : "—"} />
+          <Info label="Referralcode" value={member.referral_code || "—"} />
+          <Info label="Op leaderboard" value={member.leaderboard_opt_in === false ? "Nee" : "Ja"} />
+        </div>
+      </section>
 
       {/* Coach */}
       <section className="mt-8 rounded-2xl border border-borderc bg-white p-6">
@@ -117,7 +169,7 @@ export default async function MemberDetail({ params }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-black text-brand">Betalingen</h2>
           <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
-            Totaal: {euro((payments || []).reduce((a, p) => a + (p.amount_cents || 0), 0))}
+            Totaal: {euro(totalSpent)}
           </span>
         </div>
         <div className="mt-3 space-y-1.5">
@@ -200,6 +252,15 @@ function Stat({ label, value, accent }) {
     <div className="rounded-2xl border border-borderc bg-white p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
       <p className={"mt-2 text-xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+    </div>
+  );
+}
+
+function Info({ label, value }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 border-b border-borderc/60 pb-2">
+      <span className="shrink-0 text-brand/45">{label}</span>
+      <span className="text-right font-bold text-brand">{value}</span>
     </div>
   );
 }
