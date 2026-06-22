@@ -310,15 +310,21 @@ async function handleEvent(event, admin) {
       } else if (obj.metadata?.booking_id) {
         await markBookingPaid(admin, obj.metadata.booking_id, obj.payment_intent, obj);
       }
-      // Stash the Stripe hosted receipt URL on the just-recorded payment (keyed by session id) so
-      // members & coaches can download their betaalbewijs from their dashboard.
+      // Stash a downloadable document on the payment (keyed by session id) for the user dashboard:
+      // prefer the Stripe INVOICE (shows the customer's business name + VAT number) and fall back to
+      // the plain receipt when no invoice was created.
       try {
-        if (obj.payment_intent) {
-          const pi = await stripe.paymentIntents.retrieve(obj.payment_intent, { expand: ["latest_charge"] });
-          const receipt = pi?.latest_charge?.receipt_url;
-          if (receipt) await admin.from("payments").update({ receipt_url: receipt }).eq("stripe_id", obj.id).is("receipt_url", null);
+        let url = null;
+        if (obj.invoice) {
+          const inv = await stripe.invoices.retrieve(obj.invoice);
+          url = inv?.hosted_invoice_url || null;
         }
-      } catch (e) { console.error("receipt capture:", e?.message); }
+        if (!url && obj.payment_intent) {
+          const pi = await stripe.paymentIntents.retrieve(obj.payment_intent, { expand: ["latest_charge"] });
+          url = pi?.latest_charge?.receipt_url || null;
+        }
+        if (url) await admin.from("payments").update({ receipt_url: url }).eq("stripe_id", obj.id).is("receipt_url", null);
+      } catch (e) { console.error("receipt/invoice capture:", e?.message); }
       // subscription checkout → handled by subscription.* + invoice.paid
       return;
     }
