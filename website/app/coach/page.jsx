@@ -128,7 +128,7 @@ export default async function CoachDashboard({ searchParams }) {
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
         </form>
         <AddClientInline />
-        <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). De clienten reken je apart af, bv. via een betaalverzoek bij Mijn clienten.</p>
+        <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). Je clienten betalen jou rechtstreeks (bv. Bancontact), los van het platform.</p>
       </section>
 
       {/* Billing summary */}

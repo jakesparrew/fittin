@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { setClientPrice, sendCoachPaymentRequest } from "../actions";
+import { setClientPrice } from "../actions";
 
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 const eur = (c) => ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -96,28 +96,17 @@ export default async function CoachClienten() {
                   <Link href={`/coach#boeken`} className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-lav">Sessie boeken</Link>
                 </div>
 
-                {/* Per-client price + payment request */}
-                <div className="mt-4 grid gap-3 border-t border-borderc pt-4 sm:grid-cols-2">
+                {/* Afgesproken tarief — enkel een notitie. Clienten betalen jou rechtstreeks (bv. Bancontact), niet via het platform. */}
+                <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-borderc pt-4">
                   <form action={setClientPrice} className="flex items-end gap-2">
                     <input type="hidden" name="clientId" value={c.id} />
-                    <label className="block flex-1">
-                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Tarief/sessie (€)</span>
-                      <input name="price_eur" defaultValue={eur(priceByClient[c.id])} className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
+                    <label className="block">
+                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Afgesproken tarief/sessie (€)</span>
+                      <input name="price_eur" defaultValue={eur(priceByClient[c.id])} className="w-44 rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
                     </label>
                     <button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">Opslaan</button>
                   </form>
-                  <form action={sendCoachPaymentRequest} className="flex items-end gap-2">
-                    <input type="hidden" name="clientId" value={c.id} />
-                    <label className="block flex-1">
-                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Betaalverzoek (€)</span>
-                      <input name="amount_eur" defaultValue={eur(priceByClient[c.id])} className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
-                    </label>
-                    <label className="block w-20">
-                      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Sessies</span>
-                      <input name="sessions" type="number" min="0" defaultValue="0" title="Aantal sessietegoed dat na betaling wordt bijgeschreven (0 = los betaalverzoek)" className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
-                    </label>
-                    <button className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">Stuur</button>
-                  </form>
+                  <p className="pb-2 text-xs text-brand/40">Notitie voor jezelf — je client betaalt je rechtstreeks (bv. Bancontact), niet via het platform.</p>
                 </div>
               </div>
             );

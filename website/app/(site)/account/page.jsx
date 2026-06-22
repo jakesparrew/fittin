@@ -254,26 +254,6 @@ export default async function AccountPage({ searchParams }) {
           </div>
         )}
 
-        {(payReqs || []).length > 0 && (
-          <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
-            <p className="font-black text-brand">💳 Openstaand betaalverzoek{payReqs.length > 1 ? "en" : ""} van je coach</p>
-            <div className="mt-3 space-y-2">
-              {payReqs.map((r) => (
-                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4">
-                  <div>
-                    <p className="font-bold text-brand">{euro(r.amount_cents)}{r.description ? ` · ${r.description}` : ""}</p>
-                    <p className="text-xs text-brand/50">{r.coach?.full_name || "Je coach"}</p>
-                  </div>
-                  <form action={payCoachRequest}>
-                    <input type="hidden" name="requestId" value={r.id} />
-                    <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Betaal {euro(r.amount_cents)}</button>
-                  </form>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {myCoach && (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
             <div>
