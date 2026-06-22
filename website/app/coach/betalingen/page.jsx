@@ -14,7 +14,7 @@ export default async function CoachBetalingen() {
 
   const admin = createAdminClient();
   const [{ data: pays }, { data: ledger }] = await Promise.all([
-    admin.from("payments").select("amount_cents, kind, description, created_at, receipt_url").eq("user_id", userId).eq("kind", "coach_credits").order("created_at", { ascending: false }).limit(300),
+    admin.from("payments").select("id, amount_cents, kind, description, created_at, receipt_url").eq("user_id", userId).eq("kind", "coach_credits").order("created_at", { ascending: false }).limit(300),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
   ]);
   const purchases = pays || [];
@@ -50,7 +50,7 @@ export default async function CoachBetalingen() {
               <th className="px-5 py-3">Datum</th>
               <th className="px-5 py-3">Omschrijving</th>
               <th className="px-5 py-3 text-right">Bedrag</th>
-              <th className="px-5 py-3 text-right">Betaalbewijs</th>
+              <th className="px-5 py-3 text-right">Factuur</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borderc">
@@ -59,7 +59,10 @@ export default async function CoachBetalingen() {
                 <td className="px-5 py-3 text-brand/60">{fmt(p.created_at)}</td>
                 <td className="px-5 py-3 font-semibold text-brand">{p.description || "Sessietegoed gekocht"}</td>
                 <td className="px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
-                <td className="px-5 py-3 text-right">{p.receipt_url ? <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-accentdark hover:underline">Download →</a> : <span className="text-xs text-brand/30">—</span>}</td>
+                <td className="px-5 py-3 text-right">
+                  <a href={`/coach/factuur/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-accentdark hover:underline">Factuur →</a>
+                  {p.receipt_url && <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="ml-3 text-xs font-semibold text-brand/50 hover:underline">bewijs</a>}
+                </td>
               </tr>
             ))}
           </tbody>
