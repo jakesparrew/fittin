@@ -238,6 +238,61 @@ export async function adminUnblock(formData) {
   revalidatePath("/boeken");
 }
 
+// Move a booking to a new day/hour (drag-and-drop in the planner, or the "verplaats" modal).
+// Admin may move anytime; overlap, opening-hours and slot-block checks run server-side (RPC 0088).
+// The old keypad PIN is dropped + re-minted; the member (and any coach) is notified by mail + in-app.
+export async function adminRescheduleBooking(formData) {
+  const { supabase, error } = await requireStaff(true);
+  if (error) return { error };
+  const bookingId = formData.get("bookingId");
+  if (!bookingId) return { error: "Geen boeking." };
+  const { error: e } = await supabase.rpc("admin_reschedule_booking", {
+    p_booking: bookingId,
+    p_date: formData.get("date"),
+    p_hour: numF(formData.get("hour")),
+  });
+  if (e) return { error: e.message };
+  // Notify the people involved. A coach-reserved slot (no client) has user_id === coach_id → skip member mail.
+  try {
+    const admin = createAdminClient();
+    const { data: b } = await admin
+      .from("bookings")
+      .select("starts_at, ends_at, user_id, coach_id, gym_id, services(name)")
+      .eq("id", bookingId).single();
+    if (b) {
+      const reservedSlot = b.coach_id && b.user_id === b.coach_id; // coach booked the slot for himself
+      if (!reservedSlot) {
+        const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", b.user_id).single();
+        if (m?.email) {
+          const { sendBookingRescheduled } = await import("@/lib/email");
+          await sendBookingRescheduled({ to: m.email, name: m.full_name, serviceName: b.services?.name || "Sessie", startsAt: b.starts_at, endsAt: b.ends_at });
+        }
+        await notify({ gymId: b.gym_id, userId: b.user_id, type: "coach_booked", title: "Je sessie is verplaatst", body: b.services?.name || "Sessie", link: "/account" });
+      }
+      // Keep the coach's agenda in sync if a coach is attached (and it isn't the member themselves).
+      if (b.coach_id && b.coach_id !== b.user_id) {
+        await notify({ gymId: b.gym_id, userId: b.coach_id, type: "coach_booked", title: "Een sessie is verplaatst", body: b.services?.name || "Sessie", link: "/coach/agenda" });
+      }
+    }
+  } catch {}
+  revalidatePath("/beheer/boekingen");
+  revalidatePath("/boeken");
+  revalidatePath("/account");
+  revalidatePath("/coach");
+  revalidatePath("/coach/agenda");
+  return { ok: true, message: "Sessie verplaatst ✓" };
+}
+
+// Free 1h start-times for a date in the admin's gym — powers the availability-aware "verplaats" dropdown.
+// coach_free_hours is scoped to the caller's gym (auth.uid()), so it works for a beheerder too.
+export async function adminDayAvailability(dateStr) {
+  const { supabase, error } = await requireStaff(true);
+  if (error) return { hours: [], ok: false };
+  const { data, error: e } = await supabase.rpc("coach_free_hours", { p_date: dateStr });
+  if (e) return { hours: [], ok: false };
+  return { hours: (data || []).map(Number), ok: true };
+}
+
 // ---- Members ----
 // Admin edits a member's basic profile (name, phone) — service role (bypasses the self-only RLS).
 export async function adminUpdateMember(formData) {
