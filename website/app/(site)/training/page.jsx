@@ -36,7 +36,7 @@ export default async function Training() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(300),
-    supabase.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", user.id).maybeSingle(),
+    supabase.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", user.id).eq("status", "accepted").limit(1).maybeSingle(),
   ]);
 
   const myCoachId = coachLink?.coach?.id || null;

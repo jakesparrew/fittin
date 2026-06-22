@@ -24,7 +24,7 @@ export default async function Coaches() {
     supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents").eq("gym_id", gym.id).order("full_name"),
     supabase.from("coach_availability").select("*").eq("gym_id", gym.id).order("weekday"),
     supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
-    supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id),
+    supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id).eq("status", "accepted"),
     supabase.from("bookings").select("id, coach_id, user_id, starts_at, status, coach_billing, coach_charge_cents, services(name)").eq("gym_id", gym.id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(400),
   ]);
   const { data: reqs } = await supabase.from("coach_session_requests").select("*").eq("gym_id", gym.id).eq("status", "pending").order("created_at");

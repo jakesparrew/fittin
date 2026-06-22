@@ -143,7 +143,7 @@ export async function coachAssignProgram(formData) {
   }
 
   // Only assign to your OWN client.
-  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", memberId).maybeSingle();
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", memberId).eq("status", "accepted").maybeSingle();
   if (!link) return { error: "Dit is niet jouw client." };
 
   // Clone the program into a per-member copy so the template stays reusable and a previously

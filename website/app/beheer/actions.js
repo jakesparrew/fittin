@@ -422,7 +422,7 @@ export async function assignCoachClient(formData) {
   if (coachId === clientId) return { error: "Een coach kan zichzelf niet coachen." };
   const { error: e } = await supabase
     .from("coach_clients")
-    .upsert({ gym_id: profile.gym_id, coach_id: coachId, client_id: clientId }, { onConflict: "gym_id,coach_id,client_id" });
+    .upsert({ gym_id: profile.gym_id, coach_id: coachId, client_id: clientId, status: "accepted", requested_by: null }, { onConflict: "gym_id,coach_id,client_id" });
   if (e) return { error: e.message };
   try {
     const [{ data: client }, { data: coach }] = await Promise.all([

@@ -22,6 +22,25 @@ export async function setLeaderboardOptIn(formData) {
   return { ok: true, message: optIn ? "Je staat nu op de leaderboard ✓" : "Je staat niet meer op de leaderboard." };
 }
 
+// Member asks a coach to coach them. The coach gets a notification to accept. (If that coach already
+// invited this member, this accepts it.) Once accepted, the coach can book sessions with them.
+export async function clientRequestCoach(formData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const coachId = formData.get("coachId");
+  if (!coachId) return { error: "Kies een coach." };
+  const { error } = await supabase.rpc("client_request_coach", { p_coach: coachId });
+  if (error) return { error: error.message };
+  try {
+    const { data: me } = await supabase.from("profiles").select("full_name, gym_id").eq("id", user.id).single();
+    await notify({ gymId: me?.gym_id, userId: coachId, actorId: user.id, type: "coach_connect", title: `${me?.full_name || "Een lid"} wil met jou verbinden`, body: "Aanvaard de verbinding om hen te coachen.", link: "/coach/clienten" });
+  } catch {}
+  revalidatePath("/account");
+  revalidatePath(`/coaches/${coachId}`);
+  return { ok: true, message: "Aanvraag verstuurd ✓" };
+}
+
 // Member pays a coach's payment request via Stripe.
 export async function payCoachRequest(formData) {
   const id = formData.get("requestId");

@@ -27,7 +27,7 @@ export async function GET(_req, { params }) {
     admin.from("bookings").select("id, starts_at, status, paid, price_cents, persons, services(name), coach:profiles!bookings_coach_id_fkey(full_name)").eq("user_id", id).order("starts_at", { ascending: false }).limit(20),
     admin.from("payments").select("amount_cents, kind, description, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
     admin.from("event_signups").select("paid, created_at, event:events(title, starts_at)").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
-    admin.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", id).maybeSingle(),
+    admin.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", id).eq("status", "accepted").limit(1).maybeSingle(),
     admin.from("coach_payment_requests").select("amount_cents, status, description, created_at").eq("client_id", id).order("created_at", { ascending: false }).limit(10),
     admin.from("buddies").select("id").eq("status", "accepted").or(`requester_id.eq.${id},addressee_id.eq.${id}`),
     admin.from("referrals").select("id").eq("referrer_id", id),

@@ -32,7 +32,7 @@ export default async function CoachDashboard({ searchParams }) {
 
   // One parallel batch instead of several serial round-trips.
   const [
-    { data: members },
+    { data: clientLinks },
     { data: services },
     { data: bookings },
     { data: ledger },
@@ -43,7 +43,7 @@ export default async function CoachDashboard({ searchParams }) {
     { count: referredCount },
     { data: takenRows },
   ] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "lid").order("full_name"),
+    supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
     supabase.from("bookings").select("id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("coach_id", userId).order("starts_at", { ascending: true }),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
@@ -55,6 +55,8 @@ export default async function CoachDashboard({ searchParams }) {
     supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: schedFrom.toISOString(), p_to: schedTo.toISOString() }),
   ]);
   const refLink = `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/login?mode=signup&ref=${meRef?.referral_code || ""}`;
+  // Only verbonden (accepted) clients are bookable. New clients are connected via /coach/clienten.
+  const members = (clientLinks || []).map((l) => l.client).filter(Boolean).sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || ""));
 
   const creditBalance = (ledger || []).reduce((a, r) => a + r.delta, 0);
   const all = bookings || [];
@@ -112,6 +114,13 @@ export default async function CoachDashboard({ searchParams }) {
           <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-black text-accentdark">Hoofdactie</span>
         </div>
         <p className="mt-1 text-sm text-brand/60">Kies je client en moment. Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen. De prijs die je je client(en) aanrekent, reken je apart af.</p>
+        <Link href="/coach/clienten" className="mt-1 inline-block text-xs font-bold text-accentdark hover:underline">Zie je je client niet in de lijst? Verbind je clienten hier →</Link>
+        {members.length === 0 && (
+          <div className="mt-3 rounded-2xl border-2 border-dashed border-accent/50 bg-accent/5 p-4 text-sm">
+            <p className="font-bold text-brand">Je hebt nog geen verbonden clienten.</p>
+            <p className="mt-0.5 text-brand/60">Verbind eerst een client via <Link href="/coach/clienten" className="font-bold text-accentdark underline">Mijn clienten</Link> — pas daarna kan je hier een sessie met hen boeken.</p>
+          </div>
+        )}
         <form action={coachBookSession} className="mt-4 flex flex-wrap items-end gap-3">
           <Lbl t="Client">
             <SearchSelect name="clientId" required placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />

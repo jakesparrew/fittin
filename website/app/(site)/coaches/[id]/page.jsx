@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import { fmtHour } from "@/lib/time";
+import ActionForm from "@/components/ui/ActionForm";
+import { clientRequestCoach } from "@/app/(site)/account/actions";
+import { respondCoachLink } from "@/app/coach/actions";
 
 export const dynamic = "force-dynamic";
 const WD = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
@@ -26,6 +29,11 @@ export default async function CoachProfile({ params }) {
   ]);
   if (!c || c.role !== "coach" || !c.coach_public) notFound();
   const { user } = await getSessionProfile();
+  let myLink = null;
+  if (user && user.id !== id) {
+    const { data: lk } = await admin.from("coach_clients").select("id, status, requested_by").eq("coach_id", id).eq("client_id", user.id).maybeSingle();
+    myLink = lk || null;
+  }
 
   return (
     <main className="bg-paper">
@@ -44,6 +52,29 @@ export default async function CoachProfile({ params }) {
             <Link href={user ? "/boeken" : "/login?next=/boeken"} className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center text-sm font-black text-brand transition hover:opacity-90">
               {user ? "Boek een sessie →" : "Maak een account om te boeken →"}
             </Link>
+
+            {/* Connect with this coach */}
+            {user && user.id !== id && (
+              myLink?.status === "accepted" ? (
+                <p className="mt-3 rounded-full bg-accent/10 px-4 py-2.5 text-center text-sm font-bold text-accentdark">Verbonden met deze coach ✓</p>
+              ) : myLink?.status === "pending" && myLink.requested_by === "client" ? (
+                <p className="mt-3 rounded-full bg-paper px-4 py-2.5 text-center text-sm font-bold text-brand/60">Aanvraag verstuurd — wacht op bevestiging</p>
+              ) : myLink?.status === "pending" && myLink.requested_by === "coach" ? (
+                <ActionForm action={respondCoachLink} success="Verbonden ✓" className="mt-3">
+                  <input type="hidden" name="linkId" value={myLink.id} />
+                  <input type="hidden" name="accept" value="1" />
+                  <button className="w-full rounded-full border-2 border-accent px-6 py-3 text-sm font-black text-brand transition hover:bg-accent/10">Deze coach nodigde je uit — aanvaarden</button>
+                </ActionForm>
+              ) : (
+                <ActionForm action={clientRequestCoach} success="Aanvraag verstuurd ✓" className="mt-3">
+                  <input type="hidden" name="coachId" value={id} />
+                  <button className="w-full rounded-full border-2 border-borderc px-6 py-3 text-sm font-black text-brand transition hover:border-accent">+ Verbind met deze coach</button>
+                </ActionForm>
+              )
+            )}
+            {!user && (
+              <Link href={`/login?next=/coaches/${id}`} className="mt-3 block text-center text-sm font-semibold text-brand/50 hover:text-brand">Log in om te verbinden met deze coach</Link>
+            )}
           </div>
 
           <div>

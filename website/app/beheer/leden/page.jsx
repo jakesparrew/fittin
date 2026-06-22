@@ -14,7 +14,7 @@ export default async function Leden() {
   const [{ data: members }, { data: ledger }, { data: links }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, welcome_code_used, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }),
     supabase.from("credits_ledger").select("user_id, delta").eq("gym_id", gym.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
-    supabase.from("coach_clients").select("client_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id),
+    supabase.from("coach_clients").select("client_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("status", "accepted"),
   ]);
 
   const credits = {};

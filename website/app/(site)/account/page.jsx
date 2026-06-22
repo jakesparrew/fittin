@@ -4,7 +4,8 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { payCoachRequest, respondJoinRequest, logBodyMetrics, setLeaderboardOptIn } from "./actions";
+import { payCoachRequest, respondJoinRequest, logBodyMetrics, setLeaderboardOptIn, clientRequestCoach } from "./actions";
+import { respondCoachLink } from "@/app/coach/actions";
 import WeightChart from "@/components/WeightChart";
 import ActionForm from "@/components/ui/ActionForm";
 import { resumeCheckoutAction } from "../boeken/actions";
@@ -65,7 +66,7 @@ export default async function AccountPage({ searchParams }) {
     { data: ledger },
     { data: membership },
     { data: invitedRows },
-    { data: coachLink },
+    { data: coachLinks },
     { data: payReqs },
     { data: boardRows },
     { data: buddyLinks },
@@ -79,7 +80,7 @@ export default async function AccountPage({ searchParams }) {
     supabase.from("credits_ledger").select("delta").eq("user_id", user.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
     supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
-    admin.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("client_id", user.id).maybeSingle(),
+    admin.from("coach_clients").select("id, status, requested_by, coach:profiles!coach_clients_coach_id_fkey(id, full_name, email)").eq("client_id", user.id),
     supabase.from("coach_payment_requests").select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)").eq("client_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthIso).lt("starts_at", nowIso),
     admin.from("buddies").select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)").eq("status", "accepted").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
@@ -99,7 +100,11 @@ export default async function AccountPage({ searchParams }) {
     // Only surface an invited session once the booker actually paid (or it's a free/credit session).
     .filter((b) => b && b.status === "bevestigd" && (b.paid || b.price_cents === 0 || b.payment_source !== "los"))
     .map((b) => ({ ...b, invited: true, paid: true, payment_source: "invite", price_cents: 0, services: b.services }));
-  const myCoach = coachLink?.coach || null;
+  const coachLinksAll = (coachLinks || []).filter((l) => l.coach);
+  const acceptedCoachLink = coachLinksAll.find((l) => l.status === "accepted");
+  const myCoach = acceptedCoachLink?.coach || null;
+  const incomingCoachReqs = coachLinksAll.filter((l) => l.status === "pending" && l.requested_by === "coach"); // a coach invited me
+  const sentCoachReqs = coachLinksAll.filter((l) => l.status === "pending" && l.requested_by === "client");    // I asked a coach
 
   const lbCounts = {};
   // Coaches/beheerders never appear; members who opted out are excluded. PT sessions count
@@ -254,13 +259,41 @@ export default async function AccountPage({ searchParams }) {
           </div>
         )}
 
-        {myCoach && (
+        {/* Incoming coach connection requests (a coach invited me) */}
+        {incomingCoachReqs.length > 0 && (
+          <div className="mt-6 rounded-3xl border-2 border-accent bg-accent/5 p-6">
+            <p className="text-xs font-bold uppercase tracking-widest text-accentdark">Verbindingsverzoek</p>
+            <div className="mt-2 space-y-2">
+              {incomingCoachReqs.map((l) => (
+                <div key={l.id} className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-brand/80"><span className="font-black text-brand">{l.coach.full_name || "Een coach"}</span> wil je coachen.</p>
+                  <div className="flex gap-2">
+                    <form action={respondCoachLink}><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="1" /><button className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Aanvaarden</button></form>
+                    <form action={respondCoachLink}><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="0" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Weiger</button></form>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {myCoach ? (
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-lav">Jouw coach</p>
               <p className="mt-1 text-lg font-black text-brand">{myCoach.full_name || "Je coach"}</p>
             </div>
             <Link href="/training" className="rounded-full bg-paper px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-accent/15">Mijn training →</Link>
+          </div>
+        ) : (
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-lav">Coaching</p>
+              <p className="mt-1 font-bold text-brand">Wil je begeleiding van een coach?</p>
+              <p className="text-sm text-brand/55">Bekijk onze coaches en stuur een verbindingsverzoek. Eens verbonden kan je samen trainen en plant je coach je sessies in.</p>
+              {sentCoachReqs.length > 0 && <p className="mt-1 text-xs font-bold text-accentdark">Aanvraag verstuurd — wachten op bevestiging van {sentCoachReqs.map((l) => l.coach.full_name || "de coach").join(", ")}.</p>}
+            </div>
+            <Link href="/coaches" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Bekijk coaches →</Link>
           </div>
         )}
 

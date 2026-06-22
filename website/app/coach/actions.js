@@ -293,7 +293,7 @@ export async function sendCoachPaymentRequest(formData) {
   const sessions = Math.max(0, num(formData.get("sessions"), 0)); // >0 → top up coachee credit on payment
   if (!clientId || amount < 1) return { error: "Kies een client en een bedrag." };
   // Confirm this is the coach's client.
-  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).maybeSingle();
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).eq("status", "accepted").maybeSingle();
   if (!link) return { error: "Dit is niet jouw client." };
   const { error: e } = await supabase.from("coach_payment_requests").insert({
     gym_id: profile.gym_id, coach_id: userId, client_id: clientId, amount_cents: amount, sessions, description: formData.get("description") || null,
@@ -317,6 +317,60 @@ export async function cancelCoachPaymentRequest(formData) {
   if (error) return { error };
   await supabase.from("coach_payment_requests").update({ status: "cancelled" }).eq("id", formData.get("id")).eq("coach_id", userId).eq("status", "pending");
   revalidatePath("/coach/betalingen");
+}
+
+// ── Coach ↔ client connection requests ──────────────────────────────────────
+// Coach invites a member to connect. The member gets a notification to accept. Until accepted the
+// client is "pending" and not bookable. (If the member already requested this coach, this accepts it.)
+export async function coachRequestClient(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const clientId = formData.get("clientId");
+  if (!clientId) return { error: "Kies een lid." };
+  const { error: e } = await supabase.rpc("coach_request_client", { p_client: clientId });
+  if (e) return { error: e.message };
+  try {
+    const { data: me } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "coach_connect", title: `${me?.full_name || "Een coach"} wil je coachen`, body: "Aanvaard de verbinding om samen te starten.", link: "/account" });
+  } catch {}
+  revalidatePath("/coach/clienten");
+  return { ok: true, message: "Uitnodiging verstuurd ✓" };
+}
+
+// Accept (accept=1) or decline a pending connection request. Works for either side — the DB RPC
+// only lets the party that did NOT send the request respond.
+export async function respondCoachLink(formData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const linkId = formData.get("linkId");
+  const accept = formData.get("accept") === "1";
+  const { data: link } = await supabase.from("coach_clients").select("coach_id, client_id, requested_by, gym_id").eq("id", linkId).maybeSingle();
+  const { error: e } = await supabase.rpc("respond_coach_link", { p_link: linkId, p_accept: accept });
+  if (e) return { error: e.message };
+  if (accept && link) {
+    try {
+      const { data: me } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+      const requesterIsCoach = link.requested_by === "coach";
+      const requesterId = requesterIsCoach ? link.coach_id : link.client_id;
+      await notify({ gymId: link.gym_id, userId: requesterId, actorId: user.id, type: "coach_connect", title: `${me?.full_name || "Iemand"} aanvaardde je verbinding`, body: "Jullie zijn nu verbonden.", link: requesterIsCoach ? "/coach/clienten" : "/account" });
+    } catch {}
+  }
+  revalidatePath("/coach/clienten");
+  revalidatePath("/account");
+  return { ok: true };
+}
+
+// Cancel a pending invite, decline an incoming one, or end an existing connection (either party).
+export async function removeCoachLink(formData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const { error: e } = await supabase.rpc("remove_coach_link", { p_link: formData.get("linkId") });
+  if (e) return { error: e.message };
+  revalidatePath("/coach/clienten");
+  revalidatePath("/account");
+  return { ok: true };
 }
 
 export async function addOwnAvailability(formData) {

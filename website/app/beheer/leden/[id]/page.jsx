@@ -28,7 +28,7 @@ export default async function MemberDetail({ params }) {
       supabase.from("session_notes").select("body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
       supabase.from("credits_ledger").select("delta").eq("user_id", id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
       supabase.from("programs").select("id, name").eq("member_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id),
+      supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id).eq("status", "accepted"),
       supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
       supabase.from("bookings").select("id, starts_at, status, coach_billing, coach:profiles!bookings_coach_id_fkey(full_name, email), services(name)").eq("user_id", id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(20),
       supabase.from("payments").select("amount_cents, kind, description, created_at, status").eq("user_id", id).order("created_at", { ascending: false }).limit(20),

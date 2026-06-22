@@ -17,7 +17,7 @@ export async function sendMessage(formData) {
   const { data: me } = await supabase.from("profiles").select("gym_id, full_name").eq("id", user.id).single();
   if (!me) return { error: "Profiel niet gevonden." };
   // Confirm the coach↔client relationship exists.
-  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", coachId).eq("client_id", clientId).maybeSingle();
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", coachId).eq("client_id", clientId).eq("status", "accepted").maybeSingle();
   if (!link) return { error: "Geen actieve coach-client koppeling." };
 
   const { error } = await supabase.from("coach_messages").insert({ gym_id: me.gym_id, coach_id: coachId, client_id: clientId, sender_id: user.id, body });

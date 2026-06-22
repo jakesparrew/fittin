@@ -13,7 +13,8 @@ export default async function CoachBerichten({ searchParams }) {
   const { data: links } = await supabase
     .from("coach_clients")
     .select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)")
-    .eq("coach_id", userId);
+    .eq("coach_id", userId)
+    .eq("status", "accepted");
   const clients = (links || []).map((l) => l.client).filter(Boolean);
   const active = sp.client && clients.some((c) => c.id === sp.client) ? sp.client : clients[0]?.id || null;
   const activeClient = clients.find((c) => c.id === active);
