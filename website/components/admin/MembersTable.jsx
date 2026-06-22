@@ -5,7 +5,19 @@ import OpenMemberButton from "@/components/admin/OpenMemberButton";
 
 const ROLES = ["lid", "coach", "beheerder"];
 
-export default function MembersTable({ members = [], credits = {}, coachOf = {}, isBeheerder }) {
+const ago = (iso) => {
+  if (!iso) return "—";
+  const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  return d <= 0 ? "vandaag" : d === 1 ? "gisteren" : d < 31 ? `${d}d geleden` : d < 365 ? `${Math.floor(d / 30)} mnd` : `${Math.floor(d / 365)} jr`;
+};
+// Disengagement at a glance: red >30d, amber >14d, normal recent, grey never.
+const tone = (iso) => {
+  if (!iso) return "text-brand/30";
+  const d = (Date.now() - new Date(iso).getTime()) / 86400000;
+  return d > 30 ? "font-bold text-red-500" : d > 14 ? "font-semibold text-amber-500" : "text-brand/70";
+};
+
+export default function MembersTable({ members = [], credits = {}, coachOf = {}, lastLogin = {}, lastVisit = {}, isBeheerder }) {
   const [q, setQ] = useState("");
   const needle = q.trim().toLowerCase();
   const rows = needle
@@ -23,7 +35,7 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
         />
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-white">
+      <div className="mt-4 overflow-x-auto rounded-2xl border border-borderc bg-white">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -31,6 +43,8 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
               <th className="px-5 py-3">Rol</th>
               <th className="px-5 py-3">Coach</th>
               <th className="px-5 py-3">Sessies</th>
+              <th className="px-5 py-3">Laatste login</th>
+              <th className="px-5 py-3">Laatste bezoek</th>
               <th className="px-5 py-3">Acties</th>
             </tr>
           </thead>
@@ -64,6 +78,8 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                 <td className="px-5 py-4">
                   <span className="font-black text-brand">{credits[m.id] || 0}</span>
                 </td>
+                <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastLogin[m.id])}>{ago(lastLogin[m.id])}</span></td>
+                <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastVisit[m.id])}>{ago(lastVisit[m.id])}</span></td>
                 <td className="px-5 py-4">
                   <form action={adminAdjustCredits} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="memberId" value={m.id} />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AddMemberForm } from "@/components/admin/MemberControls";
 import MemberDrawer from "@/components/admin/MemberDrawer";
 import MembersTable from "@/components/admin/MembersTable";
@@ -11,16 +12,34 @@ export default async function Leden() {
   if (!ctx) return null;
   const { supabase, gym, profile } = ctx;
 
-  const [{ data: members }, { data: ledger }, { data: links }] = await Promise.all([
+  const adminDb = createAdminClient();
+  const [{ data: members }, { data: ledger }, { data: links }, { data: doorRows }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, welcome_code_used, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }),
     supabase.from("credits_ledger").select("user_id, delta").eq("gym_id", gym.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
     supabase.from("coach_clients").select("client_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("status", "accepted"),
+    adminDb.from("door_log").select("user_id, opened_at").eq("gym_id", gym.id).eq("result", "ok").order("opened_at", { ascending: false }).limit(5000),
   ]);
 
   const credits = {};
   for (const r of ledger || []) credits[r.user_id] = (credits[r.user_id] || 0) + r.delta;
   const coachOf = {};
   for (const l of links || []) (coachOf[l.client_id] ||= []).push(l.coach?.full_name || l.coach?.email || "Coach");
+
+  // Last gym visit per member (door_log rows are desc → first seen per user is the latest).
+  const lastVisit = {};
+  for (const r of doorRows || []) if (r.user_id && !lastVisit[r.user_id]) lastVisit[r.user_id] = r.opened_at;
+
+  // Last login per member, from Supabase Auth (paged; gyms stay well under 10k accounts).
+  const lastLogin = {};
+  try {
+    for (let page = 1; page <= 10; page++) {
+      const { data: au } = await adminDb.auth.admin.listUsers({ page, perPage: 1000 });
+      const us = au?.users || [];
+      for (const u of us) if (u.last_sign_in_at) lastLogin[u.id] = u.last_sign_in_at;
+      if (us.length < 1000) break;
+    }
+  } catch {}
+
   const isBeheerder = profile.role === "beheerder";
 
   return (
@@ -31,7 +50,7 @@ export default async function Leden() {
 
       {isBeheerder && <div className="mt-6"><AddMemberForm /></div>}
 
-      <MembersTable members={members || []} credits={credits} coachOf={coachOf} isBeheerder={isBeheerder} />
+      <MembersTable members={members || []} credits={credits} coachOf={coachOf} lastLogin={lastLogin} lastVisit={lastVisit} isBeheerder={isBeheerder} />
     </div>
   );
 }
