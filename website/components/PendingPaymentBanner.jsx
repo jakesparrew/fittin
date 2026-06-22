@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { resumeCheckoutAction } from "@/app/(site)/boeken/actions";
+import SubmitButton from "@/components/ui/SubmitButton";
 
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 
@@ -45,9 +46,9 @@ export default function PendingPaymentBanner({ items }) {
             </div>
             <form action={resumeCheckoutAction}>
               <input type="hidden" name="bookingId" value={i.id} />
-              <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand transition hover:opacity-90">
+              <SubmitButton className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand transition hover:opacity-90" pendingText="Bezig…">
                 Betaal nu {euro(i.price)}
-              </button>
+              </SubmitButton>
             </form>
           </div>
         );

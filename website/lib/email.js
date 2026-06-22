@@ -16,6 +16,8 @@ export const FROM_NEWS = process.env.EMAIL_FROM_NEWS || "Fittin' <nieuwsbrief@ne
 export const REPLY_TO = process.env.EMAIL_REPLY_TO || "info@fittin.be";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
+const esc = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
 const fmt = (iso, opts) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", ...opts }).format(new Date(iso));
 const dayLabel = (iso) => fmt(iso, { weekday: "long", day: "numeric", month: "long" });
@@ -70,7 +72,7 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
   const addr = address || "Aannemersstraat 186, 9040 Gent";
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`;
   const rows = [
-    ["Sessie", serviceName],
+    ["Sessie", esc(serviceName)],
     ["Wanneer", dayLabel(startsAt)],
     ["Uur", timeRange(startsAt, endsAt)],
     ["Personen", persons],
@@ -82,7 +84,7 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
     "Je Fittin'-boeking is bevestigd ✅",
     shell({
       title: "Je boeking is bevestigd ✅",
-      intro: `Hallo ${name || "daar"}, je sessie staat vast. Hier is alvast alles wat je moet weten:`,
+      intro: `Hallo ${esc(name) || "daar"}, je sessie staat vast. Hier is alvast alles wat je moet weten:`,
       rows,
       body: `
         <div style="text-align:center"><a href="${mapsUrl}" style="display:inline-block;margin:6px 0;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px;font-size:14px">📍 Navigeer naar de gym</a></div>
@@ -114,9 +116,9 @@ export async function sendBookingCancelled({ to, name, serviceName, startsAt }) 
     "Je Fittin'-boeking is geannuleerd",
     shell({
       title: "Je boeking is geannuleerd",
-      intro: `Hallo ${name || "daar"}, deze sessie is geannuleerd:`,
+      intro: `Hallo ${esc(name) || "daar"}, deze sessie is geannuleerd:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt)],
       ],
@@ -134,9 +136,9 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
     "Je Fittin'-sessie is verplaatst",
     shell({
       title: "Je sessie is verplaatst ✅",
-      intro: `Hallo ${name || "daar"}, je sessie staat nu op een nieuw moment:`,
+      intro: `Hallo ${esc(name) || "daar"}, je sessie staat nu op een nieuw moment:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
@@ -164,9 +166,9 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
     "Je toegangscode voor Fittin' 🔑",
     shell({
       title: "Tijd om te trainen! 🔑",
-      intro: `Hallo ${name || "daar"}, je sessie start zo meteen. Hier is alles om binnen te raken:`,
+      intro: `Hallo ${esc(name) || "daar"}, je sessie start zo meteen. Hier is alles om binnen te raken:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Uur", timeRange(startsAt, endsAt)],
         ...(address ? [["Adres", address]] : []),
       ],
@@ -198,10 +200,10 @@ export async function sendCoachBooked({ to, name, coachName, serviceName, starts
     `${coachName} heeft een sessie voor je geboekt`,
     shell({
       title: "Je coach heeft een sessie geboekt 💪",
-      intro: `Hallo ${name || "daar"}, ${coachName} heeft een sessie voor je ingepland:`,
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(coachName)} heeft een sessie voor je ingepland:`,
       rows: [
-        ["Coach", coachName],
-        ["Sessie", serviceName],
+        ["Coach", esc(coachName)],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
@@ -218,7 +220,7 @@ export async function sendCoachAssigned({ to, name, coachName }) {
     `${coachName} is nu je coach`,
     shell({
       title: "Je hebt een coach 🙌",
-      intro: `Hallo ${name || "daar"}, ${coachName} is toegewezen als jouw coach. Samen werken jullie aan je doelen — je coach kan sessies voor je inplannen en je programma opvolgen.`,
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(coachName)} is toegewezen als jouw coach. Samen werken jullie aan je doelen — je coach kan sessies voor je inplannen en je programma opvolgen.`,
       cta: { href: `${SITE}/training`, label: "Mijn training" },
     })
   );
@@ -238,7 +240,7 @@ export async function sendRoleChanged({ to, name, role }) {
   await send(
     to,
     `Je rol bij Fittin' is nu ${label}`,
-    shell({ title: `Je bent nu ${label}`, intro: `Hallo ${name || "daar"}, ${extra}`, cta })
+    shell({ title: `Je bent nu ${label}`, intro: `Hallo ${esc(name) || "daar"}, ${extra}`, cta })
   );
 }
 
@@ -249,7 +251,7 @@ export async function sendWelcomeNewAccount({ to, name, link }) {
     "Welkom bij Fittin' — stel je wachtwoord in",
     shell({
       title: "Welkom bij Fittin' 👋",
-      intro: `Hallo ${name || "daar"}, er is een account voor je aangemaakt bij Fittin'. Stel hieronder je wachtwoord in en je kan meteen sessies boeken.`,
+      intro: `Hallo ${esc(name) || "daar"}, er is een account voor je aangemaakt bij Fittin'. Stel hieronder je wachtwoord in en je kan meteen sessies boeken.`,
       body: `<p style="font-size:13px;color:#9b97ab;margin-top:14px">Werkt de knop niet? Plak deze link in je browser:<br>${link}</p>`,
       cta: { href: link, label: "Wachtwoord instellen" },
     })
@@ -263,9 +265,9 @@ export async function sendEventSignup({ to, name, title, startsAt }) {
     `Inschrijving bevestigd: ${title}`,
     shell({
       title: "Je bent ingeschreven 🎉",
-      intro: `Hallo ${name || "daar"}, je inschrijving is bevestigd:`,
+      intro: `Hallo ${esc(name) || "daar"}, je inschrijving is bevestigd:`,
       rows: [
-        ["Event", title],
+        ["Event", esc(title)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt)],
       ],
@@ -281,9 +283,9 @@ export async function sendSessionReminder({ to, name, serviceName, startsAt, end
     "Herinnering: je Fittin'-sessie is binnenkort",
     shell({
       title: "Tot binnenkort in de zaal! 💪",
-      intro: `Hallo ${name || "daar"}, een kleine herinnering voor je geplande sessie${coachName ? ` met ${coachName}` : ""}:`,
+      intro: `Hallo ${esc(name) || "daar"}, een kleine herinnering voor je geplande sessie${coachName ? ` met ${esc(coachName)}` : ""}:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
@@ -301,7 +303,7 @@ export async function sendCoachSessionsGranted({ to, name, qty }) {
     "Je coach-sessies zijn goedgekeurd",
     shell({
       title: `+${qty} coach-sessie${qty > 1 ? "s" : ""} toegekend ✅`,
-      intro: `Hallo ${name || "coach"}, de beheerder heeft je aanvraag goedgekeurd. Je kan nu sessies inplannen met je clienten.`,
+      intro: `Hallo ${esc(name) || "coach"}, de beheerder heeft je aanvraag goedgekeurd. Je kan nu sessies inplannen met je clienten.`,
       cta: { href: `${SITE}/coach`, label: "Naar coach-dashboard" },
     })
   );
@@ -315,9 +317,9 @@ export async function sendCreditsAdjusted({ to, name, delta, reason, balance }) 
     up ? "Je hebt sessies bijgekregen" : "Je sessiesaldo is aangepast",
     shell({
       title: up ? `+${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} bijgeschreven 🎉` : `${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} aangepast`,
-      intro: `Hallo ${name || "daar"}, je sessiesaldo is ${up ? "verhoogd" : "verlaagd"} met ${Math.abs(delta)} sessie${Math.abs(delta) > 1 ? "s" : ""}.`,
+      intro: `Hallo ${esc(name) || "daar"}, je sessiesaldo is ${up ? "verhoogd" : "verlaagd"} met ${Math.abs(delta)} sessie${Math.abs(delta) > 1 ? "s" : ""}.`,
       rows: [
-        ...(reason ? [["Reden", reason]] : []),
+        ...(reason ? [["Reden", esc(reason)]] : []),
         ...(balance != null ? [["Nieuw saldo", `${balance} sessies`]] : []),
       ],
       cta: { href: `${SITE}/boeken`, label: "Boek een sessie" },
@@ -333,10 +335,10 @@ export async function sendPaymentRequest({ to, name, coachName, amount, descript
     `Betaalverzoek van ${coachName || "je coach"}`,
     shell({
       title: "Betaalverzoek voor je sessie 💪",
-      intro: `Hallo ${name || "daar"}, ${coachName || "je coach"} vraagt je om een sessie te betalen via het platform.`,
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(coachName) || "je coach"} vraagt je om een sessie te betalen via het platform.`,
       rows: [
         ["Bedrag", eur],
-        ...(description ? [["Omschrijving", description]] : []),
+        ...(description ? [["Omschrijving", esc(description)]] : []),
       ],
       body: `<p style="font-size:14px;color:#6b6685">Betaal veilig met kaart via je account.</p>`,
       cta: { href: `${SITE}/account`, label: "Betaal nu" },
@@ -352,9 +354,9 @@ export async function sendSessionInvite({ to, name, fromName, serviceName, start
     `${fromName} nodigt je uit voor een sessie`,
     shell({
       title: "Je bent uitgenodigd voor een sessie 💪",
-      intro: `Hallo ${name || "daar"}, ${fromName} heeft je meegenomen naar een Fittin'-sessie:`,
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(fromName)} heeft je meegenomen naar een Fittin'-sessie:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
@@ -372,9 +374,9 @@ export async function sendEmailInvite({ to, fromName, serviceName, startsAt, end
     `${fromName} nodigt je uit bij Fittin' — je 1e sessie is gratis 🎁`,
     shell({
       title: "Je bent uitgenodigd om te trainen 💪",
-      intro: `${fromName} heeft je uitgenodigd voor een sessie bij Fittin' (Gent). Maak gratis een account om je plek te bevestigen:`,
+      intro: `${esc(fromName)} heeft je uitgenodigd voor een sessie bij Fittin' (Gent). Maak gratis een account om je plek te bevestigen:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
         ["Welkomstcadeau", `<span style="color:#33B24A">Je 1e sessie is gratis 🎁</span>`],
@@ -393,9 +395,9 @@ export async function sendBuddyJoinAsk({ to, name, fromName, serviceName, starts
     `${fromName} gaat trainen — kom je mee?`,
     shell({
       title: "Kom je mee trainen? 💪",
-      intro: `Hallo ${name || "daar"}, ${fromName} heeft de gym geboekt en vraagt of je meekomt:`,
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(fromName)} heeft de gym geboekt en vraagt of je meekomt:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
@@ -413,9 +415,9 @@ export async function sendInviteSent({ to, name, buddyNames, serviceName, starts
     `Je uitnodiging is verstuurd`,
     shell({
       title: "Je vrienden zijn uitgenodigd 🤝",
-      intro: `Hallo ${name || "daar"}, we hebben ${buddyNames || "je vrienden"} uitgenodigd voor jouw sessie:`,
+      intro: `Hallo ${esc(name) || "daar"}, we hebben ${esc(buddyNames) || "je vrienden"} uitgenodigd voor jouw sessie:`,
       rows: [
-        ["Sessie", serviceName],
+        ["Sessie", esc(serviceName)],
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
@@ -433,7 +435,7 @@ export async function sendMembershipActive({ to, name }) {
     "Welkom als Fittin'-member 🎉",
     shell({
       title: "Je member-abonnement is actief 🎉",
-      intro: `Hallo ${name || "daar"}, top dat je member wordt! Vanaf nu:`,
+      intro: `Hallo ${esc(name) || "daar"}, top dat je member wordt! Vanaf nu:`,
       rows: [
         ["Elke maand", "1 sessie inbegrepen (binnen de maand)"],
         ["Boekingstarief", "€ 12 i.p.v. € 15"],
@@ -452,7 +454,7 @@ export async function sendBuddyAccepted({ to, name, fromName }) {
     `${fromName} is nu je buddy`,
     shell({
       title: "Jullie zijn nu buddies 🤝",
-      intro: `Hallo ${name || "daar"}, ${fromName} heeft je buddy-aanvraag aanvaard. Neem elkaar mee naar een sessie — elk bezoek telt mee voor jullie stats.`,
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(fromName)} heeft je buddy-aanvraag aanvaard. Neem elkaar mee naar een sessie — elk bezoek telt mee voor jullie stats.`,
       cta: { href: `${SITE}/boeken`, label: "Boek samen een sessie" },
     })
   );
@@ -465,7 +467,7 @@ export async function sendBuddyRequest({ to, name, fromName }) {
     `${fromName} wil je trainingsbuddy zijn`,
     shell({
       title: "Nieuwe buddy-aanvraag 🤝",
-      intro: `Hallo ${name || "daar"}, ${fromName} wil met jou connecten als trainingsbuddy op Fittin'. Buddies kunnen elkaar meenemen naar sessies.`,
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(fromName)} wil met jou connecten als trainingsbuddy op Fittin'. Buddies kunnen elkaar meenemen naar sessies.`,
       cta: { href: `${SITE}/community`, label: "Bekijk aanvraag" },
     })
   );
@@ -479,8 +481,8 @@ export async function sendBuddyInvite({ to, fromName, refCode }) {
     `${fromName} nodigt je uit op Fittin'`,
     shell({
       title: "Train samen op Fittin' 💪",
-      intro: `${fromName} nodigt je uit om samen te trainen bij Fittin' — een privégym in Gent. Maak een gratis account en je eerste uur is gratis met de code FittinWelcome.`,
-      body: refCode ? `<p style="font-size:13px;color:#9b97ab;margin-top:10px">Gebruik bij registratie de vriendcode <b>${refCode}</b>.</p>` : "",
+      intro: `${esc(fromName)} nodigt je uit om samen te trainen bij Fittin' — een privégym in Gent. Maak een gratis account en je eerste uur is gratis met de code FittinWelcome.`,
+      body: refCode ? `<p style="font-size:13px;color:#9b97ab;margin-top:10px">Gebruik bij registratie de vriendcode <b>${esc(refCode)}</b>.</p>` : "",
       cta: { href: url, label: "Account aanmaken" },
     })
   );

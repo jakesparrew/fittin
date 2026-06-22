@@ -14,7 +14,7 @@ export default async function CoachLayout({ children }) {
   if (!profile || !["coach", "beheerder"].includes(profile.role)) redirect("/account");
 
   return (
-    <div className="flex min-h-screen bg-paper">
+    <div className="flex min-h-screen flex-col bg-paper md:flex-row">
       <CoachSidebar name={profile.full_name || "Coach"} role={profile.role} />
       <main className="min-w-0 flex-1">{children}</main>
       <ToastHost />

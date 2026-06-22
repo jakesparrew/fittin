@@ -16,7 +16,7 @@ export default async function BeheerLayout({ children }) {
   if (!profile || profile.role !== "beheerder") redirect(profile?.role === "coach" ? "/coach" : "/account");
 
   return (
-    <div className="flex min-h-screen bg-paper">
+    <div className="flex min-h-screen flex-col bg-paper md:flex-row">
       <AdminSidebar name={profile.full_name || "Beheerder"} role={profile.role} />
       <main className="min-w-0 flex-1">{children}</main>
       <ToastHost />
