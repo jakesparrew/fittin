@@ -509,6 +509,11 @@ export default async function AccountPage({ searchParams }) {
           )}
         </section>
 
+        {/* Payments & downloadable Stripe receipts */}
+        <div className="mt-12">
+          <Link href="/account/betalingen" className="inline-flex items-center gap-2 rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">💳 Betalingen &amp; betaalbewijzen →</Link>
+        </div>
+
         {/* History */}
         {history.length > 0 && (
           <section className="mt-12">

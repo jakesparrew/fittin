@@ -310,6 +310,15 @@ async function handleEvent(event, admin) {
       } else if (obj.metadata?.booking_id) {
         await markBookingPaid(admin, obj.metadata.booking_id, obj.payment_intent, obj);
       }
+      // Stash the Stripe hosted receipt URL on the just-recorded payment (keyed by session id) so
+      // members & coaches can download their betaalbewijs from their dashboard.
+      try {
+        if (obj.payment_intent) {
+          const pi = await stripe.paymentIntents.retrieve(obj.payment_intent, { expand: ["latest_charge"] });
+          const receipt = pi?.latest_charge?.receipt_url;
+          if (receipt) await admin.from("payments").update({ receipt_url: receipt }).eq("stripe_id", obj.id).is("receipt_url", null);
+        }
+      } catch (e) { console.error("receipt capture:", e?.message); }
       // subscription checkout → handled by subscription.* + invoice.paid
       return;
     }
@@ -330,6 +339,7 @@ async function handleEvent(event, admin) {
       if (!prof) return;
       await grantCredits(admin, prof.id, 1, "abo", false, obj.id);
       await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
+      if (obj.hosted_invoice_url) await admin.from("payments").update({ receipt_url: obj.hosted_invoice_url }).eq("stripe_id", obj.id);
       await admin.rpc("reward_pending_referral", { p_user: prof.id });
       // Welcome the new member on their first invoice; thank them each renewal.
       try {
