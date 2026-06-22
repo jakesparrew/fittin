@@ -152,7 +152,7 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-5 py-20">
           <Reveal>
             <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Fittin&rsquo; in cijfers</p>
-            <h2 className="mt-2 max-w-xl text-2xl font-black text-brand md:text-3xl">Geen poespas. Gewoon de zaal — wanneer jij wil.</h2>
+            <h2 className="mt-2 max-w-xl text-2xl font-black text-brand md:text-3xl">Geen vaste uren. Geen lidgeld. Gewoon trainen.</h2>
           </Reveal>
           <Reveal delay={120}>
             <div className="mt-8 overflow-hidden rounded-[2rem] border border-borderc">
@@ -162,7 +162,7 @@ export default function Home() {
                   { v: 24, s: "/7", l: "Open, elke dag" },
                   { v: 15, p: "€ ", l: "Per sessie van 1 uur" },
                   { v: 4, p: "1–", l: "Personen per boeking" },
-                  { v: 0, l: "Verplicht abonnement" },
+                  { v: 0, p: "€ ", l: "Lidgeld" },
                 ].map((stat, i) => (
                   <div key={i} className="group bg-white p-8 transition-colors hover:bg-paper lg:p-10">
                     <p className="font-display text-5xl font-black leading-none text-brand md:text-6xl">
