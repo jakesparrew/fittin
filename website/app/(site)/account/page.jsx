@@ -115,21 +115,24 @@ export default async function AccountPage({ searchParams }) {
 
   const now = Date.now();
   const all = [...(bookings || []), ...invitedSessions];
+  // A booking is "settled" (door-eligible) only if paid, or settled at creation (credit/free/invited).
+  // Unpaid 'los'/'abo' bookings must NOT open the door until Stripe confirms payment.
+  const isSettled = (b) => b.paid || b.payment_source === "credit" || b.payment_source === "gratis_code" || b.payment_source === "invite";
   const doorActive = all.some(
     (b) =>
-      b.status === "bevestigd" &&
+      b.status === "bevestigd" && isSettled(b) &&
       now >= new Date(b.starts_at).getTime() - 5 * 60000 &&
       now <= new Date(b.ends_at).getTime()
   );
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now);
   // A session only counts as "booked" once it's paid — credit/abo/free/invite count as paid; an
   // unpaid 'los' checkout-in-progress lives in the pending-payment banner, not in the list.
-  const upcomingPaid = upcoming.filter((b) => b.paid || b.price_cents === 0 || b.payment_source !== "los");
+  const upcomingPaid = upcoming.filter(isSettled);
   const nextSession = upcomingPaid[0]; // sorted ascending by starts_at
   const bookedCount = all.filter((b) => b.status === "bevestigd").length; // lifetime confirmed (scoreboard)
   // Pending payment: confirmed-but-unpaid 'los' bookings (20-min window from creation).
   const pendingPay = upcoming
-    .filter((b) => !b.paid && b.payment_source === "los" && b.price_cents > 0)
+    .filter((b) => !b.paid && (b.payment_source === "los" || b.payment_source === "abo") && b.price_cents > 0)
     .map((b) => ({
       id: b.id,
       name: b.services?.name || "Sessie",

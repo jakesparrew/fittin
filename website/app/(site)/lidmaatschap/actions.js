@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 
-const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 export async function buyPackage(formData) {
   const packageId = formData.get("packageId");

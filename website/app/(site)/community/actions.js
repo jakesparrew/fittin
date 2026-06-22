@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendEventSignup } from "@/lib/email";
 
-const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 export async function redeemReferral(formData) {
   const supabase = await createClient();

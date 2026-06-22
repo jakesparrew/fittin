@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 // Daily activation sweep (Vercel Cron). Protected by CRON_SECRET when set — Vercel sends it as
 // `Authorization: Bearer <CRON_SECRET>` automatically. Cooldown per campaign prevents repeats.

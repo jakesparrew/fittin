@@ -13,7 +13,7 @@ import { logCoachActivity } from "@/lib/coachlog";
 
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
 
-const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 const num = (v, d = 0) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
@@ -274,11 +274,8 @@ export async function setClientPrice(formData) {
   const clientId = formData.get("clientId");
   const price = cents(formData.get("price_eur"));
   if (price < 1) return { error: "Geef een geldig tarief (€)." };
-  const { error: e } = await supabase
-    .from("coach_clients")
-    .update({ price_cents: price })
-    .eq("coach_id", userId)
-    .eq("client_id", clientId);
+  // coach_clients writes are beheerder-only at the RLS level; coaches set the price-note via this RPC.
+  const { error: e } = await supabase.rpc("set_client_price", { p_client: clientId, p_price: price });
   if (e) return { error: e.message };
   revalidatePath("/coach/clienten");
   return { ok: true, message: "Tarief opgeslagen ✓" };

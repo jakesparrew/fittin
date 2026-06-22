@@ -49,8 +49,12 @@ export default function Footer() {
           </ul>
         </div>
       </div>
-      <div className="border-t border-white/10 py-5 text-center text-xs text-lav/70">
-        © 2026 Fittin&rsquo; · Alle rechten voorbehouden
+      <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-white/10 py-5 text-center text-xs text-lav/70">
+        <span>© 2026 Fittin&rsquo;</span>
+        <span aria-hidden>·</span>
+        <Link href="/privacy" className="transition hover:text-white">Privacybeleid</Link>
+        <span aria-hidden>·</span>
+        <Link href="/disclosure" className="transition hover:text-white">Disclosure</Link>
       </div>
     </footer>
   );

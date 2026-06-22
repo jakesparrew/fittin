@@ -6,11 +6,16 @@ import { requireStaff } from "@/lib/staff";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { queueNewsletter, enrollSubscriberInDrips } from "@/lib/newsletter";
 
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 function kickWorker() {
   const secret = process.env.CRON_SECRET;
   after(async () => {
-    try { await fetch(`${SITE}/api/queue/process${secret ? `?key=${encodeURIComponent(secret)}` : ""}`, { cache: "no-store" }); } catch {}
+    try {
+      await fetch(`${SITE}/api/queue/process`, {
+        cache: "no-store",
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
+    } catch {}
   });
 }
 

@@ -171,9 +171,10 @@ export default function DeGym() {
           <h2 className="mt-3 text-3xl font-black md:text-4xl">Persoonlijk en doelgericht</h2>
           <p className="mt-5 leading-relaxed text-brand/70">
             Fittin&rsquo; is een project van De Wereld Draait Door, vereniging zonder winstoogmerk.
-            Anders dan de hedendaagse gymketens hanteren wij geen lidgeld of abonnementskosten. We
-            vinden het belangrijk een toegankelijk tarief te bieden: je betaalt enkel voor de tijd
-            waarin je gebruik maakt van onze gym, met of zonder coach.
+            Anders dan de hedendaagse gymketens hanteren wij geen verplicht lidgeld. We vinden het
+            belangrijk een toegankelijk tarief te bieden: je betaalt enkel voor de tijd waarin je
+            gebruik maakt van onze gym, met of zonder coach. Een maandabonnement (€ 12) is mogelijk,
+            maar nooit verplicht.
           </p>
         </div>
       </section>

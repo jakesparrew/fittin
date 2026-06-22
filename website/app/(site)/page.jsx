@@ -159,7 +159,7 @@ export default function Home() {
               <div className="h-1.5 w-full bg-accent" />
               <div className="grid grid-cols-2 gap-px bg-borderc lg:grid-cols-4">
                 {[
-                  { v: 24, s: "/7", l: "Open, elke dag" },
+                  { v: 7, s: "/7", l: "Open 6–23u, elke dag" },
                   { v: 15, p: "€ ", l: "Per sessie van 1 uur" },
                   { v: 4, p: "1–", l: "Personen per boeking" },
                   { v: 0, p: "€ ", l: "Lidgeld" },

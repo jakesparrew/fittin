@@ -16,6 +16,13 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Visible keyboard-focus indicator (WCAG 2.4.7). Only shows for keyboard/AT users, not mouse clicks. */
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* Distinctive display face on headings + brand mark — keeps the UI out of generic-AI territory.
    Tight optical tracking; OpenType figures for a more deliberate, designed feel. */
 h1, h2, h3, .font-display {

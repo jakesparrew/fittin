@@ -8,7 +8,7 @@ import { enrollUserInDrips } from "@/lib/newsletter";
 import { notify } from "@/lib/notify";
 import { testNuki, getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
 
-const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 // Ensure the caller is staff (coach|beheerder); returns the supabase client + profile.
 async function requireStaff(beheerderOnly = false) {

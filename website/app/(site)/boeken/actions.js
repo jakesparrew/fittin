@@ -33,7 +33,7 @@ export async function validateDiscountAction(code, baseCents) {
   return { ok: true, cents: d.cents, off: base - d.cents, label: d.label };
 }
 
-const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 function checkoutParams(booking, email, chargeCents, codeId) {
   return {

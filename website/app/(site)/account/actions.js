@@ -8,7 +8,7 @@ import { sendBookingRescheduled, sendSessionInvite, sendInviteSent, sendBuddyJoi
 import { notify, notifyMany } from "@/lib/notify";
 import { getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
 
-const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 // Toggle whether the member appears on the monthly leaderboard (profile setting).
 export async function setLeaderboardOptIn(formData) {

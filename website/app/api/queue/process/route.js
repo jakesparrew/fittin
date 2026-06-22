@@ -8,7 +8,7 @@ export const maxDuration = 60;
 
 const BATCH = parseInt(process.env.NEWSLETTER_BATCH || "40", 10);     // emails per tick
 const DELAY = parseInt(process.env.NEWSLETTER_TICK_MS || "4000", 10); // pace between ticks
-const SITE = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3008";
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Drains the newsletter send queue one batch at a time, then triggers the next tick after the
