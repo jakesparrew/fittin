@@ -123,7 +123,7 @@ export default async function CoachDashboard({ searchParams }) {
             <p className="mt-0.5 text-brand/60">Verbind eerst een client via <Link href="/coach/clienten" className="font-bold text-accentdark underline">Mijn clienten</Link> — pas daarna kan je hier een sessie met hen boeken.</p>
           </div>
         )}
-        <form action={coachBookSession} className="mt-4 flex flex-wrap items-end gap-3">
+        <ActionForm action={coachBookSession} success="Sessie geboekt ✓" className="mt-4 flex flex-wrap items-end gap-3">
           <Lbl t="Client">
             <SearchSelect name="clientId" required placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
@@ -131,10 +131,10 @@ export default async function CoachDashboard({ searchParams }) {
             <div className="rounded-lg border-2 border-borderc bg-paper px-3 py-2 text-sm font-semibold text-brand">{ptService?.name || "Personal training"}</div>
             <input type="hidden" name="serviceId" value={ptService?.id || ""} />
           </Lbl>
-          <CoachSlotPicker defaultDate={todayStr} />
+          <CoachSlotPicker defaultDate={todayStr} openHour={gym.open_hour} closeHour={gym.close_hour} />
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
-        </form>
+        </ActionForm>
         <AddClientInline />
         <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). Je clienten betalen jou rechtstreeks (bv. Bancontact), los van het platform.</p>
       </section>

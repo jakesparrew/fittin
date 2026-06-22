@@ -5,9 +5,10 @@ import { coachDayAvailability } from "@/app/coach/actions";
 const pad = (n) => String(n).padStart(2, "0");
 const fh = (h) => `${pad(Math.floor(h))}:${h % 1 ? "30" : "00"}`;
 
-// Date + time picker for the coach booking form. The time dropdown only lists FREE 1h slots for the
-// chosen date (refetched on change), so already-booked/blocked hours are never offered.
-export default function CoachSlotPicker({ defaultDate }) {
+// Date + time picker for the coach booking form. The time dropdown lists FREE 1h slots for the chosen
+// date (refetched on change). If availability can't be loaded it falls back to all opening hours so a
+// coach is never blocked from booking (the booking RPC still rejects a truly-taken slot).
+export default function CoachSlotPicker({ defaultDate, openHour = 6, closeHour = 23 }) {
   const [date, setDate] = useState(defaultDate);
   const [hours, setHours] = useState(null); // null = loading
   const [hour, setHour] = useState("");
@@ -18,12 +19,16 @@ export default function CoachSlotPicker({ defaultDate }) {
     setHour("");
     coachDayAvailability(date).then((r) => {
       if (!active) return;
-      const hs = r?.hours || [];
+      let hs = r?.hours || [];
+      if (!r?.ok) {
+        hs = [];
+        for (let h = openHour; h + 1 <= closeHour; h += 0.5) hs.push(h);
+      }
       setHours(hs);
       setHour(hs.length ? String(hs[0]) : "");
     });
     return () => { active = false; };
-  }, [date]);
+  }, [date, openHour, closeHour]);
 
   return (
     <>

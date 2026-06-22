@@ -207,10 +207,10 @@ export async function coachRescheduleBooking(formData) {
 // Free 1h start-times for a date (availability-aware dropdowns). Returns decimals e.g. [6, 6.5, 9, ...].
 export async function coachDayAvailability(dateStr) {
   const { supabase, error } = await requireCoach();
-  if (error) return { hours: [] };
+  if (error) return { hours: [], ok: false };
   const { data, error: e } = await supabase.rpc("coach_free_hours", { p_date: dateStr });
-  if (e) return { hours: [] };
-  return { hours: (data || []).map(Number) };
+  if (e) return { hours: [], ok: false };
+  return { hours: (data || []).map(Number), ok: true };
 }
 
 // Coach requests session-credits from the superadmin (alternative to buying by card).
