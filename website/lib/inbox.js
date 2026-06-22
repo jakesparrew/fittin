@@ -1,6 +1,8 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const KEY = process.env.RESEND_API_KEY;
+const FORWARD_TO = "ran.knockaert@gmail.com"; // alle inkomende klantmail wordt hierheen doorgestuurd
+const escFwd = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const isFittin = (addr) => /@(.*\.)?fittin\.be$/i.test(String(addr || ""));
 const headerVal = (headers, name) => {
   if (!headers) return null;
@@ -40,6 +42,34 @@ export async function importReceived(gymId, resendId) {
     in_reply_to: headerVal(full.headers, "in-reply-to"),
     received_at: full.created_at || new Date().toISOString(),
   });
+
+  // Forward a copy of every new incoming customer mail to Ran. Reply-to is the original sender, so
+  // a reply from Ran lands straight in the customer's inbox. Best-effort: never block the import.
+  if (!error && FORWARD_TO) {
+    try {
+      const { Resend } = await import("resend");
+      const resend = new Resend(KEY);
+      const banner =
+        `<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555;background:#f6f5fb;border-radius:10px;padding:12px 14px;margin-bottom:14px">` +
+        `📩 <b>Nieuwe mail aan Fittin'</b><br>` +
+        `<b>Van:</b> ${escFwd(fromP.name)} &lt;${escFwd(fromP.email)}&gt;<br>` +
+        `<b>Aan:</b> ${escFwd(to)}<br>` +
+        `<b>Onderwerp:</b> ${escFwd(full.subject || "")}<br>` +
+        `<span style="color:#888">Antwoord gewoon op deze mail — je antwoord gaat rechtstreeks naar de klant.</span></div>`;
+      const orig = full.html
+        || (full.text ? `<pre style="white-space:pre-wrap;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#22194F;margin:0">${escFwd(full.text)}</pre>` : "<p>(geen inhoud)</p>");
+      await resend.emails.send({
+        from: "Fittin' <info@fittin.be>",
+        to: FORWARD_TO,
+        replyTo: fromP.email || to,
+        subject: full.subject || "(geen onderwerp)",
+        html: banner + orig,
+        headers: { "X-Fittin-Forward": "inbound" },
+      });
+    } catch (e) {
+      console.error("inbound forward failed:", e?.message);
+    }
+  }
   return !error;
 }
 
