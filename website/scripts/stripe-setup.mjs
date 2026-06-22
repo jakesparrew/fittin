@@ -6,6 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const WEBHOOK_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be") + "/api/stripe/webhook";
 const EVENTS = [
   "checkout.session.completed",
+  "checkout.session.async_payment_succeeded", // Bancontact/iDEAL settle async — without this the booking never flips to paid
   "invoice.paid",
   "invoice.payment_failed",
   "customer.subscription.created",
