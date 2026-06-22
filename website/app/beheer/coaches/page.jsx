@@ -22,7 +22,7 @@ export default async function Coaches() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [{ data: people }, { data: avail }, { data: ledger }, { data: links }, { data: sessions }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents, coach_public, coach_bio, coach_specialty, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_photo_url, phone").eq("gym_id", gym.id).order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents, coach_public, coach_bio, coach_specialty, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_photo_url, phone, bill_company, bill_vat, bill_address").eq("gym_id", gym.id).order("full_name"),
     supabase.from("coach_availability").select("*").eq("gym_id", gym.id).order("weekday"),
     supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
     supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id).eq("status", "accepted"),
@@ -164,6 +164,14 @@ export default async function Coaches() {
                       <Lbl t="PT 1-op-3 (€ pp)"><input name="pt3_eur" defaultValue={c.coach_pt3_price_cents != null ? c.coach_pt3_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
                     </div>
                     <label className="flex items-center gap-2 text-xs font-bold text-brand/70"><input type="checkbox" name="public" defaultChecked={c.coach_public} className="h-4 w-4 accent-[#5fda6b]" /> Zichtbaar op de website</label>
+                    <div className="mt-1 rounded-lg border border-borderc bg-paper/50 p-3 sm:col-span-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-lav">Facturatiegegevens (B2B — voor de factuur van zijn sessietegoed)</p>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                        <Lbl t="Bedrijfsnaam"><input name="bill_company" defaultValue={c.bill_company || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                        <Lbl t="Btw-nummer"><input name="bill_vat" defaultValue={c.bill_vat || ""} placeholder="BE 0123.456.789" className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                      </div>
+                      <label className="mt-2 block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Facturatieadres</span><textarea name="bill_address" rows={2} defaultValue={c.bill_address || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></label>
+                    </div>
                     <div className="sm:col-span-2"><button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Profiel opslaan</button></div>
                   </ActionForm>
                 </div>

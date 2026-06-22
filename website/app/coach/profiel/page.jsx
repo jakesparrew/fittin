@@ -13,7 +13,7 @@ export default async function CoachProfiel() {
   const { supabase, userId } = ctx;
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_public")
+    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_public, bill_company, bill_vat, bill_address")
     .eq("id", userId)
     .single();
 
@@ -55,6 +55,18 @@ export default async function CoachProfiel() {
           <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Extra prijsinfo / notities (optioneel)</span>
           <textarea name="pricelist" rows={3} defaultValue={me?.coach_pricelist || ""} placeholder="bv. 1 sessie € 40 · 10-beurtenkaart € 350" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
         </label>
+        <div className="rounded-xl border border-borderc bg-paper/50 p-4">
+          <p className="text-xs font-bold uppercase tracking-wide text-lav">Facturatiegegevens (voor je facturen)</p>
+          <p className="mt-1 text-xs text-brand/50">Nodig voor de factuur van je sessietegoed-aankopen (B2B). Vul je bedrijfsnaam, btw-nummer en adres in zodat je factuur correct is volgens de Belgische regels.</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <Field name="bill_company" label="Bedrijfsnaam" defaultValue={me?.bill_company} placeholder="bv. Coaching Jan BV" />
+            <Field name="bill_vat" label="Btw-nummer" defaultValue={me?.bill_vat} placeholder="BE 0123.456.789" />
+          </div>
+          <label className="mt-3 block">
+            <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Facturatieadres</span>
+            <textarea name="bill_address" rows={2} defaultValue={me?.bill_address || ""} placeholder="Straat 1, 9000 Gent" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
+          </label>
+        </div>
         <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand">Opslaan</button>
       </ActionForm>
     </div>

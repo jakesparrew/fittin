@@ -313,6 +313,9 @@ export async function saveCoachProfile(formData) {
       coach_pt2_price_cents: eur(formData.get("pt2_eur")),
       coach_pt3_price_cents: eur(formData.get("pt3_eur")),
       coach_public: formData.get("public") === "on",
+      bill_company: formData.get("bill_company") || null,
+      bill_vat: formData.get("bill_vat") || null,
+      bill_address: formData.get("bill_address") || null,
     })
     .eq("id", userId);
   if (e) return { error: e.message };
