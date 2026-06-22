@@ -7,31 +7,42 @@ import { fmtHour } from "@/lib/time";
 import ActionForm from "@/components/ui/ActionForm";
 import { clientRequestCoach } from "@/app/(site)/account/actions";
 import { respondCoachLink } from "@/app/coach/actions";
+import { slugify, isUuid, coachSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 const WD = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
 const dagdeel = (h) => (h < 12 ? "Voormiddag" : h < 17 ? "Namiddag" : "Avond");
 
+// Resolve a coach by clean name-slug or by uuid (old links keep working). All role=coach are public.
+async function resolveCoach(admin, idOrSlug, cols) {
+  if (isUuid(idOrSlug)) {
+    const { data } = await admin.from("profiles").select(cols).eq("id", idOrSlug).maybeSingle();
+    return data && data.role === "coach" ? data : null;
+  }
+  const { data: list } = await admin.from("profiles").select(cols).eq("role", "coach");
+  return (list || []).find((co) => slugify(co.full_name) === idOrSlug) || null;
+}
+
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const admin = createAdminClient();
-  const { data: c } = await admin.from("profiles").select("full_name, coach_specialty, coach_public, role").eq("id", id).maybeSingle();
-  if (!c || c.role !== "coach" || !c.coach_public) return { title: "Coach | Fittin'" };
+  const c = await resolveCoach(admin, id, "id, full_name, coach_specialty, role");
+  if (!c) return { title: "Coach | Fittin'" };
   return { title: `${c.full_name} — coach bij Fittin'`, description: `${c.full_name}${c.coach_specialty ? ` · ${c.coach_specialty}` : ""} — personal trainer bij Fittin' in Gent.` };
 }
 
 export default async function CoachProfile({ params }) {
   const { id } = await params;
   const admin = createAdminClient();
-  const [{ data: c }, { data: avail }] = await Promise.all([
-    admin.from("profiles").select("id, full_name, role, coach_public, coach_bio, coach_specialty, coach_photo_url, coach_pricelist").eq("id", id).maybeSingle(),
-    admin.from("coach_availability").select("weekday, from_hour, to_hour").eq("coach_id", id).order("weekday"),
+  const c = await resolveCoach(admin, id, "id, full_name, role, coach_bio, coach_specialty, coach_photo_url, coach_pricelist");
+  if (!c) notFound();
+  const [{ data: avail }, { user }] = await Promise.all([
+    admin.from("coach_availability").select("weekday, from_hour, to_hour").eq("coach_id", c.id).order("weekday"),
+    getSessionProfile(),
   ]);
-  if (!c || c.role !== "coach" || !c.coach_public) notFound();
-  const { user } = await getSessionProfile();
   let myLink = null;
-  if (user && user.id !== id) {
-    const { data: lk } = await admin.from("coach_clients").select("id, status, requested_by").eq("coach_id", id).eq("client_id", user.id).maybeSingle();
+  if (user && user.id !== c.id) {
+    const { data: lk } = await admin.from("coach_clients").select("id, status, requested_by").eq("coach_id", c.id).eq("client_id", user.id).maybeSingle();
     myLink = lk || null;
   }
 
@@ -54,7 +65,7 @@ export default async function CoachProfile({ params }) {
             </Link>
 
             {/* Connect with this coach */}
-            {user && user.id !== id && (
+            {user && user.id !== c.id && (
               myLink?.status === "accepted" ? (
                 <p className="mt-3 rounded-full bg-accent/10 px-4 py-2.5 text-center text-sm font-bold text-accentdark">Verbonden met deze coach ✓</p>
               ) : myLink?.status === "pending" && myLink.requested_by === "client" ? (
@@ -67,13 +78,13 @@ export default async function CoachProfile({ params }) {
                 </ActionForm>
               ) : (
                 <ActionForm action={clientRequestCoach} success="Aanvraag verstuurd ✓" className="mt-3">
-                  <input type="hidden" name="coachId" value={id} />
+                  <input type="hidden" name="coachId" value={c.id} />
                   <button className="w-full rounded-full border-2 border-borderc px-6 py-3 text-sm font-black text-brand transition hover:border-accent">+ Verbind met deze coach</button>
                 </ActionForm>
               )
             )}
             {!user && (
-              <Link href={`/login?next=/coaches/${id}`} className="mt-3 block text-center text-sm font-semibold text-brand/50 hover:text-brand">Log in om te verbinden met deze coach</Link>
+              <Link href={`/login?next=/coaches/${coachSlug(c)}`} className="mt-3 block text-center text-sm font-semibold text-brand/50 hover:text-brand">Log in om te verbinden met deze coach</Link>
             )}
           </div>
 

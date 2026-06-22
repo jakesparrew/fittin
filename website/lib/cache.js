@@ -38,7 +38,6 @@ export const getPublicCoachesCached = unstable_cache(
       .select("id, full_name, coach_specialty, coach_photo_url, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents")
       .eq("gym_id", gymId)
       .eq("role", "coach")
-      .eq("coach_public", true)
       .order("full_name");
     return data || [];
   },

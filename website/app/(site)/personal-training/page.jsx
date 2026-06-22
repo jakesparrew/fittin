@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
+import { coachSlug } from "@/lib/slug";
 
 export const metadata = {
   title: "Personal training in Gent | Fittin'",
@@ -260,7 +261,7 @@ export default async function PersonalTraining() {
           {coaches.length > 0 ? (
             <div className="mt-10 grid gap-5 md:grid-cols-3">
               {coaches.map((coach) => (
-                <Link key={coach.id} href={`/coaches/${coach.id}`} className="flex flex-col rounded-2xl border border-borderc bg-white p-7 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
+                <Link key={coach.id} href={`/coaches/${coachSlug(coach)}`} className="flex flex-col rounded-2xl border border-borderc bg-white p-7 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
                   {coach.coach_photo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={coach.coach_photo_url} alt={coach.full_name || "Coach"} className="h-16 w-16 rounded-full object-cover" />

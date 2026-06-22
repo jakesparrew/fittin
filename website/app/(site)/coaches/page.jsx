@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { coachSlug } from "@/lib/slug";
 
 export const dynamic = "force-dynamic";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
@@ -15,7 +16,7 @@ export default async function CoachesPage() {
   const { data: gym } = await supabase.from("gyms").select("id").eq("slug", "fittin").single();
   const admin = createAdminClient();
   const { data: coaches } = gym
-    ? await admin.from("profiles").select("id, full_name, coach_specialty, coach_photo_url, coach_bio").eq("gym_id", gym.id).eq("role", "coach").eq("coach_public", true).order("full_name")
+    ? await admin.from("profiles").select("id, full_name, coach_specialty, coach_photo_url, coach_bio").eq("gym_id", gym.id).eq("role", "coach").order("full_name")
     : { data: [] };
 
   return (
@@ -30,7 +31,7 @@ export default async function CoachesPage() {
 
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {(coaches || []).map((c) => (
-            <Link key={c.id} href={`/coaches/${c.id}`} className="group overflow-hidden rounded-3xl border border-borderc bg-white transition hover:-translate-y-1 hover:shadow-lg hover:shadow-brand/5">
+            <Link key={c.id} href={`/coaches/${coachSlug(c)}`} className="group overflow-hidden rounded-3xl border border-borderc bg-white transition hover:-translate-y-1 hover:shadow-lg hover:shadow-brand/5">
               <div className="aspect-[4/3] bg-paper">
                 {c.coach_photo_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
