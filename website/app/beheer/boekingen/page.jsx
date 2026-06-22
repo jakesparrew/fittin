@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { slotInstant, brusselsDateStr, fmtHour } from "@/lib/time";
-import { adminCreateBooking } from "../actions";
+import { adminCreateBooking, adminAssignCoach } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
 import BookingsList from "@/components/admin/BookingsList";
@@ -35,20 +35,21 @@ export default async function Boekingen({ searchParams }) {
   const to = new Date(slotInstant(days[6].dateStr, 23).getTime() + 3600000).toISOString();
 
   const listFrom = new Date(Date.now() - 30 * 86400000).toISOString(); // overview: last 30 days + all upcoming
-  const [{ data: bookings }, { data: blocks }, { data: members }, { data: services }, { data: allBookings }, { data: taken }] = await Promise.all([
+  const [{ data: bookings }, { data: blocks }, { data: members }, { data: services }, { data: allBookings }, { data: taken }, { data: coaches }] = await Promise.all([
     supabase.from("bookings").select("id, user_id, coach_id, starts_at, status, persons, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", from).lt("starts_at", to),
     supabase.from("slot_blocks").select("id, starts_at, reason").eq("gym_id", gym.id).gte("starts_at", from).lt("starts_at", to),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).order("full_name"),
     supabase.from("services").select("id, name").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
-    supabase.from("bookings").select("id, created_at, starts_at, ends_at, status, persons, paid, price_cents, payment_source, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
+    supabase.from("bookings").select("id, created_at, starts_at, ends_at, status, persons, paid, price_cents, payment_source, coach_id, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
     // Every 30-min cell that a booking covers (1h sessions span 2 cells) — so continuation cells show as "bezet", not free.
     supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from, p_to: to }),
+    supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
   ]);
 
   const bookingRows = (allBookings || []).map((b) => ({
     id: b.id, created_at: b.created_at, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status, persons: b.persons,
     paid: b.paid, price_cents: b.price_cents, payment_source: b.payment_source,
-    member_name: b.member?.full_name || b.member?.email, coach_name: b.coach?.full_name, service_name: b.services?.name,
+    member_name: b.member?.full_name || b.member?.email, coach_id: b.coach_id, coach_name: b.coach?.full_name, service_name: b.services?.name,
   }));
 
   const hours = [];
@@ -56,6 +57,7 @@ export default async function Boekingen({ searchParams }) {
 
   const memberOpts = (members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }));
   const serviceOpts = services || [];
+  const coachOpts = (coaches || []).map((c) => ({ id: c.id, label: c.full_name || c.email }));
 
   return (
     <div className="px-8 py-8">
@@ -73,6 +75,9 @@ export default async function Boekingen({ searchParams }) {
         <ActionForm action={adminCreateBooking} success="Boeking aangemaakt ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
           <Lbl t="Boeking voor lid">
             <SearchSelect name="memberId" required placeholder="Kies lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+          </Lbl>
+          <Lbl t="Coach (optioneel)">
+            <SearchSelect name="coachId" placeholder="Geen coach" options={coachOpts.map((c) => ({ value: c.id, label: c.label }))} />
           </Lbl>
           <Lbl t="Sessie">
             <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
@@ -99,9 +104,10 @@ export default async function Boekingen({ searchParams }) {
         blocks={(blocks || []).map((b) => ({ t: new Date(b.starts_at).getTime(), id: b.id, reason: b.reason }))}
         members={memberOpts}
         services={serviceOpts}
+        coaches={coachOpts}
       />
 
-      <BookingsList bookings={bookingRows} />
+      <BookingsList bookings={bookingRows} coaches={coachOpts} />
     </div>
   );
 }

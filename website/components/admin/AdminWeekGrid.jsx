@@ -13,7 +13,7 @@ const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(
 // - Empty cells: click → plan/block modal. Drag across consecutive empty cells in one day → block that range.
 // - Booked cells: drag onto a free cell to MOVE the session, or use "verplaats" (modal) / "annuleer".
 // - Blocked cells render their own unblock control.
-export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [], members = [], services = [], takenSlots = [] }) {
+export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [], members = [], services = [], takenSlots = [], coaches = [] }) {
   const router = useRouter();
   const bookMap = new Map(bookings.map((b) => [b.t, b]));
   const blockMap = new Map(blocks.map((b) => [b.t, b]));
@@ -144,7 +144,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
       </table>
 
       {planModal && (
-        <PlanModal modal={planModal} members={members} services={services} onClose={() => setPlanModal(null)} onDone={() => { setPlanModal(null); router.refresh(); }} />
+        <PlanModal modal={planModal} members={members} services={services} coaches={coaches} onClose={() => setPlanModal(null)} onDone={() => { setPlanModal(null); router.refresh(); }} />
       )}
       {rangeModal && (
         <RangeBlockModal modal={rangeModal} onClose={() => setRangeModal(null)} onDone={() => { setRangeModal(null); router.refresh(); }} />
@@ -156,7 +156,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
   );
 }
 
-function PlanModal({ modal, members, services, onClose, onDone }) {
+function PlanModal({ modal, members, services, coaches = [], onClose, onDone }) {
   const [state, action, pending] = useActionState(async (_p, fd) => {
     const res = await adminCreateBooking(fd);
     return res?.error ? { error: res.error } : { ok: true };
@@ -183,6 +183,10 @@ function PlanModal({ modal, members, services, onClose, onDone }) {
           <div>
             <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Lid</span>
             <SearchSelect name="memberId" required placeholder="Zoek een lid…" options={members.map((m) => ({ value: m.id, label: m.label }))} />
+          </div>
+          <div>
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Coach (optioneel)</span>
+            <SearchSelect name="coachId" placeholder="Geen coach" options={coaches.map((c) => ({ value: c.id, label: c.label }))} />
           </div>
           <label className="block">
             <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Sessie</span>

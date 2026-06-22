@@ -167,9 +167,10 @@ export async function adminCancelBooking(formData) {
 }
 
 export async function adminCreateBooking(formData) {
-  const { supabase, error } = await requireStaff(true);
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const memberId = formData.get("memberId");
+  const coachId = formData.get("coachId") || null; // optioneel: koppel een coach → sessie in zijn agenda
   const { data: bookingId, error: e } = await supabase.rpc("admin_create_booking", {
     p_member: memberId,
     p_service: formData.get("serviceId"),
@@ -179,9 +180,17 @@ export async function adminCreateBooking(formData) {
     p_use_credit: formData.get("useCredit") === "on",
   });
   if (e) return { error: e.message };
-  // Confirm the booking to the member by email.
+  // Confirm the booking to the member by email (+ attach a coach if one was chosen).
   try {
     const admin = createAdminClient();
+    let coach = null;
+    if (coachId) {
+      const { data: c } = await admin.from("profiles").select("id, full_name, role").eq("id", coachId).eq("gym_id", profile.gym_id).maybeSingle();
+      if (c && (c.role === "coach" || c.role === "beheerder")) {
+        await admin.from("bookings").update({ coach_id: coachId }).eq("id", bookingId);
+        coach = c;
+      }
+    }
     const [{ data: bk }, { data: m }] = await Promise.all([
       admin.from("bookings").select("gym_id, starts_at, ends_at, persons, services(name)").eq("id", bookingId).single(),
       admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
@@ -191,10 +200,40 @@ export async function adminCreateBooking(formData) {
       await sendBookingConfirmation({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at, endsAt: bk.ends_at, persons: bk.persons, free: true });
     }
     if (bk) await notify({ gymId: bk.gym_id, userId: memberId, type: "coach_booked", title: "Er is een sessie voor je geboekt", body: bk.services?.name || "Sessie", link: "/account" });
+    if (bk && coach) await notify({ gymId: bk.gym_id, userId: coachId, type: "coach_booked", title: "Een sessie is aan jou toegewezen", body: bk.services?.name || "Sessie", link: "/coach/agenda" });
   } catch {}
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
+  revalidatePath("/coach");
+  revalidatePath("/coach/agenda");
   return { ok: true };
+}
+
+// Attach (or clear) a coach on an EXISTING booking → it then appears in the coach's agenda and the
+// coach can cancel/verplaatsen it (cancelCoachBooking + reschedule_booking gate on coach_id).
+// Service-role update (admin bypasses RLS); validates the coach belongs to the gym.
+export async function adminAssignCoach(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const bookingId = formData.get("bookingId");
+  const coachId = formData.get("coachId") || null;
+  if (!bookingId) return { error: "Geen boeking." };
+  const admin = createAdminClient();
+  const { data: bk } = await admin.from("bookings").select("id, gym_id, services(name)").eq("id", bookingId).eq("gym_id", profile.gym_id).maybeSingle();
+  if (!bk) return { error: "Boeking niet gevonden." };
+  if (coachId) {
+    const { data: c } = await admin.from("profiles").select("id, role").eq("id", coachId).eq("gym_id", profile.gym_id).maybeSingle();
+    if (!c || (c.role !== "coach" && c.role !== "beheerder")) return { error: "Geen geldige coach." };
+  }
+  const { error: e } = await admin.from("bookings").update({ coach_id: coachId }).eq("id", bookingId).eq("gym_id", profile.gym_id);
+  if (e) return { error: e.message };
+  try {
+    if (coachId) await notify({ gymId: bk.gym_id, userId: coachId, type: "coach_booked", title: "Een sessie is aan jou toegewezen", body: bk.services?.name || "Sessie", link: "/coach/agenda" });
+  } catch {}
+  revalidatePath("/beheer/boekingen");
+  revalidatePath("/coach");
+  revalidatePath("/coach/agenda");
+  return { ok: true, message: coachId ? "Coach toegewezen ✓" : "Coach losgekoppeld ✓" };
 }
 
 // Block a consecutive range of hours at once (e.g. close the gym 9:00–17:00 for maintenance).

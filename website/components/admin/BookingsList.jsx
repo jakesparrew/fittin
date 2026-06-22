@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { adminCancelBooking } from "@/app/beheer/actions";
+import { adminCancelBooking, adminAssignCoach } from "@/app/beheer/actions";
+import ActionForm from "@/components/ui/ActionForm";
 
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -17,7 +18,7 @@ const bron = (b) =>
     : b.payment_source === "gratis_code" ? "Gratis code"
     : "Online";
 
-export default function BookingsList({ bookings = [] }) {
+export default function BookingsList({ bookings = [], coaches = [] }) {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState("upcoming");
   const now = Date.now();
@@ -69,7 +70,20 @@ export default function BookingsList({ bookings = [] }) {
                   <td className="px-4 py-3 font-semibold text-brand">{b.member_name || "—"}</td>
                   <td className="px-4 py-3 text-brand/70">{b.service_name || "Sessie"}</td>
                   <td className="px-4 py-3"><span className="rounded-full bg-paper px-2 py-0.5 text-xs font-semibold text-brand/60">{bron(b)}</span></td>
-                  <td className="px-4 py-3 text-brand/50">{b.coach_name || "—"}</td>
+                  <td className="px-4 py-3">
+                    {upcoming && b.status === "bevestigd" ? (
+                      <ActionForm action={adminAssignCoach} success="Coach bijgewerkt ✓" className="flex items-center gap-1">
+                        <input type="hidden" name="bookingId" value={b.id} />
+                        <select name="coachId" defaultValue={b.coach_id || ""} className="rounded-lg border-2 border-borderc px-2 py-1 text-xs">
+                          <option value="">— geen coach —</option>
+                          {coaches.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                        </select>
+                        <button className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold text-white">OK</button>
+                      </ActionForm>
+                    ) : (
+                      <span className="text-brand/50">{b.coach_name || "—"}</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{b.persons}</td>
                   <td className="px-4 py-3">{paid ? <span className="font-bold text-accentdark">✓</span> : <span className="font-bold text-red-500">onbetaald</span>}</td>
                   <td className="px-4 py-3 text-xs font-semibold capitalize text-brand/60">{b.status}</td>
