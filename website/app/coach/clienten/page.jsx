@@ -92,8 +92,8 @@ export default async function CoachClienten() {
               <div key={l.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc p-4">
                 <div><p className="font-bold text-brand">{l.client.full_name || l.client.email}</p><p className="text-xs text-brand/45">{l.client.email}</p></div>
                 <div className="flex gap-2">
-                  <form action={respondCoachLink}><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="1" /><button className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Aanvaarden</button></form>
-                  <form action={respondCoachLink}><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="0" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Weigeren</button></form>
+                  <ActionForm action={respondCoachLink} success="Bijgewerkt ✓"><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="1" /><button className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Aanvaarden</button></ActionForm>
+                  <ActionForm action={respondCoachLink} success="Bijgewerkt ✓"><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="0" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Weigeren</button></ActionForm>
                 </div>
               </div>
             ))}
@@ -112,7 +112,7 @@ export default async function CoachClienten() {
                 <div><p className="font-bold text-brand">{l.client.full_name || l.client.email}</p><p className="text-xs text-brand/45">{l.client.email}</p></div>
                 <div className="flex items-center gap-3">
                   <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/50">In afwachting</span>
-                  <form action={removeCoachLink}><input type="hidden" name="linkId" value={l.id} /><button className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Annuleer</button></form>
+                  <ActionForm action={removeCoachLink} success="Verwijderd ✓"><input type="hidden" name="linkId" value={l.id} /><button className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Annuleer</button></ActionForm>
                 </div>
               </div>
             ))}
@@ -154,22 +154,22 @@ export default async function CoachClienten() {
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link href="/coach#boeken" className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Sessie boeken</Link>
-                  <form action={removeCoachLink}>
+                  <ActionForm action={removeCoachLink} success="Verwijderd ✓">
                     <input type="hidden" name="linkId" value={l.id} />
                     <button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Verbreek verbinding</button>
-                  </form>
+                  </ActionForm>
                 </div>
 
                 {/* Afgesproken tarief — enkel een notitie. Clienten betalen jou rechtstreeks (bv. Bancontact), niet via het platform. */}
                 <div className="mt-4 flex flex-wrap items-end gap-2 border-t border-borderc pt-4">
-                  <form action={setClientPrice} className="flex items-end gap-2">
+                  <ActionForm action={setClientPrice} success="Tarief opgeslagen ✓" className="flex items-end gap-2">
                     <input type="hidden" name="clientId" value={c.id} />
                     <label className="block">
                       <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Afgesproken tarief/sessie (€)</span>
                       <input name="price_eur" defaultValue={eur(l.price_cents)} className="w-44 rounded-lg border-2 border-borderc px-3 py-1.5 text-sm" />
                     </label>
                     <button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">Opslaan</button>
-                  </form>
+                  </ActionForm>
                   <p className="pb-2 text-xs text-brand/40">Notitie voor jezelf — je client betaalt je rechtstreeks (bv. Bancontact), niet via het platform.</p>
                 </div>
               </div>

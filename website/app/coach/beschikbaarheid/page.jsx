@@ -1,6 +1,7 @@
 import { getCoachContext } from "@/lib/coach";
 import { addOwnAvailability, deleteOwnAvailability } from "../actions";
 import { fmtHour } from "@/lib/time";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
@@ -27,7 +28,7 @@ export default async function Beschikbaarheid() {
       <h1 className="text-3xl font-black text-brand">Beschikbaarheid</h1>
       <p className="mt-1 text-sm text-brand/50">Stel in wanneer leden jou kunnen boeken voor personal training.</p>
 
-      <form action={addOwnAvailability} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
+      <ActionForm action={addOwnAvailability} success="Beschikbaarheid toegevoegd ✓" className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
         <Lbl t="Dag">
           <select name="weekday" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
             {WD_FULL.map((d, i) => <option key={i} value={i}>{d}</option>)}
@@ -36,7 +37,7 @@ export default async function Beschikbaarheid() {
         <Lbl t="Van"><select name="from_hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
         <Lbl t="Tot"><select name="to_hour" defaultValue={18} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
         <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Toevoegen</button>
-      </form>
+      </ActionForm>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3, 4, 5, 6, 0].map((wd) => (
@@ -46,10 +47,10 @@ export default async function Beschikbaarheid() {
               {(byDay[wd] || []).map((a) => (
                 <div key={a.id} className="flex items-center justify-between rounded-lg bg-paper px-3 py-1.5 text-sm">
                   <span className="font-bold text-brand">{fmtHour(a.from_hour)} – {fmtHour(a.to_hour)}</span>
-                  <form action={deleteOwnAvailability}>
+                  <ActionForm action={deleteOwnAvailability} success="Verwijderd ✓">
                     <input type="hidden" name="id" value={a.id} />
                     <button className="text-xs font-bold text-red-500 hover:underline">×</button>
-                  </form>
+                  </ActionForm>
                 </div>
               ))}
               {(byDay[wd] || []).length === 0 && <p className="text-xs text-brand/30">Niet beschikbaar</p>}

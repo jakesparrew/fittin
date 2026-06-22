@@ -262,8 +262,8 @@ export default async function AccountPage({ searchParams }) {
                     <p className="text-xs capitalize text-brand/50">{r.booking ? fmtRange(r.booking.starts_at, r.booking.ends_at) : ""} · {r.booking?.services?.name || "Sessie"}</p>
                   </div>
                   <div className="flex gap-2">
-                    <form action={respondJoinRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="accept" /><button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Ik kom mee</button></form>
-                    <form action={respondJoinRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="decline" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand/60">Kan niet</button></form>
+                    <ActionForm action={respondJoinRequest} success="Je komt mee ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="accept" /><button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Ik kom mee</button></ActionForm>
+                    <ActionForm action={respondJoinRequest} success="Afgemeld ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="decline" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand/60">Kan niet</button></ActionForm>
                   </div>
                 </div>
               ))}
@@ -280,8 +280,8 @@ export default async function AccountPage({ searchParams }) {
                 <div key={l.id} className="flex flex-wrap items-center justify-between gap-3">
                   <p className="text-sm text-brand/80"><span className="font-black text-brand">{l.coach.full_name || "Een coach"}</span> wil je coachen.</p>
                   <div className="flex gap-2">
-                    <form action={respondCoachLink}><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="1" /><button className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Aanvaarden</button></form>
-                    <form action={respondCoachLink}><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="0" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Weiger</button></form>
+                    <ActionForm action={respondCoachLink} success="Verbonden ✓"><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="1" /><button className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Aanvaarden</button></ActionForm>
+                    <ActionForm action={respondCoachLink} success="Geweigerd ✓"><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="0" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Weiger</button></ActionForm>
                   </div>
                 </div>
               ))}

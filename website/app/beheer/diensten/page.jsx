@@ -98,8 +98,8 @@ export default async function Diensten() {
             </div>
             <div className="flex items-center gap-2">
               <span className={"rounded-full px-3 py-1 text-xs font-bold " + (c.active ? "bg-accent/15 text-accentdark" : "bg-paper text-brand/40")}>{c.active ? "Actief" : "Uit"}</span>
-              <form action={toggleDiscount}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="active" value={c.active ? "true" : "false"} /><button className="rounded-full border-2 border-borderc px-3 py-1 text-xs font-bold text-brand">{c.active ? "Zet uit" : "Zet aan"}</button></form>
-              <form action={deleteDiscount}><input type="hidden" name="id" value={c.id} /><button className="text-xs font-bold text-red-500 hover:underline">×</button></form>
+              <ActionForm action={toggleDiscount} success="Bijgewerkt ✓"><input type="hidden" name="id" value={c.id} /><input type="hidden" name="active" value={c.active ? "true" : "false"} /><button className="rounded-full border-2 border-borderc px-3 py-1 text-xs font-bold text-brand">{c.active ? "Zet uit" : "Zet aan"}</button></ActionForm>
+              <ActionForm action={deleteDiscount} success="Kortingscode verwijderd ✓"><input type="hidden" name="id" value={c.id} /><button className="text-xs font-bold text-red-500 hover:underline">×</button></ActionForm>
             </div>
           </div>
         ))}

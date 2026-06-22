@@ -2,6 +2,7 @@ import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { updateGymSettings } from "../actions";
 import NukiSettings from "@/components/admin/NukiSettings";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,7 @@ export default async function Instellingen() {
         </p>
       )}
 
-      <form action={updateGymSettings} className="mt-6 max-w-2xl space-y-5 rounded-2xl border border-borderc bg-white p-7">
+      <ActionForm action={updateGymSettings} success="Instellingen opgeslagen ✓" className="mt-6 max-w-2xl space-y-5 rounded-2xl border border-borderc bg-white p-7">
         <Field name="name" label="Naam" defaultValue={gym.name} />
         <Field name="address" label="Adres" defaultValue={gym.address} />
         <Field name="slot_minutes" label="Duur van een sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
@@ -61,7 +62,7 @@ export default async function Instellingen() {
         >
           Opslaan
         </button>
-      </form>
+      </ActionForm>
 
       <NukiSettings initial={nukiInitial} tokenSet={tokenSet} envToken={false} readOnly={readOnly} />
     </div>

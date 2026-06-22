@@ -80,14 +80,14 @@ export default async function Coaches() {
 
       {/* Add coach — promote a member OR create a brand-new coach account */}
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <form action={addCoach} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+        <ActionForm action={addCoach} success="Coach toegevoegd ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
           <Lbl t="Maak een bestaand lid coach">
             <SearchSelect name="memberId" required placeholder="Kies een lid…" options={nonCoaches.map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
           <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">+ Coach toevoegen</button>
-        </form>
+        </ActionForm>
 
-        <form action={adminAddUser} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+        <ActionForm action={adminAddUser} success="Coach aangemaakt + uitnodiging verstuurd ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
           <input type="hidden" name="role" value="coach" />
           <Lbl t="Nieuwe coach (naam)">
             <input name="full_name" required placeholder="Voornaam Naam" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
@@ -96,7 +96,7 @@ export default async function Coaches() {
             <input name="email" type="email" required placeholder="coach@…" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
           </Lbl>
           <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">+ Nieuwe coach aanmaken</button>
-        </form>
+        </ActionForm>
       </div>
 
       <div className="mt-6 space-y-5">
@@ -113,13 +113,13 @@ export default async function Coaches() {
                   <p className="text-xs text-brand/45">{c.email}{c.role === "beheerder" && " · beheerder"}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-                  <form action={setCoachPublic}>
+                  <ActionForm action={setCoachPublic} success="Zichtbaarheid bijgewerkt ✓">
                     <input type="hidden" name="coachId" value={c.id} />
                     <input type="hidden" name="on" value={c.coach_public ? "0" : "1"} />
                     <button className={"rounded-full px-3 py-1 transition " + (c.coach_public ? "bg-accent text-brand" : "bg-paper text-brand/50 hover:bg-brand/5")} title={c.coach_public ? "Staat op de website — klik om te verbergen" : "Niet op de website — klik om te tonen"}>
                       {c.coach_public ? "● Op website" : "○ Niet op website"}
                     </button>
-                  </form>
+                  </ActionForm>
                   <span className="rounded-full bg-brand/5 px-3 py-1 text-brand/70">{MODE[c.coach_billing_mode] || "—"}</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{cls.length} clients</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{upcoming} gepland</span>
@@ -137,8 +137,8 @@ export default async function Coaches() {
                     <div key={r.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
                       <span className="font-semibold text-brand">{r.qty} sessies{r.note ? ` — ${r.note}` : ""}</span>
                       <div className="flex gap-2">
-                        <form action={resolveCoachRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="approved" /><button className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-brand">Goedkeuren (+{r.qty})</button></form>
-                        <form action={resolveCoachRequest}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="declined" /><button className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">Afwijzen</button></form>
+                        <ActionForm action={resolveCoachRequest} success="Aanvraag verwerkt ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="approved" /><button className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-brand">Goedkeuren (+{r.qty})</button></ActionForm>
+                        <ActionForm action={resolveCoachRequest} success="Aanvraag verwerkt ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="declined" /><button className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">Afwijzen</button></ActionForm>
                       </div>
                     </div>
                   ))}
@@ -184,20 +184,20 @@ export default async function Coaches() {
                     {cls.map((l) => (
                       <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">
                         <Link href={`/beheer/leden/${l.client_id}`} className="hover:text-accentdark">{name(l.client_id)}</Link>
-                        <form action={unassignCoachClient} className="inline">
+                        <ActionForm action={unassignCoachClient} success="Verwijderd ✓" className="inline">
                           <input type="hidden" name="id" value={l.id} />
                           <input type="hidden" name="clientId" value={l.client_id} />
                           <button className="text-red-500 hover:underline" title="Verwijder">×</button>
-                        </form>
+                        </ActionForm>
                       </span>
                     ))}
                     {cls.length === 0 && <span className="text-xs text-brand/40">Nog geen clients toegewezen.</span>}
                   </div>
-                  <form action={assignCoachClient} className="mt-3 flex flex-wrap items-end gap-2">
+                  <ActionForm action={assignCoachClient} success="Client toegewezen ✓" className="mt-3 flex flex-wrap items-end gap-2">
                     <input type="hidden" name="coachId" value={c.id} />
                     <SearchSelect name="clientId" required placeholder="Wijs een lid toe…" options={members.filter((m) => m.id !== c.id && !assignedIds.has(m.id)).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
                     <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Toewijzen</button>
-                  </form>
+                  </ActionForm>
                 </div>
 
                 {/* Sessions with clients */}
@@ -220,13 +220,13 @@ export default async function Coaches() {
               <details className="mt-5 rounded-xl bg-paper/60 p-4">
                 <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Facturatie & beschikbaarheid</summary>
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <form action={setCoachBilling} className="rounded-xl bg-white p-4">
+                  <ActionForm action={setCoachBilling} success="Facturatie opgeslagen ✓" className="rounded-xl bg-white p-4">
                     <input type="hidden" name="coachId" value={c.id} />
                     <p className="text-sm text-brand/70">Facturatie: <strong className="text-brand">vast € 12 / sessie</strong> via sessietegoed. Coaches kopen 1–100 sessies vooraf — geen gratis, maandfactuur of abonnement.</p>
                     {(c.coach_billing_mode !== "credit" || c.coach_session_price_cents !== 1200) && (
                       <button className="mt-2 rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand">Standaard toepassen (€ 12 / sessietegoed)</button>
                     )}
-                  </form>
+                  </ActionForm>
                   <ActionForm action={grantCoachCredits} success="Sessietegoed bijgeschreven ✓" className="flex flex-wrap items-end gap-2 rounded-xl bg-white p-4">
                     <input type="hidden" name="coachId" value={c.id} />
                     <Lbl t="Sessietegoed ±"><input name="delta" type="number" placeholder="bv. 10" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
@@ -238,21 +238,21 @@ export default async function Coaches() {
                   {(byCoachAvail[c.id] || []).map((a) => (
                     <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand">
                       {WD_FULL[a.weekday].slice(0, 2)} {fmtHour(a.from_hour)}–{fmtHour(a.to_hour)}
-                      <form action={deleteCoachAvailability} className="inline">
+                      <ActionForm action={deleteCoachAvailability} success="Verwijderd ✓" className="inline">
                         <input type="hidden" name="id" value={a.id} />
                         <button className="text-red-500 hover:underline">×</button>
-                      </form>
+                      </ActionForm>
                     </span>
                   ))}
                   {(byCoachAvail[c.id] || []).length === 0 && <span className="text-xs text-brand/40">Geen beschikbaarheid.</span>}
                 </div>
-                <form action={addCoachAvailability} className="mt-3 flex flex-wrap items-end gap-2">
+                <ActionForm action={addCoachAvailability} success="Beschikbaarheid toegevoegd ✓" className="mt-3 flex flex-wrap items-end gap-2">
                   <input type="hidden" name="coachId" value={c.id} />
                   <Lbl t="Dag"><select name="weekday" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{WD_FULL.map((d, i) => <option key={i} value={i}>{d}</option>)}</select></Lbl>
                   <Lbl t="Van"><select name="from_hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
                   <Lbl t="Tot"><select name="to_hour" defaultValue={18} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
                   <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Beschikbaarheid</button>
-                </form>
+                </ActionForm>
               </details>
             </div>
           );

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { upsertExercise, deleteExercise } from "../coaching-actions";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +17,7 @@ export default async function Oefeningen() {
       <h1 className="text-3xl font-black text-brand">Oefeningen</h1>
       <p className="mt-1 text-sm text-brand/50">De gym-bibliotheek: demo, doelspieren en uitleg. Leden zien deze in /oefeningen en hun schema.</p>
 
-      <form action={upsertExercise} className="mt-6 rounded-2xl border border-borderc bg-white p-5">
+      <ActionForm action={upsertExercise} success="Oefening opgeslagen ✓" className="mt-6 rounded-2xl border border-borderc bg-white p-5">
         <div className="grid gap-4 md:grid-cols-2">
           <Field name="name" label="Naam" required />
           <Field name="category" label="Categorie (bv. borst, rug, benen)" />
@@ -35,7 +36,7 @@ export default async function Oefeningen() {
           <Field name="video_url" label="Video-URL (volledige demo)" />
         </div>
         <button className="mt-5 rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand">+ Oefening opslaan</button>
-      </form>
+      </ActionForm>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(exercises || []).map((ex) => (
@@ -47,10 +48,10 @@ export default async function Oefeningen() {
                   <p className="truncate font-black text-brand">{ex.name}</p>
                   <p className="text-xs text-brand/50">{[ex.primary_muscles?.[0] || ex.muscle, ex.equipment].filter(Boolean).join(" · ")}</p>
                 </div>
-                <form action={deleteExercise}>
+                <ActionForm action={deleteExercise} success="Oefening verwijderd ✓">
                   <input type="hidden" name="id" value={ex.id} />
                   <button className="text-xs font-bold text-red-500 hover:underline">verwijder</button>
-                </form>
+                </ActionForm>
               </div>
               {ex.slug && <Link href={`/oefeningen/${ex.slug}`} target="_blank" className="mt-2 inline-block text-xs font-semibold text-accentdark hover:underline">bekijk ↗</Link>}
             </div>

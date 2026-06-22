@@ -87,13 +87,13 @@ export default async function MemberDetail({ params }) {
         {isBeheerder && member.id !== admin.id && (
           <div className="flex flex-wrap items-center gap-2">
             {["lid", "coach", "beheerder"].filter((r) => r !== member.role).map((r) => (
-              <form key={r} action={adminSetRole}>
+              <ActionForm key={r} action={adminSetRole} success="Rol gewijzigd ✓">
                 <input type="hidden" name="memberId" value={member.id} />
                 <input type="hidden" name="role" value={r} />
                 <button className="rounded-full border-2 border-borderc px-3 py-1.5 text-xs font-bold text-brand transition hover:border-accent hover:bg-accent/10">
                   Maak {r === "beheerder" ? "beheerder" : r}
                 </button>
-              </form>
+              </ActionForm>
             ))}
             <DeleteUserButton userId={member.id} name={member.full_name || member.email} />
           </div>
@@ -135,19 +135,19 @@ export default async function MemberDetail({ params }) {
             {(coachLinks || []).map((l) => (
               <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">
                 <Link href={`/beheer/coaches`} className="hover:text-accentdark">{l.coach?.full_name || l.coach?.email || "Coach"}</Link>
-                <form action={unassignCoachClient} className="inline">
+                <ActionForm action={unassignCoachClient} success="Verwijderd ✓" className="inline">
                   <input type="hidden" name="id" value={l.id} />
                   <input type="hidden" name="clientId" value={member.id} />
                   <button className="text-red-500 hover:underline" title="Verwijder">×</button>
-                </form>
+                </ActionForm>
               </span>
             ))}
             {(!coachLinks || coachLinks.length === 0) && <span className="text-xs text-brand/40">Geen coach toegewezen.</span>}
-            <form action={assignCoachClient} className="flex items-center gap-2">
+            <ActionForm action={assignCoachClient} success="Client toegewezen ✓" className="flex items-center gap-2">
               <input type="hidden" name="clientId" value={member.id} />
               <SearchSelect name="coachId" required placeholder="Wijs coach toe…" options={(coachList || []).filter((co) => co.id !== member.id && !(coachLinks || []).some((l) => l.coach_id === co.id)).map((co) => ({ value: co.id, label: co.full_name || co.email }))} />
               <button className="rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">Toewijzen</button>
-            </form>
+            </ActionForm>
           </div>
         </div>
         <div className="mt-4">
@@ -195,11 +195,11 @@ export default async function MemberDetail({ params }) {
             <h2 className="font-black text-brand">Coach-notitie</h2>
             {program && <Link href={`/beheer/programmas/${program.id}`} className="text-xs font-bold text-accentdark">Programma: {program.name} →</Link>}
           </div>
-          <form action={addSessionNote} className="mt-3 flex gap-2">
+          <ActionForm action={addSessionNote} success="Notitie geplaatst ✓" className="mt-3 flex gap-2">
             <input type="hidden" name="memberId" value={member.id} />
             <input name="body" required placeholder="Korte notitie…" className="flex-1 rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
             <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Plaats</button>
-          </form>
+          </ActionForm>
           <div className="mt-4 space-y-2">
             {(notes || []).map((n, i) => (
               <div key={i} className="rounded-xl bg-paper px-3 py-2 text-sm">

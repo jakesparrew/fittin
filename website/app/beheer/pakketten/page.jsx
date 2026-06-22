@@ -1,5 +1,6 @@
 import { getAdminContext } from "@/lib/admin";
 import { upsertPackage, togglePackage } from "../actions";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => (c / 100).toFixed(2).replace(".", ",");
@@ -20,7 +21,7 @@ export default async function Pakketten() {
 
       <div className="mt-6 space-y-4">
         {(packages || []).map((p) => (
-          <form key={p.id} action={upsertPackage} className="grid items-end gap-3 rounded-2xl border border-borderc bg-white p-5 md:grid-cols-[1.3fr_.8fr_.7fr_.7fr_.6fr_.6fr_auto]">
+          <ActionForm key={p.id} action={upsertPackage} success="Pakket opgeslagen ✓" className="grid items-end gap-3 rounded-2xl border border-borderc bg-white p-5 md:grid-cols-[1.3fr_.8fr_.7fr_.7fr_.6fr_.6fr_auto]">
             <input type="hidden" name="id" value={p.id} />
             <Col label="Naam"><In name="name" defaultValue={p.name} /></Col>
             <Col label="Type">
@@ -45,7 +46,7 @@ export default async function Pakketten() {
               {p.kind === "abonnement" && (p.stripe_price_id ? `Stripe-prijs: ${p.stripe_price_id}` : "⚠ Geen Stripe-prijs gekoppeld (run stripe-setup).")}
               {" "}Status: {p.active ? "actief" : "uit"}
             </p>
-          </form>
+          </ActionForm>
         ))}
       </div>
 
@@ -62,7 +63,7 @@ export default async function Pakketten() {
       </div>
 
       <h2 className="mt-10 font-black text-brand">Nieuw pakket</h2>
-      <form action={upsertPackage} className="mt-3 grid items-end gap-3 rounded-2xl border border-dashed border-borderc bg-white p-5 md:grid-cols-[1.3fr_.8fr_.7fr_.7fr_.6fr_auto]">
+      <ActionForm action={upsertPackage} success="Pakket opgeslagen ✓" className="mt-3 grid items-end gap-3 rounded-2xl border border-dashed border-borderc bg-white p-5 md:grid-cols-[1.3fr_.8fr_.7fr_.7fr_.6fr_auto]">
         <Col label="Naam"><In name="name" /></Col>
         <Col label="Type">
           <select name="kind" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm">
@@ -79,7 +80,7 @@ export default async function Pakketten() {
           </select>
         </Col>
         <div><button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Toevoegen</button></div>
-      </form>
+      </ActionForm>
     </div>
   );
 }

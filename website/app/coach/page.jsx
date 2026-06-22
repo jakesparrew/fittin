@@ -251,13 +251,13 @@ export default async function CoachDashboard({ searchParams }) {
           <div className="rounded-2xl border border-borderc bg-white p-5">
             <p className="font-bold text-brand">Of vraag sessies aan</p>
             <p className="mt-0.5 text-xs text-brand/50">De beheerder keurt goed en factureert je later.</p>
-            <form action={requestCoachSessions} className="mt-3 flex flex-wrap items-end gap-2">
+            <ActionForm action={requestCoachSessions} success="Aanvraag verstuurd ✓" className="mt-3 flex flex-wrap items-end gap-2">
               <label className="text-xs font-bold text-lav">Aantal
                 <input name="qty" type="number" defaultValue="10" min="1" max="100" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
               </label>
               <input name="note" placeholder="notitie (optioneel)" className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
               <SubmitButton className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</SubmitButton>
-            </form>
+            </ActionForm>
             {(requests || []).length > 0 && (
               <div className="mt-3 space-y-1 text-xs">
                 {requests.map((r, i) => (

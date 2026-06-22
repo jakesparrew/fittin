@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { markAllRead } from "@/app/(site)/notificaties/actions";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notificaties | Coach" };
@@ -38,9 +39,9 @@ export default async function CoachNotificaties() {
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-black text-brand">Notificaties</h1>
         {unread > 0 && (
-          <form action={markAllRead}>
+          <ActionForm action={markAllRead} success="Alles gelezen ✓">
             <button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">Alles gelezen</button>
-          </form>
+          </ActionForm>
         )}
       </div>
 

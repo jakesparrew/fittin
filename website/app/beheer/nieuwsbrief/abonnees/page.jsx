@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addSubscriber, setSubscriberStatus } from "../../newsletter-actions";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
@@ -26,11 +27,11 @@ export default async function Subscribers() {
       <h1 className="mt-2 text-3xl font-black text-brand">Abonnees</h1>
       <p className="mt-1 text-sm text-brand/50">{active} actief · {unsub} uitgeschreven · {(subs || []).length} totaal. Elk lid wordt automatisch toegevoegd.</p>
 
-      <form action={addSubscriber} className="mt-6 flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+      <ActionForm action={addSubscriber} success="Abonnee toegevoegd ✓" className="mt-6 flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
         <input name="name" placeholder="Naam (optioneel)" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
         <input name="email" type="email" required placeholder="E-mailadres" className="flex-1 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
         <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">+ Abonnee toevoegen</button>
-      </form>
+      </ActionForm>
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-borderc bg-white">
         <table className="w-full text-sm">
@@ -55,11 +56,11 @@ export default async function Subscribers() {
                 </td>
                 <td className="px-5 py-3 text-xs text-brand/40">{fmt(s.created_at)}</td>
                 <td className="px-5 py-3 text-right">
-                  <form action={setSubscriberStatus} className="inline">
+                  <ActionForm action={setSubscriberStatus} success="Bijgewerkt ✓" className="inline">
                     <input type="hidden" name="id" value={s.id} />
                     <input type="hidden" name="status" value={s.status === "active" ? "unsubscribed" : "active"} />
                     <button className="text-xs font-bold text-brand/50 hover:text-brand">{s.status === "active" ? "Uitschrijven" : "Heractiveren"}</button>
-                  </form>
+                  </ActionForm>
                 </td>
               </tr>
             ))}

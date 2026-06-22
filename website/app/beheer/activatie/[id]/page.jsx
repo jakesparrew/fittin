@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SEGMENTS, evaluateMatches } from "@/lib/activation";
 import { updateActivation, setActivationStatus, deleteActivation } from "../../activation-actions";
 import { RunActivationButton, ConfirmSubmit } from "@/components/admin/CampaignControls";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) + "%" : "—");
@@ -43,7 +44,7 @@ export default async function ActivationDetail({ params }) {
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         {/* Config + compose */}
-        <form action={updateActivation} className="rounded-2xl border border-borderc bg-white p-6">
+        <ActionForm action={updateActivation} success="Opgeslagen ✓" className="rounded-2xl border border-borderc bg-white p-6">
           <input type="hidden" name="id" value={c.id} />
           {seg.param && <input type="hidden" name="param_key" value={seg.param.key} />}
           <h2 className="font-black text-brand">Instellingen</h2>
@@ -85,7 +86,7 @@ export default async function ActivationDetail({ params }) {
             <textarea name="body" defaultValue={c.body_html} rows={8} placeholder={"Hey {{naam}},\n\nWe zagen je al even niet in de zaal. Boek je volgende sessie en kom er weer in!"} className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
           </label>
           <button className="mt-3 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</button>
-        </form>
+        </ActionForm>
 
         {/* Status + run + audience */}
         <div className="space-y-4">
@@ -97,9 +98,9 @@ export default async function ActivationDetail({ params }) {
             </p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
               {on ? (
-                <form action={setActivationStatus}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="paused" /><button className="rounded-full bg-paper px-4 py-2.5 text-sm font-bold text-brand/70">Pauzeren</button></form>
+                <ActionForm action={setActivationStatus} success="Status bijgewerkt ✓"><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="paused" /><button className="rounded-full bg-paper px-4 py-2.5 text-sm font-bold text-brand/70">Pauzeren</button></ActionForm>
               ) : (
-                <form action={setActivationStatus}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="active" /><button className="rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white">Activeren (dagelijks)</button></form>
+                <ActionForm action={setActivationStatus} success="Status bijgewerkt ✓"><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="active" /><button className="rounded-full bg-brand px-4 py-2.5 text-sm font-bold text-white">Activeren (dagelijks)</button></ActionForm>
               )}
               <RunActivationButton id={c.id} matches={matches.length} />
             </div>

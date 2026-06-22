@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { adminAdjustCredits, adminSetRole } from "@/app/beheer/actions";
 import OpenMemberButton from "@/components/admin/OpenMemberButton";
+import ActionForm from "@/components/ui/ActionForm";
 
 const ROLES = ["lid", "coach", "beheerder"];
 
@@ -57,13 +58,13 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                 </td>
                 <td className="px-5 py-4">
                   {isBeheerder ? (
-                    <form action={adminSetRole} className="flex items-center gap-2">
+                    <ActionForm action={adminSetRole} success="Rol gewijzigd ✓" className="flex items-center gap-2">
                       <input type="hidden" name="memberId" value={m.id} />
                       <select name="role" defaultValue={m.role} className="rounded-lg border-2 border-borderc px-2 py-1 text-sm font-semibold">
                         {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
                       </select>
                       <button className="rounded-lg bg-brand px-3 py-1 text-xs font-bold text-white">OK</button>
-                    </form>
+                    </ActionForm>
                   ) : (
                     <span className="font-semibold capitalize text-brand/70">{m.role}</span>
                   )}
@@ -81,12 +82,12 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                 <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastLogin[m.id])}>{ago(lastLogin[m.id])}</span></td>
                 <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastVisit[m.id])}>{ago(lastVisit[m.id])}</span></td>
                 <td className="px-5 py-4">
-                  <form action={adminAdjustCredits} className="flex flex-wrap items-center gap-2">
+                  <ActionForm action={adminAdjustCredits} success="Sessietegoed aangepast ✓" className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="memberId" value={m.id} />
                     <input name="delta" type="number" placeholder="+3 of -3" title="+ = sessies bijgeven, - = sessies afhalen" className="w-24 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
                     <input name="reason" placeholder="reden (lid krijgt mail)" className="w-36 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
                     <button className="rounded-lg bg-accent px-3 py-1 text-xs font-bold text-brand">Bijwerken</button>
-                  </form>
+                  </ActionForm>
                 </td>
               </tr>
             ))}

@@ -2,6 +2,7 @@ import { getAdminContext } from "@/lib/admin";
 import { deleteChallenge } from "../community-actions";
 import QuickStart from "@/components/admin/QuickStart";
 import ChallengeWizard from "@/components/admin/ChallengeWizard";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -34,10 +35,10 @@ export default async function Challenges() {
           <div key={c.id} className="rounded-2xl border border-borderc bg-white p-5">
             <div className="flex items-start justify-between">
               <p className="font-black text-brand">{c.name}</p>
-              <form action={deleteChallenge}>
+              <ActionForm action={deleteChallenge} success="Challenge verwijderd ✓">
                 <input type="hidden" name="id" value={c.id} />
                 <button className="text-xs font-bold text-red-500 hover:underline">×</button>
-              </form>
+              </ActionForm>
             </div>
             <p className="mt-1 text-xs text-brand/50">{c.goal_count}× {c.goal_type} · +{c.reward_credits} sessies</p>
             {(c.starts_on || c.ends_on) && <p className="mt-1 text-xs text-brand/40">{c.starts_on} → {c.ends_on}</p>}

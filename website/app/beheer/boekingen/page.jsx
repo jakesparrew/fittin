@@ -6,6 +6,7 @@ import SearchSelect from "@/components/admin/SearchSelect";
 import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
 import BookingsList from "@/components/admin/BookingsList";
 import SubmitButton from "@/components/ui/SubmitButton";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -67,7 +68,7 @@ export default async function Boekingen({ searchParams }) {
 
       {/* Create booking on behalf */}
       <div className="mt-6">
-        <form action={adminCreateBooking} className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+        <ActionForm action={adminCreateBooking} success="Boeking aangemaakt ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
           <Lbl t="Boeking voor lid">
             <SearchSelect name="memberId" required placeholder="Kies lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
@@ -84,7 +85,7 @@ export default async function Boekingen({ searchParams }) {
             Trek 1 sessie af
           </label>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</SubmitButton>
-        </form>
+        </ActionForm>
       </div>
 
       {/* Week grid — click to plan/block, drag over empty hours to block a range */}

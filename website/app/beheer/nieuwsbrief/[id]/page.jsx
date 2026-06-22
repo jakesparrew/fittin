@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { updateNewsletter, deleteCampaign, addDripStep, setDripStatus, enrollAllInDrip } from "../../newsletter-actions";
 import { SendNewsletterButton, ConfirmSubmit, SendProgress } from "@/components/admin/CampaignControls";
 import DripStepCard from "@/components/admin/DripStepCard";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) + "%" : "—");
@@ -70,7 +71,7 @@ export default async function CampaignDetail({ params }) {
 
           {c.status === "draft" ? (
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
-              <form action={updateNewsletter} className="rounded-2xl border border-borderc bg-white p-6">
+              <ActionForm action={updateNewsletter} success="Opgeslagen ✓" className="rounded-2xl border border-borderc bg-white p-6">
                 <input type="hidden" name="id" value={c.id} />
                 <h2 className="font-black text-brand">Opstellen</h2>
                 <Field label="Titel (intern)" name="name" defaultValue={c.name} />
@@ -81,7 +82,7 @@ export default async function CampaignDetail({ params }) {
                   <textarea name="body" defaultValue={c.body_html} rows={12} placeholder="Schrijf je bericht. Lege regel = nieuwe alinea. HTML mag ook." className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
                 </label>
                 <button className="mt-3 rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</button>
-              </form>
+              </ActionForm>
 
               <div className="rounded-2xl border border-borderc bg-white p-6">
                 <h2 className="font-black text-brand">Voorbeeld & verzenden</h2>
@@ -116,11 +117,11 @@ export default async function CampaignDetail({ params }) {
             <div className="ml-auto flex items-center gap-2">
               {c.status !== "active" ? (
                 <>
-                  <form action={setDripStatus}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="active" /><button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Activeren (nieuwe inschrijvingen)</button></form>
+                  <ActionForm action={setDripStatus} success="Bijgewerkt ✓"><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="active" /><button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Activeren (nieuwe inschrijvingen)</button></ActionForm>
                   <ConfirmSubmit action={enrollAllInDrip} id={c.id} confirm={`Alle ${subCount || 0} huidige abonnees nu in deze drip inschrijven?`} label="+ Alle huidige abonnees" />
                 </>
               ) : (
-                <form action={setDripStatus}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="paused" /><button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand/70">Pauzeren</button></form>
+                <ActionForm action={setDripStatus} success="Bijgewerkt ✓"><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="paused" /><button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand/70">Pauzeren</button></ActionForm>
               )}
             </div>
           </div>
@@ -155,7 +156,7 @@ export default async function CampaignDetail({ params }) {
             {steps.length === 0 && <p className="rounded-xl bg-paper p-4 text-sm text-brand/50">Nog geen stappen. Voeg hieronder de eerste mail toe.</p>}
           </div>
 
-          <form action={addDripStep} className="mt-4 rounded-2xl border border-dashed border-borderc bg-white p-5">
+          <ActionForm action={addDripStep} success="Stap toegevoegd ✓" className="mt-4 rounded-2xl border border-dashed border-borderc bg-white p-5">
             <input type="hidden" name="campaignId" value={c.id} />
             <p className="font-black text-brand">Stap toevoegen</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-[140px_1fr]">
@@ -170,7 +171,7 @@ export default async function CampaignDetail({ params }) {
             </div>
             <textarea name="body" rows={5} placeholder="Bericht van deze stap…" className="mt-3 w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
             <button className="mt-3 rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Stap toevoegen</button>
-          </form>
+          </ActionForm>
         </>
       )}
     </div>

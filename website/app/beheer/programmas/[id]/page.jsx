@@ -11,6 +11,7 @@ import {
 import ExercisePicker from "@/components/admin/ExercisePicker";
 import SearchSelect from "@/components/admin/SearchSelect";
 import PublishWorkoutPanel from "@/components/workouts/PublishWorkoutPanel";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export default async function ProgramBuilder({ params }) {
       </div>
 
       {/* Assign */}
-      <form action={assignProgram} className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-4">
+      <ActionForm action={assignProgram} success="Programma toegewezen ✓" className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-4">
         <input type="hidden" name="programId" value={program.id} />
         <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Toewijzen aan</span>
@@ -81,7 +82,7 @@ export default async function ProgramBuilder({ params }) {
         {program.member_id && (
           <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
         )}
-      </form>
+      </ActionForm>
 
       {!program.member_id && <PublishWorkoutPanel program={program} />}
 
@@ -104,18 +105,18 @@ export default async function ProgramBuilder({ params }) {
                       )}
                       <span>{pe.sets ?? "–"} × {pe.reps ?? "–"}</span>
                       <span>{pe.rest_sec ?? "–"}s rust</span>
-                      <form action={deleteProgramExercise}>
+                      <ActionForm action={deleteProgramExercise} success="Verwijderd ✓">
                         <input type="hidden" name="id" value={pe.id} />
                         <input type="hidden" name="programId" value={program.id} />
                         <button className="text-xs font-bold text-red-500 hover:underline">×</button>
-                      </form>
+                      </ActionForm>
                     </div>
                   </div>
                 ))}
                 {exs.length === 0 && <p className="text-xs text-brand/40">Nog geen oefeningen op deze dag.</p>}
               </div>
 
-              <form action={addProgramExercise} className="mt-3 flex flex-wrap items-end gap-2">
+              <ActionForm action={addProgramExercise} success="Oefening toegevoegd ✓" className="mt-3 flex flex-wrap items-end gap-2">
                 <input type="hidden" name="programId" value={program.id} />
                 <input type="hidden" name="dayId" value={day.id} />
                 <ExercisePicker name="exerciseId" options={(exercises || []).map((e) => ({ id: e.id, name: e.name }))} addAction={quickExercise} />
@@ -123,18 +124,18 @@ export default async function ProgramBuilder({ params }) {
                 <input name="reps" type="number" placeholder="reps" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
                 <input name="rest_sec" type="number" placeholder="rust(s)" className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
                 <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Oefening</button>
-              </form>
+              </ActionForm>
             </div>
           );
         })}
       </div>
 
-      <form action={addProgramDay} className="mt-5">
+      <ActionForm action={addProgramDay} success="Dag toegevoegd ✓" className="mt-5">
         <input type="hidden" name="programId" value={program.id} />
         <button className="rounded-full border-2 border-dashed border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-accent">
           + Dag toevoegen
         </button>
-      </form>
+      </ActionForm>
 
       {(!exercises || exercises.length === 0) && (
         <p className="mt-6 rounded-xl bg-accent/10 p-3 text-sm font-semibold text-accentdark">
