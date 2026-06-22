@@ -145,11 +145,11 @@ export default async function CoachDashboard({ searchParams }) {
         <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
           <div className="flex items-center justify-between">
             <p className="font-bold text-brand">🔔 Notificaties</p>
-            <Link href="/notificaties" className="text-xs font-bold text-accentdark">Alles bekijken →</Link>
+            <Link href="/coach/notificaties" className="text-xs font-bold text-accentdark">Alles bekijken →</Link>
           </div>
           <div className="mt-3 space-y-1.5">
             {notifs.map((n) => (
-              <Link key={n.id} href={n.link || "/notificaties"} className={"block rounded-xl px-3 py-2 text-sm transition hover:bg-paper " + (n.read ? "" : "bg-accent/5")}>
+              <Link key={n.id} href="/coach/notificaties" className={"block rounded-xl px-3 py-2 text-sm transition hover:bg-paper " + (n.read ? "" : "bg-accent/5")}>
                 <span className="font-bold text-brand">{n.title}</span>
                 {n.body && <span className="text-brand/50"> · {n.body}</span>}
               </Link>
