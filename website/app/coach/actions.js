@@ -73,10 +73,11 @@ export async function coachCreateClient(formData) {
 }
 
 export async function coachBookSession(formData) {
-  const { supabase, userId, error } = await requireCoach();
+  const { supabase, userId, profile, error } = await requireCoach();
   if (error) return { error };
+  const clientId = formData.get("clientId") || null; // null = reserveer enkel het slot (client later toevoegen)
   const { data: bookingId, error: e } = await supabase.rpc("coach_book_session", {
-    p_client: formData.get("clientId"),
+    p_client: clientId,
     p_service: formData.get("serviceId"),
     p_date: formData.get("date"),
     p_hour: numF(formData.get("hour")),
@@ -84,32 +85,48 @@ export async function coachBookSession(formData) {
   });
   if (e) return { error: e.message };
 
-  // Notify the client their coach booked a session for them.
   try {
-    const [{ data: booking }, { data: client }, { data: coach }] = await Promise.all([
-      supabase.from("bookings").select("starts_at, ends_at, services(name)").eq("id", bookingId).single(),
-      supabase.from("profiles").select("email, full_name").eq("id", formData.get("clientId")).single(),
-      supabase.from("profiles").select("full_name").eq("id", userId).single(),
-    ]);
-    if (booking && client?.email)
-      await sendCoachBooked({
-        to: client.email,
-        name: client.full_name,
-        coachName: coach?.full_name || "Je coach",
-        serviceName: booking.services?.name || "Sessie",
-        startsAt: booking.starts_at,
-        endsAt: booking.ends_at,
-      });
-    const { data: prof } = await supabase.from("profiles").select("gym_id").eq("id", userId).single();
-    if (prof) {
-      await notify({ gymId: prof.gym_id, userId: formData.get("clientId"), actorId: userId, type: "coach_booked", title: `${coach?.full_name || "Je coach"} plande een sessie voor je`, body: booking?.services?.name || "Sessie", link: "/account" });
-      await logCoachActivity({ gymId: prof.gym_id, coachId: userId, type: "booked", summary: `Sessie geboekt met ${client?.full_name || "client"} · ${booking?.services?.name || "Sessie"}`, refId: bookingId });
+    const { data: booking } = await supabase.from("bookings").select("starts_at, ends_at, services(name)").eq("id", bookingId).single();
+    const { data: coach } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    if (clientId) {
+      const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", clientId).single();
+      if (booking && client?.email) await sendCoachBooked({ to: client.email, name: client.full_name, coachName: coach?.full_name || "Je coach", serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at });
+      await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "coach_booked", title: `${coach?.full_name || "Je coach"} plande een sessie voor je`, body: booking?.services?.name || "Sessie", link: "/account" });
+      await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "booked", summary: `Sessie geboekt · ${booking?.services?.name || "Sessie"}`, refId: bookingId });
+    } else {
+      await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "booked", summary: `Slot gereserveerd (nog geen client) · ${booking?.services?.name || "Sessie"}`, refId: bookingId });
     }
   } catch {}
 
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
-  return { ok: true };
+  return { ok: true, message: clientId ? "Sessie geboekt ✓" : "Slot gereserveerd ✓ — voeg later een client toe" };
+}
+
+// Assign a client to a slot the coach reserved earlier (the booking is currently the coach's own).
+export async function coachAssignClient(formData) {
+  const { supabase, userId, profile, error } = await requireCoach();
+  if (error) return { error };
+  const bookingId = formData.get("bookingId");
+  const clientId = formData.get("clientId");
+  if (!bookingId || !clientId) return { error: "Kies een client." };
+  const { data: bk } = await supabase.from("bookings").select("id, user_id, starts_at, ends_at, services(name)").eq("id", bookingId).eq("coach_id", userId).maybeSingle();
+  if (!bk) return { error: "Sessie niet gevonden." };
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).eq("status", "accepted").maybeSingle();
+  if (!link) return { error: "Dit is niet jouw (verbonden) client." };
+  const admin = createAdminClient();
+  const { error: e } = await admin.from("bookings").update({ user_id: clientId }).eq("id", bookingId).eq("coach_id", userId);
+  if (e) return { error: e.message };
+  try {
+    const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", clientId).single();
+    const { data: me } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    if (client?.email) await sendCoachBooked({ to: client.email, name: client.full_name, coachName: me?.full_name || "Je coach", serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at, endsAt: bk.ends_at });
+    await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "coach_booked", title: `${me?.full_name || "Je coach"} plande een sessie voor je`, body: bk.services?.name || "Sessie", link: "/account" });
+    await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "booked", summary: `Client toegevoegd aan gereserveerde sessie · ${bk.services?.name || "Sessie"}`, refId: bookingId });
+  } catch {}
+  revalidatePath("/coach");
+  revalidatePath("/coach/agenda");
+  return { ok: true, message: "Client toegevoegd ✓" };
 }
 
 // Plan a recurring series of sessions for one client: same weekday + hour, weekly for N weeks.

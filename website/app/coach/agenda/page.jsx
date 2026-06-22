@@ -11,11 +11,18 @@ export default async function Agenda() {
   const ctx = await getCoachContext();
   if (!ctx) return null;
   const { supabase, userId } = ctx;
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select("id, starts_at, ends_at, status, persons, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)")
-    .eq("coach_id", userId)
-    .order("starts_at", { ascending: true });
+  const [{ data: bookings }, { data: clientLinks }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("id, user_id, starts_at, ends_at, status, persons, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)")
+      .eq("coach_id", userId)
+      .order("starts_at", { ascending: true }),
+    supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
+  ]);
+  // Connected clients available to assign to a reserved (client-less) slot.
+  const clientOpts = (clientLinks || []).map((l) => l.client).filter(Boolean)
+    .map((c) => ({ id: c.id, label: c.full_name || c.email }))
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   const now = Date.now();
   const all = (bookings || []).filter((b) => b.status === "bevestigd");
@@ -47,12 +54,14 @@ export default async function Agenda() {
             <div key={d}>
               <p className="text-sm font-black capitalize text-brand">{fmtDay(d + "T12:00:00")}</p>
               <div className="mt-2 space-y-2">
-                {byDay[d].map((b) => (
+                {byDay[d].map((b) => {
+                  const reserved = b.user_id === userId; // slot booked without a client yet
+                  return (
                   <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
                     <div className="flex items-center gap-3">
                       <span className="rounded-md bg-accent px-2 py-0.5 text-sm font-black text-brand">{fmtTime(b.starts_at)}</span>
                       <div>
-                        <p className="font-bold text-brand">{b.member?.full_name || "Client"}</p>
+                        <p className="font-bold text-brand">{reserved ? <span className="text-accentdark">Gereserveerd <span className="font-normal text-brand/40">· nog geen client</span></span> : (b.member?.full_name || "Client")}</p>
                         <p className="text-xs text-brand/50">{b.services?.name} · {b.persons}p</p>
                       </div>
                     </div>
@@ -60,10 +69,11 @@ export default async function Agenda() {
                       <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
                         {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                       </span>
-                      <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} />
+                      <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} clients={clientOpts} />
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

@@ -47,7 +47,7 @@ export default async function CoachDashboard({ searchParams }) {
   ] = await Promise.all([
     supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
-    supabase.from("bookings").select("id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("coach_id", userId).order("starts_at", { ascending: true }),
+    supabase.from("bookings").select("id, user_id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("coach_id", userId).order("starts_at", { ascending: true }),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
     supabase.from("coach_session_requests").select("qty, status, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(5),
     supabase.from("notifications").select("id, type, title, body, link, read, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(6),
@@ -85,7 +85,7 @@ export default async function CoachDashboard({ searchParams }) {
   const takenKeys = (takenRows || []).map((t) => keyOf(t.starts_at));
   const mineMap = {};
   for (const b of all) {
-    if (b.status === "bevestigd" && new Date(b.starts_at) >= schedFrom) mineMap[keyOf(b.starts_at)] = { name: b.member?.full_name || "Client", service: b.services?.name || "Sessie" };
+    if (b.status === "bevestigd" && new Date(b.starts_at) >= schedFrom) mineMap[keyOf(b.starts_at)] = { name: b.user_id === userId ? "Gereserveerd" : (b.member?.full_name || "Client"), service: b.services?.name || "Sessie" };
   }
   const schedDays = [];
   for (let i = 0; i < 14; i++) {
@@ -124,8 +124,8 @@ export default async function CoachDashboard({ searchParams }) {
           </div>
         )}
         <ActionForm action={coachBookSession} success="Sessie geboekt ✓" className="mt-4 flex flex-wrap items-end gap-3">
-          <Lbl t="Client">
-            <SearchSelect name="clientId" required placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+          <Lbl t="Client (optioneel)">
+            <SearchSelect name="clientId" placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
           <Lbl t="Sessie">
             <div className="rounded-lg border-2 border-borderc bg-paper px-3 py-2 text-sm font-semibold text-brand">{ptService?.name || "Personal training"}</div>
@@ -135,6 +135,7 @@ export default async function CoachDashboard({ searchParams }) {
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
         </ActionForm>
+        <p className="mt-2 text-xs text-brand/50">Tip: laat <strong>Client</strong> leeg om enkel het uur te reserveren. Je kan later bij de sessie een client toevoegen via <strong>+ Client toevoegen</strong>.</p>
         <AddClientInline />
         <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). Je clienten betalen jou rechtstreeks (bv. Bancontact), los van het platform.</p>
       </section>
@@ -296,20 +297,23 @@ export default async function CoachDashboard({ searchParams }) {
           <p className="mt-4 text-sm text-brand/50">Nog geen geplande sessies.</p>
         ) : (
           <div className="mt-4 space-y-2">
-            {upcoming.slice(0, 8).map((b) => (
+            {upcoming.slice(0, 8).map((b) => {
+              const reserved = b.user_id === userId; // slot booked without a client yet
+              return (
               <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
                 <div>
-                  <p className="font-bold text-brand">{b.member?.full_name || "Client"}</p>
+                  <p className="font-bold text-brand">{reserved ? <span className="text-accentdark">Gereserveerd <span className="font-normal text-brand/40">· nog geen client</span></span> : (b.member?.full_name || "Client")}</p>
                   <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
                     {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                   </span>
-                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} />
+                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
