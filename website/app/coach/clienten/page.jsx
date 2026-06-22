@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCoachContext } from "@/lib/coach";
 import { setClientPrice, coachRequestClient, respondCoachLink, removeCoachLink } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
@@ -33,28 +34,41 @@ export default async function CoachClienten() {
   const { data: gymMembers } = await supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "lid").order("full_name");
   const connectable = (gymMembers || []).filter((m) => !linkedIds.has(m.id));
 
-  let bookings = [], logs = [], creditRows = [];
+  const now = Date.now();
+  const weekAgoMs = now - 7 * 86400000;
+  let bookings = [], creditRows = [];
+  const lastLogin = {};
   if (ids.length) {
-    const weekAgo = new Date(Date.now() - 7 * 86400000);
-    const [bRes, lRes, cRes] = await Promise.all([
+    const admin = createAdminClient();
+    const [bRes, cRes] = await Promise.all([
       supabase.from("bookings").select("id, user_id, starts_at, status, services(name)").eq("coach_id", userId).in("user_id", ids).order("starts_at"),
-      supabase.from("workout_logs").select("user_id, created_at").in("user_id", ids).gte("created_at", weekAgo.toISOString()),
       supabase.from("coach_credit_ledger").select("client_id, delta").eq("coach_id", userId).in("client_id", ids),
     ]);
-    bookings = bRes.data || []; logs = lRes.data || []; creditRows = cRes.data || [];
+    bookings = bRes.data || []; creditRows = cRes.data || [];
+    // Laatste login per verbonden client (Supabase Auth) → onderdeel van "laatst actief".
+    await Promise.all(ids.map(async (id) => {
+      try { const { data } = await admin.auth.admin.getUserById(id); if (data?.user?.last_sign_in_at) lastLogin[id] = data.user.last_sign_in_at; } catch {}
+    }));
   }
   const creditByClient = {};
   for (const r of creditRows) creditByClient[r.client_id] = (creditByClient[r.client_id] || 0) + r.delta;
 
-  const now = Date.now();
-  const lastActive = {}; const weekCount = {};
-  for (const l of logs) {
-    weekCount[l.user_id] = (weekCount[l.user_id] || 0) + 1;
-    if (!lastActive[l.user_id] || new Date(l.created_at) > new Date(lastActive[l.user_id])) lastActive[l.user_id] = l.created_at;
-  }
-  const nextByClient = {};
+  // "Sessies (7d)" = bevestigde sessies in de laatste 7 dagen; "laatst actief" = max(login, laatste sessie).
+  const lastSession = {}; const weekCount = {}; const nextByClient = {};
   for (const b of bookings) {
-    if (b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now && !nextByClient[b.user_id]) nextByClient[b.user_id] = b;
+    if (b.status !== "bevestigd") continue;
+    const t = new Date(b.starts_at).getTime();
+    if (t <= now) {
+      if (!lastSession[b.user_id] || t > new Date(lastSession[b.user_id]).getTime()) lastSession[b.user_id] = b.starts_at;
+      if (t >= weekAgoMs) weekCount[b.user_id] = (weekCount[b.user_id] || 0) + 1;
+    } else if (!nextByClient[b.user_id]) {
+      nextByClient[b.user_id] = b;
+    }
+  }
+  const lastActive = {};
+  for (const id of ids) {
+    const cands = [lastLogin[id], lastSession[id]].filter(Boolean).map((d) => new Date(d).getTime());
+    if (cands.length) lastActive[id] = new Date(Math.max(...cands)).toISOString();
   }
 
   return (
