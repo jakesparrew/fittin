@@ -7,17 +7,16 @@ export const isStripeConfigured = Boolean(key);
 // change Checkout/Subscription/webhook behavior in production.
 export const stripe = key ? new Stripe(key, { apiVersion: "2026-05-27.dahlia" }) : null;
 
-// Let people pay as a business: a "Purchasing as a business?" checkbox + VAT/company tax id
-// field on the Stripe Checkout page (so company purchases get a proper invoice).
+// We issue our OWN Belgian invoices (coaches enter their company/VAT/address in their profile), so we
+// no longer collect a VAT number at Stripe Checkout — the confusing "Purchasing as a business?"
+// toggle is removed. We keep address collection + customer creation for clean receipts/customers.
 // For sessions that attach a `customer`:
 export const bizCustomer = {
-  tax_id_collection: { enabled: true },
   billing_address_collection: "auto",
   customer_update: { name: "auto", address: "auto" },
 };
 // For guest sessions (customer_email, no customer object):
 export const bizGuest = {
-  tax_id_collection: { enabled: true },
   billing_address_collection: "auto",
   customer_creation: "always",
 };
