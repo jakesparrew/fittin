@@ -47,6 +47,8 @@ export default async function AccountPage({ searchParams }) {
   if (!isSupabaseConfigured) redirect("/login");
   const { user, profile } = await getSessionProfile();
   if (!user) redirect("/login?next=/account");
+  // Coaches don't have a member account dashboard — send them to their coach dashboard.
+  if (profile?.role === "coach") redirect("/coach");
   const sp = (await searchParams) || {};
 
   const supabase = await createClient();

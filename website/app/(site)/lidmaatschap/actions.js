@@ -14,6 +14,10 @@ export async function buyPackage(formData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/lidmaatschap");
 
+  // Coaches buy session credits (€12 each) via their own dashboard — never member packages.
+  const { data: meProf } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (meProf?.role === "coach") return { error: "Coaches kopen sessietegoed via hun coach-dashboard, geen ledenpakketten." };
+
   const { data: pkg } = await supabase.from("packages").select("*").eq("id", packageId).eq("active", true).single();
   if (!pkg) return { error: "Pakket niet gevonden." };
   if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };

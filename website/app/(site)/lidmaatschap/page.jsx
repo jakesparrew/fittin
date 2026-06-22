@@ -15,6 +15,8 @@ export default async function Lidmaatschap() {
   if (!isSupabaseConfigured) redirect("/");
   // Public pricing page — visible to everyone. Buying requires login (handled per button).
   const { user, profile } = await getSessionProfile();
+  // Coaches pay €12/sessie via sessietegoed in hun dashboard — geen ledenpakketten/abonnement.
+  if (profile?.role === "coach") redirect("/coach");
   const admin = createAdminClient();
   const { data: defaultGym } = profile ? { data: { id: profile.gym_id } } : await admin.from("gyms").select("id").order("created_at").limit(1).single();
   const gymId = defaultGym?.id;

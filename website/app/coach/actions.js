@@ -41,7 +41,6 @@ export async function coachBookSession(formData) {
     p_date: formData.get("date"),
     p_hour: numF(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
-    p_use_client_credit: formData.get("use_client_credit") === "on",
   });
   if (e) return { error: e.message };
 
