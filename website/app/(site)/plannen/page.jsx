@@ -43,14 +43,13 @@ export default async function Plannen() {
       <div className="mx-auto max-w-3xl px-5 py-16">
         <Link href="/training" className="text-sm font-bold text-brand/60 hover:text-brand">← Mijn training</Link>
         <h1 className="mt-4 text-3xl font-black md:text-4xl">Mijn trainingsplannen</h1>
-        <p className="mt-2 text-brand/60">Bouw je eigen plan, kies een sjabloon, of laat de AI er een opstellen. Het actieve plan verschijnt in “Mijn training”.</p>
+        <p className="mt-2 text-brand/60">Bouw je eigen plan of kies een sjabloon. Het actieve plan verschijnt in “Mijn training”.</p>
 
         <div className="mt-6 flex flex-wrap gap-3">
           <form action={createPlan} className="flex gap-2">
             <input name="name" placeholder="Naam van je plan" aria-label="Naam van je plan" className="rounded-full border-2 border-borderc bg-white px-4 py-2.5 text-sm text-brand outline-none focus:border-accent" />
             <SubmitButton className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand">+ Nieuw plan</SubmitButton>
           </form>
-          <Link href="/plannen/genereer" className="rounded-full bg-brand px-5 py-2.5 text-sm font-black text-white transition hover:opacity-90">✨ Genereer met AI</Link>
         </div>
 
         {/* Member's plans */}
@@ -78,7 +77,7 @@ export default async function Plannen() {
           ))}
           {(!plans || plans.length === 0) && (
             <div className="rounded-3xl border border-dashed border-borderc bg-white p-8 text-center text-sm text-brand/60">
-              Nog geen plan. Maak er een, kies een sjabloon hieronder, of genereer er een met AI.
+              Nog geen plan. Maak er een of kies een sjabloon hieronder.
             </div>
           )}
         </div>

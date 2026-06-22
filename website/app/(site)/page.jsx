@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import Reveal from "@/components/anim/Reveal";
 import Counter from "@/components/anim/Counter";
+import { getSessionProfile, roleHome } from "@/lib/auth";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -43,14 +45,17 @@ const appFeatures = [
   { title: "Kant-en-klare workouts", icon: "dumbbell", desc: "Follow-along programma's zoals Borst, Schouders en Rug: per oefening een bewegende demo, je sets, reps en rust. Druk op start en volg mee." },
   { title: "Rusttimer & voortgang", icon: "chart", desc: "De rusttimer telt voor je af en je voortgang per oefening wordt bijgehouden. Jij focust op de set, de app houdt de rest bij." },
   { title: "~800 oefeningen met demo's", icon: "book", desc: "Een volledige oefeningenbibliotheek met bewegende demo-beelden, de juiste spieren en heldere uitleg. Altijd perfecte techniek." },
-  { title: "Eigen plannen + AI-generator", icon: "ai", desc: "Stel je eigen workout-plannen samen, of laat de AI-generator in enkele tikken een schema op maat opzetten voor jouw doel." },
+  { title: "Eigen plannen & sjablonen", icon: "ai", desc: "Stel je eigen workout-plannen samen of kies een kant-en-klaar sjabloon dat past bij jouw doel." },
   { title: "Training loggen met PR's", icon: "list", desc: "Log je sets en gewicht, krijg een melding bij elk nieuw persoonlijk record en volg je progressie week na week." },
   { title: "Community & leaderboard", icon: "trophy", desc: "Klim in de ranking, doe mee aan challenges, train met je buddies en volg de activiteitenfeed." },
   { title: "Persoonlijke coaching", icon: "coach", desc: "Je coach bouwt je programma in de app — jij volgt het onder 'Training', je coach volgt jouw opvolging op. Begeleiding op maat." },
   { title: "Slimme toegang & boeken", icon: "key", desc: "Boek elke dag van 6 tot 23u de hele zaal privé. Je toegangscode komt automatisch ± 5 min vooraf en de deur opent via de app." },
 ];
 
-export default function Home() {
+export default async function Home() {
+  // Al ingelogd? Sla de marketing-homepage over en ga meteen naar je dashboard.
+  const { user, profile } = await getSessionProfile();
+  if (user) redirect(roleHome(profile?.role));
   return (
     <main className="overflow-hidden">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
@@ -289,7 +294,7 @@ export default function Home() {
               <p className="mt-4 leading-relaxed text-brand/60">
                 Fittin&rsquo; is meer dan een privézaal die je per uur reserveert. In je account zit een complete
                 trainingsapp: kant-en-klare workouts met demo&rsquo;s en rusttimer, ~800 oefeningen, je eigen plannen
-                of een AI-generator, training loggen met PR&rsquo;s, een community met leaderboard én je coaching.
+                en sjablonen, training loggen met PR&rsquo;s, een community met leaderboard én je coaching.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <Link href="/workouts" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">Ontdek de workouts →</Link>

@@ -71,10 +71,9 @@ export default async function WorkoutsPage() {
 
         <div className="mt-10 rounded-3xl border border-borderc bg-white p-6">
           <h3 className="font-black text-brand">Liever je eigen plan?</h3>
-          <p className="mt-1 text-sm text-brand/60">Bouw je eigen workout uit de oefeningenbibliotheek of laat AI er één voor je maken.</p>
+          <p className="mt-1 text-sm text-brand/60">Bouw je eigen workout uit de oefeningenbibliotheek.</p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link href="/plannen" className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Mijn plannen</Link>
-            <Link href="/plannen/genereer" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">Genereer met AI</Link>
             <Link href="/oefeningen" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">Oefeningen</Link>
           </div>
         </div>
