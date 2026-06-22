@@ -1,6 +1,7 @@
 "use server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted } from "@/lib/email";
@@ -234,6 +235,86 @@ export async function adminAssignCoach(formData) {
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
   return { ok: true, message: coachId ? "Coach toegewezen ✓" : "Coach losgekoppeld ✓" };
+}
+
+// ---- Coach profile (admin can edit a coach's full public profile) ----
+// coach_* columns aren't writable by 'authenticated' → service role after the beheerder check.
+export async function adminSaveCoachProfile(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const coachId = formData.get("coachId");
+  if (!coachId) return { error: "Geen coach." };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("profiles").select("id, role").eq("id", coachId).eq("gym_id", profile.gym_id).maybeSingle();
+  if (!c || (c.role !== "coach" && c.role !== "beheerder")) return { error: "Geen geldige coach." };
+  const eur = (v) => { const s = String(v ?? "").trim(); if (!s) return null; const n = Math.round(parseFloat(s.replace(",", ".")) * 100); return Number.isFinite(n) ? n : null; };
+  const name = String(formData.get("full_name") ?? "").trim();
+  const { error: e } = await admin.from("profiles").update({
+    ...(name ? { full_name: name } : {}),
+    phone: formData.get("phone") || null,
+    coach_bio: formData.get("bio") || null,
+    coach_specialty: formData.get("specialty") || null,
+    coach_pricelist: formData.get("pricelist") || null,
+    coach_pt_price_cents: eur(formData.get("pt1_eur")),
+    coach_pt2_price_cents: eur(formData.get("pt2_eur")),
+    coach_pt3_price_cents: eur(formData.get("pt3_eur")),
+    coach_public: formData.get("public") === "on",
+  }).eq("id", coachId).eq("gym_id", profile.gym_id);
+  if (e) return { error: e.message };
+  revalidateTag("coaches");
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/coaches");
+  revalidatePath(`/coaches/${coachId}`);
+  return { ok: true, message: "Profiel opgeslagen ✓" };
+}
+
+export async function adminUploadCoachPhoto(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const coachId = formData.get("coachId");
+  if (!coachId) return { error: "Geen coach." };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("profiles").select("id").eq("id", coachId).eq("gym_id", profile.gym_id).maybeSingle();
+  if (!c) return { error: "Coach niet gevonden." };
+  const file = formData.get("photo");
+  if (!file || typeof file === "string" || !file.size) return { error: "Kies een afbeelding." };
+  if (file.size > 5 * 1024 * 1024) return { error: "Afbeelding mag max. 5 MB zijn." };
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) return { error: "Enkel JPG, PNG, WebP of GIF." };
+  const ext = (file.name?.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `coaches/${coachId}-${Date.now()}.${ext}`;
+  const buf = Buffer.from(await file.arrayBuffer());
+  const { error: upErr } = await admin.storage.from("coach-photos").upload(path, buf, { contentType: file.type, upsert: true });
+  if (upErr) return { error: upErr.message };
+  const { data: pub } = admin.storage.from("coach-photos").getPublicUrl(path);
+  await admin.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", coachId);
+  revalidateTag("coaches");
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/coaches");
+  return { ok: true, message: "Foto geüpload ✓" };
+}
+
+// ---- "Bekijk als coach" (read-only impersonatie) ----
+// Zet een beheerder-only cookie; getCoachContext toont dan het dashboard van die coach. Write-acties
+// worden geblokkeerd (read-only). De cookie alleen geeft NOOIT toegang — getCoachContext/requireCoach
+// honoreren 'm enkel als de échte gebruiker beheerder is.
+export async function startViewAsCoach(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const coachId = formData.get("coachId");
+  if (!coachId) return { error: "Geen coach." };
+  const admin = createAdminClient();
+  const { data: c } = await admin.from("profiles").select("id, role").eq("id", coachId).eq("gym_id", profile.gym_id).maybeSingle();
+  if (!c || !["coach", "beheerder"].includes(c.role)) return { error: "Geen geldige coach." };
+  const jar = await cookies();
+  jar.set("fittin_view_coach", coachId, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 2 * 60 * 60 });
+  console.log(`[view-as] beheerder ${profile.id} bekijkt coach ${coachId}`);
+  redirect("/coach");
+}
+
+export async function stopViewAsCoach() {
+  const jar = await cookies();
+  jar.delete("fittin_view_coach");
+  redirect("/beheer/coaches");
 }
 
 // Block a consecutive range of hours at once (e.g. close the gym 9:00–17:00 for maintenance).

@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { notify } from "@/lib/notify";
+import { viewAsActive } from "@/lib/coach";
 
 // Send a message in a coach↔client thread. The sender (auth user) must be either the coach or the
 // client of the pair. Works from both the coach area and the member's training page.
@@ -13,6 +14,7 @@ export async function sendMessage(formData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Niet ingelogd." };
+  if (await viewAsActive()) return { error: "Alleen-lezen tijdens ‘bekijk als coach’." };
   if (user.id !== coachId && user.id !== clientId) return { error: "Geen toegang tot dit gesprek." };
   const { data: me } = await supabase.from("profiles").select("gym_id, full_name").eq("id", user.id).single();
   if (!me) return { error: "Profiel niet gevonden." };

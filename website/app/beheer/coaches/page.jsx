@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
-import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic } from "../actions";
+import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic, adminSaveCoachProfile, adminUploadCoachPhoto, startViewAsCoach } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ActionForm from "@/components/ui/ActionForm";
 import { fmtHour } from "@/lib/time";
@@ -22,7 +22,7 @@ export default async function Coaches() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [{ data: people }, { data: avail }, { data: ledger }, { data: links }, { data: sessions }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents, coach_public").eq("gym_id", gym.id).order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents, coach_public, coach_bio, coach_specialty, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_photo_url, phone").eq("gym_id", gym.id).order("full_name"),
     supabase.from("coach_availability").select("*").eq("gym_id", gym.id).order("weekday"),
     supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
     supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id).eq("status", "accepted"),
@@ -130,6 +130,44 @@ export default async function Coaches() {
                   {commByCoach[c.id] > 0 && <span className="rounded-full bg-paper px-3 py-1 text-brand/70">Commissie: {euro(commByCoach[c.id])}</span>}
                 </div>
               </div>
+
+              {/* Bekijk als coach (read-only impersonatie) */}
+              <form action={startViewAsCoach} className="mt-4">
+                <input type="hidden" name="coachId" value={c.id} />
+                <button className="rounded-full border-2 border-brand px-4 py-2 text-sm font-bold text-brand transition hover:bg-brand hover:text-white">👁️ Bekijk als coach (read-only) →</button>
+              </form>
+
+              {/* Profiel & foto bewerken (volledig coach-profiel beheren) */}
+              <details className="mt-4 rounded-xl border border-borderc bg-paper/50 p-4">
+                <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Profiel &amp; foto bewerken</summary>
+                <div className="mt-4 flex flex-wrap items-start gap-5">
+                  <div className="text-center">
+                    {c.coach_photo_url
+                      ? <img src={c.coach_photo_url} alt="" className="h-24 w-24 rounded-2xl object-cover" />
+                      : <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-borderc text-2xl font-black text-brand/40">{(c.full_name || "?").slice(0, 1)}</div>}
+                    <ActionForm action={adminUploadCoachPhoto} success="Foto geüpload ✓" className="mt-2">
+                      <input type="hidden" name="coachId" value={c.id} />
+                      <input type="file" name="photo" accept="image/*" className="block w-32 text-[10px]" />
+                      <button className="mt-1 rounded-full bg-brand px-3 py-1 text-[10px] font-bold text-white">Upload foto</button>
+                    </ActionForm>
+                  </div>
+                  <ActionForm action={adminSaveCoachProfile} success="Profiel opgeslagen ✓" className="grid flex-1 gap-3 sm:grid-cols-2">
+                    <input type="hidden" name="coachId" value={c.id} />
+                    <Lbl t="Naam"><input name="full_name" defaultValue={c.full_name || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                    <Lbl t="Telefoon"><input name="phone" defaultValue={c.phone || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                    <Lbl t="Specialiteit"><input name="specialty" defaultValue={c.coach_specialty || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                    <Lbl t="Prijslijst (kort)"><input name="pricelist" defaultValue={c.coach_pricelist || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                    <label className="block sm:col-span-2"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Bio</span><textarea name="bio" rows={3} defaultValue={c.coach_bio || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></label>
+                    <Lbl t="PT 1-op-1 (€)"><input name="pt1_eur" defaultValue={c.coach_pt_price_cents != null ? c.coach_pt_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Lbl t="PT 1-op-2 (€ pp)"><input name="pt2_eur" defaultValue={c.coach_pt2_price_cents != null ? c.coach_pt2_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                      <Lbl t="PT 1-op-3 (€ pp)"><input name="pt3_eur" defaultValue={c.coach_pt3_price_cents != null ? c.coach_pt3_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-brand/70"><input type="checkbox" name="public" defaultChecked={c.coach_public} className="h-4 w-4 accent-[#5fda6b]" /> Zichtbaar op de website</label>
+                    <div className="sm:col-span-2"><button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Profiel opslaan</button></div>
+                  </ActionForm>
+                </div>
+              </details>
 
               {/* Pending session requests */}
               {(reqByCoach[c.id] || []).length > 0 && (

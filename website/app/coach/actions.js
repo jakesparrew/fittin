@@ -10,6 +10,7 @@ import { sendCoachBooked, sendBookingCancelled, sendBookingRescheduled, sendPaym
 import { notify, notifyAdmins } from "@/lib/notify";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { logCoachActivity } from "@/lib/coachlog";
+import { viewAsActive } from "@/lib/coach";
 
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
 
@@ -32,6 +33,7 @@ async function requireCoach() {
   if (!user) return { error: "Niet ingelogd." };
   const { data: profile } = await supabase.from("profiles").select("id, gym_id, role").eq("id", user.id).single();
   if (!profile || !["coach", "beheerder"].includes(profile.role)) return { error: "Geen rechten." };
+  if (await viewAsActive()) return { error: "Alleen-lezen tijdens ‘bekijk als coach’. Ga terug naar beheerder om te wijzigen." };
   return { supabase, profile, userId: user.id, email: user.email };
 }
 
