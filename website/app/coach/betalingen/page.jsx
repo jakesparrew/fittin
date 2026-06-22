@@ -32,7 +32,7 @@ export default async function CoachBetalingen() {
       </p>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
-        <Stat label="Sessietegoed (saldo)" value={balance} accent={balance <= 2} />
+        <Stat label={balance < 0 ? "Openstaand (€ " + (Math.abs(balance) * 12) + ")" : "Sessietegoed (saldo)"} value={balance} accent={balance > 0 && balance <= 2} />
         <Stat label="Gekocht (deze maand)" value={euro(month)} />
         <Stat label="Gekocht (totaal)" value={euro(total)} />
       </div>

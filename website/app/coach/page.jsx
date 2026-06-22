@@ -144,7 +144,7 @@ export default async function CoachDashboard({ searchParams }) {
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Aankomende sessies" value={upcoming.length} />
         {mode === "credit" ? (
-          <Stat label="Coach-sessies (saldo)" value={creditBalance} accent={creditBalance <= 2} />
+          <Stat label="Coach-sessies (saldo)" value={creditBalance} accent={creditBalance > 0 && creditBalance <= 2} />
         ) : mode === "invoice" ? (
           <Stat label="Te factureren (deze maand)" value={euro(monthCharges)} />
         ) : (
@@ -155,7 +155,7 @@ export default async function CoachDashboard({ searchParams }) {
 
       {/* Coach-sessies kopen — bovenaan zodat je je saldo snel kan aanvullen */}
       {mode === "credit" && (
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
+        <div id="tegoed" className="mt-4 grid gap-4 scroll-mt-8 md:grid-cols-2">
           <div className="rounded-2xl border-2 border-accent bg-accent/5 p-5">
             <div className="flex items-center gap-2">
               <span className="text-xl">💳</span>
