@@ -45,7 +45,7 @@ const appFeatures = [
   { title: "~800 oefeningen met demo's", icon: "book", desc: "Een volledige oefeningenbibliotheek met bewegende demo-beelden, de juiste spieren en heldere uitleg. Altijd perfecte techniek." },
   { title: "Eigen plannen + AI-generator", icon: "ai", desc: "Stel je eigen workout-plannen samen, of laat de AI-generator in enkele tikken een schema op maat opzetten voor jouw doel." },
   { title: "Training loggen met PR's", icon: "list", desc: "Log je sets en gewicht, krijg een melding bij elk nieuw persoonlijk record en volg je progressie week na week." },
-  { title: "Community & leaderboard", icon: "trophy", desc: "Klim in de ranking, doe mee aan challenges en events, train met je buddies en volg de activiteitenfeed." },
+  { title: "Community & leaderboard", icon: "trophy", desc: "Klim in de ranking, doe mee aan challenges, train met je buddies en volg de activiteitenfeed." },
   { title: "Persoonlijke coaching", icon: "coach", desc: "Je coach bouwt je programma in de app — jij volgt het onder 'Training', je coach volgt jouw opvolging op. Begeleiding op maat." },
   { title: "Slimme toegang & boeken", icon: "key", desc: "Boek elke dag van 6 tot 23u de hele zaal privé. Je toegangscode komt automatisch ± 5 min vooraf en de deur opent via de app." },
 ];

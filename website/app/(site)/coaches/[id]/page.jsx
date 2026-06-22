@@ -7,6 +7,7 @@ import { fmtHour } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
 const WD = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+const dagdeel = (h) => (h < 12 ? "Voormiddag" : h < 17 ? "Namiddag" : "Avond");
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -60,10 +61,23 @@ export default async function CoachProfile({ params }) {
             {(avail || []).length > 0 && (
               <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
                 <p className="text-xs font-bold uppercase tracking-widest text-lav">Beschikbaarheid</p>
-                <div className="mt-2 space-y-1 text-sm text-brand/80">
-                  {avail.map((a, i) => (
-                    <p key={i}><span className="font-bold capitalize text-brand">{WD[a.weekday]}</span> · {fmtHour(a.from_hour)} – {fmtHour(a.to_hour)}</p>
-                  ))}
+                <div className="mt-3 space-y-2">
+                  {[1, 2, 3, 4, 5, 6, 0].map((wd) => {
+                    const slots = (avail || []).filter((a) => a.weekday === wd).sort((a, b) => a.from_hour - b.from_hour);
+                    if (!slots.length) return null;
+                    return (
+                      <div key={wd} className="flex flex-wrap items-center gap-2">
+                        <span className="w-24 shrink-0 font-bold capitalize text-brand">{WD[wd]}</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {slots.map((a, i) => (
+                            <span key={i} className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accentdark">
+                              {dagdeel(a.from_hour)} · {fmtHour(a.from_hour)}–{fmtHour(a.to_hour)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             )}

@@ -207,12 +207,7 @@ export default function BookingClient({
           </p>
         )}
 
-        {/* Session vs Events toggle */}
-        <div className="mt-8 inline-flex rounded-full border border-borderc bg-white p-1">
-          <button onClick={() => setMode("session")} className={"rounded-full px-5 py-2 text-sm font-bold transition " + (mode === "session" ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>Sessie boeken</button>
-          <button onClick={() => setMode("events")} className={"rounded-full px-5 py-2 text-sm font-bold transition " + (mode === "events" ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>Events{events.length > 0 && ` (${events.length})`}</button>
-        </div>
-
+        {/* Events feature is "coming soon" — only session booking is active. */}
         {mode === "events" ? (
           <EventsBooking events={events} isLoggedIn={isLoggedIn} />
         ) : (

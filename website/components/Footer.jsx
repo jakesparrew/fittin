@@ -31,7 +31,6 @@ export default function Footer() {
             <li><Link href="/huisregels" className="transition hover:text-white">Toegang &amp; huisregels</Link></li>
             <li><Link href="/calorieen-berekenen" className="transition hover:text-white">Calorieën berekenen</Link></li>
             <li><Link href="/supplementen" className="transition hover:text-white">Supplementen</Link></li>
-            <li><Link href="/events" className="transition hover:text-white">Events</Link></li>
           </ul>
         </div>
         <div>
