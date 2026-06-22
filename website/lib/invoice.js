@@ -5,6 +5,6 @@
 //   0.06  = 6% (sportdiensten)
 //   0.21  = 21% (standaard B2B)  ← most common for a B2B service to a VAT-registered coach
 // ⚠ Bevestig met de boekhouder vóór je echte facturen uitreikt; pas dan dit ene getal aan.
-export const COACH_VAT_RATE = 0; // placeholder tot de boekhouder bevestigt
+export const COACH_VAT_RATE = 0.06; // 6%, INBEGREPEN in de prijs (€12 = incl. btw) — bevestigd 2026-06-23
 export const COACH_VAT_NOTE =
-  "Btw-regeling voor sessietegoed nog te bevestigen met de boekhouder (vrijstelling / 6% / 21%). Pas COACH_VAT_RATE aan in lib/invoice.js.";
+  "Bedragen zijn inclusief 6% btw. Sportvereniging zonder winstoogmerk.";
