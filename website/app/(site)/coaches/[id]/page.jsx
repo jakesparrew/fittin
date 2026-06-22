@@ -17,16 +17,16 @@ const dagdeel = (h) => (h < 12 ? "Voormiddag" : h < 17 ? "Namiddag" : "Avond");
 async function resolveCoach(admin, idOrSlug, cols) {
   if (isUuid(idOrSlug)) {
     const { data } = await admin.from("profiles").select(cols).eq("id", idOrSlug).maybeSingle();
-    return data && data.role === "coach" ? data : null;
+    return data && data.role === "coach" && data.coach_public === true ? data : null;
   }
-  const { data: list } = await admin.from("profiles").select(cols).eq("role", "coach");
+  const { data: list } = await admin.from("profiles").select(cols).eq("role", "coach").eq("coach_public", true);
   return (list || []).find((co) => slugify(co.full_name) === idOrSlug) || null;
 }
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
   const admin = createAdminClient();
-  const c = await resolveCoach(admin, id, "id, full_name, coach_specialty, role");
+  const c = await resolveCoach(admin, id, "id, full_name, coach_specialty, role, coach_public");
   if (!c) return { title: "Coach | Fittin'" };
   return { title: `${c.full_name} — coach bij Fittin'`, description: `${c.full_name}${c.coach_specialty ? ` · ${c.coach_specialty}` : ""} — personal trainer bij Fittin' in Gent.` };
 }
@@ -34,7 +34,7 @@ export async function generateMetadata({ params }) {
 export default async function CoachProfile({ params }) {
   const { id } = await params;
   const admin = createAdminClient();
-  const c = await resolveCoach(admin, id, "id, full_name, role, coach_bio, coach_specialty, coach_photo_url, coach_pricelist");
+  const c = await resolveCoach(admin, id, "id, full_name, role, coach_public, coach_bio, coach_specialty, coach_photo_url, coach_pricelist");
   if (!c) notFound();
   const [{ data: avail }, { user }] = await Promise.all([
     admin.from("coach_availability").select("weekday, from_hour, to_hour").eq("coach_id", c.id).order("weekday"),

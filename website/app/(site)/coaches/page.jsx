@@ -16,7 +16,7 @@ export default async function CoachesPage() {
   const { data: gym } = await supabase.from("gyms").select("id").eq("slug", "fittin").single();
   const admin = createAdminClient();
   const { data: coaches } = gym
-    ? await admin.from("profiles").select("id, full_name, coach_specialty, coach_photo_url, coach_bio").eq("gym_id", gym.id).eq("role", "coach").order("full_name")
+    ? await admin.from("profiles").select("id, full_name, coach_specialty, coach_photo_url, coach_bio").eq("gym_id", gym.id).eq("role", "coach").eq("coach_public", true).order("full_name")
     : { data: [] };
 
   return (

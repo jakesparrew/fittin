@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
-import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest } from "../actions";
+import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import { fmtHour } from "@/lib/time";
 
@@ -21,7 +21,7 @@ export default async function Coaches() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
   const [{ data: people }, { data: avail }, { data: ledger }, { data: links }, { data: sessions }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents").eq("gym_id", gym.id).order("full_name"),
+    supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents, coach_public").eq("gym_id", gym.id).order("full_name"),
     supabase.from("coach_availability").select("*").eq("gym_id", gym.id).order("weekday"),
     supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
     supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id).eq("status", "accepted"),
@@ -111,7 +111,14 @@ export default async function Coaches() {
                   <p className="text-lg font-black text-brand">{c.full_name || c.email}</p>
                   <p className="text-xs text-brand/45">{c.email}{c.role === "beheerder" && " · beheerder"}</p>
                 </div>
-                <div className="flex flex-wrap gap-2 text-xs font-bold">
+                <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
+                  <form action={setCoachPublic}>
+                    <input type="hidden" name="coachId" value={c.id} />
+                    <input type="hidden" name="on" value={c.coach_public ? "0" : "1"} />
+                    <button className={"rounded-full px-3 py-1 transition " + (c.coach_public ? "bg-accent text-brand" : "bg-paper text-brand/50 hover:bg-brand/5")} title={c.coach_public ? "Staat op de website — klik om te verbergen" : "Niet op de website — klik om te tonen"}>
+                      {c.coach_public ? "● Op website" : "○ Niet op website"}
+                    </button>
+                  </form>
                   <span className="rounded-full bg-brand/5 px-3 py-1 text-brand/70">{MODE[c.coach_billing_mode] || "—"}</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{cls.length} clients</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{upcoming} gepland</span>

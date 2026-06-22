@@ -395,6 +395,23 @@ export async function deleteUser(formData) {
 }
 
 // ---- Coach ↔ client assignments ----
+
+// Toggle a coach's visibility on the public website (/coaches, personal-training, booking). Beheerder-only.
+export async function setCoachPublic(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const coachId = formData.get("coachId");
+  const on = formData.get("on") === "1";
+  // coach_* columns aren't writable by 'authenticated' (0015 grants) → write via service role after the staff check.
+  const admin = createAdminClient();
+  const { error: e } = await admin.from("profiles").update({ coach_public: on }).eq("id", coachId).eq("gym_id", profile.gym_id);
+  if (e) return { error: e.message };
+  revalidateTag("coaches");
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/coaches");
+  return { ok: true };
+}
+
 export async function addCoach(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
