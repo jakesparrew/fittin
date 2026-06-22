@@ -315,17 +315,21 @@ export async function setCoachBilling(formData) {
 }
 
 export async function grantCoachCredits(formData) {
-  const { supabase, profile, error } = await requireStaff(true);
+  const { profile, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("coach_ledger").insert({
-    gym_id: profile.gym_id,
-    coach_id: formData.get("coachId"),
-    delta: num(formData.get("delta")),
-    reason: "grant",
-  });
+  const coachId = formData.get("coachId");
+  const delta = num(formData.get("delta"));
+  if (!coachId || !delta) return { error: "Geef een aantal sessietegoed (+ erbij, − eraf)." };
+  // coach_ledger writes are service-role only since 0081 → use the admin client after the staff check.
+  const admin = createAdminClient();
+  const { error: e } = await admin.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: coachId, delta, reason: "grant" });
+  if (e) return { error: e.message };
+  try {
+    await notify({ gymId: profile.gym_id, userId: coachId, type: "request", title: delta >= 0 ? `+${delta} sessietegoed bijgeschreven` : `${delta} sessietegoed aangepast`, body: "Door de beheerder", link: "/coach" });
+  } catch {}
   revalidatePath("/beheer/coaches");
   revalidatePath("/coach");
-  return { ok: true };
+  return { ok: true, message: "Sessietegoed bijgeschreven ✓" };
 }
 
 // ---- User management (add / remove / create admin) ----
@@ -478,7 +482,10 @@ export async function resolveCoachRequest(formData) {
   if (!req || req.status !== "pending") return { error: "Aanvraag niet gevonden." };
   await supabase.from("coach_session_requests").update({ status: decision, resolved_at: new Date().toISOString(), resolved_by: userId }).eq("id", id);
   if (decision === "approved") {
-    await supabase.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: req.coach_id, delta: req.qty, reason: "grant" });
+    // coach_ledger writes are service-role only since 0081.
+    const admin = createAdminClient();
+    const { error: le } = await admin.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: req.coach_id, delta: req.qty, reason: "grant" });
+    if (le) return { error: le.message };
     try {
       const { data: c } = await supabase.from("profiles").select("email, full_name").eq("id", req.coach_id).single();
       if (c?.email) { const { sendCoachSessionsGranted } = await import("@/lib/email"); await sendCoachSessionsGranted({ to: c.email, name: c.full_name, qty: req.qty }); }

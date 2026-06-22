@@ -91,7 +91,9 @@ export default function Nav() {
           )}
           {account && isStaff && (
             <>
-              <Link href="/account" className="hidden text-sm font-bold text-brand/60 transition hover:text-brand sm:block">Mijn account</Link>
+              <form action="/auth/signout" method="post" className="hidden sm:block">
+                <button className="text-sm font-bold text-brand/60 transition hover:text-brand">Uitloggen</button>
+              </form>
               <Link href={home} className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:opacity-90 sm:block">
                 {staffLabel} →
               </Link>
@@ -126,9 +128,13 @@ export default function Nav() {
               </Link>
             )}
             {isStaff && <Link href={home} onClick={() => setOpen(false)} className="block py-2 font-bold text-accentdark">{staffLabel} →</Link>}
-            <Link href={account ? "/account" : "/login?mode=signup"} onClick={() => setOpen(false)} className="block py-2 font-bold text-brand">
-              {account ? "Mijn account" : "Inloggen / word lid"}
-            </Link>
+            {account && isStaff ? (
+              <form action="/auth/signout" method="post"><button className="block py-2 font-bold text-brand">Uitloggen</button></form>
+            ) : (
+              <Link href={account ? "/account" : "/login?mode=signup"} onClick={() => setOpen(false)} className="block py-2 font-bold text-brand">
+                {account ? "Mijn account" : "Inloggen / word lid"}
+              </Link>
+            )}
           </div>
         </nav>
       )}

@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
 import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import ActionForm from "@/components/ui/ActionForm";
 import { fmtHour } from "@/lib/time";
 
 export const dynamic = "force-dynamic";
@@ -226,11 +227,11 @@ export default async function Coaches() {
                       <button className="mt-2 rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand">Standaard toepassen (€ 12 / sessietegoed)</button>
                     )}
                   </form>
-                  <form action={grantCoachCredits} className="flex flex-wrap items-end gap-2 rounded-xl bg-white p-4">
+                  <ActionForm action={grantCoachCredits} success="Sessietegoed bijgeschreven ✓" className="flex flex-wrap items-end gap-2 rounded-xl bg-white p-4">
                     <input type="hidden" name="coachId" value={c.id} />
                     <Lbl t="Sessietegoed ±"><input name="delta" type="number" placeholder="bv. 10" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
                     <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Toekennen</button>
-                  </form>
+                  </ActionForm>
                 </div>
                 <p className="mt-4 text-xs font-bold uppercase tracking-wide text-lav">Beschikbaarheid</p>
                 <div className="mt-2 flex flex-wrap gap-2">
