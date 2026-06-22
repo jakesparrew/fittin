@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
+import { coachBookSession, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import CoachScheduler from "@/components/coach/CoachScheduler";
 import AddClientInline from "@/components/coach/AddClientInline";
+import CoachSlotPicker from "@/components/coach/CoachSlotPicker";
+import CoachSessionActions from "@/components/coach/CoachSessionActions";
 import { fmtHour } from "@/lib/time";
 import SubmitButton from "@/components/ui/SubmitButton";
 import ActionForm from "@/components/ui/ActionForm";
@@ -129,10 +131,7 @@ export default async function CoachDashboard({ searchParams }) {
             <div className="rounded-lg border-2 border-borderc bg-paper px-3 py-2 text-sm font-semibold text-brand">{ptService?.name || "Personal training"}</div>
             <input type="hidden" name="serviceId" value={ptService?.id || ""} />
           </Lbl>
-          <Lbl t="Datum"><input name="date" type="date" required defaultValue={todayStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <Lbl t="Uur">
-            <select name="hour" required className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select>
-          </Lbl>
+          <CoachSlotPicker defaultDate={todayStr} />
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
         </form>
@@ -307,10 +306,7 @@ export default async function CoachDashboard({ searchParams }) {
                   <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
                     {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                   </span>
-                  <form action={cancelCoachBooking}>
-                    <input type="hidden" name="bookingId" value={b.id} />
-                    <button className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Annuleer</button>
-                  </form>
+                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} />
                 </div>
               </div>
             ))}

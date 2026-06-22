@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { cancelCoachBooking } from "../actions";
+import CoachSessionActions from "@/components/coach/CoachSessionActions";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -60,10 +60,7 @@ export default async function Agenda() {
                       <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
                         {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                       </span>
-                      <form action={cancelCoachBooking}>
-                        <input type="hidden" name="bookingId" value={b.id} />
-                        <button className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Annuleer</button>
-                      </form>
+                      <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} />
                     </div>
                   </div>
                 ))}

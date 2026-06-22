@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
-import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest, sendBuddyInvite, sendWelcomeNewAccount } from "@/lib/email";
+import { sendCoachBooked, sendBookingCancelled, sendBookingRescheduled, sendPaymentRequest, sendBuddyInvite, sendWelcomeNewAccount } from "@/lib/email";
 import { notify, notifyAdmins } from "@/lib/notify";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { logCoachActivity } from "@/lib/coachlog";
@@ -157,24 +157,60 @@ export async function coachBulkBook(formData) {
 export async function cancelCoachBooking(formData) {
   const { supabase, userId, error } = await requireCoach();
   if (error) return { error };
+  // Cancelling is only allowed up to 6 hours before the session.
+  const cutoff = new Date(Date.now() + 6 * 3600000).toISOString();
   const { data: cancelled } = await supabase
     .from("bookings")
     .update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
     .eq("id", formData.get("bookingId"))
     .eq("coach_id", userId)
-    .gt("starts_at", new Date().toISOString())
+    .gt("starts_at", cutoff)
     .select("starts_at, user_id, services(name)")
     .maybeSingle();
-  // Notify the client their coach cancelled (the credit refund is handled by a DB trigger).
-  if (cancelled) {
-    try {
-      const { data: client } = await supabase.from("profiles").select("email, full_name, gym_id").eq("id", cancelled.user_id).single();
-      if (client?.email) await sendBookingCancelled({ to: client.email, name: client.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
-      if (client) await notify({ gymId: client.gym_id, userId: cancelled.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft een sessie geannuleerd", body: cancelled.services?.name || "Sessie", link: "/account" });
-    } catch {}
+  if (!cancelled) {
+    revalidatePath("/coach"); revalidatePath("/coach/agenda");
+    return { error: "Annuleren kan enkel tot 6 uur voor de sessie." };
   }
+  // Notify the client their coach cancelled (the credit refund is handled by a DB trigger).
+  try {
+    const { data: client } = await supabase.from("profiles").select("email, full_name, gym_id").eq("id", cancelled.user_id).single();
+    if (client?.email) await sendBookingCancelled({ to: client.email, name: client.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
+    if (client) await notify({ gymId: client.gym_id, userId: cancelled.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft een sessie geannuleerd", body: cancelled.services?.name || "Sessie", link: "/account" });
+  } catch {}
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
+  return { ok: true, message: "Sessie geannuleerd ✓" };
+}
+
+// Coach moves one of their sessions to a free slot (up to 6h before; the RPC re-checks hours/overlap/blocks).
+export async function coachRescheduleBooking(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const bookingId = formData.get("bookingId");
+  const { error: e } = await supabase.rpc("reschedule_booking", {
+    p_booking: bookingId, p_date: formData.get("date"), p_hour: numF(formData.get("hour")),
+  });
+  if (e) return { error: e.message };
+  try {
+    const { data: b } = await supabase.from("bookings").select("starts_at, ends_at, user_id, gym_id, services(name)").eq("id", bookingId).single();
+    if (b) {
+      const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", b.user_id).single();
+      if (client?.email) await sendBookingRescheduled({ to: client.email, name: client.full_name, serviceName: b.services?.name || "Sessie", startsAt: b.starts_at, endsAt: b.ends_at });
+      await notify({ gymId: b.gym_id, userId: b.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft je sessie verplaatst", body: b.services?.name || "Sessie", link: "/account" });
+    }
+  } catch {}
+  revalidatePath("/coach");
+  revalidatePath("/coach/agenda");
+  return { ok: true, message: "Sessie verplaatst ✓" };
+}
+
+// Free 1h start-times for a date (availability-aware dropdowns). Returns decimals e.g. [6, 6.5, 9, ...].
+export async function coachDayAvailability(dateStr) {
+  const { supabase, error } = await requireCoach();
+  if (error) return { hours: [] };
+  const { data, error: e } = await supabase.rpc("coach_free_hours", { p_date: dateStr });
+  if (e) return { hours: [] };
+  return { hours: (data || []).map(Number) };
 }
 
 // Coach requests session-credits from the superadmin (alternative to buying by card).

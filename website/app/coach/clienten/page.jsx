@@ -3,6 +3,7 @@ import { getCoachContext } from "@/lib/coach";
 import { setClientPrice, coachRequestClient, respondCoachLink, removeCoachLink } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
 import SearchSelect from "@/components/admin/SearchSelect";
+import AddClientInline from "@/components/coach/AddClientInline";
 
 const eur = (c) => ((c || 0) / 100).toFixed(2).replace(".", ",");
 
@@ -77,7 +78,8 @@ export default async function CoachClienten() {
         ) : (
           <p className="mt-3 text-sm text-brand/50">Alle leden zijn al verbonden of uitgenodigd.</p>
         )}
-        <p className="mt-2 text-xs text-brand/40">Nog geen account voor dit lid? Maak het aan via "Sessie boeken" op je dashboard — dan is het meteen verbonden.</p>
+        <AddClientInline />
+        <p className="mt-2 text-xs text-brand/40">Nieuw lid zonder account? Maak het hierboven aan via e-mail — het wordt meteen aan jou verbonden en krijgt een login-uitnodiging.</p>
       </div>
 
       {/* Incoming connection requests (a member asked to be coached by me) */}
