@@ -167,6 +167,15 @@ export default async function AccountPage({ searchParams }) {
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-4xl px-5 py-16">
+        {/* Active session → door opener pinned to the top; hidden again outside the slot window */}
+        {doorActive && (
+          <div className="mb-6 rounded-3xl bg-brand p-6 text-white">
+            <p className="text-sm font-bold uppercase tracking-widest text-lav">Je sessie is bezig</p>
+            <p className="mb-4 mt-1 text-lg font-black">Open de deur met de app</p>
+            <DoorButton />
+            <Link href="/huisregels" className="mt-3 inline-block text-sm font-bold text-accent underline-offset-2 hover:underline">Toegang &amp; huisregels →</Link>
+          </div>
+        )}
         {pendingPay.length > 0 && <PendingPaymentBanner items={pendingPay} />}
 
         {/* Header */}
@@ -374,15 +383,6 @@ export default async function AccountPage({ searchParams }) {
             <form action={openBillingPortal}>
               <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Beheer abonnement</button>
             </form>
-          </div>
-        )}
-
-        {doorActive && (
-          <div className="mt-8 rounded-3xl bg-brand p-6 text-white">
-            <p className="text-sm font-bold uppercase tracking-widest text-lav">Je sessie is bezig</p>
-            <p className="mb-4 mt-1 text-lg font-black">Open de deur met de app</p>
-            <DoorButton />
-            <Link href="/huisregels" className="mt-3 inline-block text-sm font-bold text-accent underline-offset-2 hover:underline">Toegang &amp; huisregels →</Link>
           </div>
         )}
 
