@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe, isStripeConfigured, bizGuest, invoiceForBusiness } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingConfirmation, sendSessionInvite, sendEmailInvite } from "@/lib/email";
 import { validateDiscount, recordRedemption } from "@/lib/discounts";
 
@@ -40,7 +40,6 @@ function checkoutParams(booking, email, chargeCents, codeId) {
     mode: "payment",
     customer_email: email,
     ...bizGuest,
-    ...invoiceForBusiness,
     line_items: [
       {
         quantity: 1,

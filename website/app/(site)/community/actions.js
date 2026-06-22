@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { stripe, isStripeConfigured, bizGuest, invoiceForBusiness } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendEventSignup } from "@/lib/email";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
@@ -54,7 +54,6 @@ export async function signupEvent(formData) {
     mode: "payment",
     customer_email: user.email,
     ...bizGuest,
-    ...invoiceForBusiness,
     line_items: [{ quantity: 1, price_data: { currency: "eur", unit_amount: ev.price_cents, product_data: { name: `${ev.title} — Fittin' event` } } }],
     metadata: { kind: "event", event_id: eventId, user_id: user.id, signup_id: signupId || "" },
     success_url: `${siteUrl()}/account?event=1`,

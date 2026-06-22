@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { stripe, isStripeConfigured, bizCustomer, invoiceForBusiness } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 import { sendCoachBooked, sendBookingCancelled, sendBookingRescheduled, sendPaymentRequest, sendBuddyInvite, sendWelcomeNewAccount } from "@/lib/email";
 import { notify, notifyAdmins } from "@/lib/notify";
@@ -463,7 +463,6 @@ export async function buyCoachCredits(formData) {
       mode: "payment",
       customer,
       ...bizCustomer,
-      ...invoiceForBusiness,
       line_items: [
         { quantity: qty, price_data: { currency: "eur", unit_amount: unit, product_data: { name: "Coach-sessie — Fittin' (€ 12,00/sessie)" } } },
       ],

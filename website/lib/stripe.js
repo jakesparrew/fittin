@@ -21,7 +21,3 @@ export const bizGuest = {
   billing_address_collection: "auto",
   customer_creation: "always",
 };
-// Spread into ONE-TIME (mode:'payment') Checkout sessions so Stripe auto-generates a real invoice
-// (with the business name + VAT number the customer enters) — receipts don't show VAT, invoices do.
-// NOT for subscriptions (those already invoice each cycle) or setup/€0 sessions.
-export const invoiceForBusiness = { invoice_creation: { enabled: true } };

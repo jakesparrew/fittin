@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { stripe, isStripeConfigured, bizCustomer, invoiceForBusiness } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
@@ -29,7 +29,6 @@ export async function buyPackage(formData) {
       mode: "payment",
       customer,
       ...bizCustomer,
-      ...invoiceForBusiness,
       line_items: [
         {
           quantity: 1,

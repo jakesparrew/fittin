@@ -28,7 +28,7 @@ export default async function AccountBetalingen() {
     <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
       <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand">← Mijn account</Link>
       <h1 className="mt-2 text-3xl font-black text-brand">Betalingen &amp; betaalbewijzen</h1>
-      <p className="mt-1 max-w-2xl text-sm text-brand/60">Al je betalingen aan Fittin. Klik op <b>Download</b> voor je factuur/betaalbewijs van Stripe — mét je bedrijfsnaam &amp; btw-nummer als je als bedrijf betaalde.</p>
+      <p className="mt-1 max-w-2xl text-sm text-brand/60">Al je betalingen aan Fittin. Klik op <b>Download</b> voor je betaalbewijs van Stripe (abonnement = link naar je factuur).</p>
 
       <div className="mt-6 overflow-x-auto rounded-2xl border border-borderc bg-white">
         <table className="w-full min-w-[520px] text-sm">
