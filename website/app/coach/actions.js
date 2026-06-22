@@ -1,11 +1,14 @@
 "use server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import crypto from "crypto";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
-import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest, sendBuddyInvite } from "@/lib/email";
+import { sendCoachBooked, sendBookingCancelled, sendPaymentRequest, sendBuddyInvite, sendWelcomeNewAccount } from "@/lib/email";
 import { notify, notifyAdmins } from "@/lib/notify";
+import { enrollUserInDrips } from "@/lib/newsletter";
 import { logCoachActivity } from "@/lib/coachlog";
 
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
@@ -30,6 +33,43 @@ async function requireCoach() {
   const { data: profile } = await supabase.from("profiles").select("id, gym_id, role").eq("id", user.id).single();
   if (!profile || !["coach", "beheerder"].includes(profile.role)) return { error: "Geen rechten." };
   return { supabase, profile, userId: user.id, email: user.email };
+}
+
+// Coach adds a NEW client by e-mail straight from the booking screen: creates the account (or links
+// an existing one in this gym), assigns them as this coach's client, and sends the welcome/login mail.
+export async function coachCreateClient(formData) {
+  const { profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const full_name = String(formData.get("full_name") || "").trim();
+  if (!email || !email.includes("@")) return { error: "Geef een geldig e-mailadres." };
+
+  const admin = createAdminClient();
+  let uid;
+  const { data: created, error: cErr } = await admin.auth.admin.createUser({
+    email, email_confirm: true, password: crypto.randomUUID() + "Aa1!", user_metadata: { full_name },
+  });
+  if (cErr) {
+    if (/already|exists|registered/i.test(cErr.message)) {
+      const { data: ex } = await admin.from("profiles").select("id, gym_id").eq("email", email).maybeSingle();
+      if (!ex) return { error: "Dit e-mailadres bestaat al — vraag de beheerder het lid toe te voegen." };
+      if (ex.gym_id !== profile.gym_id) return { error: "Dit lid hoort bij een andere gym." };
+      uid = ex.id;
+    } else return { error: cErr.message };
+  } else {
+    uid = created.user.id;
+    await admin.from("profiles").update({ gym_id: profile.gym_id, role: "lid", full_name: full_name || null }).eq("id", uid);
+    try {
+      const { data: link } = await admin.auth.admin.generateLink({ type: "recovery", email, options: { redirectTo: `${siteUrl()}/wachtwoord-herstellen` } });
+      const action = link?.properties?.action_link;
+      if (action) await sendWelcomeNewAccount({ to: email, name: full_name, link: action });
+    } catch {}
+    try { await enrollUserInDrips(uid); } catch {}
+  }
+  await admin.from("coach_clients").upsert({ gym_id: profile.gym_id, coach_id: userId, client_id: uid }, { onConflict: "gym_id,coach_id,client_id" });
+  revalidatePath("/coach");
+  revalidatePath("/coach/clienten");
+  return { ok: true, clientId: uid };
 }
 
 export async function coachBookSession(formData) {

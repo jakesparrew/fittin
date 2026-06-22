@@ -3,6 +3,7 @@ import { getCoachContext } from "@/lib/coach";
 import { coachBookSession, cancelCoachBooking, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import CoachScheduler from "@/components/coach/CoachScheduler";
+import AddClientInline from "@/components/coach/AddClientInline";
 import { fmtHour } from "@/lib/time";
 import SubmitButton from "@/components/ui/SubmitButton";
 import ActionForm from "@/components/ui/ActionForm";
@@ -65,6 +66,9 @@ export default async function CoachDashboard({ searchParams }) {
   const hours = [];
   for (let h = gym.open_hour; h < gym.close_hour; h += 0.5) hours.push(h);
   const mode = profile.coach_billing_mode;
+  // Coaches only book PT — show it as a fixed label, not a dropdown.
+  const ptServices = (services || []).filter((s) => s.type === "pt");
+  const ptService = ptServices[0] || (services || [])[0];
 
   // ---- Interactive 14-day planner data (gym-wide taken slots + my own sessions) ----
   const keyOf = (iso) => {
@@ -107,15 +111,14 @@ export default async function CoachDashboard({ searchParams }) {
           <h2 className="text-xl font-black text-brand">Sessie boeken met een client</h2>
           <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-black text-accentdark">Hoofdactie</span>
         </div>
-        <p className="mt-1 text-sm text-brand/60">Kies je client, sessie en moment. Elke boeking gebruikt 1 sessietegoed (€ 12 / sessie).</p>
+        <p className="mt-1 text-sm text-brand/60">Kies je client en moment. Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen. De prijs die je je client(en) aanrekent, reken je apart af.</p>
         <form action={coachBookSession} className="mt-4 flex flex-wrap items-end gap-3">
           <Lbl t="Client">
             <SearchSelect name="clientId" required placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
           <Lbl t="Sessie">
-            <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-              {(services || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+            <div className="rounded-lg border-2 border-borderc bg-paper px-3 py-2 text-sm font-semibold text-brand">{ptService?.name || "Personal training"}</div>
+            <input type="hidden" name="serviceId" value={ptService?.id || ""} />
           </Lbl>
           <Lbl t="Datum"><input name="date" type="date" required defaultValue={todayStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <Lbl t="Uur">
@@ -124,7 +127,8 @@ export default async function CoachDashboard({ searchParams }) {
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
         </form>
-        {(!members || members.length === 0) && <p className="mt-3 text-xs text-brand/40">Nog geen clienten/leden in de gym.</p>}
+        <AddClientInline />
+        <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). De clienten reken je apart af, bv. via een betaalverzoek bij Mijn clienten.</p>
       </section>
 
       {/* Billing summary */}
@@ -271,7 +275,7 @@ export default async function CoachDashboard({ searchParams }) {
             <Link href={`/coach?w=${planW + 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">→</Link>
           </div>
         </div>
-        <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={services || []} />
+        <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={ptServices} />
       </div>
 
       {/* Upcoming sessions */}
