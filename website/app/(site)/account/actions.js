@@ -11,6 +11,22 @@ import { getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 // Toggle whether the member appears on the monthly leaderboard (profile setting).
+// A member/client saves billing details so they can download an invoice on their company name (B2B).
+// bill_* are protected columns → service role after the identity check, scoped to the own row.
+export async function saveBillingDetails(formData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const { error } = await createAdminClient().from("profiles").update({
+    bill_company: formData.get("bill_company") || null,
+    bill_vat: formData.get("bill_vat") || null,
+    bill_address: formData.get("bill_address") || null,
+  }).eq("id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/account/betalingen");
+  return { ok: true, message: "Facturatiegegevens opgeslagen ✓" };
+}
+
 export async function setLeaderboardOptIn(formData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
