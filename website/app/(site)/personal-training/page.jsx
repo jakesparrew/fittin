@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 import { coachSlug } from "@/lib/slug";
 
@@ -263,8 +264,7 @@ export default async function PersonalTraining() {
               {coaches.map((coach) => (
                 <Link key={coach.id} href={`/coaches/${coachSlug(coach)}`} className="flex flex-col rounded-2xl border border-borderc bg-white p-7 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
                   {coach.coach_photo_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={coach.coach_photo_url} alt={coach.full_name || "Coach"} className="h-16 w-16 rounded-full object-cover" />
+                    <Image src={coach.coach_photo_url} alt={coach.full_name || "Coach"} width={64} height={64} sizes="64px" className="h-16 w-16 rounded-full object-cover" />
                   ) : (
                     <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-lg font-black text-accent">
                       {(coach.full_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}

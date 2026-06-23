@@ -105,7 +105,7 @@ function PostCard({ post, me }) {
           {post.body && <p className={"mt-1 text-sm " + (post.kind === "activity" || post.kind === "achievement" ? "font-semibold text-brand/80" : "text-brand/80")}>{post.body}</p>}
           {post.image_url && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={post.image_url} alt="" className="mt-3 max-h-96 w-full rounded-xl object-cover" />
+            <img src={post.image_url} alt="" loading="lazy" decoding="async" className="mt-3 max-h-96 w-full rounded-xl object-cover" />
           )}
 
           {/* Kudos */}
@@ -127,7 +127,7 @@ function Avatar({ name, url, small }) {
   const sz = small ? "h-7 w-7 text-[10px]" : "h-10 w-10 text-sm";
   if (url) {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src={url} alt={name || ""} className={`${sz} shrink-0 rounded-full object-cover`} />;
+    return <img src={url} alt={name || ""} loading="lazy" decoding="async" className={`${sz} shrink-0 rounded-full object-cover`} />;
   }
   return <span className={`${sz} flex shrink-0 items-center justify-center rounded-full bg-brand font-black text-accent`}>{initials(name)}</span>;
 }

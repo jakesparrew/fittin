@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coachSlug } from "@/lib/slug";
@@ -32,10 +33,9 @@ export default async function CoachesPage() {
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {(coaches || []).map((c) => (
             <Link key={c.id} href={`/coaches/${coachSlug(c)}`} className="group overflow-hidden rounded-3xl border border-borderc bg-white transition hover:-translate-y-1 hover:shadow-lg hover:shadow-brand/5">
-              <div className="aspect-[4/3] bg-paper">
+              <div className="relative aspect-[4/3] bg-paper">
                 {c.coach_photo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={c.coach_photo_url} alt={c.full_name || "Coach"} className="h-full w-full object-cover" />
+                  <Image src={c.coach_photo_url} alt={c.full_name || "Coach"} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
                 ) : (
                   <div className="flex h-full items-center justify-center text-5xl font-black text-brand/15">{(c.full_name || "C").slice(0, 1)}</div>
                 )}

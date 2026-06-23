@@ -44,7 +44,7 @@ export default function EventsBooking({ events = [], isLoggedIn }) {
               <div className="border-t border-borderc p-6">
                 {ev.image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={ev.image_url} alt={ev.title} className="mb-4 max-h-72 w-full rounded-2xl object-cover" />
+                  <img src={ev.image_url} alt={ev.title} loading="lazy" decoding="async" className="mb-4 max-h-72 w-full rounded-2xl object-cover" />
                 )}
                 {ev.description && <p className="leading-relaxed text-brand/70">{ev.description}</p>}
                 {Array.isArray(ev.faq) && ev.faq.length > 0 && (

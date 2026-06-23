@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
 import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic, adminSaveCoachProfile, adminUploadCoachPhoto, startViewAsCoach } from "../actions";
@@ -143,7 +144,7 @@ export default async function Coaches() {
                 <div className="mt-4 flex flex-wrap items-start gap-5">
                   <div className="text-center">
                     {c.coach_photo_url
-                      ? <img src={c.coach_photo_url} alt="" className="h-24 w-24 rounded-2xl object-cover" />
+                      ? <Image src={c.coach_photo_url} alt="" width={96} height={96} sizes="96px" className="h-24 w-24 rounded-2xl object-cover" />
                       : <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-borderc text-2xl font-black text-brand/40">{(c.full_name || "?").slice(0, 1)}</div>}
                     <ActionForm action={adminUploadCoachPhoto} success="Foto geüpload ✓" className="mt-2">
                       <input type="hidden" name="coachId" value={c.id} />
