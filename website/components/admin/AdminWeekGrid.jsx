@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { slotInstant, fmtHour } from "@/lib/time";
 import { adminCreateBooking, adminBlockSlot, adminBlockRange, adminCancelBooking, adminUnblock, adminRescheduleBooking, adminDayAvailability } from "@/app/beheer/actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import BookingDetail from "@/components/BookingDetail";
 
 const toast = (type, msg) => { try { window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type, msg } })); } catch {} };
 const pad = (n) => String(n).padStart(2, "0");
@@ -99,7 +100,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                         title="Versleep naar een vrij uur om te verplaatsen"
                         className={"flex h-full cursor-move flex-col justify-center rounded-lg px-1.5 py-1 leading-tight transition hover:ring-2 hover:ring-accent " + (reserved ? "bg-brand/10" : "bg-accent/20") + (dragBk?.id === bk.id ? " opacity-40" : "")}
                       >
-                        <span className="truncate font-bold text-brand">{reserved ? "Gereserveerd" : (bk.name || "Lid")}</span>
+                        <BookingDetail bookingId={bk.id} className="block truncate font-bold text-brand">{reserved ? "Gereserveerd" : (bk.name || "Lid")}</BookingDetail>
                         <span className="truncate text-[10px] text-brand/50">{bk.serviceName} · {bk.persons}p</span>
                         <div className="flex items-center gap-2 leading-none">
                           <button type="button" onClick={() => setMoveModal({ bk, date: d.dateStr })} className="text-[10px] font-bold text-accentdark hover:underline">verplaats</button>

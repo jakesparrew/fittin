@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import CoachSessionActions from "@/components/coach/CoachSessionActions";
+import BookingDetail from "@/components/BookingDetail";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -61,7 +62,7 @@ export default async function Agenda() {
                     <div className="flex items-center gap-3">
                       <span className="rounded-md bg-accent px-2 py-0.5 text-sm font-black text-brand">{fmtTime(b.starts_at)}</span>
                       <div>
-                        <p className="font-bold text-brand">{reserved ? <span className="text-accentdark">Gereserveerd <span className="font-normal text-brand/40">· nog geen client</span></span> : (b.member?.full_name || "Client")}</p>
+                        <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
                         <p className="text-xs text-brand/50">{b.services?.name} · {b.persons}p</p>
                       </div>
                     </div>

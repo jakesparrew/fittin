@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { adminCancelBooking, adminAssignCoach } from "@/app/beheer/actions";
 import ActionForm from "@/components/ui/ActionForm";
+import BookingDetail from "@/components/BookingDetail";
 
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -67,7 +68,7 @@ export default function BookingsList({ bookings = [], coaches = [] }) {
                 <tr key={b.id} className={b.status !== "bevestigd" ? "opacity-50" : ""}>
                   <td className="whitespace-nowrap px-4 py-3 capitalize text-brand/70">{fmt(b.starts_at)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-brand/50">{b.created_at ? <>{fmt(b.created_at)}<span className="block text-brand/35">{ago(b.created_at)}</span></> : "—"}</td>
-                  <td className="px-4 py-3 font-semibold text-brand">{b.member_name || "—"}</td>
+                  <td className="px-4 py-3 font-semibold text-brand"><BookingDetail bookingId={b.id} className="font-semibold text-brand">{b.member_name || "—"}</BookingDetail></td>
                   <td className="px-4 py-3 text-brand/70">{b.service_name || "Sessie"}</td>
                   <td className="px-4 py-3"><span className="rounded-full bg-paper px-2 py-0.5 text-xs font-semibold text-brand/60">{bron(b)}</span></td>
                   <td className="px-4 py-3">

@@ -6,6 +6,7 @@ import CoachScheduler from "@/components/coach/CoachScheduler";
 import AddClientInline from "@/components/coach/AddClientInline";
 import CoachSlotPicker from "@/components/coach/CoachSlotPicker";
 import CoachSessionActions from "@/components/coach/CoachSessionActions";
+import BookingDetail from "@/components/BookingDetail";
 import { fmtHour } from "@/lib/time";
 import SubmitButton from "@/components/ui/SubmitButton";
 import ActionForm from "@/components/ui/ActionForm";
@@ -303,7 +304,7 @@ export default async function CoachDashboard({ searchParams }) {
               return (
               <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
                 <div>
-                  <p className="font-bold text-brand">{reserved ? <span className="text-accentdark">Gereserveerd <span className="font-normal text-brand/40">· nog geen client</span></span> : (b.member?.full_name || "Client")}</p>
+                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
                   <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}</p>
                 </div>
                 <div className="flex items-center gap-3">
