@@ -114,10 +114,13 @@ export async function coachAssignClient(formData) {
   if (!bookingId || !clientId) return { error: "Kies een client." };
   const { data: bk } = await supabase.from("bookings").select("id, user_id, starts_at, ends_at, services(name)").eq("id", bookingId).eq("coach_id", userId).maybeSingle();
   if (!bk) return { error: "Sessie niet gevonden." };
+  // Only a still-reserved slot (no client yet → user_id === coach) may be assigned. Refuse to
+  // overwrite a booking that already carries a real member/client, so we never orphan their payment.
+  if (bk.user_id !== userId) return { error: "Deze sessie heeft al een client gekoppeld." };
   const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).eq("status", "accepted").maybeSingle();
   if (!link) return { error: "Dit is niet jouw (verbonden) client." };
   const admin = createAdminClient();
-  const { error: e } = await admin.from("bookings").update({ user_id: clientId }).eq("id", bookingId).eq("coach_id", userId);
+  const { error: e } = await admin.from("bookings").update({ user_id: clientId }).eq("id", bookingId).eq("coach_id", userId).eq("user_id", userId);
   if (e) return { error: e.message };
   try {
     const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", clientId).single();
