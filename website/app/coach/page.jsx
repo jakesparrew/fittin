@@ -30,7 +30,9 @@ export default async function CoachDashboard({ searchParams }) {
   // ?w paginates the planner two weeks at a time so coaches can plan further ahead.
   const planW = Math.max(0, parseInt(sp.w || "0", 10) || 0);
   const schedFrom = new Date(); schedFrom.setHours(0, 0, 0, 0);
-  schedFrom.setDate(schedFrom.getDate() + planW * 14);
+  // Anchor to Monday of the current week so the planner runs maandag→zondag (not "from today").
+  const dow = (schedFrom.getDay() + 6) % 7; // 0 = maandag … 6 = zondag
+  schedFrom.setDate(schedFrom.getDate() - dow + planW * 14);
   const schedTo = new Date(schedFrom.getTime() + 14 * 86400000);
 
   // One parallel batch instead of several serial round-trips.
