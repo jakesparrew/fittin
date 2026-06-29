@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingConfirmation, sendEventSignup } from "@/lib/email";
+import { sendBookingInvites } from "@/lib/booking-invites";
 import { recordRedemption } from "@/lib/discounts";
 
 export const runtime = "nodejs";
@@ -106,6 +107,7 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
     .update({ paid: true, status: "bevestigd", stripe_payment_intent: paymentIntent })
     .eq("id", bookingId)
     .eq("status", "bevestigd")
+    .eq("paid", false) // only the FIRST unpaid→paid transition returns a row → confirm + invites run once
     .select("id, gym_id, starts_at, ends_at, persons, user_id, services(name)")
     .single();
   if (!booking) return;
@@ -151,6 +153,15 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
     });
   } catch (e) {
     console.error("booking confirmation mail failed (payment already recorded):", e?.message);
+  }
+  // Payment confirmed → now (and only now) e-mail anyone the booker invited along. Deferred from
+  // booking creation so an abandoned/unpaid checkout never sends invites. Idempotent via the
+  // unpaid→paid guard above (this runs once per booking).
+  try {
+    const { data: inviter } = await admin.from("profiles").select("full_name").eq("id", booking.user_id).single();
+    await sendBookingInvites(admin, booking, inviter?.full_name);
+  } catch (e) {
+    console.error("post-payment booking invites failed:", e?.message);
   }
 }
 

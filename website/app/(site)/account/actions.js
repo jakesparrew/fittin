@@ -128,13 +128,20 @@ export async function inviteBuddiesToBooking(bookingId, userIds) {
   try {
     const admin = createAdminClient();
     const [{ data: booking }, { data: people }, { data: me }] = await Promise.all([
-      admin.from("bookings").select("starts_at, ends_at, services(name)").eq("id", bookingId).single(),
+      admin.from("bookings").select("starts_at, ends_at, paid, price_cents, services(name)").eq("id", bookingId).single(),
       admin.from("profiles").select("email, full_name").in("id", ids),
       admin.from("profiles").select("full_name").eq("id", user.id).single(),
     ]);
     const fromName = me?.full_name || user.user_metadata?.full_name || "Een Fittin'-lid";
-    for (const p of people || []) {
-      if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
+    // Only e-mail the invitee once the booking is CONFIRMED (paid or free). For an unpaid booking
+    // (pending Stripe) the participant is already added above — the invite e-mail is sent by the
+    // payment webhook (sendBookingInvites), so an abandoned checkout never e-mails them, and a buddy
+    // added before payment isn't e-mailed twice.
+    const confirmed = !!booking && (booking.paid || booking.price_cents === 0);
+    if (confirmed) {
+      for (const p of people || []) {
+        if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
+      }
     }
     if (user.email) await sendInviteSent({ to: user.email, name: me?.full_name, buddyNames: (people || []).map((p) => p.full_name).filter(Boolean).join(", "), serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
     const { data: meRow } = await admin.from("profiles").select("gym_id").eq("id", user.id).single();

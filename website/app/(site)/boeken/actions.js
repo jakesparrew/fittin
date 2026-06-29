@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
-import { sendBookingConfirmation, sendSessionInvite, sendEmailInvite } from "@/lib/email";
+import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingInvites } from "@/lib/booking-invites";
 import { validateDiscount, recordRedemption } from "@/lib/discounts";
 
 // Search gym members to invite to a session (name + id only — no contact details exposed).
@@ -81,22 +82,17 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, gym_id, starts_at, ends_at, persons, price_cents, paid, payment_source, services(name)")
+    .select("id, gym_id, user_id, starts_at, ends_at, persons, price_cents, paid, payment_source, services(name)")
     .eq("id", bookingId)
     .single();
 
-  // Invite members along (capped at the booking's person count). Their attendance counts for them.
+  // Persist the invitees now, but DON'T e-mail them yet. Invites are sent only once the booking is
+  // CONFIRMED — immediately below for free/credit bookings, or from the Stripe webhook after a paid
+  // booking's payment succeeds. This way an abandoned (unpaid) checkout never e-mails the invitees.
+  // Members invited along (capped at the booking's person count). Their attendance counts for them.
   const invitees = (Array.isArray(participantIds) && participantIds.length ? participantIds : buddyIds) || [];
   if (invitees.length && booking) {
     await supabase.rpc("add_booking_participants", { p_booking: booking.id, p_users: invitees });
-    try {
-      const admin = createAdminClient();
-      const { data: people } = await admin.from("profiles").select("email, full_name").in("id", invitees);
-      const fromName = user.user_metadata?.full_name || "Een Fittin'-lid";
-      for (const p of people || []) {
-        if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at });
-      }
-    } catch {}
   }
 
   // Invite NON-members by e-mail. Anti-abuse: capped at the booking's free spots, e-mail-validated,
@@ -106,7 +102,6 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
   if (emails.length && booking && freeSpots > 0) {
     try {
       const admin = createAdminClient();
-      const fromName = user.user_metadata?.full_name || "Een Fittin'-lid";
       const clean = [...new Set(emails.map((e) => String(e || "").trim().toLowerCase()))]
         .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && e !== (user.email || "").toLowerCase())
         .slice(0, freeSpots);
@@ -117,10 +112,10 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
         if (budget <= 0) break;
         const { data: member } = await admin.from("profiles").select("id").eq("email", email).eq("gym_id", booking.gym_id).maybeSingle();
         if (member) {
+          // Existing member → add as a participant; they're invited via sendBookingInvites on confirm.
           await supabase.rpc("add_booking_participants", { p_booking: booking.id, p_users: [member.id] });
-          await sendSessionInvite({ to: email, fromName, serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at });
         } else {
-          await sendEmailInvite({ to: email, fromName, serviceName: booking.services?.name || "Sessie", startsAt: booking.starts_at, endsAt: booking.ends_at, signupUrl: `${siteUrl()}/login?mode=signup&next=/boeken` });
+          // Non-member → record the pending invite; the e-mail is sent on confirm.
           await admin.from("email_invites").insert({ gym_id: booking.gym_id, inviter_id: user.id, email, booking_id: booking.id });
           budget--;
         }
@@ -137,8 +132,9 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
   revalidatePath("/account");
   revalidatePath("/boeken");
 
-  // Free (FittinWelcome) or zero-price → done.
+  // Free (FittinWelcome) or zero-price → confirmed now, so the invitees can be e-mailed.
   if (!booking || booking.paid || booking.price_cents === 0) {
+    if (booking) { try { await sendBookingInvites(createAdminClient(), booking, user.user_metadata?.full_name); } catch {} }
     await sendBookingConfirmation({
       to: user.email,
       name: user.user_metadata?.full_name,
@@ -178,6 +174,7 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
         free: true,
       });
     } catch {}
+    try { await sendBookingInvites(admin, booking, user.user_metadata?.full_name); } catch {}
     revalidatePath("/account");
     revalidatePath("/boeken");
     return { ok: true, free: true };
