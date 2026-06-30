@@ -29,6 +29,11 @@ export async function importReceived(gymId, resendId) {
   const to = (full.to || []).find(isFittin);
   if (!to) return false; // not for us (shared Resend account)
   const fromP = parseName(full.from);
+  // Loop guard: never ingest our OWN outbound. The newsletter (nieuwsbrief@news.fittin.be), drips
+  // and transactional mail (mail.fittin.be) reach the @fittin.be catch-all whenever they're sent to
+  // an @fittin.be recipient (e.g. gaetan@fittin.be is on the list) — they are not customer mail and
+  // would otherwise flood the superadmin inbox. Any @fittin.be sender is us, so drop it.
+  if (isFittin(fromP.email)) return false;
   const { error } = await admin.from("inbound_emails").insert({
     gym_id: gymId,
     resend_id: resendId,
