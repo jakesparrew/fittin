@@ -78,7 +78,7 @@ export default async function AccountPage({ searchParams }) {
   ] = await Promise.all([
     supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
     supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
-    supabase.rpc("credits_balance", { p_user: user.id }),
+    supabase.rpc("credits_balance_detail", { p_user: user.id }),
     supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
     admin.from("coach_clients").select("id, status, requested_by, coach:profiles!coach_clients_coach_id_fkey(id, full_name, email)").eq("client_id", user.id),
@@ -95,7 +95,9 @@ export default async function AccountPage({ searchParams }) {
   const gymOpen = gym?.open_hour ?? 6;
   const gymClose = gym?.close_hour ?? 23;
 
-  const credits = ledger || 0;
+  // credits_balance_detail returns one row: { balance, next_expiry, expiring }.
+  const creditDetail = (Array.isArray(ledger) ? ledger[0] : ledger) || {};
+  const credits = creditDetail.balance ?? 0;
   const invitedSessions = (invitedRows || [])
     .map((r) => r.booking)
     // Only surface an invited session once the booker actually paid (or it's a free/credit session).
@@ -243,7 +245,13 @@ export default async function AccountPage({ searchParams }) {
         {/* Stat row */}
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Aankomende sessies" value={upcomingPaid.length} />
-          <Stat label="Sessies (saldo)" value={credits} />
+          <Stat
+            label="Sessies (saldo)"
+            value={credits}
+            hint={creditDetail.next_expiry && creditDetail.expiring > 0
+              ? `${creditDetail.expiring === credits ? "Vervalt" : `${creditDetail.expiring} vervalt`} op ${new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", year: "numeric" }).format(new Date(creditDetail.next_expiry))}`
+              : null}
+          />
           <Stat label="Totaal geboekt" value={bookedCount} />
           {!profile?.welcome_code_used && profile?.welcome_status !== "used" && (
             <Stat label="Welkomstsessie" value="Beschikbaar" accent />
@@ -551,11 +559,12 @@ export default async function AccountPage({ searchParams }) {
   );
 }
 
-function Stat({ label, value, accent }) {
+function Stat({ label, value, accent, hint }) {
   return (
     <div className="rounded-2xl border border-borderc bg-white p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
       <p className={"mt-2 text-2xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+      {hint && <p className="mt-1 text-xs font-semibold text-amber-600">{hint}</p>}
     </div>
   );
 }

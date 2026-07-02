@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { adminCancelBooking, adminAssignCoach } from "@/app/beheer/actions";
+import { adminCancelBooking, adminAssignCoach, adminMarkBookingPaid } from "@/app/beheer/actions";
 import ActionForm from "@/components/ui/ActionForm";
 import BookingDetail from "@/components/BookingDetail";
 import { isSettled, sourceLabel } from "@/lib/booking-status";
@@ -83,7 +83,19 @@ export default function BookingsList({ bookings = [], coaches = [] }) {
                     )}
                   </td>
                   <td className="px-4 py-3">{b.persons}</td>
-                  <td className="px-4 py-3">{paid ? <span className="font-bold text-accentdark">✓</span> : <span className="font-bold text-red-500">onbetaald</span>}</td>
+                  <td className="px-4 py-3">
+                    {paid ? <span className="font-bold text-accentdark">✓</span> : (
+                      <span className="flex items-center gap-2">
+                        <span className="font-bold text-red-500">onbetaald</span>
+                        {b.status === "bevestigd" && (
+                          <ActionForm action={adminMarkBookingPaid} success="Gemarkeerd als betaald ✓" onSubmit={(e) => { if (!confirm("Markeer als betaald (cash/overschrijving aan de balie)?")) e.preventDefault(); }}>
+                            <input type="hidden" name="bookingId" value={b.id} />
+                            <button className="rounded-full border border-borderc px-2 py-0.5 text-[10px] font-bold text-brand/70 hover:border-accent hover:text-brand" title="Cash of overschrijving ontvangen aan de balie">✓ betaald (cash)</button>
+                          </ActionForm>
+                        )}
+                      </span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-xs font-semibold capitalize text-brand/60">{b.status}</td>
                   <td className="px-4 py-3 text-right">
                     {upcoming && b.status === "bevestigd" && (

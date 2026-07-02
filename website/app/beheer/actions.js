@@ -8,6 +8,7 @@ import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsA
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { notify } from "@/lib/notify";
+import { notifyInviteesOfChange } from "@/lib/booking-invites";
 import { testNuki, getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
@@ -185,11 +186,36 @@ export async function adminCancelBooking(formData) {
     const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", bk.user_id).single();
     if (m?.email) await sendBookingCancelled({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at });
     await notify({ gymId: bk.gym_id, userId: bk.user_id, type: "system", title: "Je sessie is geannuleerd", body: (bk.services?.name || "Sessie") + (refunded ? " — het bedrag is terugbetaald." : ""), link: "/account" });
+    await notifyInviteesOfChange(admin, bk, "cancelled"); // invited guests were told a concrete time
   } catch (e) { console.error("admin cancel notify failed:", e?.message); }
 
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
   return { ok: true, message: refunded ? "Geannuleerd + terugbetaald ✓" : "Sessie geannuleerd ✓" };
+}
+
+// Desk payment (cash/overschrijving): settle an unpaid booking without Stripe. Also writes a
+// payments row (without stripe_id) so the revenue overview stays truthful.
+export async function adminMarkBookingPaid(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const { data: bk } = await admin
+    .from("bookings")
+    .update({ paid: true })
+    .eq("id", formData.get("bookingId"))
+    .eq("gym_id", profile.gym_id)
+    .eq("paid", false)
+    .eq("status", "bevestigd")
+    .select("id, gym_id, user_id, price_cents, charge_cents, services(name)")
+    .maybeSingle();
+  if (!bk) return { error: "Boeking niet gevonden of al betaald." };
+  try {
+    const amount = bk.charge_cents ?? bk.price_cents;
+    if (amount > 0) await admin.from("payments").insert({ gym_id: bk.gym_id, user_id: bk.user_id, amount_cents: amount, kind: "booking", description: `Boeking · ${bk.services?.name || "Sessie"} (cash/overschrijving)` });
+  } catch (e) { console.error("mark-paid payment row:", e?.message); }
+  revalidatePath("/beheer/boekingen");
+  return { ok: true, message: "Gemarkeerd als betaald ✓" };
 }
 
 export async function adminCreateBooking(formData) {
@@ -422,6 +448,7 @@ export async function adminRescheduleBooking(formData) {
       if (b.coach_id && b.coach_id !== b.user_id) {
         await notify({ gymId: b.gym_id, userId: b.coach_id, type: "coach_booked", title: "Een sessie is verplaatst", body: b.services?.name || "Sessie", link: "/coach/agenda" });
       }
+      await notifyInviteesOfChange(admin, { id: bookingId, ...b }, "rescheduled"); // guests got the OLD time
     }
   } catch {}
   revalidatePath("/beheer/boekingen");

@@ -99,11 +99,16 @@ export async function rescheduleBookingAction(formData) {
   const { error } = await supabase.rpc("reschedule_booking", { p_booking: id, p_date: date, p_hour: hour });
   if (error) return { error: error.message };
 
-  // Confirm the new time by e-mail (best-effort).
+  // Confirm the new time by e-mail (best-effort) — and tell invited buddies/guests, who were
+  // told the OLD time.
   try {
     const { data: me } = await supabase.from("profiles").select("email, full_name").eq("id", user.id).single();
     const { data: b } = await supabase.from("bookings").select("starts_at, ends_at, services(name)").eq("id", id).single();
     if (me?.email && b) await sendBookingRescheduled({ to: me.email, name: me.full_name, serviceName: b.services?.name || "Sessie", startsAt: b.starts_at, endsAt: b.ends_at });
+    if (b) {
+      const { notifyInviteesOfChange } = await import("@/lib/booking-invites");
+      await notifyInviteesOfChange(createAdminClient(), { id, user_id: user.id, ...b }, "rescheduled");
+    }
   } catch {}
 
   revalidatePath("/account");

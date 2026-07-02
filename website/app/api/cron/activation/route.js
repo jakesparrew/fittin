@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { runAllActivations } from "@/lib/activation";
-import { sendDueReminders } from "@/lib/reminders";
+import { sendDueReminders, sendCreditExpiryWarnings } from "@/lib/reminders";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -25,6 +25,7 @@ export async function GET(req) {
   try { await createAdminClient().rpc("award_challenges"); } catch (e) { console.error("cron award_challenges failed:", e?.message); }
   let reminders = 0;
   try { reminders = await sendDueReminders(); } catch (e) { console.error("cron reminders failed:", e?.message); }
+  try { await sendCreditExpiryWarnings(); } catch (e) { console.error("cron credit-expiry warnings failed:", e?.message); }
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.

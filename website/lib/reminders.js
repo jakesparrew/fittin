@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendSessionReminder, sendAccessCode } from "@/lib/email";
+import { sendSessionReminder, sendAccessCode, sendCreditsExpiring } from "@/lib/email";
 import { getNukiConfig, ensureBookingKeypadCode } from "@/lib/nuki";
 import { notify } from "@/lib/notify";
 
@@ -40,6 +40,39 @@ export async function sendDueReminders() {
     if (ok) await admin.from("bookings").update({ reminder_sent: true }).eq("id", b.id);
   }
   return sent;
+}
+
+// Warn members whose remaining PAID credits expire within 14 days (run daily by cron). Paid
+// sessions previously evaporated with zero warning anywhere. Dedup: at most one warning per member
+// per 14 days, via the in-app notification trail.
+export async function sendCreditExpiryWarnings() {
+  const admin = createAdminClient();
+  const { data: users } = await admin.from("credits_ledger").select("user_id, gym_id");
+  const seen = new Map();
+  for (const r of users || []) if (!seen.has(r.user_id)) seen.set(r.user_id, r.gym_id);
+
+  const horizon = Date.now() + 14 * 86400000;
+  const dedupSince = new Date(Date.now() - 14 * 86400000).toISOString();
+  let warned = 0;
+  for (const [userId, gymId] of seen) {
+    try {
+      const { data: rows } = await admin.rpc("credits_balance_detail", { p_user: userId });
+      const d = Array.isArray(rows) ? rows[0] : rows;
+      if (!d?.next_expiry || !(d.expiring > 0)) continue;
+      const exp = new Date(d.next_expiry).getTime();
+      if (exp > horizon || exp < Date.now()) continue;
+      // Already warned in this window? (notification trail doubles as the dedup marker)
+      const { count } = await admin.from("notifications").select("id", { count: "exact", head: true })
+        .eq("user_id", userId).eq("type", "credits").ilike("title", "%vervalt binnenkort%").gte("created_at", dedupSince);
+      if (count) continue;
+      const dateStr = new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "long" }).format(new Date(d.next_expiry));
+      await notify({ gymId, userId, type: "credits", title: `${d.expiring === 1 ? "1 sessie" : `${d.expiring} sessies`} vervalt binnenkort`, body: `Geldig tot ${dateStr} — boek ze in!`, link: "/boeken" });
+      const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", userId).single();
+      if (m?.email) await sendCreditsExpiring({ to: m.email, name: m.full_name, count: d.expiring, date: dateStr });
+      warned++;
+    } catch (e) { console.error("credit expiry warning failed:", userId, e?.message); }
+  }
+  return warned;
 }
 
 // Access codes: ~5 minutes before a confirmed session starts, e-mail the entry code + directions.

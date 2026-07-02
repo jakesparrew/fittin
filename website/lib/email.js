@@ -212,6 +212,20 @@ export async function sendPurchaseReceipt({ to, name, description, amountCents, 
   );
 }
 
+// ---- Member: paid credits about to expire ----
+export async function sendCreditsExpiring({ to, name, count, date }) {
+  return send(
+    to,
+    `Je ${count === 1 ? "sessie vervalt" : "sessies vervallen"} binnenkort ⏳`,
+    shell({
+      title: "Niet vergeten te trainen 💪",
+      intro: `Hallo ${esc(name) || "daar"}, ${count === 1 ? "1 sessie van je saldo vervalt" : `${count} sessies van je saldo vervallen`} op ${esc(date)}. Boek ze in en laat niets verloren gaan!`,
+      cta: { href: `${SITE}/boeken`, label: "Sessie boeken" },
+    }),
+    FROM_BOOKING
+  );
+}
+
 // ---- PT prospect: intake request confirmation ----
 export async function sendIntakeConfirmation({ to, name }) {
   return send(

@@ -10,6 +10,7 @@ import { sendCoachBooked, sendBookingCancelled, sendBookingRescheduled, sendPaym
 import { notify, notifyAdmins } from "@/lib/notify";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { logCoachActivity } from "@/lib/coachlog";
+import { notifyInviteesOfChange } from "@/lib/booking-invites";
 import { viewAsActive } from "@/lib/coach";
 
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
@@ -198,6 +199,7 @@ export async function cancelCoachBooking(formData) {
     const { data: client } = await supabase.from("profiles").select("email, full_name, gym_id").eq("id", cancelled.user_id).single();
     if (client?.email) await sendBookingCancelled({ to: client.email, name: client.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
     if (client) await notify({ gymId: client.gym_id, userId: cancelled.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft een sessie geannuleerd", body: cancelled.services?.name || "Sessie", link: "/account" });
+    await notifyInviteesOfChange(createAdminClient(), { id: formData.get("bookingId"), user_id: cancelled.user_id, starts_at: cancelled.starts_at, services: cancelled.services }, "cancelled");
   } catch {}
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
@@ -219,6 +221,7 @@ export async function coachRescheduleBooking(formData) {
       const { data: client } = await supabase.from("profiles").select("email, full_name").eq("id", b.user_id).single();
       if (client?.email) await sendBookingRescheduled({ to: client.email, name: client.full_name, serviceName: b.services?.name || "Sessie", startsAt: b.starts_at, endsAt: b.ends_at });
       await notify({ gymId: b.gym_id, userId: b.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft je sessie verplaatst", body: b.services?.name || "Sessie", link: "/account" });
+      await notifyInviteesOfChange(createAdminClient(), { id: bookingId, ...b }, "rescheduled");
     }
   } catch {}
   revalidatePath("/coach");
