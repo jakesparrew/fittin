@@ -46,9 +46,16 @@ export default async function CoachClienten() {
     ]);
     bookings = bRes.data || []; creditRows = cRes.data || [];
     // Laatste login per verbonden client (Supabase Auth) → onderdeel van "laatst actief".
-    await Promise.all(ids.map(async (id) => {
-      try { const { data } = await admin.auth.admin.getUserById(id); if (data?.user?.last_sign_in_at) lastLogin[id] = data.user.last_sign_in_at; } catch {}
-    }));
+    // Eén gepagineerde listUsers i.p.v. een Auth-API-call per client (N+1 + rate-limit-risico).
+    try {
+      const idSet = new Set(ids);
+      for (let page = 1; page <= 10; page++) {
+        const { data: au } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+        const us = au?.users || [];
+        for (const u of us) if (idSet.has(u.id) && u.last_sign_in_at) lastLogin[u.id] = u.last_sign_in_at;
+        if (us.length < 1000) break;
+      }
+    } catch (e) { console.error("clienten lastLogin lookup failed:", e?.message); }
   }
   const creditByClient = {};
   for (const r of creditRows) creditByClient[r.client_id] = (creditByClient[r.client_id] || 0) + r.delta;

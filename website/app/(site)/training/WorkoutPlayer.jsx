@@ -48,8 +48,10 @@ export default function WorkoutPlayer({ days }) {
     fd.set("sets_json", JSON.stringify(entries[peId] || []));
     setBusyPe(peId);
     startTransition(async () => {
-      const res = await logExercise(fd);
-      setFeedback((f) => ({ ...f, [peId]: res?.error ? res.error : res?.pr ? "🏆 Nieuw PR!" : "Gelogd ✓" }));
+      // A failed save = lost training data; show it in red instead of an always-green span.
+      let res;
+      try { res = await logExercise(fd); } catch { res = { error: "Opslaan mislukt — probeer opnieuw." }; }
+      setFeedback((f) => ({ ...f, [peId]: res?.error ? { msg: res.error, err: true } : { msg: res?.pr ? "🏆 Nieuw PR!" : "Gelogd ✓" } }));
       setBusyPe(null);
     });
   };
@@ -57,7 +59,15 @@ export default function WorkoutPlayer({ days }) {
     const fd = new FormData();
     fd.set("peId", peId);
     setBusyPe(peId);
-    startTransition(async () => { await toggleExerciseDone(fd); setBusyPe(null); });
+    startTransition(async () => {
+      try {
+        const res = await toggleExerciseDone(fd);
+        if (res?.error) window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type: "error", msg: res.error } }));
+      } catch {
+        window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type: "error", msg: "Opslaan mislukt — probeer opnieuw." } }));
+      }
+      setBusyPe(null);
+    });
   };
 
   return (
@@ -124,7 +134,7 @@ export default function WorkoutPlayer({ days }) {
                         {pe.rest_sec ? <button onClick={() => setRest({ left: pe.rest_sec, total: pe.rest_sec })} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand">⏱ rust {pe.rest_sec}s</button> : null}
                         <button disabled={busyPe === pe.peId} onClick={() => doLog(pe.peId)} className="rounded-full bg-accent px-5 py-1.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">Log{rows.length > 1 ? " sets" : ""}</button>
                         <button disabled={busyPe === pe.peId} onClick={() => doToggle(pe.peId)} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-lav disabled:opacity-50">{pe.doneToday ? "Ongedaan" : "Klaar ✓"}</button>
-                        {feedback[pe.peId] && <span className="text-xs font-bold text-accentdark">{feedback[pe.peId]}</span>}
+                        {feedback[pe.peId] && <span className={`text-xs font-bold ${feedback[pe.peId].err ? "text-red-500" : "text-accentdark"}`}>{feedback[pe.peId].msg}</span>}
                       </div>
                     </div>
                   </div>

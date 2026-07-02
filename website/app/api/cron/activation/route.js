@@ -20,10 +20,11 @@ export async function GET(req) {
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return new NextResponse("unauthorized", { status: 401 });
   }
-  try { await createAdminClient().rpc("expire_unpaid_bookings", { p_gym: null }); } catch {}
-  try { await createAdminClient().rpc("award_challenges"); } catch {}
+  // These sweeps release blocked slots + send reminders — failures must be visible, not swallowed.
+  try { await createAdminClient().rpc("expire_unpaid_bookings", { p_gym: null }); } catch (e) { console.error("cron expire_unpaid_bookings failed:", e?.message); }
+  try { await createAdminClient().rpc("award_challenges"); } catch (e) { console.error("cron award_challenges failed:", e?.message); }
   let reminders = 0;
-  try { reminders = await sendDueReminders(); } catch {}
+  try { reminders = await sendDueReminders(); } catch (e) { console.error("cron reminders failed:", e?.message); }
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.

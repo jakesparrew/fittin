@@ -251,7 +251,9 @@ async function handleRefund(admin, charge) {
       if (cancelled?.[0]?.user_id) member = cancelled[0].user_id;
     }
     const refs = [];
-    if (pi) { try { const list = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 10 }); for (const s of list.data || []) refs.push(s.id); } catch {} }
+    // If this lookup fails the credit clawback below is skipped while the refund already happened —
+    // that MUST be visible in the logs (member keeps refunded credits otherwise).
+    if (pi) { try { const list = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 10 }); for (const s of list.data || []) refs.push(s.id); } catch (e) { console.error("refund clawback: session lookup failed, grants NOT reversed:", pi, e?.message); } }
     if (invoiceId) refs.push(invoiceId);
     for (const ref of refs) {
       await reverseLedger(admin, "credits_ledger", ref, charge.id);

@@ -16,11 +16,14 @@ export async function GET(req) {
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return new NextResponse("unauthorized", { status: 401 });
   }
+  // Door codes are time-critical — a silent failure here strands members at a locked door.
+  // Log every failure and return non-200 so Vercel's cron monitoring can alert on it.
+  const errors = [];
   let sent = 0, revoked = 0, swept = 0;
-  try { sent = await sendDueAccessCodes(); } catch {}
+  try { sent = await sendDueAccessCodes(); } catch (e) { errors.push(`access: ${e?.message}`); console.error("cron access codes failed:", e?.message); }
   // Clean up keypad codes for sessions that ended (+grace) or were cancelled, then sweep the lock for
   // any expired/orphan "Fittin …" codes as a backstop against accumulation.
-  try { revoked = await revokeExpiredKeypadCodes(createAdminClient()); } catch {}
-  try { swept = await reconcileKeypadCodes(createAdminClient()); } catch {}
-  return NextResponse.json({ sent, revoked, swept });
+  try { revoked = await revokeExpiredKeypadCodes(createAdminClient()); } catch (e) { errors.push(`revoke: ${e?.message}`); console.error("cron revoke failed:", e?.message); }
+  try { swept = await reconcileKeypadCodes(createAdminClient()); } catch (e) { errors.push(`sweep: ${e?.message}`); console.error("cron sweep failed:", e?.message); }
+  return NextResponse.json({ sent, revoked, swept, ...(errors.length ? { errors } : {}) }, { status: errors.length ? 500 : 200 });
 }
