@@ -91,7 +91,7 @@ export default async function AccountPage({ searchParams }) {
     supabase.from("body_metrics").select("weight_kg, logged_on").eq("user_id", user.id).order("logged_on", { ascending: true }).limit(120),
   ]);
 
-  const { data: gym } = await supabase.from("gyms").select("open_hour, close_hour").eq("id", profile.gym_id).maybeSingle();
+  const { data: gym } = await supabase.from("gyms").select("open_hour, close_hour, address").eq("id", profile.gym_id).maybeSingle();
   const gymOpen = gym?.open_hour ?? 6;
   const gymClose = gym?.close_hour ?? 23;
 
@@ -133,6 +133,12 @@ export default async function AccountPage({ searchParams }) {
   const upcomingPaid = upcoming.filter(isSettled);
   const nextSession = upcomingPaid[0]; // sorted ascending by starts_at
   const bookedCount = all.filter((b) => b.status === "bevestigd").length; // lifetime confirmed (scoreboard)
+  // Honest membership nudge (Batch 2.3): how many paid single ("los") sessions in the last 30 days?
+  const since30 = now - 30 * 86400000;
+  const losCount = (bookings || []).filter((b) => b.payment_source === "los" && b.paid && b.created_at && new Date(b.created_at).getTime() >= since30).length;
+  // First-visit state (Batch 2.6): has this member actually trained yet? Drives the "eerste bezoek" card.
+  const hasVisited = all.some((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() < now);
+  const gymAddress = gym?.address || "Aannemersstraat 186, 9040 Gent";
   // Pending payment: confirmed-but-unpaid 'los' bookings (20-min window from creation).
   const pendingPay = upcoming
     .filter((b) => !b.paid && (b.payment_source === "los" || b.payment_source === "abo") && b.price_cents > 0)
@@ -370,9 +376,17 @@ export default async function AccountPage({ searchParams }) {
         </div>
 
         {sp.betaald === "1" && (
-          <p className="mt-6 rounded-2xl bg-accent/15 p-4 text-sm font-semibold text-accentdark">
-            Betaling gelukt — je boeking is bevestigd. Je ontvangt een bevestiging per e-mail.
-          </p>
+          <div className="mt-6 rounded-2xl bg-accent/15 p-4">
+            <p className="text-sm font-semibold text-accentdark">
+              Betaling gelukt — je boeking is bevestigd. Je ontvangt een bevestiging per e-mail.
+            </p>
+            {!membership && losCount >= 2 && (
+              <p className="mt-2 text-sm text-brand/70">
+                Dit was je {losCount}e losse sessie deze maand (€{losCount * 15}). Met de beurtenkaart betaalde je ±€{((losCount * 1364) / 100).toFixed(2).replace(".", ",")}, met het abo €{losCount * 12}.{" "}
+                <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Bekijk de opties →</Link>
+              </p>
+            )}
+          </div>
         )}
         {(sp.abo === "1" || sp.credits === "1") && (
           <p className="mt-6 rounded-2xl bg-accent/15 p-4 text-sm font-semibold text-accentdark">
@@ -435,6 +449,47 @@ export default async function AccountPage({ searchParams }) {
             </div>
           )}
         </section>
+
+        {/* First-visit primer (Batch 2.6) — nervous first-timers find the door story only in email today */}
+        {!hasVisited && (
+          <section className="mt-8 overflow-hidden rounded-3xl border-2 border-accent/40 bg-accent/5">
+            <div className="p-6">
+              <p className="text-xs font-black uppercase tracking-widest text-accentdark">Jouw eerste bezoek</p>
+              <h2 className="mt-1 text-xl font-black text-brand">Zo raak je binnen 🔑</h2>
+              <ol className="mt-4 space-y-3">
+                {[
+                  ["Je code komt vanzelf", "± 5 minuten voor je sessie krijg je je persoonlijke toegangscode — per e-mail én hier in de app."],
+                  ["Toets in op het paneel", "Bij de voordeur staat een codepaneel. Toets je code in, of open de deur met de knop hierboven."],
+                  ["Werkt enkel tijdens je slot", "De toegang is alleen actief tijdens jouw gereserveerde uur. Sluit de deur goed achter je."],
+                ].map(([t, b], i) => (
+                  <li key={t} className="flex gap-3">
+                    <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-black text-brand">{i + 1}</span>
+                    <div>
+                      <p className="font-bold text-brand">{t}</p>
+                      <p className="text-sm text-brand/65">{b}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <div className="mt-5 flex flex-wrap gap-3">
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(gymAddress)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+                >
+                  📍 Navigeer naar de gym
+                </a>
+                <Link href="/huisregels" className="rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">
+                  Toegang &amp; huisregels
+                </Link>
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-brand/55">
+                De gym is onbemand. Bij nood bel je altijd eerst <b className="text-brand">112</b>. De EHBO-kit hangt bij de ingang. Adres: <b className="text-brand">{gymAddress}</b>.
+              </p>
+            </div>
+          </section>
+        )}
 
         {/* Upcoming */}
         <section className="mt-12">

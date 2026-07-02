@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendSessionReminder, sendAccessCode, sendCreditsExpiring } from "@/lib/email";
+import { sendSessionReminder, sendAccessCode, sendCreditsExpiring, sendFirstSessionFollowup, sendGuestFollowup } from "@/lib/email";
 import { getNukiConfig, ensureBookingKeypadCode } from "@/lib/nuki";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import { notify } from "@/lib/notify";
@@ -74,6 +74,80 @@ export async function sendCreditExpiryWarnings() {
     } catch (e) { console.error("credit expiry warning failed:", userId, e?.message); }
   }
   return warned;
+}
+
+// Post-first-session follow-up: members whose FIRST session ended 2–24h ago get a "hoe was het?"
+// mail with an honest pricing recap + rebook CTA. Idempotent via profiles.first_followup_sent
+// (backfilled true for everyone who already had a session, so only genuine first-timers match).
+export async function sendFirstSessionFollowups() {
+  const admin = createAdminClient();
+  const from = new Date(Date.now() - 24 * 3600000).toISOString();
+  const to = new Date(Date.now() - 2 * 3600000).toISOString();
+  const { data: rows } = await admin
+    .from("bookings")
+    .select("id, user_id, ends_at, member:profiles!bookings_user_id_fkey(email, full_name, role, first_followup_sent)")
+    .eq("status", "bevestigd")
+    .gte("ends_at", from)
+    .lt("ends_at", to);
+
+  const seen = new Set();
+  let sent = 0;
+  for (const b of rows || []) {
+    if (seen.has(b.user_id)) continue;
+    const m = b.member;
+    if (!m || m.role !== "lid" || m.first_followup_sent || !m.email) continue;
+    seen.add(b.user_id);
+    // Claim atomically so overlapping cron runs can't double-send.
+    const { data: claimed } = await admin.from("profiles").update({ first_followup_sent: true }).eq("id", b.user_id).eq("first_followup_sent", false).select("id");
+    if (!claimed || !claimed.length) continue;
+    try {
+      const r = await sendFirstSessionFollowup({ to: m.email, name: m.full_name });
+      if (r?.ok === false) { await admin.from("profiles").update({ first_followup_sent: false }).eq("id", b.user_id); continue; }
+      sent++;
+    } catch (e) {
+      console.error("first-session followup failed:", b.user_id, e?.message);
+      await admin.from("profiles").update({ first_followup_sent: false }).eq("id", b.user_id); // let it retry
+    }
+  }
+  return sent;
+}
+
+// Guest → member funnel: non-member buddies who were invited ~1 day ago get one "kom zelf trainen,
+// je eerste sessie is gratis" mail (carrying the inviter's ?ref=). Idempotent via email_invites.followup_sent.
+export async function sendGuestFollowups() {
+  const admin = createAdminClient();
+  const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+  const from = new Date(Date.now() - 48 * 3600000).toISOString();
+  const to = new Date(Date.now() - 20 * 3600000).toISOString();
+  const { data: rows } = await admin
+    .from("email_invites")
+    .select("id, email, inviter_id, created_at, inviter:profiles!email_invites_inviter_id_fkey(full_name)")
+    .eq("followup_sent", false)
+    .gte("created_at", from)
+    .lt("created_at", to);
+
+  const seenEmail = new Set();
+  let sent = 0;
+  for (const inv of rows || []) {
+    const email = String(inv.email || "").toLowerCase().trim();
+    if (!email || seenEmail.has(email)) { await admin.from("email_invites").update({ followup_sent: true }).eq("id", inv.id); continue; }
+    seenEmail.add(email);
+    // Skip guests who already have an account — they're on the member track, not the guest track.
+    const { data: existing } = await admin.from("profiles").select("id").eq("email", email).maybeSingle();
+    if (existing) { await admin.from("email_invites").update({ followup_sent: true }).eq("id", inv.id); continue; }
+    const { data: claimed } = await admin.from("email_invites").update({ followup_sent: true }).eq("id", inv.id).eq("followup_sent", false).select("id");
+    if (!claimed || !claimed.length) continue;
+    try {
+      const signupUrl = `${SITE}/login?mode=signup&ref=${encodeURIComponent(inv.inviter_id)}`;
+      const r = await sendGuestFollowup({ to: email, inviterName: inv.inviter?.full_name, signupUrl });
+      if (r?.ok === false) { await admin.from("email_invites").update({ followup_sent: false }).eq("id", inv.id); continue; }
+      sent++;
+    } catch (e) {
+      console.error("guest followup failed:", inv.id, e?.message);
+      await admin.from("email_invites").update({ followup_sent: false }).eq("id", inv.id);
+    }
+  }
+  return sent;
 }
 
 // Access codes: ~5 minutes before a confirmed session starts, e-mail the entry code + directions.

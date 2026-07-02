@@ -61,7 +61,8 @@ export async function coachCreateClient(formData) {
     } else return { error: cErr.message };
   } else {
     uid = created.user.id;
-    await admin.from("profiles").update({ gym_id: profile.gym_id, role: "lid", full_name: full_name || null }).eq("id", uid);
+    // day0_welcome_sent=true: coach-created clients get sendWelcomeNewAccount, not the member welcome.
+    await admin.from("profiles").update({ gym_id: profile.gym_id, role: "lid", full_name: full_name || null, day0_welcome_sent: true }).eq("id", uid);
     try {
       const { data: link } = await admin.auth.admin.generateLink({ type: "recovery", email, options: { redirectTo: `${siteUrl()}/wachtwoord-herstellen` } });
       const action = link?.properties?.action_link;

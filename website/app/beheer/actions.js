@@ -597,7 +597,8 @@ export async function adminAddUser(formData) {
   }
   const uid = created.user.id;
   // The signup trigger creates the profile; patch role/phone/gym to the admin's gym.
-  await admin.from("profiles").update({ gym_id: profile.gym_id, role, phone: phone || null, full_name: full_name || null }).eq("id", uid);
+  // day0_welcome_sent=true: admin-created accounts get sendWelcomeNewAccount, not the member welcome.
+  await admin.from("profiles").update({ gym_id: profile.gym_id, role, phone: phone || null, full_name: full_name || null, day0_welcome_sent: true }).eq("id", uid);
 
   try {
     const { data: link } = await admin.auth.admin.generateLink({
@@ -663,8 +664,12 @@ export async function addCoach(formData) {
   const memberId = formData.get("memberId");
   const { error: e } = await supabase.rpc("admin_set_role", { p_member: memberId, p_role: "coach" });
   if (e) return { error: e.message };
-  // Make new coaches visible on /coaches by default (their name is enough); they can opt out.
-  await supabase.from("profiles").update({ coach_public: true }).eq("id", memberId);
+  // Publish gate (Batch 2.8): don't auto-publish a bare profile — an empty coach card on /coaches is
+  // worse than none. Only make them public once they have a photo AND a bio; otherwise leave them
+  // private and the coach first-run checklist walks them through it.
+  const { data: cp } = await supabase.from("profiles").select("coach_photo_url, coach_bio").eq("id", memberId).single();
+  const ready = !!(cp?.coach_photo_url && String(cp?.coach_bio || "").trim());
+  await supabase.from("profiles").update({ coach_public: ready }).eq("id", memberId);
   try {
     const { data: m } = await supabase.from("profiles").select("email, full_name").eq("id", memberId).single();
     if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role: "coach" });

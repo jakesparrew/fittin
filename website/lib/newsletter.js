@@ -256,6 +256,25 @@ export async function enrollUserInDrips(userId) {
   }
 }
 
+// Member converted (bought abo / punch card) → cancel their still-scheduled onboarding-drip sends so
+// they stop getting "word lid" nudges after they already joined. Keeps them subscribed (unlike
+// unsubscribe) — they should still get real newsletters, just not the become-a-member drip.
+export async function cancelDripsForUser(userId) {
+  try {
+    const admin = createAdminClient();
+    const { data: prof } = await admin.from("profiles").select("gym_id, email").eq("id", userId).single();
+    if (!prof?.email) return;
+    const { data: sub } = await admin.from("subscribers").select("id").eq("gym_id", prof.gym_id).eq("email", prof.email.toLowerCase()).maybeSingle();
+    if (!sub) return;
+    const { data: pending } = await admin.from("campaign_sends").select("id, resend_id").eq("subscriber_id", sub.id).eq("status", "scheduled");
+    for (const p of pending || []) {
+      if (p.resend_id && resend) { try { await resend.emails.cancel(p.resend_id); } catch {} }
+      await admin.from("campaign_sends").update({ status: "skipped" }).eq("id", p.id);
+    }
+    await admin.from("drip_enrollments").update({ status: "cancelled" }).eq("subscriber_id", sub.id).eq("status", "active");
+  } catch (e) { console.error("cancelDripsForUser:", e?.message); }
+}
+
 // Record a Resend webhook event against the matching send + bump campaign counters.
 export async function recordResendEvent(type, emailId) {
   if (!emailId) return;

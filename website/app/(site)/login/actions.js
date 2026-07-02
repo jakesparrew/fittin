@@ -50,6 +50,15 @@ export async function authAction(_prevState, formData) {
       await createAdminClient().from("profiles").update({ pending_referral: ref }).eq("id", data.user.id);
     }
     if (!data.session) return { info: "Bevestig je e-mail via de link die we je net stuurden, en log dan in." };
+    // Auto-confirmed signup (no e-mail confirmation step) → send the Day-0 welcome here, since this
+    // user won't pass through /auth/callback. Confirmation-required signups get it there instead.
+    try {
+      const { createAdminClient } = await import("@/lib/supabase/admin");
+      const { sendWelcomeMember } = await import("@/lib/email");
+      const admin = createAdminClient();
+      const r = await sendWelcomeMember({ to: email, name: fullName });
+      if (r?.ok !== false) await admin.from("profiles").update({ day0_welcome_sent: true }).eq("id", data.user.id);
+    } catch (e) { console.error("day0 welcome (signup) failed:", e?.message); }
     redirect(await destination(supabase, data.user.id, next));
   }
 

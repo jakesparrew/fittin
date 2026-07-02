@@ -77,7 +77,7 @@ async function send(to, subject, html, from = FROM, replyTo = REPLY_TO) {
 }
 
 // ---- Member: booking confirmed ----
-export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address, paymentSource, creditBalance }) {
+export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address, paymentSource, creditBalance, nudgeCount }) {
   const addr = address || "Aannemersstraat 186, 9040 Gent";
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`;
   const rows = [
@@ -95,6 +95,16 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
   } else if (free) {
     rows.push(["Prijs", `<span style="color:#33B24A">Gratis</span>`]);
   }
+  // Nudge on the 2nd/3rd paid single ("los") session this month — pure honest arithmetic, no dark
+  // pattern: show what a card/abo would have cost. nudgeCount = number of paid single sessions incl.
+  // this one, in the last 30 days.
+  const nudgeHtml = nudgeCount >= 2
+    ? `<div style="margin:14px 0 0;background:#f0effa;border-radius:14px;padding:14px 16px">
+         <p style="margin:0;font-size:14px;font-weight:bold;color:#22194F">Dit was je ${nudgeCount}e losse sessie deze maand (€${(nudgeCount * 15).toString().replace(".", ",")}).</p>
+         <p style="margin:6px 0 0;font-size:13px;color:#6b6685;line-height:1.5">Met de <b>10-beurtenkaart</b> betaalde je hiervoor ±€${((nudgeCount * 1364) / 100).toFixed(2).replace(".", ",")}, met het <b>abonnement</b> €${(nudgeCount * 12).toString().replace(".", ",")}. Geen verplichting — puur ter info.</p>
+         <a href="${SITE}/lidmaatschap" style="display:inline-block;margin-top:8px;font-size:13px;font-weight:bold;color:#1a7d34;text-decoration:none">Bekijk de opties →</a>
+       </div>`
+    : "";
   await send(
     to,
     "Je Fittin'-boeking is bevestigd ✅",
@@ -102,7 +112,7 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
       title: "Je boeking is bevestigd ✅",
       intro: `Hallo ${esc(name) || "daar"}, je sessie staat vast. Hier is alvast alles wat je moet weten:`,
       rows,
-      body: `
+      body: `${nudgeHtml}
         <div style="text-align:center"><a href="${mapsUrl}" style="display:inline-block;margin:6px 0;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px;font-size:14px">📍 Navigeer naar de gym</a></div>
         <div style="margin-top:16px;border-top:1px solid #ece9f5;padding-top:14px">
           <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo kom je binnen</p>
@@ -396,6 +406,73 @@ export async function sendWelcomeNewAccount({ to, name, link }) {
   );
 }
 
+// ---- Member: Day-0 branded welcome (self-signups + Google — they get nothing else) ----
+export async function sendWelcomeMember({ to, name }) {
+  return send(
+    to,
+    "Welkom bij Fittin' 👋 Je eerste sessie is gratis",
+    shell({
+      title: "Welkom bij Fittin' 👋",
+      intro: `Hallo ${esc(name) || "daar"}, leuk dat je er bent! Fittin' is een privégym in Gent — je reserveert de zaal helemaal voor jezelf (en wie je meebrengt). Geen lidgeld, je betaalt enkel voor je tijd.`,
+      body: `
+        <div style="margin:8px 0 4px;background:#f0f9f1;border-radius:14px;padding:14px 16px">
+          <p style="margin:0;font-size:15px;font-weight:bold;color:#1a7d34">🎁 Je allereerste sessie is gratis</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#6b6685;line-height:1.5">Ze wordt automatisch verrekend wanneer je je eerste sessie boekt — je hoeft geen code in te vullen.</p>
+        </div>
+        <div style="margin-top:16px">
+          <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo werkt het</p>
+          <ol style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.7">
+            <li>Kies een uur dat past en reserveer in de app.</li>
+            <li>± 5 minuten voor je sessie krijg je je persoonlijke toegangscode — per mail én in de app.</li>
+            <li>Toets de code in op het paneel naast de voordeur. De toegang werkt enkel tijdens jouw slot.</li>
+          </ol>
+        </div>`,
+      cta: { href: `${SITE}/boeken`, label: "Boek je gratis sessie" },
+    })
+  );
+}
+
+// ---- Member: post-first-session follow-up (highest-ROI conversion beat) ----
+export async function sendFirstSessionFollowup({ to, name }) {
+  return send(
+    to,
+    "Hoe was je eerste sessie bij Fittin'? 💪",
+    shell({
+      title: "Hoe was het? 💪",
+      intro: `Hallo ${esc(name) || "daar"}, je hebt je eerste sessie bij Fittin' erop zitten — proficiat! We hopen dat het goed voelde. Klaar voor de volgende?`,
+      body: `
+        <div style="margin:8px 0;border-top:1px solid #ece9f5;padding-top:14px">
+          <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 8px">Wat past het best bij jou?</p>
+          <table style="border-collapse:collapse;width:100%">
+            <tr><td style="padding:5px 12px 5px 0;font-size:14px;color:#6b6685">Losse sessie</td><td style="font-weight:bold;font-size:14px">€15</td></tr>
+            <tr><td style="padding:5px 12px 5px 0;font-size:14px;color:#6b6685">10-beurtenkaart (10 + 1 gratis)</td><td style="font-weight:bold;font-size:14px">€150 · ±€13,64/sessie</td></tr>
+            <tr><td style="padding:5px 12px 5px 0;font-size:14px;color:#6b6685">Abonnement</td><td style="font-weight:bold;font-size:14px">€12/mnd · alle sessies aan €12</td></tr>
+          </table>
+          <p style="font-size:12px;color:#9b97ab;margin:8px 0 0">Geen verplichtingen — kies gewoon wat voor jou klopt.</p>
+        </div>`,
+      cta: { href: `${SITE}/boeken`, label: "Boek je volgende sessie" },
+    })
+  );
+}
+
+// ---- Guest (non-member buddy) → member funnel: day-after "kom zelf trainen" ----
+export async function sendGuestFollowup({ to, inviterName, signupUrl }) {
+  return send(
+    to,
+    "Hoe was het trainen bij Fittin'? Je eerste eigen sessie is gratis 🎁",
+    shell({
+      title: "Kom terug — nu voor jezelf 🎁",
+      intro: `Je trainde onlangs mee bij Fittin'${inviterName ? ` met ${esc(inviterName)}` : ""} in onze privégym in Gent. Leuk dat je erbij was! Zin om zelf de zaal te reserveren?`,
+      body: `
+        <div style="margin:8px 0 4px;background:#f0f9f1;border-radius:14px;padding:14px 16px">
+          <p style="margin:0;font-size:15px;font-weight:bold;color:#1a7d34">🎁 Je eerste eigen sessie is gratis</p>
+          <p style="margin:6px 0 0;font-size:13px;color:#6b6685;line-height:1.5">Maak een account en je gratis sessie staat automatisch klaar. Geen lidgeld, je betaalt enkel voor je tijd.</p>
+        </div>`,
+      cta: { href: signupUrl, label: "Maak je account" },
+    })
+  );
+}
+
 // ---- Member: event signup confirmed ----
 export async function sendEventSignup({ to, name, title, startsAt }) {
   await send(
@@ -619,7 +696,7 @@ export async function sendBuddyInvite({ to, fromName, refCode }) {
     `${fromName} nodigt je uit op Fittin'`,
     shell({
       title: "Train samen op Fittin' 💪",
-      intro: `${esc(fromName)} nodigt je uit om samen te trainen bij Fittin' — een privégym in Gent. Maak een gratis account en je eerste uur is gratis met de code FittinWelcome.`,
+      intro: `${esc(fromName)} nodigt je uit om samen te trainen bij Fittin' — een privégym in Gent. Maak een gratis account en je eerste uur is gratis — het wordt automatisch verrekend bij je eerste boeking.`,
       body: refCode ? `<p style="font-size:13px;color:#9b97ab;margin-top:10px">Gebruik bij registratie de vriendcode <b>${esc(refCode)}</b>.</p>` : "",
       cta: { href: url, label: "Account aanmaken" },
     })

@@ -6,6 +6,7 @@ import CoachScheduler from "@/components/coach/CoachScheduler";
 import AddClientInline from "@/components/coach/AddClientInline";
 import CoachSlotPicker from "@/components/coach/CoachSlotPicker";
 import CoachSessionActions from "@/components/coach/CoachSessionActions";
+import CoachChecklist from "@/components/coach/CoachChecklist";
 import BookingDetail from "@/components/BookingDetail";
 import { fmtHour } from "@/lib/time";
 import SubmitButton from "@/components/ui/SubmitButton";
@@ -111,6 +112,17 @@ export default async function CoachDashboard({ searchParams }) {
       </div>
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
+
+      {/* First-run checklist (Batch 2.8) — only for real coaches, not the beheerder "view as" mode. */}
+      {!ctx.viewingAs && (
+        <CoachChecklist steps={[
+          { label: "Voeg een profielfoto toe", done: !!profile.coach_photo_url, hint: "Een gezicht schept vertrouwen.", href: "/coach/profiel", cta: "Naar profiel" },
+          { label: "Schrijf een korte bio", done: !!String(profile.coach_bio || "").trim(), hint: "Vertel over je aanpak en ervaring.", href: "/coach/profiel", cta: "Naar profiel" },
+          { label: "Stel je tarieven in", done: !!profile.coach_pt_price_cents, hint: "Prijs voor 1-op-1 personal training.", href: "/coach/profiel", cta: "Naar profiel" },
+          { label: "Zet jezelf zichtbaar op de site", done: !!profile.coach_public, hint: "Verschijn op /coaches zodat leden je vinden.", href: "/coach/profiel", cta: "Naar profiel" },
+          { label: "Koop je eerste sessietegoed", done: creditBalance > 0, hint: "Nodig om sessies met clienten te boeken.", href: "#tegoed", cta: "Koop tegoed" },
+        ]} />
+      )}
 
       {/* PRIMARY ACTION — book a session with a client */}
       <section id="boeken" className="mt-6 scroll-mt-8 rounded-3xl border-2 border-accent bg-white p-6 shadow-sm shadow-accent/10">

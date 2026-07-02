@@ -117,7 +117,7 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
     .eq("id", bookingId)
     .eq("status", "bevestigd")
     .eq("paid", false) // only the FIRST unpaid→paid transition returns a row → confirm + invites run once
-    .select("id, gym_id, starts_at, ends_at, persons, user_id, services(name)")
+    .select("id, gym_id, starts_at, ends_at, persons, user_id, payment_source, services(name)")
     .single();
   if (!booking) return;
   if (session?.amount_total)
@@ -148,6 +148,17 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
       }
     } catch {}
   }
+  // Honest nudge (Batch 2.3): count paid single ("los") sessions in the last 30 days so the
+  // confirmation can show what a card/abo would have cost. Only for los — abo/credit are irrelevant.
+  let nudgeCount = 0;
+  if (booking.payment_source === "los" && booking.user_id) {
+    try {
+      const since = new Date(Date.now() - 30 * 86400000).toISOString();
+      const { count } = await admin.from("bookings").select("id", { count: "exact", head: true })
+        .eq("user_id", booking.user_id).eq("payment_source", "los").eq("paid", true).gte("created_at", since);
+      nudgeCount = count || 0;
+    } catch {}
+  }
   // Best-effort confirmation mail: never let an email hiccup roll back a successful payment.
   try {
     const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", booking.user_id).single();
@@ -159,6 +170,7 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
       endsAt: booking.ends_at,
       persons: booking.persons,
       free: false,
+      nudgeCount,
     });
   } catch (e) {
     console.error("booking confirmation mail failed (payment already recorded):", e?.message);
@@ -303,6 +315,8 @@ async function handleEvent(event, admin) {
           ]);
           if (m?.email) await sendPurchaseReceipt({ to: m.email, name: m.full_name, description: `Beurtenkaart · ${credits} sessies`, amountCents: obj.amount_total, balanceLine: Number.isInteger(bal) ? `${bal} sessies beschikbaar` : null });
         } catch (e) { console.error("punchcard receipt:", e?.message); }
+        // Converted → stop the "word lid" onboarding drip (Batch 2.4).
+        try { const { cancelDripsForUser } = await import("@/lib/newsletter"); await cancelDripsForUser(obj.metadata.user_id); } catch (e) { console.error("cancelDrips (punchcard):", e?.message); }
       } else if (obj.metadata?.kind === "coach_credits") {
         const coachId = obj.metadata.coach_id;
         const credits = parseInt(obj.metadata.credits, 10) || 0;
@@ -407,6 +421,8 @@ async function handleEvent(event, admin) {
         if (first) {
           const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", prof.id).single();
           if (m?.email) { const { sendMembershipActive } = await import("@/lib/email"); await sendMembershipActive({ to: m.email, name: m.full_name }); }
+          // Converted to member → stop the "word lid" onboarding drip (Batch 2.4).
+          try { const { cancelDripsForUser } = await import("@/lib/newsletter"); await cancelDripsForUser(prof.id); } catch (e) { console.error("cancelDrips (abo):", e?.message); }
         }
       } catch {}
       return;

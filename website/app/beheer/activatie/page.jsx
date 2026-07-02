@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SEGMENTS, evaluateMatches } from "@/lib/activation";
 import ActivationWizard from "@/components/admin/ActivationWizard";
 import QuickStart from "@/components/admin/QuickStart";
+import { createWinbackPrefabs } from "../activation-actions";
 
 export const dynamic = "force-dynamic";
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) + "%" : "—");
@@ -38,6 +39,15 @@ export default async function Activatie() {
       ]} />
 
       <ActivationWizard segments={Object.entries(SEGMENTS).map(([key, s]) => ({ key, label: s.label, desc: s.desc, param: s.param ? { key: s.param.key, label: s.param.label, default: s.param.default } : null }))} />
+
+      {/* One-click win-back prefabs (Batch 2.5) — creates two ready-to-review drafts. */}
+      <form action={createWinbackPrefabs} className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-borderc bg-paper/50 p-4">
+        <div className="flex-1">
+          <p className="text-sm font-black text-brand">Snelstart: win-back sjablonen</p>
+          <p className="text-xs text-brand/50">Maakt twee kant-en-klare concepten aan — “We missen je” (14d inactief) en “Abonnement gestopt” (+1 gratis sessie). Jij leest ze na en zet ze actief.</p>
+        </div>
+        <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Sjablonen aanmaken</button>
+      </form>
 
       <div className="mt-6 space-y-3">
         {(camps || []).map((c) => {

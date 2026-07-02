@@ -9,6 +9,8 @@ const num = (v, d = 0) => {
   return Number.isFinite(n) ? n : d;
 };
 
+const SITE_ACT = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+
 export async function createActivation(formData) {
   const { supabase, profile, userId, error } = await requireStaff(true);
   if (error) return { error };
@@ -116,4 +118,55 @@ export async function deleteActivation(formData) {
   await supabase.from("campaigns").delete().eq("id", formData.get("id")).eq("kind", "activation");
   revalidatePath("/beheer/activatie");
   redirect("/beheer/activatie");
+}
+
+// Batch 2.5 — one-click win-back prefabs. Creates two ready-to-review DRAFT campaigns (honest tone,
+// no pushy discounts): "We missen je" (inactive ≥14d) and "Abonnement gestopt" (lapsed member, +1
+// reward credit). Owner reviews the copy, then flips one toggle to activate — the daily cron does the rest.
+export async function createWinbackPrefabs() {
+  const { supabase, profile, userId, error } = await requireStaff(true);
+  if (error) return { error };
+  const drafts = [
+    {
+      name: "We missen je 👋",
+      trigger_type: "inactive",
+      trigger_params: { days: 14, min: 4, max: 1 },
+      subject: "We missen je bij Fittin' 👋",
+      body_html: `<p>Hey {{naam}}, we zagen je al even niet meer in de gym. Alles goed?</p><p>De zaal staat wanneer jij wil klaar — reserveer een uur dat past en pik gewoon weer op waar je gebleven was. Geen lidgeld, je betaalt enkel voor je tijd.</p><p><a href="${SITE_ACT}/boeken" style="background:#5fda6b;color:#22194f;font-weight:800;text-decoration:none;padding:12px 22px;border-radius:999px;display:inline-block">Boek een sessie</a></p>`,
+      reward_credits: 0,
+      cooldown_days: 45,
+    },
+    {
+      name: "Abonnement gestopt — kom terug",
+      trigger_type: "lapsed_member",
+      trigger_params: { days: 10, min: 4, max: 1 },
+      subject: "Je bent welkom terug bij Fittin' 💚",
+      body_html: `<p>Hey {{naam}}, je abonnement is een tijdje geleden gestopt — geen probleem, dat hoort erbij.</p><p>Als welkom-terug zetten we <strong>1 gratis sessie</strong> voor je klaar. Kom eens langs, helemaal vrijblijvend. Boek gewoon een uur dat past en je gratis sessie wordt automatisch verrekend.</p><p><a href="${SITE_ACT}/boeken" style="background:#5fda6b;color:#22194f;font-weight:800;text-decoration:none;padding:12px 22px;border-radius:999px;display:inline-block">Kom terug trainen</a></p>`,
+      reward_credits: 1,
+      cooldown_days: 90,
+    },
+  ];
+  let created = 0;
+  for (const d of drafts) {
+    // Skip if a prefab with this exact name already exists for the gym (idempotent — no duplicates).
+    const { data: existing } = await supabase.from("campaigns").select("id").eq("gym_id", profile.gym_id).eq("kind", "activation").eq("name", d.name).maybeSingle();
+    if (existing) continue;
+    const { error: e } = await supabase.from("campaigns").insert({
+      gym_id: profile.gym_id,
+      kind: "activation",
+      name: d.name,
+      trigger_type: d.trigger_type,
+      trigger_params: d.trigger_params,
+      subject: d.subject,
+      body_html: d.body_html,
+      reward_credits: d.reward_credits,
+      discount_percent: 0,
+      cooldown_days: d.cooldown_days,
+      status: "draft",
+      created_by: userId,
+    });
+    if (!e) created++;
+  }
+  revalidatePath("/beheer/activatie");
+  return { ok: true, created };
 }
