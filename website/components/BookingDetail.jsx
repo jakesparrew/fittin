@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getBookingDetail } from "@/app/booking-detail-action";
 import { isSettled, sourceLabel } from "@/lib/booking-status";
 
@@ -26,12 +26,20 @@ export default function BookingDetail({ bookingId, children, className = "" }) {
     }
   }
 
+  // Escape closes the drawer (basic dialog behaviour for keyboard users).
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <>
       <button type="button" onClick={openPanel} className={"cursor-pointer text-left hover:underline " + className}>{children}</button>
       {open && (
         <div className="fixed inset-0 z-[60] flex justify-end bg-black/40" onClick={() => setOpen(false)}>
-          <div className="h-full w-full max-w-sm overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Boekingsdetails" className="h-full w-full max-w-sm overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-black text-brand">Boekingsdetails</h3>
               <button onClick={() => setOpen(false)} aria-label="Sluiten" className="rounded-lg px-2 py-1 text-xl leading-none text-brand/40 hover:text-brand">✕</button>

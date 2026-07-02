@@ -124,13 +124,18 @@ export async function upsertService(formData) {
   const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
+  // Bounded price parse: "15,oo" gave NaN cents on the LIVE session price with zero feedback.
+  const priceCents = Math.round(parseFloat(String(formData.get("price_eur") || "0").replace(",", ".")) * 100);
+  if (!Number.isFinite(priceCents) || priceCents < 0 || priceCents > 100000) {
+    return { error: "Ongeldige prijs — geef een bedrag tussen € 0 en € 1000 (bv. 15 of 15,50)." };
+  }
   const row = {
     gym_id: profile.gym_id,
     type: formData.get("type") || "fit60",
     key: formData.get("key"),
     name: formData.get("name"),
     duration_min: num(formData.get("duration_min"), 60),
-    price_cents: Math.round(parseFloat(String(formData.get("price_eur") || "0").replace(",", ".")) * 100),
+    price_cents: priceCents,
     capacity: num(formData.get("capacity"), 1),
     active: formData.get("active") === "on" || formData.get("active") === "true",
   };

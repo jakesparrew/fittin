@@ -417,10 +417,10 @@ export default function BookingClient({
                     {(invitees.length > 0 || emailInvitees.length > 0) && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {invitees.map((m) => (
-                          <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">{m.name}<button type="button" onClick={() => setInvitees((s) => s.filter((x) => x.id !== m.id))} className="text-brand/60 hover:text-brand">×</button></span>
+                          <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">{m.name}<button type="button" aria-label={`Verwijder ${m.name}`} onClick={() => setInvitees((s) => s.filter((x) => x.id !== m.id))} className="text-brand/60 hover:text-brand">×</button></span>
                         ))}
                         {emailInvitees.map((e) => (
-                          <span key={e} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white">{e}<button type="button" onClick={() => setEmailInvitees((s) => s.filter((x) => x !== e))} className="text-white/60 hover:text-white">×</button></span>
+                          <span key={e} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white">{e}<button type="button" aria-label={`Verwijder uitnodiging voor ${e}`} onClick={() => setEmailInvitees((s) => s.filter((x) => x !== e))} className="text-white/60 hover:text-white">×</button></span>
                         ))}
                       </div>
                     )}
@@ -446,6 +446,7 @@ export default function BookingClient({
                             } else setMemberResults([]);
                           }}
                           placeholder="Zoek een lid op naam…"
+                          aria-label="Zoek een lid op naam om uit te nodigen"
                           className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent"
                         />
                         {memberResults.length > 0 && (
@@ -460,7 +461,7 @@ export default function BookingClient({
 
                     {usedInvites < inviteSlots && (
                       <div className="mt-2 flex gap-2">
-                        <input type="email" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEmailInvite(); } }} placeholder="Geen account? E-mailadres…" className="min-w-0 flex-1 rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+                        <input type="email" aria-label="Nodig iemand zonder account uit via e-mail" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEmailInvite(); } }} placeholder="Geen account? E-mailadres…" className="min-w-0 flex-1 rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
                         <button type="button" onClick={addEmailInvite} className="shrink-0 rounded-xl bg-white px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">Uitnodigen</button>
                       </div>
                     )}
@@ -519,7 +520,7 @@ export default function BookingClient({
               <div className="mt-4">
                 <p className="text-xs font-bold uppercase tracking-wide text-lav">Kortingscode</p>
                 <div className="mt-2 flex gap-2">
-                  <input value={discountCode} onChange={(e) => { setDiscountCode(e.target.value); setDiscountInfo(null); }} placeholder="bv. TERUG50"
+                  <input value={discountCode} onChange={(e) => { setDiscountCode(e.target.value); setDiscountInfo(null); }} placeholder="bv. TERUG50" aria-label="Kortingscode"
                     className="min-w-0 flex-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm uppercase text-white placeholder:text-lav/60 outline-none focus:border-accent" />
                   <button type="button" disabled={!discountCode.trim() || applyingCode}
                     onClick={async () => {
