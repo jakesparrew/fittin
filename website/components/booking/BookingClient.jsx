@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBookingAction, searchMembersAction, validateDiscountAction } from "@/app/(site)/boeken/actions";
@@ -22,6 +22,7 @@ export default function BookingClient({
   paymentCanceled = false,
   buddies = [],
   events = [],
+  prefill = {},
 }) {
   const router = useRouter();
   const [mode, setMode] = useState("session"); // session | events
@@ -32,11 +33,14 @@ export default function BookingClient({
   const [showNight, setShowNight] = useState(false);
   const [mobileDay, setMobileDay] = useState(null);
   const [selected, setSelected] = useState(null); // { dateStr, hour } — hour is decimal (6.5 = 06:30)
-  const [persons, setPersons] = useState(1);
-  const [duration, setDuration] = useState(1);
+  // Quick-rebook: /boeken?personen=&duur= pre-fills persons + duration from a past session.
+  const [persons, setPersons] = useState(Math.min(4, Math.max(1, Number(prefill.persons) || 1)));
+  const [duration, setDuration] = useState(Math.min(4, Math.max(1, Number(prefill.duration) || 1)));
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
-  const [useCredit, setUseCredit] = useState(false);
+  // Auto-apply the beurtenkaart/abo balance by default (opt-OUT) — a €150-card holder should never
+  // silently pay €15 cash again. Free welcome session still wins when available.
+  const [useCredit, setUseCredit] = useState(!welcomeAvailable && creditBalance >= 1);
   const [discountCode, setDiscountCode] = useState("");
   const [discountInfo, setDiscountInfo] = useState(null); // {ok,cents,off,label} | {error}
   const [applyingCode, setApplyingCode] = useState(false);
@@ -53,8 +57,15 @@ export default function BookingClient({
   const service = services.find((s) => s.id === serviceId) || services[0];
   const isFit60 = service?.type === "fit60";
   const isPT = service?.type === "pt";
+  // Booking horizon (in weeks) is a membership perk: members plan up to 8 weeks out, others 2.
+  const maxWeek = isMember ? 8 : 1;
   // Reset the person count when the service changes (gym-persons vs PT-formule mean different things).
-  useEffect(() => { setPersons(1); }, [serviceId]);
+  // Skip the very first run so a ?personen= prefill (quick-rebook) survives mount.
+  const didMountService = useRef(false);
+  useEffect(() => {
+    if (!didMountService.current) { didMountService.current = true; return; }
+    setPersons(1);
+  }, [serviceId]);
 
   const days = useMemo(() => {
     const out = [];
@@ -282,8 +293,14 @@ export default function BookingClient({
               <div className="mb-3 flex items-center justify-between">
                 <button onClick={() => setWeekOffset((w) => Math.max(0, w - 1))} disabled={weekOffset === 0} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">‹ vorige</button>
                 <span className="text-sm font-bold text-brand/60">{weekLabel}</span>
-                <button onClick={() => setWeekOffset((w) => Math.min(8, w + 1))} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition hover:border-lav">volgende ›</button>
+                <button onClick={() => setWeekOffset((w) => Math.min(maxWeek, w + 1))} disabled={weekOffset >= maxWeek} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">volgende ›</button>
               </div>
+              {/* Honest membership perk: members can book further ahead than non-members. */}
+              {!isMember && weekOffset >= maxWeek && (
+                <div className="mb-3 rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand/70">
+                  Leden boeken tot 8 weken vooruit (jij 2). <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Word lid →</Link>
+                </div>
+              )}
 
               {/* Mobiel: dagkiezer + tijdslots in 1 kolom — geen horizontale scroll */}
               <div className="md:hidden">
@@ -513,7 +530,7 @@ export default function BookingClient({
             {isFit60 && !welcomeApplies && creditBalance >= 1 && (
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
                 <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
-                <span className="text-lav">Betaal met 1 <span className="font-bold text-accent">sessie</span> (saldo: {creditBalance})</span>
+                <span className="text-lav">Betaal met je <span className="font-bold text-accent">beurtenkaart</span> — saldo: {creditBalance}{useCredit ? "" : " · vink uit om cash/kaart te betalen"}</span>
               </label>
             )}
 
@@ -544,7 +561,7 @@ export default function BookingClient({
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">
               <span className="text-lav">Totaal</span>
               <span className="text-3xl font-black text-accent">
-                {welcomeApplies ? "Gratis" : creditApplies ? "1 sessie" : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}
+                {welcomeApplies ? "Gratis" : creditApplies ? `${duration} sessie${duration > 1 ? "s" : ""}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}
               </span>
             </div>
 
@@ -571,6 +588,28 @@ export default function BookingClient({
         </div>
         )}
       </div>
+
+      {/* Mobile sticky confirm bar — the summary panel is lg:sticky only, so on phones the price +
+          confirm sit far below the pickers. This keeps them one tap away. Sits above the tab bar. */}
+      {mode === "session" && selected && (
+        <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-borderc bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(34,25,79,0.08)] backdrop-blur lg:hidden">
+          <div className="mx-auto flex max-w-md items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="truncate text-xs font-bold text-brand">{days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · {slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}</p>
+              <p className="text-sm font-black text-accentdark">{welcomeApplies ? "Gratis" : creditApplies ? `${duration} sessie${duration > 1 ? "s" : ""}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}</p>
+            </div>
+            {isLoggedIn ? (
+              <button onClick={submit} disabled={busy} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30 transition enabled:hover:-translate-y-0.5 disabled:opacity-50">
+                {busy ? "Even geduld…" : "Bevestig"}
+              </button>
+            ) : (
+              <Link href={`/login?mode=signup&next=${encodeURIComponent(`/boeken?d=${selected.dateStr}&h=${selected.hour}&p=${persons}&u=${duration}`)}`} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30">
+                Account & boeken
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }

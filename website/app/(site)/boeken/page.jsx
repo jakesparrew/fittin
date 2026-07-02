@@ -27,7 +27,8 @@ export default async function BoekenPage({ searchParams }) {
   const { user, profile } = sess;
 
   const from = new Date(); from.setHours(0, 0, 0, 0);
-  const to = new Date(from.getTime() + 8 * 86400000);
+  // Cover the full member booking horizon (8 weeks) so availability stays accurate that far out.
+  const to = new Date(from.getTime() + 63 * 86400000);
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const nowIso = new Date().toISOString();
 
@@ -107,6 +108,7 @@ export default async function BoekenPage({ searchParams }) {
         paymentCanceled={sp.geannuleerd === "1"}
         buddies={buddies}
         events={events}
+        prefill={{ persons: sp.personen, duration: sp.duur }}
       />
       <div className="bg-paper">
         <div className="mx-auto max-w-6xl px-5 pb-16">

@@ -29,14 +29,21 @@ const TABS = {
 export default function BottomTabBar() {
   const pathname = usePathname() || "/";
   const [role, setRole] = useState(undefined); // undefined=loading, null=guest, else role
+  const [unread, setUnread] = useState(0);
   useEffect(() => {
     let active = true;
-    fetch("/api/me", { cache: "no-store" })
+    const load = () => fetch("/api/me", { cache: "no-store" })
       .then((r) => r.json())
-      .then((d) => { if (active) setRole(d?.loggedIn ? (d.role || "lid") : null); })
+      .then((d) => { if (!active) return; setRole(d?.loggedIn ? (d.role || "lid") : null); setUnread(d?.unread || 0); })
       .catch(() => { if (active) setRole(null); });
-    return () => { active = false; };
-  }, []);
+    load();
+    // Refetch when the app regains focus (installed-PWA users keep it open) so a new door code /
+    // coach message surfaces the badge without a full navigation.
+    const onFocus = () => { if (document.visibilityState === "visible") load(); };
+    document.addEventListener("visibilitychange", onFocus);
+    window.addEventListener("focus", onFocus);
+    return () => { active = false; document.removeEventListener("visibilitychange", onFocus); window.removeEventListener("focus", onFocus); };
+  }, [pathname]);
 
   const tabs = !role ? TABS.guest : TABS[role] || TABS.lid;
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
@@ -48,8 +55,13 @@ export default function BottomTabBar() {
           const act = isActive(href);
           return (
             <li key={href} className="flex-1">
-              <Link href={href} className={"flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition " + (act ? "text-accentdark" : "text-brand/55 hover:text-brand")}>
-                <Icon d={ICONS[icon]} />
+              <Link href={href} className={"relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition " + (act ? "text-accentdark" : "text-brand/55 hover:text-brand")}>
+                <span className="relative">
+                  <Icon d={ICONS[icon]} />
+                  {href === "/account" && unread > 0 && (
+                    <span className="absolute -right-2 -top-1 min-w-[15px] rounded-full bg-red-500 px-1 text-center text-[9px] font-black leading-[15px] text-white">{unread > 9 ? "9+" : unread}</span>
+                  )}
+                </span>
                 <span>{label}</span>
               </Link>
             </li>

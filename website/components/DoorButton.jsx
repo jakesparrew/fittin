@@ -8,10 +8,21 @@ export default function DoorButton() {
 
   async function open() {
     setState("busy");
-    const res = await openDoorAction();
+    let res;
+    try {
+      res = await openDoorAction();
+    } catch {
+      // Network dropped mid-request (weak signal at the door is common). Don't leave the button
+      // stuck on "Openen…" — tell the member to retry or use the keypad code.
+      setState("error");
+      setMsg("Geen verbinding — probeer opnieuw of gebruik je deurcode op het paneel.");
+      setTimeout(() => setState("idle"), 8000);
+      return;
+    }
     if (res?.error) {
       setState("error");
       setMsg(res.error);
+      setTimeout(() => setState("idle"), 8000);
     } else if (res?.pending) {
       // Authorised + logged, but the automatic lock isn't connected yet — be honest.
       setState("pending");

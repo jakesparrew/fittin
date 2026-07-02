@@ -494,6 +494,13 @@ export default async function AccountPage({ searchParams }) {
                     {!b.invited && (
                       <RescheduleBooking bookingId={b.id} startsAt={b.starts_at} openHour={gymOpen} closeHour={gymClose} />
                     )}
+                    <a
+                      href={`/api/ics/${b.id}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-white px-4 py-2.5 text-sm font-bold text-brand transition hover:border-accent"
+                      title="Voeg deze sessie toe aan je agenda"
+                    >
+                      📅 Agenda
+                    </a>
                   </div>
                   </div>
                   {b.nuki_code && (
@@ -536,16 +543,26 @@ export default async function AccountPage({ searchParams }) {
                       {fmtRange(b.starts_at, b.ends_at)}
                     </p>
                   </div>
-                  <span
-                    className={
-                      "rounded-full px-3 py-1 text-xs font-bold " +
-                      (b.status === "geannuleerd"
-                        ? "bg-paper text-brand/50"
-                        : "bg-accent/15 text-accentdark")
-                    }
-                  >
-                    {b.status === "geannuleerd" ? "Geannuleerd" : "Voltooid"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {b.status !== "geannuleerd" && b.services?.type !== "pt" && (
+                      <Link
+                        href={`/boeken?personen=${b.persons || 1}&duur=${Math.max(1, Math.round((new Date(b.ends_at) - new Date(b.starts_at)) / 3600000))}`}
+                        className="rounded-full border-2 border-borderc bg-white px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent"
+                      >
+                        Boek opnieuw
+                      </Link>
+                    )}
+                    <span
+                      className={
+                        "rounded-full px-3 py-1 text-xs font-bold " +
+                        (b.status === "geannuleerd"
+                          ? "bg-paper text-brand/50"
+                          : "bg-accent/15 text-accentdark")
+                      }
+                    >
+                      {b.status === "geannuleerd" ? "Geannuleerd" : "Voltooid"}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

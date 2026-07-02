@@ -1,10 +1,10 @@
 // PWA service worker: network-first for everything (always fresh code when online),
 // cache only as an offline fallback. Bump CACHE to invalidate old caches.
-const CACHE = "fittin-v2";
-const OFFLINE_FALLBACK = "/";
+const CACHE = "fittin-v3";
+const OFFLINE_FALLBACK = "/offline";
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((c) => c.add(OFFLINE_FALLBACK)).catch(() => {}));
+  event.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE_FALLBACK, "/"])).catch(() => {}));
   self.skipWaiting();
 });
 
