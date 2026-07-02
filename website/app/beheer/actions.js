@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted } from "@/lib/email";
+import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted, sendBookingCancelled } from "@/lib/email";
+import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { notify } from "@/lib/notify";
 import { testNuki, getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
@@ -159,12 +160,36 @@ export async function adminCancelBooking(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("bookingId");
-  await supabase
+  // Cancel + capture the details we need to inform/refund the member. Only a still-confirmed booking
+  // fires the DB refund triggers (credit 0057, coach-credit 0097, coach 0024).
+  const { data: bk } = await supabase
     .from("bookings")
     .update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("status", "bevestigd")
+    .select("id, gym_id, user_id, starts_at, paid, price_cents, payment_source, stripe_payment_intent, services(name)")
+    .maybeSingle();
+  if (!bk) { revalidatePath("/beheer/boekingen"); return { error: "Boeking niet gevonden of al geannuleerd." }; }
+
+  // Refund a real online payment (a 'los'/'abo' session paid via Stripe). Credit/coach-credit
+  // refunds are handled by DB triggers; a €0 admin comp needs nothing.
+  let refunded = false;
+  if (bk.paid && bk.stripe_payment_intent && bk.price_cents > 0 && isStripeConfigured) {
+    try { await stripe.refunds.create({ payment_intent: bk.stripe_payment_intent }); refunded = true; }
+    catch (e) { console.error("admin cancel refund failed:", e?.message); }
+  }
+
+  // Always tell the member their session was cancelled (they may otherwise show up to a locked door).
+  try {
+    const admin = createAdminClient();
+    const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", bk.user_id).single();
+    if (m?.email) await sendBookingCancelled({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at });
+    await notify({ gymId: bk.gym_id, userId: bk.user_id, type: "system", title: "Je sessie is geannuleerd", body: (bk.services?.name || "Sessie") + (refunded ? " — het bedrag is terugbetaald." : ""), link: "/account" });
+  } catch (e) { console.error("admin cancel notify failed:", e?.message); }
+
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
+  return { ok: true, message: refunded ? "Geannuleerd + terugbetaald ✓" : "Sessie geannuleerd ✓" };
 }
 
 export async function adminCreateBooking(formData) {

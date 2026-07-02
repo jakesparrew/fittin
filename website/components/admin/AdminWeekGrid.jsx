@@ -104,7 +104,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                         <span className="truncate text-[10px] text-brand/50">{bk.serviceName} · {bk.persons}p</span>
                         <div className="flex items-center gap-2 leading-none">
                           <button type="button" onClick={() => setMoveModal({ bk, date: d.dateStr })} className="text-[10px] font-bold text-accentdark hover:underline">verplaats</button>
-                          <form action={adminCancelBooking} className="leading-none">
+                          <form action={adminCancelBooking} className="leading-none" onSubmit={(e) => { if (!confirm("Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.")) e.preventDefault(); }}>
                             <input type="hidden" name="bookingId" value={bk.id} />
                             <button className="text-[10px] font-bold text-red-500 hover:underline">annuleer</button>
                           </form>

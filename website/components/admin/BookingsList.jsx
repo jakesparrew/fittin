@@ -90,7 +90,7 @@ export default function BookingsList({ bookings = [], coaches = [] }) {
                   <td className="px-4 py-3 text-xs font-semibold capitalize text-brand/60">{b.status}</td>
                   <td className="px-4 py-3 text-right">
                     {upcoming && b.status === "bevestigd" && (
-                      <form action={adminCancelBooking}>
+                      <form action={adminCancelBooking} onSubmit={(e) => { if (!confirm("Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.")) e.preventDefault(); }}>
                         <input type="hidden" name="bookingId" value={b.id} />
                         <button className="text-xs font-bold text-red-500 hover:underline">annuleer</button>
                       </form>
