@@ -52,14 +52,16 @@ export default async function BoekenPage({ searchParams }) {
     admin.from("events").select("id, title, description, image_url, faq, starts_at, ends_at, capacity, price_cents, event_signups(user_id, paid)").eq("gym_id", gym.id).eq("status", "approved").gte("starts_at", nowIso).order("starts_at").limit(50),
   ]);
 
-  // Monthly leaderboard (sessions + referral bonus points).
+  // Monthly leaderboard (sessions + referral bonus points). Names are shown as "Voornaam A." — the
+  // board is visible on a semi-public page, so we never expose full surnames (GDPR-friendly default).
+  const lbName = (n) => { const p = String(n || "Lid").trim().split(/\s+/); return (p.length > 1 && p[p.length - 1][0]) ? `${p[0]} ${p[p.length - 1][0].toUpperCase()}.` : (p[0] || "Lid"); };
   const lbCounts = {};
-  for (const b of boardRows || []) { if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0, pts: 0 }).n++; }
+  for (const b of boardRows || []) { if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; const k = b.user_id; (lbCounts[k] ||= { name: lbName(b.member?.full_name), n: 0, pts: 0 }).n++; }
   for (const r of refPts || []) { if (r.referrer_id) { (lbCounts[r.referrer_id] ||= { name: "Lid", n: 0, pts: 0 }).pts = r.points; } }
   const missing = Object.keys(lbCounts).filter((id) => lbCounts[id].name === "Lid");
   if (missing.length) {
     const { data: names } = await admin.from("profiles").select("id, full_name").in("id", missing);
-    for (const p of names || []) if (lbCounts[p.id]) lbCounts[p.id].name = p.full_name || "Lid";
+    for (const p of names || []) if (lbCounts[p.id]) lbCounts[p.id].name = lbName(p.full_name);
   }
   const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v, score: v.n + (v.pts || 0) })).sort((a, b) => b.score - a.score);
 

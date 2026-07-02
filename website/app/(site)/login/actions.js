@@ -35,7 +35,14 @@ export async function authAction(_prevState, formData) {
       password,
       options: { data: { full_name: fullName }, emailRedirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(next)}` },
     });
-    if (error) return { error: error.message };
+    if (error) {
+      const m = error.message || "";
+      return { error:
+        /already registered|already exists|already been registered/i.test(m) ? "Er bestaat al een account met dit e-mailadres. Log in of reset je wachtwoord."
+        : /weak|at least|should be|password/i.test(m) ? "Kies een sterker wachtwoord (minstens 6 tekens)."
+        : /rate|too many|seconds/i.test(m) ? "Te veel pogingen. Wacht even en probeer opnieuw."
+        : "Registreren mislukt. Probeer het opnieuw." };
+    }
     await enrollUserInDrips(data.user.id); // start any active welcome drip
     const ref = String(formData.get("ref") || "").trim();
     if (ref) {
