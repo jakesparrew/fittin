@@ -58,13 +58,13 @@ function shell({ title, intro, rows = [], body = "", cta }) {
   </div>`;
 }
 
-async function send(to, subject, html, from = FROM) {
+async function send(to, subject, html, from = FROM, replyTo = REPLY_TO) {
   if (!resend || !to) return { ok: false, skipped: true };
   try {
     // Resend's SDK returns { data, error } and does NOT throw on API errors (unverified domain,
     // rate limit, suppression). Check res.error explicitly so a rejected send is never treated as
     // success — otherwise confirmations / reminders / door codes fail with zero trace.
-    const res = await resend.emails.send({ from, to, replyTo: REPLY_TO, subject, html });
+    const res = await resend.emails.send({ from, to, replyTo, subject, html });
     if (res?.error) {
       console.error("email send error:", subject, res.error?.message || JSON.stringify(res.error));
       return { ok: false, error: res.error };
@@ -209,6 +209,40 @@ export async function sendPurchaseReceipt({ to, name, description, amountCents, 
       body: `<p style="font-size:14px;color:#6b6685">Je betaalbewijs kan je altijd downloaden in je account onder Betalingen.</p>`,
       cta: { href: `${SITE}/boeken`, label: "Sessie boeken" },
     })
+  );
+}
+
+// ---- PT prospect: intake request confirmation ----
+export async function sendIntakeConfirmation({ to, name }) {
+  return send(
+    to,
+    "We hebben je aanvraag goed ontvangen 💪",
+    shell({
+      title: "Je gratis intake is aangevraagd ✅",
+      intro: `Hallo ${esc(name) || "daar"}, bedankt voor je interesse in personal training bij Fittin'!`,
+      body: `<p style="font-size:14px;color:#6b6685">We nemen zo snel mogelijk (meestal binnen 1 werkdag) contact met je op om je gratis intake en proeftraining in te plannen. Volledig vrijblijvend.</p>`,
+      cta: { href: `${SITE}/personal-training`, label: "Meer over personal training" },
+    })
+  );
+}
+
+// ---- Owner: new PT intake request (reply-to = the prospect, so replying answers them directly) ----
+export async function sendIntakeNotice({ to, prospectName, prospectEmail, phone, goal }) {
+  return send(
+    to,
+    `Nieuwe PT-intake aanvraag — ${prospectName}`,
+    shell({
+      title: "Nieuwe intake-aanvraag 🏋️",
+      intro: "Iemand vroeg een gratis intake/proeftraining aan via fittin.be:",
+      rows: [
+        ["Naam", esc(prospectName)],
+        ["E-mail", esc(prospectEmail)],
+        ...(phone ? [["Telefoon", esc(phone)]] : []),
+      ],
+      body: `<p style="font-size:14px;color:#6b6685;white-space:pre-wrap">${esc(goal || "(geen doel/vraag ingevuld)")}</p><p style="font-size:13px;color:#9b97ab;margin-top:12px">Antwoord gewoon op deze mail — je antwoord gaat rechtstreeks naar ${esc(prospectEmail)}.</p>`,
+    }),
+    FROM,
+    prospectEmail
   );
 }
 

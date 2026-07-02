@@ -1,7 +1,9 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const KEY = process.env.RESEND_API_KEY;
-const FORWARD_TO = "ran.knockaert@gmail.com"; // alle inkomende klantmail wordt hierheen doorgestuurd
+// Alle inkomende klantmail wordt hierheen doorgestuurd (env-overridebaar; exported zodat
+// andere owner-notificaties — bv. PT-intakes — dezelfde mailbox gebruiken).
+export const FORWARD_TO = process.env.INBOX_FORWARD_TO || "ran.knockaert@gmail.com";
 const escFwd = (v) => String(v ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const isFittin = (addr) => /@(.*\.)?fittin\.be$/i.test(String(addr || ""));
 const headerVal = (headers, name) => {

@@ -2,6 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 import { coachSlug } from "@/lib/slug";
+import ActionForm from "@/components/ui/ActionForm";
+import { requestIntake } from "./actions";
 
 export const metadata = {
   title: "Personal training in Gent | Fittin'",
@@ -143,12 +145,12 @@ export default async function PersonalTraining() {
             </p>
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link
-              href="/boeken"
+            <a
+              href="#intake"
               className="inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90"
             >
-              Boek je gratis proeftraining
-            </Link>
+              Vraag je gratis proeftraining aan
+            </a>
             <a
               href="#coaches"
               className="inline-block rounded-full border border-borderc px-7 py-3.5 font-bold text-brand transition hover:bg-paper"
@@ -344,18 +346,56 @@ Je sessie verplaatsen kan tot 6u op voorhand, in overleg met je coach.
                 Intake én proeftraining, volledig gratis en vrijblijvend. Je ontdekt meteen hoe het voelt
                 om met een coach te trainen — en wat een plan op maat in de app voor jou kan doen.
               </p>
-              <Link
-                href="/boeken"
+              <a
+                href="#intake"
                 className="mt-8 inline-block rounded-full bg-brand px-8 py-4 font-bold text-white transition hover:opacity-90"
               >
-                Boek je gratis proeftraining
-              </Link>
+                Vraag je gratis proeftraining aan
+              </a>
               <p className="mt-4 text-sm font-semibold text-brand/70">
                 Liever eerst overleggen? Mail{" "}
                 <a href="mailto:info@fittin.be?subject=Personal%20training" className="underline">info@fittin.be</a>
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ============ INTAKE-AANVRAAG ============ */}
+      {/* The redeem path for every "gratis proeftraining" promise — works without account. */}
+      <section id="intake" className="scroll-mt-24 bg-paper">
+        <div className="mx-auto max-w-3xl px-5 py-20">
+          <h2 className="text-center text-3xl font-black text-brand md:text-4xl">Vraag je gratis intake & proeftraining aan</h2>
+          <p className="mx-auto mt-4 max-w-xl text-center text-brand/70">
+            Laat je gegevens achter en we contacteren je snel (meestal binnen 1 werkdag) om een moment
+            te prikken. Volledig gratis en vrijblijvend.
+          </p>
+          <ActionForm action={requestIntake} success="Aanvraag verstuurd ✓" className="mt-10 rounded-3xl border border-borderc bg-white p-6 md:p-8">
+            {/* Honeypot — verborgen voor mensen, ingevuld door bots. */}
+            <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-bold text-brand">
+                Naam
+                <input name="name" required maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+              </label>
+              <label className="block text-sm font-bold text-brand">
+                E-mail
+                <input name="email" type="email" required maxLength={200} autoComplete="email" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+              </label>
+              <label className="block text-sm font-bold text-brand sm:col-span-2">
+                Telefoon <span className="font-normal text-brand/40">(optioneel)</span>
+                <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+              </label>
+              <label className="block text-sm font-bold text-brand sm:col-span-2">
+                Wat is je doel? <span className="font-normal text-brand/40">(optioneel)</span>
+                <textarea name="goal" rows={4} maxLength={2000} placeholder="Bv. sterker worden, afvallen, terug opbouwen na blessure…" className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+              </label>
+            </div>
+            <button className="mt-6 w-full rounded-full bg-accent py-4 text-lg font-black text-brand transition hover:opacity-90 sm:w-auto sm:px-10">
+              Vraag gratis intake aan
+            </button>
+            <p className="mt-3 text-xs text-brand/40">We gebruiken je gegevens enkel om je intake in te plannen.</p>
+          </ActionForm>
         </div>
       </section>
     </main>

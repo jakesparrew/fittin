@@ -82,6 +82,24 @@ export default function BookingClient({
   const hours = !hasNight || showNight ? allHours : allHours.filter((h) => h >= 7 && h < 22);
   const activeDay = (days.find((d) => d.dateStr === mobileDay) || days[0])?.dateStr;
 
+  // Restore a slot chosen BEFORE signup (guest picks a moment → creates account → lands back on
+  // /boeken?d=…&h=…): re-select it so the biggest funnel seam doesn't drop their choice. Only when
+  // the slot is still actually bookable.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const d = sp.get("d");
+    const h = parseFloat(sp.get("h"));
+    if (!d || Number.isNaN(h)) return;
+    const u = Math.min(4, Math.max(1, parseInt(sp.get("u"), 10) || 1));
+    if (!days.some((x) => x.dateStr === d) || !canBook(d, h, u)) return;
+    setSelected({ dateStr: d, hour: h });
+    setMobileDay(d);
+    setDuration(u);
+    const p = parseInt(sp.get("p"), 10);
+    if (p >= 1 && p <= 4) setPersons(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function coachOpen(dateStr, h) {
     if (!isPT || !coachId) return true;
     const wd = new Date(`${dateStr}T12:00:00Z`).getUTCDay();
@@ -535,12 +553,13 @@ export default function BookingClient({
               </button>
             ) : (
               <div className="mt-6 space-y-2">
-                <Link href="/login?mode=signup&next=/boeken" className="block w-full rounded-full bg-accent py-3.5 text-center font-bold text-brand transition hover:opacity-90">
+                {/* Carry the chosen slot through signup/login so it's pre-selected when they land back. */}
+                <Link href={`/login?mode=signup&next=${encodeURIComponent(selected ? `/boeken?d=${selected.dateStr}&h=${selected.hour}&p=${persons}&u=${duration}` : "/boeken")}`} className="block w-full rounded-full bg-accent py-3.5 text-center font-bold text-brand transition hover:opacity-90">
                   Maak account & boek je eerste uur gratis
                 </Link>
                 <p className="text-center text-xs text-lav">
                   Al een account?{" "}
-                  <Link href="/login?next=/boeken" className="font-bold text-white/80 hover:underline">Inloggen</Link>
+                  <Link href={`/login?next=${encodeURIComponent(selected ? `/boeken?d=${selected.dateStr}&h=${selected.hour}&p=${persons}&u=${duration}` : "/boeken")}`} className="font-bold text-white/80 hover:underline">Inloggen</Link>
                 </p>
               </div>
             )}
