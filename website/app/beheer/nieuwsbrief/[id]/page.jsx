@@ -98,7 +98,10 @@ export default async function CampaignDetail({ params }) {
             <div className="mt-6 rounded-2xl border border-borderc bg-white p-6">
               <h2 className="font-black text-brand">Bericht</h2>
               <p className="mt-1 text-sm font-bold text-brand">{c.subject}</p>
-              <div className="mt-2 text-sm text-brand/70" dangerouslySetInnerHTML={{ __html: c.body_html || "" }} />
+              {/* Sandboxed render: campaign HTML can be author-supplied, so isolate it (no scripts,
+                  no same-origin) instead of dangerouslySetInnerHTML — defense against a stored-XSS
+                  payload reaching the superadmin's session. */}
+              <iframe title="nieuwsbrief" sandbox="" srcDoc={c.body_html || ""} className="mt-2 h-[460px] w-full rounded-lg border border-borderc bg-white" />
               <p className="mt-4 text-xs text-brand/40">Verzonden {fmt(c.sent_at)}.</p>
             </div>
           )}
