@@ -90,9 +90,18 @@ async function grantCredits(admin, userId, credits, reason, withPunchcard = fals
 
 async function markBookingPaid(admin, bookingId, paymentIntent, session) {
   // Don't confirm if the captured amount is below the agreed charge (mismatched/partial session).
-  const { data: pre } = await admin.from("bookings").select("charge_cents, price_cents, status, gym_id, user_id, services(name)").eq("id", bookingId).single();
+  const { data: pre } = await admin.from("bookings").select("charge_cents, price_cents, status, paid, stripe_payment_intent, gym_id, user_id, services(name)").eq("id", bookingId).single();
   if (!pre) return;
   if (session?.amount_total != null && session.amount_total < (pre.charge_cents ?? pre.price_cents ?? 0)) return;
+  // DUPLICATE-PAYMENT GUARD: the booking is already paid by a DIFFERENT payment_intent (e.g. a slow
+  // first checkout landed after the member re-paid via a resumed session). Refund this second charge.
+  if (pre.paid && paymentIntent && pre.stripe_payment_intent && pre.stripe_payment_intent !== paymentIntent) {
+    try {
+      await stripe.refunds.create({ payment_intent: paymentIntent });
+      await admin.from("notifications").insert({ gym_id: pre.gym_id, user_id: pre.user_id, type: "system", title: "Dubbele betaling terugbetaald", body: "Deze sessie was al betaald — we hebben de tweede betaling automatisch teruggestort.", link: "/account" });
+    } catch (e) { console.error("duplicate-payment refund failed:", e?.message); }
+    return;
+  }
   // RACE GUARD: a slow payment (SCA/Bancontact/bank-app) can land after the slot hold expired and the
   // slot was released/re-booked. Never deliver a dead booking — refund the charge and tell the member.
   if (pre.status !== "bevestigd") {

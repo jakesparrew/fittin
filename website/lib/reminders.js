@@ -19,9 +19,11 @@ export async function sendDueReminders() {
 
   let sent = 0;
   for (const b of rows || []) {
+    let ok = true; // no e-mail on file → nothing to send, don't retry
     if (b.member?.email) {
+      ok = false;
       try {
-        await sendSessionReminder({
+        const r = await sendSessionReminder({
           to: b.member.email,
           name: b.member.full_name,
           serviceName: b.services?.name || "Sessie",
@@ -29,10 +31,13 @@ export async function sendDueReminders() {
           endsAt: b.ends_at,
           coachName: b.coach?.full_name,
         });
-        sent++;
-      } catch {}
+        ok = r?.ok !== false; // only mark sent when the mail actually went out
+        if (ok) sent++;
+      } catch (e) { console.error("reminder send threw:", b.id, e?.message); }
     }
-    await admin.from("bookings").update({ reminder_sent: true }).eq("id", b.id);
+    // Only flip reminder_sent when it succeeded, so a transient failure retries next cron tick
+    // (the +6h..+30h window keeps this bounded — no infinite ret/spam after the session passes).
+    if (ok) await admin.from("bookings").update({ reminder_sent: true }).eq("id", b.id);
   }
   return sent;
 }

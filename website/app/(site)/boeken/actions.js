@@ -211,11 +211,19 @@ export async function resumeCheckoutAction(formData) {
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("id, price_cents, charge_cents, discount_code_id, paid, services(name)")
+    .select("id, price_cents, charge_cents, discount_code_id, paid, status, stripe_session_id, services(name)")
     .eq("id", id)
     .eq("user_id", user.id)
     .single();
-  if (!booking || booking.paid) return;
+  // Only resume a still-held, unpaid booking. A cancelled/expired slot must not spawn a new checkout.
+  if (!booking || booking.paid || booking.status !== "bevestigd") return;
+
+  // Prevent a DOUBLE charge: expire the previous Checkout session before opening a new one, so a
+  // slow payment on the old link can't land alongside the new one. Best-effort (old link may already
+  // be expired/completed).
+  if (booking.stripe_session_id) {
+    try { await stripe.checkout.sessions.expire(booking.stripe_session_id); } catch {}
+  }
 
   // Re-use the originally agreed (possibly discounted) amount + code, not the full list price.
   const session = await stripe.checkout.sessions.create(

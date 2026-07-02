@@ -59,11 +59,20 @@ function shell({ title, intro, rows = [], body = "", cta }) {
 }
 
 async function send(to, subject, html, from = FROM) {
-  if (!resend || !to) return;
+  if (!resend || !to) return { ok: false, skipped: true };
   try {
-    await resend.emails.send({ from, to, replyTo: REPLY_TO, subject, html });
+    // Resend's SDK returns { data, error } and does NOT throw on API errors (unverified domain,
+    // rate limit, suppression). Check res.error explicitly so a rejected send is never treated as
+    // success — otherwise confirmations / reminders / door codes fail with zero trace.
+    const res = await resend.emails.send({ from, to, replyTo: REPLY_TO, subject, html });
+    if (res?.error) {
+      console.error("email send error:", subject, res.error?.message || JSON.stringify(res.error));
+      return { ok: false, error: res.error };
+    }
+    return { ok: true, id: res?.data?.id };
   } catch (e) {
     console.error("email send failed:", subject, e?.message);
+    return { ok: false, error: e };
   }
 }
 
@@ -278,7 +287,7 @@ export async function sendEventSignup({ to, name, title, startsAt }) {
 
 // ---- Member: day-before session reminder ----
 export async function sendSessionReminder({ to, name, serviceName, startsAt, endsAt, coachName }) {
-  await send(
+  return send(
     to,
     "Herinnering: je Fittin'-sessie is binnenkort",
     shell({
