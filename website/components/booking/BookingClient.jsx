@@ -463,6 +463,9 @@ export default function BookingClient({
                   </div>
                   {!selected && <p className="mt-2 text-xs text-brand/40">Kies eerst een startmoment hierboven.</p>}
                   {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration} uur kost {duration} sessies.</p>}
+                  {welcomeAvailable && useWelcome && duration > 1 && (
+                    <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {duration} uur betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
+                  )}
                 </div>
               </Card>
             )}

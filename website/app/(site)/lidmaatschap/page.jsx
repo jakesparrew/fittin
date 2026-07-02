@@ -7,7 +7,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { buyPackage, openBillingPortal } from "./actions";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Sessies & abonnement | Fittin'" };
+export const metadata = {
+  title: "Prijzen — sessies & abonnement | Fittin'",
+  description: "Trainen bij Fittin' in Gent: losse sessie € 15, 10-beurtenkaart € 150 (11 sessies) of abonnement € 12/maand met 1 sessie inbegrepen. Geen lidgeld, je eerste sessie is gratis.",
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/lidmaatschap` },
+};
 const euro = (c) => "€ " + (c / 100).toFixed(2).replace(".", ",");
 const eur0 = (c) => "€ " + Math.round(c / 100); // whole-euro headline price (no ,00)
 

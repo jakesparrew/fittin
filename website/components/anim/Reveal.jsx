@@ -3,10 +3,14 @@ import { useEffect, useRef, useState } from "react";
 
 // Fade-up on scroll. Reveals immediately if already in view (so above-the-fold content
 // never stays hidden), uses IntersectionObserver for below-the-fold. Respects reduced-motion via CSS.
-export default function Reveal({ children, className = "", delay = 0 }) {
+// `eager` renders visible on the SERVER (no opacity:0 until hydration) — use it for above-the-fold
+// content like the homepage hero, whose text is the LCP element and must not wait for React (or,
+// without JS, forever).
+export default function Reveal({ children, className = "", delay = 0, eager = false }) {
   const ref = useRef(null);
-  const [shown, setShown] = useState(false);
+  const [shown, setShown] = useState(eager);
   useEffect(() => {
+    if (eager) return;
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();

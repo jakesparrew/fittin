@@ -44,7 +44,7 @@ export default function LoginForm() {
           <p className="mt-2 text-sm leading-relaxed text-brand/60">
             {mode === "login"
               ? "Log in om de gym te reserveren en je boekingen te beheren."
-              : "Registreren is gratis. Je eerste uur is gratis met de code FittinWelcome."}
+              : "Registreren is gratis. Je eerste sessie is automatisch gratis bij je eerste boeking."}
           </p>
 
           {urlError && (

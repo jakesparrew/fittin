@@ -12,8 +12,8 @@ const memberCards = [
     title: "Lid worden",
     items: [
       "Registreer je online — helemaal gratis",
-      'Eerste uur gratis met de code "FittinWelcome"',
-      'Ga naar online boeken en kies "Fit60"',
+      "Je eerste uur is automatisch gratis",
+      'Ga naar online boeken en kies "Privé sessie"',
     ],
   },
   {
@@ -76,9 +76,9 @@ export default function DeGym() {
             Word nu lid en ontvang meteen <span className="text-accentdark">1 gratis sessie</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-brand/70">
-            Gebruik de code{" "}
-            <span className="rounded-full bg-brand px-3 py-1 font-bold text-accent">FittinWelcome</span>{" "}
-            bij je eerste boeking.
+            Je{" "}
+            <span className="rounded-full bg-brand px-3 py-1 font-bold text-accent">eerste sessie is gratis</span>{" "}
+            — automatisch verrekend bij je eerste online boeking.
           </p>
           <Link
             href="/boeken"

@@ -36,7 +36,7 @@ const usps = [
 
 const steps = [
   ["Maak je gratis account", "In 30 seconden geregeld — met e-mail of met Google. Geen lidgeld, geen verplichtingen.", "01"],
-  ["Boek je eerste uur — gratis", "Reserveer een moment dat jou past en gebruik de code FittinWelcome voor je eerste gratis sessie.", "02"],
+  ["Boek je eerste uur — gratis", "Reserveer een moment dat jou past — je eerste sessie is automatisch gratis.", "02"],
   ["Open de deur & train", "Je boeking opent de deur via de app. De hele zaal voor jou — alleen, met vrienden of met coach.", "03"],
 ];
 
@@ -82,10 +82,10 @@ export default async function Home() {
         <div className="animate-floaty-slow pointer-events-none absolute -bottom-40 -right-24 h-[32rem] w-[32rem] rounded-full bg-lav/20 blur-2xl" />
 
         <div className="relative mx-auto max-w-6xl px-5 py-28 md:py-36">
-          <Reveal>
+          <Reveal eager>
             <p className="text-sm font-black uppercase tracking-[0.3em] text-accent">Get Fittin&rsquo; · Gent</p>
           </Reveal>
-          <Reveal delay={80}>
+          <Reveal eager delay={80}>
             <h1 className="mt-5 max-w-4xl text-5xl font-black leading-[0.98] tracking-tight md:text-7xl">
               Train in jouw eigen{" "}
               <span className="relative whitespace-nowrap text-accent">
@@ -96,13 +96,13 @@ export default async function Home() {
               </span>
             </h1>
           </Reveal>
-          <Reveal delay={160}>
+          <Reveal eager delay={160}>
             <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl">
               Een modern uitgeruste zaal, exclusief voor jou. Reserveer per uur, open de deur met de
               app en train wanneer het jou past — alleen, met je coach of met je vrienden.
             </p>
           </Reveal>
-          <Reveal delay={240}>
+          <Reveal eager delay={240}>
             <div className="mt-10 flex flex-wrap gap-4">
               <Link href="/login?mode=signup" className="shine rounded-full bg-accent px-8 py-4 text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40">
                 Maak gratis account
@@ -112,7 +112,7 @@ export default async function Home() {
               </Link>
             </div>
             <p className="mt-4 text-sm font-semibold text-white/60">
-              Je eerste uur is <span className="font-black text-accent">gratis</span> met de code <span className="font-black text-white">FittinWelcome</span> · geen lidgeld, geen verplichtingen.
+              Je eerste uur is <span className="font-black text-accent">automatisch gratis</span> bij je eerste boeking · geen lidgeld, geen verplichtingen.
             </p>
           </Reveal>
           <Reveal delay={320}>
@@ -367,9 +367,9 @@ export default async function Home() {
               Je eerste uur is <span className="text-accent">gratis</span>
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg text-white/70">
-              Word Fittin&rsquo; member en gebruik de code{" "}
-              <span className="rounded-full bg-white/10 px-3 py-1 font-black text-accent ring-1 ring-accent/30">FittinWelcome</span>{" "}
-              bij je eerste online boeking.
+              Word Fittin&rsquo; member — je{" "}
+              <span className="rounded-full bg-white/10 px-3 py-1 font-black text-accent ring-1 ring-accent/30">eerste sessie is gratis</span>{" "}
+              en wordt automatisch verrekend bij je eerste online boeking.
             </p>
             <Link href="/boeken" className="shine mt-10 inline-block rounded-full bg-accent px-10 py-4 text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl">
               Boek je gratis sessie

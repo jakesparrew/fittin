@@ -5,6 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function validateDiscount(gymId, userId, rawCode, baseCents) {
   const code = String(rawCode || "").trim().toUpperCase();
   if (!code) return { none: true, cents: baseCents };
+  // Marketing said "code FittinWelcome" for years — people still type it in the discount field,
+  // where it isn't a real code (the free first session applies automatically). Explain instead of
+  // the confusing "Ongeldige kortingscode."
+  if (code === "FITTINWELCOME") return { error: "Je eerste sessie is automatisch gratis — daar heb je geen code voor nodig." };
   const admin = createAdminClient();
   const { data: dc } = await admin.from("discount_codes").select("*").eq("gym_id", gymId).eq("code", code).maybeSingle();
   if (!dc || !dc.active) return { error: "Ongeldige kortingscode." };
