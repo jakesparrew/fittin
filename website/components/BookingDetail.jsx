@@ -1,16 +1,12 @@
 "use client";
 import { useState } from "react";
 import { getBookingDetail } from "@/app/booking-detail-action";
+import { isSettled, sourceLabel } from "@/lib/booking-status";
 
 const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 const time = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
-const bron = (b) =>
-  b.paymentSource === "abo" ? "Abonnement"
-    : b.paymentSource === "credit" ? "Beurtenkaart"
-    : b.paymentSource === "gratis_code" ? "Gratis code"
-    : b.coachName ? "Via coach"
-    : "Online";
+const bron = (b) => sourceLabel(b);
 
 // Click a booking name/card anywhere → slide-in side panel with the full details. Read-only.
 export default function BookingDetail({ bookingId, children, className = "" }) {
@@ -51,7 +47,7 @@ export default function BookingDetail({ bookingId, children, className = "" }) {
 }
 
 function Detail({ b }) {
-  const paid = b.paid || b.priceCents === 0 || b.paymentSource !== "los";
+  const paid = isSettled(b);
   return (
     <div className="mt-5 space-y-3 text-sm">
       <div className="pb-1">

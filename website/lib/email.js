@@ -77,7 +77,7 @@ async function send(to, subject, html, from = FROM) {
 }
 
 // ---- Member: booking confirmed ----
-export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address }) {
+export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address, paymentSource, creditBalance }) {
   const addr = address || "Aannemersstraat 186, 9040 Gent";
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`;
   const rows = [
@@ -87,7 +87,14 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
     ["Personen", persons],
     ["Adres", addr],
   ];
-  if (free) rows.push(["Prijs", `<span style="color:#33B24A">Gratis (FittinWelcome)</span>`]);
+  // Source-aware price row: a punch-card or abo session must not read "Gratis (FittinWelcome)".
+  if (paymentSource === "credit") {
+    rows.push(["Prijs", `<span style="color:#33B24A">Betaald met je beurtenkaart${Number.isInteger(creditBalance) ? ` (saldo: ${creditBalance})` : ""}</span>`]);
+  } else if (paymentSource === "gratis_code") {
+    rows.push(["Prijs", `<span style="color:#33B24A">Gratis (FittinWelcome)</span>`]);
+  } else if (free) {
+    rows.push(["Prijs", `<span style="color:#33B24A">Gratis</span>`]);
+  }
   await send(
     to,
     "Je Fittin'-boeking is bevestigd ✅",
@@ -135,6 +142,73 @@ export async function sendBookingCancelled({ to, name, serviceName, startsAt }) 
       cta: { href: `${SITE}/boeken`, label: "Nieuwe sessie boeken" },
     }),
     FROM_BOOKING
+  );
+}
+
+const eurTxt = (c) => `€ ${((c || 0) / 100).toFixed(2).replace(".", ",")}`;
+
+// ---- Member: monthly membership payment failed ----
+export async function sendMembershipPaymentFailed({ to, name }) {
+  return send(
+    to,
+    "Je maandbetaling is niet gelukt",
+    shell({
+      title: "Je maandbetaling is niet gelukt",
+      intro: `Hallo ${esc(name) || "daar"}, de maandelijkse betaling van je Fittin'-abonnement (€ 12) is niet doorgegaan.`,
+      body: `<p style="font-size:14px;color:#6b6685">Meestal is een verlopen of vervangen kaart de oorzaak. Werk je betaalmethode bij via je account — dan blijft je membership (en je inbegrepen sessie) gewoon doorlopen. We proberen het automatisch nog een paar keer.</p>`,
+      cta: { href: `${SITE}/account`, label: "Betaalmethode bijwerken" },
+    })
+  );
+}
+
+// ---- Member: membership ended ----
+export async function sendMembershipCancelled({ to, name }) {
+  return send(
+    to,
+    "Je Fittin'-abonnement is stopgezet",
+    shell({
+      title: "Je abonnement is stopgezet",
+      intro: `Hallo ${esc(name) || "daar"}, je maandabonnement is beëindigd. Je kan uiteraard gewoon sessies blijven boeken aan € 15, of op elk moment opnieuw member worden.`,
+      body: `<p style="font-size:14px;color:#6b6685">Was dit niet de bedoeling of heb je vragen? Antwoord op deze mail — we helpen je graag verder.</p>`,
+      cta: { href: `${SITE}/lidmaatschap`, label: "Opnieuw member worden" },
+    })
+  );
+}
+
+// ---- Member: a payment was refunded ----
+export async function sendPaymentRefunded({ to, name, description, amountCents }) {
+  return send(
+    to,
+    "Je betaling is terugbetaald",
+    shell({
+      title: "Terugbetaling onderweg 💶",
+      intro: `Hallo ${esc(name) || "daar"}, we hebben een betaling aan jou terugbetaald:`,
+      rows: [
+        ["Omschrijving", esc(description || "Betaling")],
+        ["Bedrag", eurTxt(amountCents)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Het bedrag staat — afhankelijk van je bank — binnen 5 à 10 werkdagen terug op je rekening. Vragen? Antwoord gewoon op deze mail.</p>`,
+      cta: { href: `${SITE}/account`, label: "Mijn account" },
+    })
+  );
+}
+
+// ---- Member/coach: purchase receipt (punch card, coach credits) ----
+export async function sendPurchaseReceipt({ to, name, description, amountCents, balanceLine }) {
+  return send(
+    to,
+    "Bedankt voor je aankoop bij Fittin' ✅",
+    shell({
+      title: "Aankoop bevestigd ✅",
+      intro: `Hallo ${esc(name) || "daar"}, bedankt! Dit is je bevestiging:`,
+      rows: [
+        ["Aankoop", esc(description || "Aankoop")],
+        ["Bedrag", eurTxt(amountCents)],
+        ...(balanceLine ? [["Saldo", esc(balanceLine)]] : []),
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Je betaalbewijs kan je altijd downloaden in je account onder Betalingen.</p>`,
+      cta: { href: `${SITE}/boeken`, label: "Sessie boeken" },
+    })
   );
 }
 

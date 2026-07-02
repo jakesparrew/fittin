@@ -3,6 +3,7 @@ import { useState } from "react";
 import { adminCancelBooking, adminAssignCoach } from "@/app/beheer/actions";
 import ActionForm from "@/components/ui/ActionForm";
 import BookingDetail from "@/components/BookingDetail";
+import { isSettled, sourceLabel } from "@/lib/booking-status";
 
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -11,13 +12,9 @@ const ago = (iso) => {
   const d = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
   return d <= 0 ? "vandaag" : d === 1 ? "gisteren" : d < 31 ? `${d}d geleden` : `${Math.floor(d / 30)} mnd geleden`;
 };
-// How the booking came in (the "log"): coach-booked, member online, or via a credit/abo/code.
-const bron = (b) =>
-  b.coach_name ? "Via coach"
-    : b.payment_source === "abo" ? "Abonnement"
-    : b.payment_source === "credit" ? "Beurtenkaart"
-    : b.payment_source === "gratis_code" ? "Gratis code"
-    : "Online";
+// Shared paid/source logic (lib/booking-status) — the local heuristic here used to mark an
+// UNPAID €12 abo session with a green ✓, so the money was never chased.
+const bron = (b) => sourceLabel(b);
 
 export default function BookingsList({ bookings = [], coaches = [] }) {
   const [q, setQ] = useState("");
@@ -63,7 +60,7 @@ export default function BookingsList({ bookings = [], coaches = [] }) {
           <tbody className="divide-y divide-borderc">
             {rows.map((b) => {
               const upcoming = new Date(b.starts_at).getTime() >= now;
-              const paid = b.paid || b.price_cents === 0 || b.payment_source !== "los";
+              const paid = isSettled(b);
               return (
                 <tr key={b.id} className={b.status !== "bevestigd" ? "opacity-50" : ""}>
                   <td className="whitespace-nowrap px-4 py-3 capitalize text-brand/70">{fmt(b.starts_at)}</td>

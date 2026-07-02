@@ -134,7 +134,15 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
 
   // Free (FittinWelcome) or zero-price → confirmed now, so the invitees can be e-mailed.
   if (!booking || booking.paid || booking.price_cents === 0) {
-    if (booking) { try { await sendBookingInvites(createAdminClient(), booking, user.user_metadata?.full_name); } catch {} }
+    let creditBalance = null;
+    if (booking) {
+      const admin = createAdminClient();
+      try { await sendBookingInvites(admin, booking, user.user_metadata?.full_name); } catch {}
+      // A punch-card booking's confirmation doubles as the balance receipt.
+      if (booking.payment_source === "credit") {
+        try { const { data: bal } = await admin.rpc("credits_balance", { p_user: user.id }); if (Number.isInteger(bal)) creditBalance = bal; } catch {}
+      }
+    }
     await sendBookingConfirmation({
       to: user.email,
       name: user.user_metadata?.full_name,
@@ -143,6 +151,8 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
       endsAt: booking?.ends_at,
       persons: booking?.persons || 1,
       free: true,
+      paymentSource: booking?.payment_source,
+      creditBalance,
     });
     return { ok: true, free: true };
   }
@@ -225,9 +235,23 @@ export async function resumeCheckoutAction(formData) {
     try { await stripe.checkout.sessions.expire(booking.stripe_session_id); } catch {}
   }
 
-  // Re-use the originally agreed (possibly discounted) amount + code, not the full list price.
+  // Re-use the originally agreed (possibly discounted) amount + code, not the full list price —
+  // but re-check the code first: it may have been exhausted/deactivated since the booking was made.
+  let chargeCents = booking.charge_cents ?? undefined;
+  let codeId = booking.discount_code_id || null;
+  if (codeId) {
+    const admin = createAdminClient();
+    const { data: dc } = await admin.from("discount_codes").select("active, expires_at, max_uses, used_count").eq("id", codeId).maybeSingle();
+    const stillValid = dc && dc.active
+      && !(dc.expires_at && new Date(dc.expires_at) < new Date())
+      && !(dc.max_uses != null && dc.used_count >= dc.max_uses);
+    if (!stillValid) {
+      chargeCents = booking.price_cents; codeId = null;
+      await admin.from("bookings").update({ charge_cents: booking.price_cents, discount_code_id: null }).eq("id", id);
+    }
+  }
   const session = await stripe.checkout.sessions.create(
-    checkoutParams(booking, user.email, booking.charge_cents ?? undefined, booking.discount_code_id || null)
+    checkoutParams(booking, user.email, chargeCents, codeId)
   );
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", id);
   redirect(session.url);

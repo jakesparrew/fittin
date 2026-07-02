@@ -28,8 +28,21 @@ export async function validateDiscount(gymId, userId, rawCode, baseCents) {
 export async function recordRedemption(gymId, codeId, userId, bookingId) {
   const admin = createAdminClient();
   await admin.from("discount_redemptions").insert({ gym_id: gymId, code_id: codeId, user_id: userId, booking_id: bookingId });
-  const { data: dc } = await admin.from("discount_codes").select("used_count").eq("id", codeId).single();
-  await admin.from("discount_codes").update({ used_count: (dc?.used_count || 0) + 1 }).eq("id", codeId);
+  // Guarded compare-and-set instead of read-modify-write, so two concurrent redemptions of a
+  // max_uses=1 code can't both slip under the cap (TOCTOU race).
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const { data: dc } = await admin.from("discount_codes").select("used_count, max_uses").eq("id", codeId).single();
+    if (!dc) return;
+    if (dc.max_uses != null && dc.used_count >= dc.max_uses) return; // already at cap
+    const { data: updated } = await admin
+      .from("discount_codes")
+      .update({ used_count: dc.used_count + 1 })
+      .eq("id", codeId)
+      .eq("used_count", dc.used_count) // CAS: only wins if nobody bumped in between
+      .select("id");
+    if (updated && updated.length) return;
+  }
+  console.error("recordRedemption: CAS failed after 3 attempts", codeId);
 }
 
 // Per-recipient discount code for an activation campaign: deterministic per (campaign, member),

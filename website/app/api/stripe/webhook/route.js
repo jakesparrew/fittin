@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendBookingConfirmation, sendEventSignup } from "@/lib/email";
+import { sendBookingConfirmation, sendEventSignup, sendMembershipPaymentFailed, sendMembershipCancelled, sendPaymentRefunded, sendPurchaseReceipt } from "@/lib/email";
 import { sendBookingInvites } from "@/lib/booking-invites";
 import { recordRedemption } from "@/lib/discounts";
 
@@ -242,10 +242,13 @@ async function handleRefund(admin, charge) {
   const fully = charge.refunded === true;
 
   if (fully) {
+    let member = null; // whoever we can identify → gets the refund-notice mail
     if (pi) {
-      await admin.from("bookings")
+      const { data: cancelled } = await admin.from("bookings")
         .update({ status: "geannuleerd", paid: false, cancelled_at: new Date().toISOString() })
-        .eq("stripe_payment_intent", pi).eq("status", "bevestigd");
+        .eq("stripe_payment_intent", pi).eq("status", "bevestigd")
+        .select("user_id");
+      if (cancelled?.[0]?.user_id) member = cancelled[0].user_id;
     }
     const refs = [];
     if (pi) { try { const list = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 10 }); for (const s of list.data || []) refs.push(s.id); } catch {} }
@@ -255,6 +258,14 @@ async function handleRefund(admin, charge) {
       await reverseLedger(admin, "coach_ledger", ref, charge.id);
       await reverseLedger(admin, "coach_credit_ledger", ref, charge.id);
     }
+    // Tell the member their money is on its way back (previously: nothing — they might still show up).
+    try {
+      if (!member) { const p = await profileFromCustomer(admin, charge.customer); member = p?.id || null; }
+      if (member) {
+        const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", member).single();
+        if (m?.email) await sendPaymentRefunded({ to: m.email, name: m.full_name, description: charge.description || "Betaling aan Fittin'", amountCents: charge.amount_refunded });
+      }
+    } catch (e) { console.error("refund notice:", e?.message); }
   }
 
   try {
@@ -282,6 +293,14 @@ async function handleEvent(event, admin) {
         const credits = parseInt(obj.metadata.credits, 10) || 0;
         await grantCredits(admin, obj.metadata.user_id, credits, "aankoop", true, obj.id);
         await recordPayment(admin, { userId: obj.metadata.user_id, amountCents: obj.amount_total, kind: "beurtenkaart", description: `Beurtenkaart · ${credits} sessies`, stripeId: obj.id });
+        // Receipt e-mail — a €150 purchase deserves an acknowledgment beyond the Stripe screen.
+        try {
+          const [{ data: m }, { data: bal }] = await Promise.all([
+            admin.from("profiles").select("email, full_name").eq("id", obj.metadata.user_id).single(),
+            admin.rpc("credits_balance", { p_user: obj.metadata.user_id }),
+          ]);
+          if (m?.email) await sendPurchaseReceipt({ to: m.email, name: m.full_name, description: `Beurtenkaart · ${credits} sessies`, amountCents: obj.amount_total, balanceLine: Number.isInteger(bal) ? `${bal} sessies beschikbaar` : null });
+        } catch (e) { console.error("punchcard receipt:", e?.message); }
       } else if (obj.metadata?.kind === "coach_credits") {
         const coachId = obj.metadata.coach_id;
         const credits = parseInt(obj.metadata.credits, 10) || 0;
@@ -293,6 +312,14 @@ async function handleEvent(event, admin) {
           );
         }
         await recordPayment(admin, { userId: coachId, amountCents: obj.amount_total, kind: "coach_credits", description: `Coach-sessies · ${credits}`, stripeId: obj.id });
+        try {
+          const [{ data: c }, { data: led }] = await Promise.all([
+            admin.from("profiles").select("email, full_name").eq("id", coachId).single(),
+            admin.from("coach_ledger").select("delta").eq("coach_id", coachId),
+          ]);
+          const bal = (led || []).reduce((a, r) => a + r.delta, 0);
+          if (c?.email) await sendPurchaseReceipt({ to: c.email, name: c.full_name, description: `Coach-sessies · ${credits}`, amountCents: obj.amount_total, balanceLine: `${bal} sessietegoed` });
+        } catch (e) { console.error("coach-credits receipt:", e?.message); }
       } else if (obj.metadata?.kind === "event") {
         const eventId = obj.metadata.event_id;
         const userId = obj.metadata.user_id;
@@ -346,9 +373,19 @@ async function handleEvent(event, admin) {
     case "customer.subscription.updated":
       await upsertMembership(admin, obj);
       return;
-    case "customer.subscription.deleted":
+    case "customer.subscription.deleted": {
+      const { data: mem } = await admin.from("memberships").select("user_id, gym_id").eq("stripe_sub_id", obj.id).maybeSingle();
       await admin.from("memberships").update({ status: "geannuleerd" }).eq("stripe_sub_id", obj.id);
+      // Tell the member their abo ended (previously: nothing at all).
+      if (mem?.user_id) {
+        try {
+          const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", mem.user_id).single();
+          if (m?.email) await sendMembershipCancelled({ to: m.email, name: m.full_name });
+          await admin.from("notifications").insert({ gym_id: mem.gym_id, user_id: mem.user_id, type: "system", title: "Je abonnement is stopgezet", body: "Je kan blijven boeken aan € 15, of op elk moment opnieuw member worden.", link: "/lidmaatschap" });
+        } catch (e) { console.error("membership-cancelled notice failed:", e?.message); }
+      }
       return;
+    }
     case "invoice.paid": {
       // Only subscription invoices grant the monthly included session.
       // (Stripe's newer API moved the subscription ref off the invoice root, so we
@@ -381,12 +418,30 @@ async function handleEvent(event, admin) {
       await admin.from("memberships").update({ status: "past_due" }).eq("user_id", prof.id).eq("status", "actief");
       try {
         await admin.from("notifications").insert({ gym_id: prof.gym_id, user_id: prof.id, type: "system", title: "Betaling mislukt", body: "Je maandbetaling lukte niet. Werk je betaalmethode bij via je account om member te blijven.", link: "/account" });
-      } catch {}
+        // E-mail too — a failing card is preventable churn and the bell alone is easy to miss.
+        const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", prof.id).single();
+        if (m?.email) await sendMembershipPaymentFailed({ to: m.email, name: m.full_name });
+      } catch (e) { console.error("payment-failed notice:", e?.message); }
       return;
     }
     case "charge.refunded":
       await handleRefund(admin, obj);
       return;
+    case "charge.dispute.created": {
+      // Chargeback opened — the owner must respond within Stripe's deadline or lose by default.
+      // NOTE: this event must also be enabled on the webhook endpoint in the Stripe dashboard.
+      try {
+        const { data: gym } = await admin.from("gyms").select("id").order("created_at").limit(1).single();
+        if (gym) {
+          const amt = ((obj.amount || 0) / 100).toFixed(2);
+          const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", gym.id).eq("role", "beheerder");
+          for (const a of admins || []) {
+            await admin.from("notifications").insert({ gym_id: gym.id, user_id: a.id, type: "system", title: `⚠️ Chargeback geopend (€ ${amt})`, body: "Een lid betwist een betaling. Reageer in het Stripe-dashboard vóór de deadline, anders verlies je de zaak automatisch.", link: "/beheer/betalingen" });
+          }
+        }
+      } catch (e) { console.error("dispute alert:", e?.message); }
+      return;
+    }
     default:
       return;
   }

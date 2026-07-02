@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSessionProfile } from "@/lib/auth";
+import { isSettled } from "@/lib/booking-status";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
@@ -117,7 +118,7 @@ export default async function AccountPage({ searchParams }) {
   const all = [...(bookings || []), ...invitedSessions];
   // A booking is "settled" (door-eligible) only if paid, or settled at creation (credit/free/invited).
   // Unpaid 'los'/'abo' bookings must NOT open the door until Stripe confirms payment.
-  const isSettled = (b) => b.paid || b.payment_source === "credit" || b.payment_source === "gratis_code" || b.payment_source === "invite";
+  // Shared definition (lib/booking-status) — same logic the admin list + detail panel now use.
   const doorActive = all.some(
     (b) =>
       b.status === "bevestigd" && isSettled(b) &&

@@ -218,12 +218,13 @@ export async function adminCreateBooking(formData) {
       }
     }
     const [{ data: bk }, { data: m }] = await Promise.all([
-      admin.from("bookings").select("gym_id, starts_at, ends_at, persons, services(name)").eq("id", bookingId).single(),
+      admin.from("bookings").select("gym_id, starts_at, ends_at, persons, payment_source, services(name)").eq("id", bookingId).single(),
       admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
     ]);
     if (bk && m?.email) {
       const { sendBookingConfirmation } = await import("@/lib/email");
-      await sendBookingConfirmation({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at, endsAt: bk.ends_at, persons: bk.persons, free: true });
+      // paymentSource keeps the label honest: credit → "Betaald met je beurtenkaart", comp → "Gratis".
+      await sendBookingConfirmation({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at, endsAt: bk.ends_at, persons: bk.persons, free: true, paymentSource: bk.payment_source });
     }
     if (bk) await notify({ gymId: bk.gym_id, userId: memberId, type: "coach_booked", title: "Er is een sessie voor je geboekt", body: bk.services?.name || "Sessie", link: "/account" });
     if (bk && coach) await notify({ gymId: bk.gym_id, userId: coachId, type: "coach_booked", title: "Een sessie is aan jou toegewezen", body: bk.services?.name || "Sessie", link: "/coach/agenda" });
