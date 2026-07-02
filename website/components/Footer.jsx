@@ -54,6 +54,8 @@ export default function Footer() {
         <span aria-hidden>·</span>
         <Link href="/privacy" className="transition hover:text-white">Privacybeleid</Link>
         <span aria-hidden>·</span>
+        <Link href="/voorwaarden" className="transition hover:text-white">Algemene voorwaarden</Link>
+        <span aria-hidden>·</span>
         <Link href="/disclosure" className="transition hover:text-white">Disclosure</Link>
       </div>
     </footer>

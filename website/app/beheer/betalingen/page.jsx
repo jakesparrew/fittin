@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getGymSecrets } from "@/lib/gym-secrets";
 import { saveInvoiceSettings } from "./actions";
 import ActionForm from "@/components/ui/ActionForm";
 
@@ -23,6 +25,8 @@ export default async function Betalingen({ searchParams }) {
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym } = ctx;
+  // IBAN now lives in the service-role-only gym_integrations table (0102), not on gyms.
+  const secrets = await getGymSecrets(createAdminClient(), gym.id);
 
   const now = new Date();
   const dayStart = new Date(now); dayStart.setHours(0, 0, 0, 0);
@@ -64,7 +68,7 @@ export default async function Betalingen({ searchParams }) {
         <ActionForm action={saveInvoiceSettings} success="Factuurgegevens opgeslagen ✓" className="mt-3 grid gap-3 sm:grid-cols-2">
           <Field name="legal_name" label="Wettelijke naam (vzw)" defaultValue={gym.legal_name} />
           <Field name="vat_number" label="Ondernemings-/btw-nummer" defaultValue={gym.vat_number} placeholder="BE0123.456.789" />
-          <Field name="iban" label="IBAN" defaultValue={gym.iban} />
+          <Field name="iban" label="IBAN" defaultValue={secrets.iban || ""} />
           <Field name="invoice_email" label="Facturatie-e-mail" defaultValue={gym.invoice_email} />
           <Field name="invoice_footer" label="Voetnoot op factuur" defaultValue={gym.invoice_footer} full />
           <div className="sm:col-span-2">

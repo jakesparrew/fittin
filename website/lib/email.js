@@ -317,6 +317,13 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
             <li>Leg gewichten en materiaal terug op hun vaste plaats.</li>
             <li>Doe de lichten uit en controleer of de deur dicht is.</li>
           </ul>
+          <div style="margin-top:14px;border-top:1px solid #ece9f5;padding-top:12px">
+            <p style="font-size:13px;color:#6b6685;margin:0;line-height:1.6">
+              <b style="color:#22194F">Nood?</b> De gym is onbemand — bel bij een noodgeval <b style="color:#22194F">112</b>.
+              De EHBO-kit hangt aan de muur bij de ingang. Adres voor de hulpdiensten:
+              <b style="color:#22194F">${esc(address || "Aannemersstraat 186, 9040 Gent")}</b>.
+            </p>
+          </div>
         </div>`,
       cta: { href: `${SITE}/huisregels`, label: "Toegang & huisregels" },
     }),

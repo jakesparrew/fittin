@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createBookingAction, searchMembersAction, validateDiscountAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel, fmtHour } from "@/lib/time";
 import EventsBooking from "@/components/booking/EventsBooking";
+import { track } from "@/lib/track";
 
 const euro = (cents) => "€ " + (cents / 100).toFixed(2).replace(".", ",");
 
@@ -148,6 +149,7 @@ export default function BookingClient({
     if (!selected || !service) return;
     setBusy(true);
     setError("");
+    track("checkout_started"); // funnel: confirm clicked (→ Stripe for paid, or instant for free/credit)
     let res;
     try {
       res = await createBookingAction({
@@ -309,7 +311,7 @@ export default function BookingClient({
                     if (taken) return <div key={h} className="rounded-xl bg-borderc/40 py-3 text-center text-[10px] font-bold leading-tight text-brand/35">{label}<br />vol</div>;
                     if (!inRange && !canBook(activeDay, h, 1)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/20">{label}</div>;
                     return (
-                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); setDuration(1); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
+                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); setDuration(1); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
                         {label}{isSel ? " ✓" : ""}
                       </button>
                     );
@@ -349,7 +351,7 @@ export default function BookingClient({
                           return (
                             <button
                               key={d.dateStr}
-                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); setDuration(1); }}
+                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); setDuration(1); track("booking_slot_chosen"); }}
                               className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
                             >
                               {isSel ? "✓" : inRange ? "•" : ""}

@@ -18,9 +18,12 @@ const KIND = { booking: "Sessie", beurtenkaart: "Beurtenkaart", abonnement: "Abo
 export default async function FactuurPage({ searchParams }) {
   const ctx = await getAdminContext();
   if (!ctx) return null;
-  const { gym, supabase } = ctx;
+  const { gym: gymRow, supabase } = ctx;
   const sp = (await searchParams) || {};
   const admin = createAdminClient();
+  // IBAN moved to gym_integrations (0102) — merge it back onto the gym object the Invoice expects.
+  const { getGymSecrets } = await import("@/lib/gym-secrets");
+  const gym = { ...gymRow, iban: (await getGymSecrets(admin, gymRow.id)).iban || gymRow.iban };
 
   let props = null;
 

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { track } from "@/lib/track";
 
 const DISMISS_KEY = "fittin-pwa-dismissed";
 const DISMISS_DAYS = 14; // don't nag — re-ask only after two weeks
@@ -35,6 +36,7 @@ export default function PWAInstallPrompt() {
     };
     const onInstalled = () => {
       try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch {}
+      track("install_accepted");
       setShow(false);
     };
     window.addEventListener("beforeinstallprompt", onBIP);
@@ -51,6 +53,8 @@ export default function PWAInstallPrompt() {
       clearTimeout(t);
     };
   }, []);
+
+  useEffect(() => { if (show) track("install_prompt_shown"); }, [show]);
 
   function dismiss() {
     try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch {}

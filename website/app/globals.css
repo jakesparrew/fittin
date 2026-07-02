@@ -4,8 +4,13 @@
   --color-brand: #22194f;
   --color-branddeep: #1a1440;
   --color-accent: #5fda6b;
-  --color-accentdark: #33b24a;
+  /* accentdark = "green text on white": darkened #33b24a→#1a7d34 to pass WCAG AA (2.76:1 → ~4.6:1).
+     178 text uses; bg-accentdark is 1 badge (a slightly deeper green there is fine). */
+  --color-accentdark: #1a7d34;
   --color-lav: #b2adc2;
+  /* ink-soft = muted text on WHITE/paper that still passes AA (~6:1). Prefer this over
+     text-lav / text-brand/40-50 on light backgrounds (text-lav stays for on-brand-dark surfaces). */
+  --color-ink-soft: #5a5479;
   --color-paper: #f5f6fa;
   --color-borderc: #e6e4f0;
   --font-sans: var(--font-lato), "Lato", ui-sans-serif, system-ui, sans-serif;

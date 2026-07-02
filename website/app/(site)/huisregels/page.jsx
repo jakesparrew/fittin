@@ -82,6 +82,20 @@ export default function HuisregelsPage() {
         </div>
       </section>
 
+      {/* Emergency — the gym is unstaffed */}
+      <section className="mx-auto max-w-4xl px-5 pb-8">
+        <div className="rounded-3xl border-2 border-red-200 bg-red-50 p-6">
+          <h2 className="text-xl font-black text-brand">Bij nood 🚑</h2>
+          <p className="mt-2 leading-relaxed text-brand/70">
+            De gym is <strong>onbemand</strong> tijdens je sessie. Bel bij een noodgeval altijd eerst{" "}
+            <a href="tel:112" className="font-black text-red-600">112</a>. De EHBO-kit hangt aan de muur
+            bij de ingang. Geef aan de hulpdiensten dit adres door:{" "}
+            <strong>Aannemersstraat 186, 9040 Gent</strong>. Meld nadien wat er gebeurd is via{" "}
+            <a href="mailto:info@fittin.be" className="font-semibold text-accentdark hover:underline">info@fittin.be</a>.
+          </p>
+        </div>
+      </section>
+
       {/* Cleanup */}
       <section className="mx-auto max-w-4xl px-5 pb-20">
         <div className="rounded-3xl bg-brand p-8 text-white">

@@ -53,7 +53,6 @@ export async function updateGymSettings(formData) {
     name: formData.get("name") || undefined,
     address: formData.get("address") || undefined,
     slot_minutes: num(formData.get("slot_minutes"), 60),
-    access_code: (formData.get("access_code") || "").trim() || null,
     access_info: (formData.get("access_info") || "").trim() || null,
     open_hour: openH,
     close_hour: closeH,
@@ -61,6 +60,12 @@ export async function updateGymSettings(formData) {
   };
   const { error: e } = await supabase.from("gyms").update(patch).eq("id", profile.gym_id);
   if (e) return { error: e.message };
+  // The static door code is a SECRET → gym_integrations (service-role only), not the world-readable
+  // gyms row. Written via the admin client (requireStaff already confirmed beheerder above).
+  try {
+    const { setGymSecrets } = await import("@/lib/gym-secrets");
+    await setGymSecrets(createAdminClient(), profile.gym_id, { access_code: (formData.get("access_code") || "").trim() || null });
+  } catch (err) { return { error: err.message }; }
   revalidateTag("gym");
   revalidatePath("/beheer/instellingen");
   revalidatePath("/boeken");

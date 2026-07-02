@@ -23,6 +23,13 @@ export async function POST(req) {
     const ua = req.headers.get("user-agent") || "";
     if (!ua || BOT.test(ua)) return ok();
 
+    // Named funnel event (optional) — whitelisted so the beacon can't be abused as arbitrary storage.
+    const EVENTS = new Set(["booking_slot_chosen", "checkout_started", "signup_completed", "install_prompt_shown", "install_accepted", "referral_link_shared", "waitlist_joined"]);
+    const event = EVENTS.has(String(body.event || "")) ? String(body.event) : null;
+    // UTM attribution (campaign labels, not PII) — truncated + lowercased.
+    const utm = (v) => { const s = String(v || "").trim().toLowerCase().slice(0, 80); return s || null; };
+    const utm_source = utm(body.utm_source), utm_medium = utm(body.utm_medium), utm_campaign = utm(body.utm_campaign);
+
     // Daily anonymous fingerprint — sha256(ip|ua|day|secret), truncated. Rotates every day, no PII kept.
     const ip = (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "0";
     const day = new Date().toISOString().slice(0, 10);
@@ -38,7 +45,7 @@ export async function POST(req) {
     }
     const device = /mobile|android|iphone|ipad|ipod/i.test(ua) ? "mobile" : "desktop";
 
-    await createAdminClient().from("page_views").insert({ path, referrer_host, visitor, device });
+    await createAdminClient().from("page_views").insert({ path, referrer_host, visitor, device, event, utm_source, utm_medium, utm_campaign });
   } catch {}
   return ok();
 }

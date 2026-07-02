@@ -1,8 +1,15 @@
 "use client";
 import Link from "next/link";
+import { useEffect } from "react";
 
 // Catches unexpected errors in any route segment (rendered inside the app layout).
 export default function Error({ error, reset }) {
+  useEffect(() => {
+    try {
+      const body = JSON.stringify({ message: error?.message || "route-error", stack: error?.stack || null, path: typeof location !== "undefined" ? location.pathname : null });
+      navigator.sendBeacon?.("/api/log-error", new Blob([body], { type: "application/json" }));
+    } catch { /* ignore */ }
+  }, [error]);
   return (
     <main className="flex min-h-[70vh] items-center justify-center bg-paper px-5 py-20">
       <div className="max-w-md text-center">

@@ -24,7 +24,9 @@ export default async function CoachFactuur({ params }) {
     .eq("id", id).single();
   if (!p || p.user_id !== user.id) return <Missing />; // only your own payment
 
-  const { data: gym } = await admin.from("gyms").select("*").eq("id", p.gym_id).single();
+  const { data: gymRow } = await admin.from("gyms").select("*").eq("id", p.gym_id).single();
+  const { getGymSecrets } = await import("@/lib/gym-secrets");
+  const gym = { ...gymRow, iban: (await getGymSecrets(admin, p.gym_id)).iban || gymRow?.iban }; // IBAN moved to gym_integrations (0102)
   // Assign (once) the gap-free invoice number via the coach's own session (auth.uid() = coach).
   const { data: assignedNo } = await supabase.rpc("assign_invoice_no", { p_payment: id });
   const number = assignedNo || "F-" + String(p.id).slice(0, 8).toUpperCase();

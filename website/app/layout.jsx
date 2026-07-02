@@ -2,8 +2,8 @@ import "./globals.css";
 import { Lato, Bricolage_Grotesque } from "next/font/google";
 import PWARegister from "../components/PWARegister";
 import PWAInstallPrompt from "../components/PWAInstallPrompt";
-import { Analytics } from "@vercel/analytics/next";
 import PageView from "../components/analytics/PageView";
+import ErrorLogger from "../components/ErrorLogger";
 
 const lato = Lato({
   subsets: ["latin"],
@@ -30,7 +30,7 @@ export const metadata = {
     template: "%s",
   },
   description:
-    "Fittin' is een privé fitness in Gent. Reserveer de zaal voor jezelf (en vrienden) of train met een personal coach. Eerste sessie gratis met code FittinWelcome.",
+    "Fittin' is een privé fitness in Gent. Reserveer de zaal voor jezelf (en vrienden) of train met een personal coach. Je eerste sessie is gratis.",
   applicationName: "Fittin'",
   appleWebApp: { capable: true, title: "Fittin'", statusBarStyle: "default" },
   openGraph: {
@@ -62,8 +62,8 @@ export default function RootLayout({ children }) {
         <PWARegister />
         {children}
         <PWAInstallPrompt />
-        <Analytics />
         <PageView />
+        <ErrorLogger />
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSessionReminder, sendAccessCode, sendCreditsExpiring } from "@/lib/email";
 import { getNukiConfig, ensureBookingKeypadCode } from "@/lib/nuki";
+import { getGymSecrets } from "@/lib/gym-secrets";
 import { notify } from "@/lib/notify";
 
 // Day-before reminders: email members whose confirmed session starts ~1 day out (run daily by cron).
@@ -85,13 +86,18 @@ export async function sendDueAccessCodes() {
   const to = new Date(Date.now() + 16 * 60000).toISOString();
   const { data: rows } = await admin
     .from("bookings")
-    .select("id, gym_id, user_id, starts_at, ends_at, nuki_auth_name, services(name), gym:gyms(access_code, access_info, address), member:profiles!bookings_user_id_fkey(email, full_name)")
+    .select("id, gym_id, user_id, starts_at, ends_at, nuki_auth_name, services(name), gym:gyms(access_info, address), member:profiles!bookings_user_id_fkey(email, full_name)")
     .eq("status", "bevestigd")
     .eq("access_sent", false)
     .or("paid.eq.true,payment_source.in.(credit,gratis_code)") // never hand a door code to an unpaid los/abo booking
     .gte("starts_at", from)
     .lt("starts_at", to);
 
+  const secretsByGym = new Map(); // static door code (0102) is per-gym; fetch once, reuse across rows
+  const staticCode = async (gymId) => {
+    if (!secretsByGym.has(gymId)) secretsByGym.set(gymId, (await getGymSecrets(admin, gymId)).access_code);
+    return secretsByGym.get(gymId);
+  };
   let sent = 0;
   for (const b of rows || []) {
     const address = b.gym?.address || "Aannemersstraat 186, 9040 Gent";
@@ -111,14 +117,14 @@ export async function sendDueAccessCodes() {
 
     // When the Nuki lock is enabled, mint a fresh per-booking keypad code valid only during the slot.
     // Otherwise (or if Nuki fails) fall back to the static gym code so a member is never locked out.
-    let code = b.gym?.access_code || null;
+    let code = await staticCode(b.gym_id);
     let personal = false;
     if (cfg?.enabled) {
       try {
         code = await ensureBookingKeypadCode(admin, cfg, b);
         personal = true;
       } catch {
-        code = b.gym?.access_code || null; // fail-safe fallback
+        code = await staticCode(b.gym_id); // fail-safe fallback
       }
     }
 

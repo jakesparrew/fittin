@@ -16,7 +16,7 @@ export default async function Instellingen() {
   // only non-secret values to the client (whether a token is stored — never the token itself).
   let nukiRow = null;
   try {
-    const { data } = await createAdminClient().from("gym_integrations").select("nuki_enabled, nuki_smartlock_id, keypad_lead_min, keypad_grace_min, nuki_api_token").eq("gym_id", gym.id).maybeSingle();
+    const { data } = await createAdminClient().from("gym_integrations").select("nuki_enabled, nuki_smartlock_id, keypad_lead_min, keypad_grace_min, nuki_api_token, access_code").eq("gym_id", gym.id).maybeSingle();
     nukiRow = data;
   } catch {}
   const nukiInitial = {
@@ -42,7 +42,7 @@ export default async function Instellingen() {
         <Field name="name" label="Naam" defaultValue={gym.name} />
         <Field name="address" label="Adres" defaultValue={gym.address} />
         <Field name="slot_minutes" label="Duur van een sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
-        <Field name="access_code" label="Toegangscode (in de toegangsmail, ± 5 min voor de sessie)" defaultValue={gym.access_code} />
+        <Field name="access_code" label="Toegangscode (in de toegangsmail, ± 5 min voor de sessie)" defaultValue={nukiRow?.access_code || ""} />
         <Field name="access_info" label="Extra toegangsinstructie (optioneel)" defaultValue={gym.access_info} />
 
         <div className="grid grid-cols-2 gap-4">
