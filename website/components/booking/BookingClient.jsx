@@ -130,7 +130,9 @@ export default function BookingClient({
     if (!selected || !service) return;
     setBusy(true);
     setError("");
-    const res = await createBookingAction({
+    let res;
+    try {
+      res = await createBookingAction({
       serviceId: service.id,
       date: selected.dateStr,
       hour: selected.hour,
@@ -142,7 +144,12 @@ export default function BookingClient({
       discountCode: !welcomeApplies && !creditApplies ? discountCode.trim() : "",
       participantIds: invitees.map((i) => i.id),
       emailInvites: emailInvitees,
-    });
+      });
+    } catch {
+      setBusy(false);
+      setError("Er ging iets mis bij het boeken. Controleer je verbinding en probeer opnieuw.");
+      return;
+    }
     if (res?.error) {
       setBusy(false);
       setError(res.error);

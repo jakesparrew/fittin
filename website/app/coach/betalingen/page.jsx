@@ -39,7 +39,7 @@ export default async function CoachBetalingen() {
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent bg-accent/5 p-5">
         <p className="text-sm font-semibold text-brand/70">Sessietegoed bijkopen? Dat doe je op je dashboard.</p>
-        <Link href="/coach#boeken" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">Naar dashboard →</Link>
+        <Link href="/coach#tegoed" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">Naar dashboard →</Link>
       </div>
 
       <h2 className="mt-8 text-lg font-black text-brand">Aankoopgeschiedenis</h2>

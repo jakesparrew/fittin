@@ -137,7 +137,7 @@ export default async function AccountPage({ searchParams }) {
       id: b.id,
       name: b.services?.name || "Sessie",
       price: b.price_cents,
-      deadline: new Date(new Date(b.created_at).getTime() + 20 * 60000).toISOString(),
+      deadline: new Date(new Date(b.created_at).getTime() + 35 * 60000).toISOString(),
     }));
   const history = all
     .filter((b) => !(b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now))
