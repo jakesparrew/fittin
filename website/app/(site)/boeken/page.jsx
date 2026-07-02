@@ -78,12 +78,12 @@ export default async function BoekenPage({ searchParams }) {
     const [{ data: activeMember }, { count }, { data: ledger }, { data: links }] = await Promise.all([
       supabase.rpc("has_active_membership", { p_uid: user.id }),
       admin.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "bevestigd"),
-      supabase.from("credits_ledger").select("delta").eq("user_id", user.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+      supabase.rpc("credits_balance", { p_user: user.id }),
       supabase.from("buddies").select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)").eq("status", "accepted"),
     ]);
     isMember = !!activeMember;
     myBooked = count || 0;
-    credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+    credits = ledger || 0;
     buddies = (links || []).map((l) => {
       const other = l.requester_id === user.id ? l.addressee : l.requester;
       return { id: other?.id, name: other?.full_name || "Buddy" };

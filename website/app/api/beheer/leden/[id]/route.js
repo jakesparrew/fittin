@@ -22,7 +22,7 @@ export async function GET(_req, { params }) {
 
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
   const [ledger, membership, bookings, payments, events, coachLink, payReqs, buddies, refs] = await Promise.all([
-    admin.from("credits_ledger").select("delta").eq("user_id", id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+    admin.rpc("credits_balance", { p_user: id }),
     admin.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", id).eq("status", "actief").maybeSingle(),
     admin.from("bookings").select("id, starts_at, status, paid, price_cents, persons, services(name), coach:profiles!bookings_coach_id_fkey(full_name)").eq("user_id", id).order("starts_at", { ascending: false }).limit(20),
     admin.from("payments").select("amount_cents, kind, description, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
@@ -33,7 +33,7 @@ export async function GET(_req, { params }) {
     admin.from("referrals").select("id").eq("referrer_id", id),
   ]);
 
-  const credits = (ledger.data || []).reduce((a, r) => a + r.delta, 0);
+  const credits = ledger.data || 0;
   const confirmed = (bookings.data || []).filter((b) => b.status === "bevestigd");
   const sessionsThisMonth = confirmed.filter((b) => b.starts_at >= monthStart).length;
   const totalSpent = (payments.data || []).reduce((a, p) => a + (p.amount_cents || 0), 0);

@@ -15,13 +15,13 @@ export default async function Leden() {
   const adminDb = createAdminClient();
   const [{ data: members }, { data: ledger }, { data: links }, { data: doorRows }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, welcome_code_used, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }),
-    supabase.from("credits_ledger").select("user_id, delta").eq("gym_id", gym.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+    supabase.rpc("gym_credit_balances", { p_gym: gym.id }),
     supabase.from("coach_clients").select("client_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("status", "accepted"),
     adminDb.from("door_log").select("user_id, opened_at").eq("gym_id", gym.id).eq("result", "ok").order("opened_at", { ascending: false }).limit(5000),
   ]);
 
   const credits = {};
-  for (const r of ledger || []) credits[r.user_id] = (credits[r.user_id] || 0) + r.delta;
+  for (const r of ledger || []) credits[r.user_id] = r.balance;
   const coachOf = {};
   for (const l of links || []) (coachOf[l.client_id] ||= []).push(l.coach?.full_name || l.coach?.email || "Coach");
 

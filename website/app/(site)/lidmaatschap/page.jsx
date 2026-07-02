@@ -27,10 +27,10 @@ export default async function Lidmaatschap() {
   if (user) {
     const supabase = await createClient();
     const [{ data: ledger }, { data: mem }] = await Promise.all([
-      supabase.from("credits_ledger").select("delta").eq("user_id", user.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+      supabase.rpc("credits_balance", { p_user: user.id }),
       supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
     ]);
-    credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+    credits = ledger || 0;
     membership = mem;
   }
   const isMember = !!membership;

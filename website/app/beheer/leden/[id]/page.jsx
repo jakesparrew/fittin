@@ -44,7 +44,7 @@ export default async function MemberDetail({ params }) {
     supabase.from("bookings").select("starts_at, status, services(name)").eq("user_id", id).order("starts_at", { ascending: false }).limit(20),
     supabase.from("workout_logs").select("logged_on, sets_json, program_exercise:program_exercises(exercises(name))").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
     supabase.from("session_notes").select("body, created_at").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
-    supabase.from("credits_ledger").select("delta").eq("user_id", id).or(`expires_at.is.null,expires_at.gt.${nowIso}`),
+    supabase.rpc("credits_balance", { p_user: id }),
     supabase.from("programs").select("id, name").eq("member_id", id).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id).eq("status", "accepted"),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
@@ -65,7 +65,7 @@ export default async function MemberDetail({ params }) {
   if (!member) return <div className="px-8 py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
 
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
-  const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+  const credits = ledger || 0;
   const sessionsThisMonth = monthConf || 0;
   const onTrack = sessionsThisMonth >= 4;
   const authUser = authRes?.data?.user || null;

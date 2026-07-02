@@ -466,9 +466,9 @@ export async function adminAdjustCredits(formData) {
     const admin = createAdminClient();
     const [{ data: m }, { data: ledger }] = await Promise.all([
       admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
-      admin.from("credits_ledger").select("delta").eq("user_id", memberId).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+      admin.rpc("credits_balance", { p_user: memberId }),
     ]);
-    const balance = (ledger || []).reduce((a, r) => a + r.delta, 0);
+    const balance = ledger || 0;
     if (m?.email) await sendCreditsAdjusted({ to: m.email, name: m.full_name, delta, reason, balance });
     await notify({ gymId: profile.gym_id, userId: memberId, type: "credits", title: delta >= 0 ? `+${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} bijgeschreven` : `${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} aangepast`, body: reason, link: "/account" });
   } catch {}

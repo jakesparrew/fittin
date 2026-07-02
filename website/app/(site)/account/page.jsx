@@ -77,7 +77,7 @@ export default async function AccountPage({ searchParams }) {
   ] = await Promise.all([
     supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
     supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
-    supabase.from("credits_ledger").select("delta").eq("user_id", user.id).or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
+    supabase.rpc("credits_balance", { p_user: user.id }),
     supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
     admin.from("coach_clients").select("id, status, requested_by, coach:profiles!coach_clients_coach_id_fkey(id, full_name, email)").eq("client_id", user.id),
@@ -94,7 +94,7 @@ export default async function AccountPage({ searchParams }) {
   const gymOpen = gym?.open_hour ?? 6;
   const gymClose = gym?.close_hour ?? 23;
 
-  const credits = (ledger || []).reduce((a, r) => a + r.delta, 0);
+  const credits = ledger || 0;
   const invitedSessions = (invitedRows || [])
     .map((r) => r.booking)
     // Only surface an invited session once the booker actually paid (or it's a free/credit session).
