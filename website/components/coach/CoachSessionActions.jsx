@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { coachRescheduleBooking, cancelCoachBooking, coachDayAvailability, coachAssignClient } from "@/app/coach/actions";
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -10,6 +11,7 @@ const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(
 // Per-session controls for a coach: Verplaats (to a free slot) + Annuleer. Both only up to 6h before.
 // `reserved` = slot booked without a client yet; `clients` = [{id,label}] connected clients to assign.
 export default function CoachSessionActions({ bookingId, startsAt, reserved = false, clients = [] }) {
+  const router = useRouter();
   const locked = Date.now() > new Date(startsAt).getTime() - 6 * 3600000;
   const [mode, setMode] = useState(null); // null | 'move' | 'assign'
   const [date, setDate] = useState(todayStr());
@@ -28,7 +30,7 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
     setBusy(false);
     if (res?.error) { toast("error", res.error); return; }
     toast("success", res?.message || "Client toegevoegd ✓");
-    window.location.reload();
+    router.refresh();
   }
 
   async function loadHours(d) {
@@ -46,7 +48,7 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
     setBusy(false);
     if (res?.error) { toast("error", res.error); return; }
     toast("success", res?.message || "Verplaatst ✓");
-    window.location.reload();
+    router.refresh();
   }
 
   async function doCancel() {
@@ -57,7 +59,7 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
     setBusy(false);
     if (res?.error) { toast("error", res.error); return; }
     toast("success", res?.message || "Geannuleerd ✓");
-    window.location.reload();
+    router.refresh();
   }
 
   if (mode === "move") {

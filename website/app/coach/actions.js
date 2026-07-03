@@ -384,6 +384,25 @@ export async function cancelCoachPaymentRequest(formData) {
   if (error) return { error };
   await supabase.from("coach_payment_requests").update({ status: "cancelled" }).eq("id", formData.get("id")).eq("coach_id", userId).eq("status", "pending");
   revalidatePath("/coach/betalingen");
+  revalidatePath("/coach/clienten");
+}
+
+// Batch 3.2 — save a private per-client note (coach-only). Upsert one row per coach⇄client pair.
+export async function coachSaveClientNote(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const clientId = formData.get("clientId");
+  if (!clientId) return { error: "Geen client." };
+  // Confirm this is the coach's accepted client before writing.
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).eq("status", "accepted").maybeSingle();
+  if (!link) return { error: "Dit is niet jouw client." };
+  const { error: e } = await supabase.from("coach_client_notes").upsert(
+    { gym_id: profile.gym_id, coach_id: userId, client_id: clientId, body: formData.get("body") || null, updated_at: new Date().toISOString() },
+    { onConflict: "coach_id,client_id" }
+  );
+  if (e) return { error: e.message };
+  revalidatePath(`/coach/clienten/${clientId}`);
+  return { ok: true, message: "Notitie opgeslagen ✓" };
 }
 
 // ── Coach ↔ client connection requests ──────────────────────────────────────

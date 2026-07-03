@@ -174,6 +174,7 @@ export default async function CoachClienten() {
                 {next && <p className="mt-3 text-xs capitalize text-brand/50">Volgende sessie: {fmt(next.starts_at)} · {next.services?.name}</p>}
 
                 <div className="mt-4 flex flex-wrap gap-2">
+                  <Link href={`/coach/clienten/${c.id}`} className="rounded-full bg-brand px-4 py-2 text-xs font-bold text-white transition hover:opacity-90">Bekijk client →</Link>
                   <Link href="/coach#boeken" className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Sessie boeken</Link>
                   <ActionForm action={removeCoachLink} success="Verwijderd ✓">
                     <input type="hidden" name="linkId" value={l.id} />

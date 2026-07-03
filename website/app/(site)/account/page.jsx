@@ -457,6 +457,25 @@ export default async function AccountPage({ searchParams }) {
           )}
         </section>
 
+        {/* Coach payment requests (Batch 3.6) — pay your coach for PT via Stripe */}
+        {(payReqs || []).length > 0 && (
+          <section className="mt-8 space-y-3">
+            {(payReqs || []).map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border-2 border-accent/40 bg-accent/5 p-5">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-widest text-accentdark">Betaalverzoek van je coach</p>
+                  <p className="mt-1 font-black text-brand">{euro(r.amount_cents)} · {r.description || "Personal training"}</p>
+                  <p className="mt-0.5 text-sm text-brand/55">van {r.coach?.full_name || "je coach"}</p>
+                </div>
+                <form action={payCoachRequest}>
+                  <input type="hidden" name="requestId" value={r.id} />
+                  <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Betaal {euro(r.amount_cents)}</button>
+                </form>
+              </div>
+            ))}
+          </section>
+        )}
+
         {/* First-visit primer (Batch 2.6) — nervous first-timers find the door story only in email today */}
         {!hasVisited && (
           <section className="mt-8 overflow-hidden rounded-3xl border-2 border-accent/40 bg-accent/5">
