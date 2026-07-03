@@ -473,6 +473,25 @@ export async function sendGuestFollowup({ to, inviterName, signupUrl }) {
   );
 }
 
+// ---- Member: a waitlisted slot just freed up ----
+export async function sendWaitlistOpen({ to, name, serviceName, startsAt, bookUrl }) {
+  return send(
+    to,
+    "Er is een plek vrij bij Fittin' 🎉",
+    shell({
+      title: "Een plek is vrijgekomen 🎉",
+      intro: `Hallo ${esc(name) || "daar"}, het uur waarvoor je op de wachtlijst stond is net vrijgekomen. Wees er snel bij — wie eerst boekt, heeft de plek.`,
+      rows: [
+        ["Sessie", esc(serviceName || "Sessie")],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt)],
+      ],
+      cta: { href: bookUrl, label: "Boek dit uur" },
+    }),
+    FROM_BOOKING
+  );
+}
+
 // ---- Member: event signup confirmed ----
 export async function sendEventSignup({ to, name, title, startsAt }) {
   await send(

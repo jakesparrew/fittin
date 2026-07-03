@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Reveal from "@/components/anim/Reveal";
 import Counter from "@/components/anim/Counter";
 import { getSessionProfile, roleHome } from "@/lib/auth";
+import { healthClubLd, jsonLdScript } from "@/lib/seo";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -12,20 +13,8 @@ export const metadata = {
   alternates: { canonical: SITE },
 };
 
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "HealthClub",
-  name: "Fittin'",
-  description: "Privé fitness & personal training in Gent. Reserveer de zaal voor jezelf of train met een coach. Elke dag van 6u tot 23u.",
-  url: "https://fittin.be",
-  email: "info@fittin.be",
-  image: "https://fittin.be/opengraph-image",
-  priceRange: "€€",
-  address: { "@type": "PostalAddress", streetAddress: "Aannemersstraat 186", addressLocality: "Gent", postalCode: "9040", addressCountry: "BE" },
-  geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },
-  sameAs: ["https://www.instagram.com/fittin_gent/", "https://www.facebook.com/fittingent"],
-  openingHours: "Mo-Su 06:00-23:00",
-};
+// Shared HealthClub schema (lib/seo) — one source of truth for home + degym (were drifting).
+const jsonLd = healthClubLd();
 
 const usps = [
   ["Volledige privacy", "Alleen, met vrienden of met coach — de zaal is helemaal van jou.", "lock"],
@@ -58,7 +47,7 @@ export default async function Home() {
   if (user) redirect(roleHome(profile?.role));
   return (
     <main className="overflow-hidden">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script {...jsonLdScript(jsonLd)} />
 
       {/* ============ HERO ============ */}
       <section className="relative isolate overflow-hidden bg-brand text-white">

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getGymCached, getExerciseBySlug, getAlternativesByCategory } from "@/lib/cache";
+import { catLabel } from "@/lib/exercise-categories";
+import { breadcrumbLd, exerciseHowToLd, jsonLdScript } from "@/lib/seo";
 import ExerciseDetail from "@/components/exercises/ExerciseDetail";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
 
@@ -32,10 +34,23 @@ export default async function ExercisePage({ params }) {
     .sort((a, b) => (muscle && (b.primary_muscles || []).includes(muscle) ? 1 : 0) - (muscle && (a.primary_muscles || []).includes(muscle) ? 1 : 0))
     .slice(0, 6);
 
+  const crumbItems = [
+    { name: "Home", url: "/" },
+    { name: "Oefeningen", url: "/oefeningen" },
+    ...(ex.category ? [{ name: catLabel(ex.category), url: `/oefeningen/categorie/${ex.category}` }] : []),
+    { name: ex.name, url: `/oefeningen/${ex.slug}` },
+  ];
+
   return (
     <main className="bg-paper min-h-screen">
+      <script {...jsonLdScript(breadcrumbLd(crumbItems))} />
+      {Array.isArray(ex.instructions) && ex.instructions.length > 0 && <script {...jsonLdScript(exerciseHowToLd(ex))} />}
       <div className="mx-auto max-w-2xl px-5 py-12">
-        <Link href="/oefeningen" className="text-sm font-semibold text-brand/50 hover:text-brand">← Alle oefeningen</Link>
+        {/* Breadcrumb — links back up into the category hub (topical cluster) */}
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-brand/45">
+          <Link href="/oefeningen" className="hover:text-brand">Oefeningen</Link>
+          {ex.category && (<><span>›</span><Link href={`/oefeningen/categorie/${ex.category}`} className="capitalize hover:text-brand">{catLabel(ex.category)}</Link></>)}
+        </nav>
         <div className="mt-5 rounded-3xl border border-borderc bg-white p-5 md:p-7">
           <ExerciseDetail exercise={ex} />
         </div>

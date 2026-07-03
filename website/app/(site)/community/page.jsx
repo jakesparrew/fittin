@@ -37,6 +37,7 @@ export default async function Community() {
     { data: gymBookings },
     { data: buddyRows },
     { data: postRows },
+    { data: refPts },
   ] = await Promise.all([
     supabase.from("referrals").select("id").eq("referred_id", user.id).maybeSingle(),
     supabase.from("bookings").select("starts_at").eq("user_id", user.id).eq("status", "bevestigd"),
@@ -46,6 +47,8 @@ export default async function Community() {
     admin.from("bookings").select("user_id, starts_at, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 120 * 86400000).toISOString()),
     admin.from("buddies").select("id, status, requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(full_name), addressee:profiles!buddies_addressee_id_fkey(full_name)").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
     admin.from("posts").select("id, author_id, kind, body, image_url, meta, created_at, author:profiles!posts_author_id_fkey(full_name, coach_photo_url), post_kudos(user_id), post_comments(id, user_id, body, created_at, cauthor:profiles!post_comments_user_id_fkey(full_name))").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }).limit(40),
+    // Referral bonus points this month — same source /boeken uses, so both leaderboards agree.
+    admin.rpc("referral_points", { p_gym: profile.gym_id, p_since: monthStart.toISOString() }),
   ]);
 
   const challengeBoard = (c) => {
@@ -59,15 +62,18 @@ export default async function Community() {
     return Object.entries(cc).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
   };
 
-  // Leaderboard
+  // Leaderboard — sessions + referral bonus points (same formula as /boeken so the two boards agree;
+  // the "breng een vriend → extra punt op het scoreboard" promise is now actually kept here too).
   const counts = {};
   for (const b of monthAgg.data || []) {
     if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; // no coaches, respect opt-out
     const k = b.user_id;
-    if (!counts[k]) counts[k] = { name: b.member?.full_name || "Lid", n: 0 };
-    counts[k].n++;
+    (counts[k] ||= { name: b.member?.full_name || "Lid", n: 0, pts: 0 }).n++;
   }
-  const board = Object.entries(counts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
+  for (const r of refPts || []) {
+    if (r.referrer_id && counts[r.referrer_id]) counts[r.referrer_id].pts = r.points || 0;
+  }
+  const board = Object.entries(counts).map(([id, v]) => ({ id, ...v, score: v.n + (v.pts || 0) })).sort((a, b) => b.score - a.score);
   const myRank = board.findIndex((r) => r.id === user.id);
   const mySessions = (myBookings || []).filter((b) => new Date(b.starts_at) >= monthStart).length;
 
@@ -213,7 +219,7 @@ export default async function Community() {
                     <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-white/20" : "bg-white")}>{i + 1}</span>
                     <span className="font-bold">{r.name}</span>
                   </span>
-                  <span className="font-black">{r.n} pt</span>
+                  <span className="font-black">{r.score} pt{r.pts > 0 ? ` · ${r.n}× + ${r.pts} vriend${r.pts === 1 ? "" : "en"}` : ""}</span>
                 </div>
               ))}
               {board.length === 0 && <p className="text-sm text-brand/50">Nog geen sessies deze maand. Wees de eerste!</p>}

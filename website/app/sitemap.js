@@ -18,10 +18,13 @@ export default async function sitemap() {
     const { data: gym } = await admin.from("gyms").select("id").eq("slug", "fittin").single();
     if (gym) {
       const [{ data: exercises }, { data: workouts }, { data: coaches }] = await Promise.all([
-        admin.from("exercises").select("slug").eq("gym_id", gym.id).not("slug", "is", null),
+        admin.from("exercises").select("slug, category").eq("gym_id", gym.id).not("slug", "is", null),
         admin.from("programs").select("slug").eq("gym_id", gym.id).eq("is_public", true).not("slug", "is", null),
         admin.from("profiles").select("id, full_name").eq("gym_id", gym.id).eq("role", "coach").eq("coach_public", true),
       ]);
+      // Category hubs first (higher priority — they anchor the exercise topical cluster).
+      const cats = Array.from(new Set((exercises || []).map((e) => e.category).filter(Boolean)));
+      for (const c of cats) entries.push({ url: `${site}/oefeningen/categorie/${c}`, changeFrequency: "weekly", priority: 0.7 });
       for (const e of exercises || []) entries.push({ url: `${site}/oefeningen/${e.slug}`, changeFrequency: "monthly", priority: 0.5 });
       for (const w of workouts || []) entries.push({ url: `${site}/workouts/${w.slug}`, changeFrequency: "monthly", priority: 0.6 });
       for (const c of coaches || []) entries.push({ url: `${site}/coaches/${coachSlug(c)}`, changeFrequency: "monthly", priority: 0.6 });

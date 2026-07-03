@@ -4,6 +4,7 @@ import { getGymCached, getPublicWorkoutBySlug } from "@/lib/cache";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import WorkoutFollow from "@/components/workouts/WorkoutFollow";
+import ShareButton from "@/components/ShareButton";
 
 export const dynamic = "force-dynamic";
 
@@ -50,11 +51,18 @@ export default async function WorkoutDetail({ params }) {
           <Link href="/workouts" className="text-sm font-bold text-white/60 transition hover:text-white">← Alle workouts</Link>
           <h1 className="mt-3 text-3xl font-black md:text-4xl">{workout.name}</h1>
           <p className="mt-2 text-white/75">{workout.subtitle}</p>
-          <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold">
             <span className="rounded-full bg-white/10 px-3 py-1">{workout.level}</span>
             <span className="rounded-full bg-white/10 px-3 py-1">± {workout.est_minutes} min</span>
             <span className="rounded-full bg-white/10 px-3 py-1">{workout.exercises.length} oefeningen</span>
             {workout.focus && <span className="rounded-full bg-accent/20 px-3 py-1 text-accent">{workout.focus}</span>}
+            <ShareButton
+              title={`${workout.name} · Fittin'`}
+              text={workout.subtitle || "Volg deze workout mee bij Fittin'"}
+              path={`/workouts/${slug}`}
+              label="Deel"
+              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white transition hover:bg-white/20"
+            />
           </div>
         </div>
       </section>

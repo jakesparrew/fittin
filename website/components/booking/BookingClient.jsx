@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBookingAction, searchMembersAction, validateDiscountAction } from "@/app/(site)/boeken/actions";
+import { createBookingAction, searchMembersAction, validateDiscountAction, toggleWaitlistAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel, fmtHour } from "@/lib/time";
 import EventsBooking from "@/components/booking/EventsBooking";
 import { track } from "@/lib/track";
@@ -325,7 +325,7 @@ export default function BookingClient({
                     const isSel = selected && selected.dateStr === activeDay && selected.hour === h;
                     const label = fmtHour(h);
                     if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/25">{label}</div>;
-                    if (taken) return <div key={h} className="rounded-xl bg-borderc/40 py-3 text-center text-[10px] font-bold leading-tight text-brand/35">{label}<br />vol</div>;
+                    if (taken) return <WaitlistSlot key={h} date={activeDay} hour={h} label={label} isLoggedIn={isLoggedIn} />;
                     if (!inRange && !canBook(activeDay, h, 1)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/20">{label}</div>;
                     return (
                       <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); setDuration(1); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
@@ -363,7 +363,7 @@ export default function BookingClient({
                           const inRange = selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
                           const isSel = selected && selected.dateStr === d.dateStr && selected.hour === h;
                           if (past || closed) return <div key={d.dateStr} className="h-7 rounded-md bg-paper" />;
-                          if (taken) return <div key={d.dateStr} className="flex h-7 items-center justify-center rounded-md bg-borderc/40 text-[9px] font-bold text-brand/30">vol</div>;
+                          if (taken) return <WaitlistSlot key={d.dateStr} date={d.dateStr} hour={h} compact isLoggedIn={isLoggedIn} />;
                           if (!inRange && !canBook(d.dateStr, h, 1)) return <div key={d.dateStr} className="h-7 rounded-md bg-paper/60" />;
                           return (
                             <button
@@ -629,5 +629,41 @@ function Row({ label, value }) {
       <dt className="text-lav">{label}</dt>
       <dd className="text-right font-bold">{value}</dd>
     </div>
+  );
+}
+
+// A full ("vol") slot. Logged-in members can tap it to join the waitlist and get pinged when it frees.
+// Guests just see "vol" (no dead-end — they can still browse other slots).
+function WaitlistSlot({ date, hour, label, compact = false, isLoggedIn }) {
+  const [state, setState] = useState("idle"); // idle | busy | on
+  const toggle = async () => {
+    if (state === "busy") return;
+    setState("busy");
+    try {
+      const res = await toggleWaitlistAction({ date, hour: String(hour) });
+      setState(res?.on ? "on" : "idle");
+      if (res?.on) track("waitlist_joined");
+      if (res?.error) { setState("idle"); }
+    } catch { setState("idle"); }
+  };
+  if (!isLoggedIn) {
+    return compact
+      ? <div className="flex h-7 items-center justify-center rounded-md bg-borderc/40 text-[9px] font-bold text-brand/30">vol</div>
+      : <div className="rounded-xl bg-borderc/40 py-3 text-center text-[10px] font-bold leading-tight text-brand/35">{label}<br />vol</div>;
+  }
+  const on = state === "on";
+  if (compact) {
+    return (
+      <button type="button" onClick={toggle} title={on ? "Je staat op de wachtlijst — tik om te verwijderen" : "Vol — zet me op de wachtlijst"}
+        className={"flex h-7 items-center justify-center rounded-md text-[9px] font-bold transition " + (on ? "bg-accent/25 text-accentdark" : "bg-borderc/40 text-brand/30 hover:bg-amber-100 hover:text-amber-700")}>
+        {state === "busy" ? "…" : on ? "🔔" : "vol"}
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={toggle} title={on ? "Je staat op de wachtlijst — tik om te verwijderen" : "Vol — zet me op de wachtlijst"}
+      className={"rounded-xl py-3 text-center text-[10px] font-bold leading-tight transition " + (on ? "bg-accent/20 text-accentdark" : "bg-borderc/40 text-brand/35 hover:bg-amber-100 hover:text-amber-700")}>
+      {label}<br />{state === "busy" ? "…" : on ? "🔔 wachtlijst" : "vol · wachtlijst?"}
+    </button>
   );
 }

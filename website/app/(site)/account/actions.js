@@ -96,8 +96,19 @@ export async function rescheduleBookingAction(formData) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Niet ingelogd." };
 
+  // Capture the OLD slot before moving, so we can offer it to the waitlist once it frees.
+  const { data: before } = await supabase.from("bookings").select("gym_id, starts_at, services(name)").eq("id", id).single();
+
   const { error } = await supabase.rpc("reschedule_booking", { p_booking: id, p_date: date, p_hour: hour });
   if (error) return { error: error.message };
+
+  // The original slot is now free → tell the earliest waiters (best-effort, never blocks the move).
+  if (before?.gym_id && before?.starts_at) {
+    try {
+      const { notifyWaitlist } = await import("@/lib/waitlist");
+      await notifyWaitlist(createAdminClient(), { gymId: before.gym_id, slotInstant: before.starts_at, serviceName: before.services?.name || "Sessie" });
+    } catch {}
+  }
 
   // Confirm the new time by e-mail (best-effort) — and tell invited buddies/guests, who were
   // told the OLD time.

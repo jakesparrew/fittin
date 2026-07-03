@@ -18,6 +18,7 @@ import BookingBuddies from "@/components/booking/BookingBuddies";
 import BuddyJoin from "@/components/booking/BuddyJoin";
 import RescheduleBooking from "@/components/booking/RescheduleBooking";
 import ShareRank from "@/components/ShareRank";
+import ShareReferral from "@/components/ShareReferral";
 import AccountSettings from "@/components/account/AccountSettings";
 import AccountLinking from "@/components/account/AccountLinking";
 import BodyMetricsForm from "@/components/account/BodyMetricsForm";
@@ -385,6 +386,12 @@ export default async function AccountPage({ searchParams }) {
                 Dit was je {losCount}e losse sessie deze maand (€{losCount * 15}). Met de beurtenkaart betaalde je ±€{((losCount * 1364) / 100).toFixed(2).replace(".", ",")}, met het abo €{losCount * 12}.{" "}
                 <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Bekijk de opties →</Link>
               </p>
+            )}
+            {profile?.referral_code && (
+              <div className="mt-3 border-t border-accent/20 pt-3">
+                <p className="text-sm font-semibold text-brand">Breng volgende keer een vriend mee — die traint gratis 🎁</p>
+                <div className="mt-2"><ShareReferral code={profile.referral_code} compact /></div>
+              </div>
             )}
           </div>
         )}

@@ -197,6 +197,9 @@ export async function adminCancelBooking(formData) {
     if (m?.email) await sendBookingCancelled({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at });
     await notify({ gymId: bk.gym_id, userId: bk.user_id, type: "system", title: "Je sessie is geannuleerd", body: (bk.services?.name || "Sessie") + (refunded ? " — het bedrag is terugbetaald." : ""), link: "/account" });
     await notifyInviteesOfChange(admin, bk, "cancelled"); // invited guests were told a concrete time
+    // Slot just freed → offer it to the waitlist (Batch 5.5).
+    const { notifyWaitlist } = await import("@/lib/waitlist");
+    await notifyWaitlist(admin, { gymId: bk.gym_id, slotInstant: bk.starts_at, serviceName: bk.services?.name || "Sessie" });
   } catch (e) { console.error("admin cancel notify failed:", e?.message); }
 
   revalidatePath("/beheer/boekingen");

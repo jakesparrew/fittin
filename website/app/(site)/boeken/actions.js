@@ -256,3 +256,27 @@ export async function resumeCheckoutAction(formData) {
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", id);
   redirect(session.url);
 }
+
+// Batch 5.5 — join/leave the waitlist for a full slot (logged-in members only). When the slot later
+// frees (cancel/reschedule), the earliest waiters get a bell + e-mail (see lib/waitlist notifyWaitlist).
+export async function toggleWaitlistAction({ date, hour }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Log in om je op de wachtlijst te zetten." };
+  const h = parseFloat(hour);
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(h)) return { error: "Ongeldig tijdslot." };
+  const { slotInstant } = await import("@/lib/time");
+  const { data: prof } = await supabase.from("profiles").select("gym_id").eq("id", user.id).single();
+  if (!prof?.gym_id) return { error: "Geen gym gekoppeld." };
+  const iso = slotInstant(date, h).toISOString();
+
+  // Toggle: already on the list → remove; otherwise add.
+  const { data: existing } = await supabase.from("slot_waitlist").select("id").eq("gym_id", prof.gym_id).eq("user_id", user.id).eq("slot_instant", iso).maybeSingle();
+  if (existing) {
+    await supabase.from("slot_waitlist").delete().eq("id", existing.id);
+    return { ok: true, on: false, message: "Van de wachtlijst gehaald." };
+  }
+  const { error } = await supabase.from("slot_waitlist").insert({ gym_id: prof.gym_id, user_id: user.id, slot_instant: iso });
+  if (error) return { error: "Kon je niet op de wachtlijst zetten." };
+  return { ok: true, on: true, message: "Je staat op de wachtlijst — we mailen je zodra er een plek vrijkomt." };
+}

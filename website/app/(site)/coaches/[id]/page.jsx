@@ -8,6 +8,7 @@ import ActionForm from "@/components/ui/ActionForm";
 import { clientRequestCoach } from "@/app/(site)/account/actions";
 import { respondCoachLink } from "@/app/coach/actions";
 import { slugify, isUuid, coachSlug } from "@/lib/slug";
+import { personLd, breadcrumbLd, jsonLdScript, SITE } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 const WD = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
@@ -28,7 +29,12 @@ export async function generateMetadata({ params }) {
   const admin = createAdminClient();
   const c = await resolveCoach(admin, id, "id, full_name, coach_specialty, role, coach_public");
   if (!c) return { title: "Coach | Fittin'" };
-  return { title: `${c.full_name} — coach bij Fittin'`, description: `${c.full_name}${c.coach_specialty ? ` · ${c.coach_specialty}` : ""} — personal trainer bij Fittin' in Gent.` };
+  // Canonical always points at the clean name-slug — uuid + slug both resolve, so this de-dupes them.
+  return {
+    title: `${c.full_name} — coach bij Fittin'`,
+    description: `${c.full_name}${c.coach_specialty ? ` · ${c.coach_specialty}` : ""} — personal trainer bij Fittin' in Gent.`,
+    alternates: { canonical: `${SITE}/coaches/${coachSlug(c)}` },
+  };
 }
 
 export default async function CoachProfile({ params }) {
@@ -46,8 +52,12 @@ export default async function CoachProfile({ params }) {
     myLink = lk || null;
   }
 
+  const coachUrl = `/coaches/${coachSlug(c)}`;
+
   return (
     <main className="bg-paper">
+      <script {...jsonLdScript(personLd(c, coachUrl))} />
+      <script {...jsonLdScript(breadcrumbLd([{ name: "Home", url: "/" }, { name: "Coaches", url: "/coaches" }, { name: c.full_name, url: coachUrl }]))} />
       <div className="mx-auto max-w-4xl px-5 py-16">
         <Link href="/coaches" className="text-sm font-semibold text-brand/50 hover:text-brand">← Alle coaches</Link>
 

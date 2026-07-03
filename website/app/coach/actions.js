@@ -201,6 +201,11 @@ export async function cancelCoachBooking(formData) {
     if (client?.email) await sendBookingCancelled({ to: client.email, name: client.full_name, serviceName: cancelled.services?.name || "Sessie", startsAt: cancelled.starts_at });
     if (client) await notify({ gymId: client.gym_id, userId: cancelled.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft een sessie geannuleerd", body: cancelled.services?.name || "Sessie", link: "/account" });
     await notifyInviteesOfChange(createAdminClient(), { id: formData.get("bookingId"), user_id: cancelled.user_id, starts_at: cancelled.starts_at, services: cancelled.services }, "cancelled");
+    // Slot freed → offer it to the waitlist (Batch 5.5).
+    if (client?.gym_id) {
+      const { notifyWaitlist } = await import("@/lib/waitlist");
+      await notifyWaitlist(createAdminClient(), { gymId: client.gym_id, slotInstant: cancelled.starts_at, serviceName: cancelled.services?.name || "Sessie" });
+    }
   } catch {}
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");

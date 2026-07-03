@@ -1,9 +1,10 @@
 import Link from "next/link";
+import { healthClubLd, jsonLdScript } from "@/lib/seo";
 
 export const metadata = {
-  title: "De gym | Fittin'",
+  title: "Privégym in Gent | Fittin'",
   description:
-    "Een modern uitgeruste privégym in Gent. Reserveer de zaal voor jou en je vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
+    "Een modern uitgeruste privégym in Gent (Sint-Amandsberg). Reserveer de zaal voor jou en je vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
   alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/degym` },
 };
 
@@ -48,35 +49,22 @@ const loves = [
   ["We love cables", "Kabelstations voor eindeloze variatie in je training."],
 ];
 
-const localBusinessLd = {
-  "@context": "https://schema.org",
-  "@type": "HealthClub",
-  name: "Fittin'",
-  description: "Privé fitness & personal training in Gent. Reserveer de zaal voor jezelf of met vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
-  url: "https://fittin.be",
-  email: "info@fittin.be",
-  image: "https://fittin.be/opengraph-image",
-  priceRange: "€€",
-  address: { "@type": "PostalAddress", streetAddress: "Aannemersstraat 186", postalCode: "9040", addressLocality: "Gent", addressCountry: "BE" },
-  geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },
-  openingHours: "Mo-Su 06:00-23:00",
-  hasMap: "https://www.google.com/maps?q=Aannemersstraat+186,+9040+Gent",
-};
+const localBusinessLd = healthClubLd(); // shared source of truth (lib/seo)
 
 export default function DeGym() {
   return (
     <main>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessLd) }} />
+      <script {...jsonLdScript(localBusinessLd)} />
       {/* Hero */}
       <section className="relative overflow-hidden bg-paper">
         <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-accent" />
         <div className="relative mx-auto max-w-6xl px-5 py-24">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Lid worden</p>
+          <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Privégym · Gent</p>
           <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight md:text-5xl">
-            Word nu lid en ontvang meteen <span className="text-accentdark">1 gratis sessie</span>
+            Privégym in Gent — <span className="text-accentdark">de zaal is helemaal van jou</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg text-brand/70">
-            Je{" "}
+            Reserveer de volledige zaal voor jezelf of je vrienden. Je{" "}
             <span className="rounded-full bg-brand px-3 py-1 font-bold text-accent">eerste sessie is gratis</span>{" "}
             — automatisch verrekend bij je eerste online boeking.
           </p>
@@ -185,8 +173,8 @@ export default function DeGym() {
           <div className="overflow-hidden rounded-3xl border border-borderc bg-white md:grid md:grid-cols-[1fr_1.3fr]">
             <div className="p-8 md:p-10">
               <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Vind ons</p>
-              <h2 className="mt-2 text-3xl font-black text-brand">In het hart van Gent</h2>
-              <p className="mt-4 leading-relaxed text-brand/70">Onze privégym ligt vlot bereikbaar met gratis parking aan de deur.</p>
+              <h2 className="mt-2 text-3xl font-black text-brand">Fitness in Sint-Amandsberg, Gent</h2>
+              <p className="mt-4 leading-relaxed text-brand/70">Onze privégym ligt in Sint-Amandsberg (Gent), vlot bereikbaar met gratis parking aan de deur.</p>
               <dl className="mt-6 space-y-3 text-sm">
                 <div><dt className="font-bold text-brand">Adres</dt><dd className="text-brand/70">Aannemersstraat 186, 9040 Gent</dd></div>
                 <div><dt className="font-bold text-brand">Parking</dt><dd className="text-brand/70">Gratis parking aan de deur</dd></div>
