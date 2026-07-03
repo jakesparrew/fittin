@@ -568,12 +568,39 @@ export async function grantCoachCredits(formData) {
   const admin = createAdminClient();
   const { error: e } = await admin.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: coachId, delta, reason: "grant" });
   if (e) return { error: e.message };
+  let resolvedNote = "";
+  if (delta > 0) {
+    // A positive grant is billable (€12/sessie, per factuur) → open post onder Betalingen.
+    // Negative deltas are corrections — no invoice.
+    try {
+      await admin.from("payments").insert({
+        gym_id: profile.gym_id, user_id: coachId, amount_cents: delta * 1200,
+        kind: "coach_credits", description: `Coach-sessietegoed · ${delta} sessies (toegekend)`, status: "onbetaald",
+      });
+    } catch (err) { console.error("grant payment row failed:", err?.message); }
+    // If this manual grant covers pending session requests from the same coach, resolve them — the
+    // owner just handled them via this form, so the "Coach-aanvragen" badge must not keep nagging.
+    try {
+      const { data: pend } = await admin.from("coach_session_requests").select("id, qty").eq("gym_id", profile.gym_id).eq("coach_id", coachId).eq("status", "pending").order("created_at");
+      let remaining = delta;
+      let resolved = 0;
+      for (const r of pend || []) {
+        if (remaining < r.qty) break;
+        await admin.from("coach_session_requests").update({ status: "approved", resolved_at: new Date().toISOString(), resolved_by: profile.id }).eq("id", r.id).eq("status", "pending");
+        remaining -= r.qty;
+        resolved++;
+      }
+      if (resolved) resolvedNote = ` · ${resolved} openstaande aanvra${resolved === 1 ? "ag" : "gen"} automatisch goedgekeurd`;
+    } catch (err) { console.error("grant auto-resolve failed:", err?.message); }
+  }
   try {
     await notify({ gymId: profile.gym_id, userId: coachId, type: "request", title: delta >= 0 ? `+${delta} sessietegoed bijgeschreven` : `${delta} sessietegoed aangepast`, body: "Door de beheerder", link: "/coach" });
   } catch {}
   revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/betalingen");
+  revalidatePath("/beheer");
   revalidatePath("/coach");
-  return { ok: true, message: "Sessietegoed bijgeschreven ✓" };
+  return { ok: true, message: `Sessietegoed bijgeschreven ✓${delta > 0 ? ` — open post van € ${(delta * 12).toFixed(2).replace(".", ",")} bij Betalingen` : ""}${resolvedNote}` };
 }
 
 // ---- User management (add / remove / create admin) ----
@@ -730,21 +757,57 @@ export async function resolveCoachRequest(formData) {
   const { data: req } = await supabase.from("coach_session_requests").select("*").eq("id", id).eq("gym_id", profile.gym_id).single();
   if (!req || req.status !== "pending") return { error: "Aanvraag niet gevonden." };
   await supabase.from("coach_session_requests").update({ status: decision, resolved_at: new Date().toISOString(), resolved_by: userId }).eq("id", id);
+  let paymentId = null;
   if (decision === "approved") {
     // coach_ledger writes are service-role only since 0081.
     const admin = createAdminClient();
     const { error: le } = await admin.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: req.coach_id, delta: req.qty, reason: "grant" });
     if (le) return { error: le.message };
+    // The coach owes €12/session for this grant (paid by invoice/overschrijving, not Stripe) — record
+    // an OPEN payment so it shows red under Betalingen and the B2B factuur can be generated from it.
+    try {
+      const { data: pay } = await admin.from("payments").insert({
+        gym_id: profile.gym_id, user_id: req.coach_id, amount_cents: req.qty * 1200,
+        kind: "coach_credits", description: `Coach-sessietegoed · ${req.qty} sessies (op aanvraag)`, status: "onbetaald",
+      }).select("id").single();
+      paymentId = pay?.id || null;
+    } catch (e) { console.error("coach request payment row failed:", e?.message); }
     try {
       const { data: c } = await supabase.from("profiles").select("email, full_name").eq("id", req.coach_id).single();
       if (c?.email) { const { sendCoachSessionsGranted } = await import("@/lib/email"); await sendCoachSessionsGranted({ to: c.email, name: c.full_name, qty: req.qty }); }
     } catch {}
-    await notify({ gymId: profile.gym_id, userId: req.coach_id, type: "request", title: `${req.qty} coach-sessies goedgekeurd ✓`, body: "Je tegoed is bijgeschreven.", link: "/coach" });
+    await notify({ gymId: profile.gym_id, userId: req.coach_id, type: "request", title: `${req.qty} coach-sessies goedgekeurd ✓`, body: `Je tegoed is bijgeschreven. Je ontvangt een factuur van € ${(req.qty * 12).toFixed(2).replace(".", ",")}.`, link: "/coach" });
   } else {
     await notify({ gymId: profile.gym_id, userId: req.coach_id, type: "request", title: "Je sessie-aanvraag werd afgewezen", body: `${req.qty} sessies`, link: "/coach" });
   }
   revalidatePath("/beheer/coaches");
-  return { ok: true };
+  revalidatePath("/beheer/betalingen");
+  revalidatePath("/beheer");
+  return {
+    ok: true,
+    paymentId,
+    message: decision === "approved"
+      ? `Goedgekeurd ✓ +${req.qty} sessies bijgeschreven — open post van € ${(req.qty * 12).toFixed(2).replace(".", ",")} staat bij Betalingen (maak daar de factuur).`
+      : "Aanvraag afgewezen.",
+  };
+}
+
+// Mark an open (onbetaald) payment as paid once the money arrived by overschrijving/cash.
+// Used for coach-credit grants and other invoice-based posts — Stripe payments are never open.
+export async function markPaymentPaid(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const id = formData.get("paymentId");
+  if (!id) return { error: "Geen betaling." };
+  const admin = createAdminClient();
+  const { data: updated } = await admin.from("payments")
+    .update({ status: "betaald" })
+    .eq("id", id).eq("gym_id", profile.gym_id).eq("status", "onbetaald")
+    .select("id");
+  if (!updated || !updated.length) return { error: "Betaling niet gevonden of al betaald." };
+  revalidatePath("/beheer/betalingen");
+  revalidatePath("/beheer");
+  return { ok: true, message: "Gemarkeerd als betaald ✓" };
 }
 
 // ---- Packages (bundles / subscriptions) ----

@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import { saveInvoiceSettings } from "./actions";
+import { markPaymentPaid } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
@@ -125,7 +126,17 @@ export default async function Betalingen({ searchParams }) {
                     const ok = s === "betaald" || s === "paid";
                     const refund = s === "refunded" || s === "terugbetaald";
                     const cls = ok ? "bg-accent/15 text-accentdark" : refund ? "bg-paper text-brand/50" : "bg-red-100 text-red-600";
-                    return <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold capitalize " + cls}>{s}</span>;
+                    return (
+                      <span className="flex items-center gap-2">
+                        <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold capitalize " + cls}>{s}</span>
+                        {s === "onbetaald" && (
+                          <ActionForm action={markPaymentPaid} className="inline">
+                            <input type="hidden" name="paymentId" value={p.id} />
+                            <button className="rounded-full border border-borderc px-2 py-0.5 text-[10px] font-bold text-brand/70 transition hover:border-accent hover:text-brand" title="Overschrijving/cash ontvangen">✓ ontvangen</button>
+                          </ActionForm>
+                        )}
+                      </span>
+                    );
                   })()}
                 </td>
                 <td className="px-5 py-3 text-brand/50">{p.description || "—"}</td>

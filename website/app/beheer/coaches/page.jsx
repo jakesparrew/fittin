@@ -79,6 +79,46 @@ export default async function Coaches() {
         </div>
       </div>
 
+      {/* Pending session requests — ALL of them, in one prominent block at the top. The dashboard's
+          "Coach-aanvragen" card deep-links here (#aanvragen); before, requests were buried per coach. */}
+      {(reqs || []).length > 0 && (
+        <section id="aanvragen" className="mt-5 scroll-mt-6 rounded-3xl border-2 border-amber-300 bg-amber-50 p-6">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
+            </span>
+            <h2 className="text-lg font-black text-brand">Sessie-aanvragen · {(reqs || []).length}</h2>
+          </div>
+          <p className="mt-1 text-sm text-brand/60">
+            Deze coaches willen sessietegoed op factuur. Bij <b>goedkeuren</b> wordt het tegoed meteen bijgeschreven
+            én verschijnt een open post bij <Link href="/beheer/betalingen" className="font-bold text-accentdark hover:underline">Betalingen</Link> — daar maak je de factuur (B2B).
+          </p>
+          <div className="mt-4 space-y-2">
+            {(reqs || []).map((r) => (
+              <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
+                <div>
+                  <p className="font-black text-brand">{name(r.coach_id)} · {r.qty} sessies <span className="font-bold text-brand/50">(€ {(r.qty * 12).toFixed(2).replace(".", ",")})</span></p>
+                  <p className="text-xs text-brand/45">{fmt(r.created_at)}{r.note ? ` — “${r.note}”` : ""}</p>
+                </div>
+                <div className="flex gap-2">
+                  <ActionForm action={resolveCoachRequest}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <input type="hidden" name="decision" value="approved" />
+                    <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand transition hover:opacity-90">Goedkeuren (+{r.qty})</button>
+                  </ActionForm>
+                  <ActionForm action={resolveCoachRequest}>
+                    <input type="hidden" name="id" value={r.id} />
+                    <input type="hidden" name="decision" value="declined" />
+                    <button className="rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm font-bold text-brand/60 transition hover:border-red-300 hover:text-red-600">Afwijzen</button>
+                  </ActionForm>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Add coach — promote a member OR create a brand-new coach account */}
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <ActionForm action={addCoach} success="Coach toegevoegd ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">

@@ -516,6 +516,29 @@ export async function sendWaitlistOpen({ to, name, serviceName, startsAt, bookUr
   );
 }
 
+// ---- Admin: a coach requested session credits (needs approval — money is waiting) ----
+export async function sendCoachRequestNotice({ to, coachName, qty, note }) {
+  return send(
+    to,
+    `${coachName} vraagt ${qty} coach-sessies aan`,
+    shell({
+      title: "Sessie-aanvraag van een coach 🏋️",
+      intro: `${esc(coachName)} vraagt <b>${qty} sessies</b> (€ ${(qty * 12).toFixed(2).replace(".", ",")}) aan om via factuur/overschrijving te betalen.`,
+      rows: [
+        ["Coach", esc(coachName)],
+        ["Aantal", `${qty} sessies`],
+        ["Bedrag", `€ ${(qty * 12).toFixed(2).replace(".", ",")}`],
+        ...(note ? [["Opmerking", esc(note)]] : []),
+      ],
+      body: `<p style="font-size:13px;color:#6b6685;margin-top:10px">Keur goed of wijs af — bij goedkeuring wordt het tegoed bijgeschreven en verschijnt er een openstaande post bij Betalingen waarvoor je meteen een factuur kan maken.</p>`,
+      cta: { href: `${SITE}/beheer/coaches#aanvragen`, label: "Bekijk de aanvraag" },
+    }),
+    FROM,
+    REPLY_TO,
+    "coach_request"
+  );
+}
+
 // ---- Member: event signup confirmed ----
 export async function sendEventSignup({ to, name, title, startsAt }) {
   await send(

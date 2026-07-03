@@ -260,8 +260,16 @@ export async function requestCoachSessions(formData) {
   await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "request", summary: `${qty} coach-sessies aangevraagd` });
   try {
     const { data: c } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
-    await notifyAdmins({ gymId: profile.gym_id, actorId: userId, type: "request", title: `${c?.full_name || "Een coach"} vraagt ${qty} sessies aan`, body: "Keur goed of wijs af bij Coaches.", link: "/beheer/coaches" });
-  } catch {}
+    const coachName = c?.full_name || "Een coach";
+    await notifyAdmins({ gymId: profile.gym_id, actorId: userId, type: "request", title: `${coachName} vraagt ${qty} sessies aan`, body: "Keur goed of wijs af bij Coaches.", link: "/beheer/coaches#aanvragen" });
+    // Also e-mail every beheerder — a pending request is money waiting and must not sit unseen in a bell.
+    const admin = createAdminClient();
+    const { data: admins } = await admin.from("profiles").select("email").eq("gym_id", profile.gym_id).eq("role", "beheerder").not("email", "is", null);
+    const { sendCoachRequestNotice } = await import("@/lib/email");
+    for (const a of admins || []) {
+      await sendCoachRequestNotice({ to: a.email, coachName, qty, note: formData.get("note") || null });
+    }
+  } catch (e) { console.error("coach request notice failed:", e?.message); }
   revalidatePath("/coach");
   return { ok: true };
 }
