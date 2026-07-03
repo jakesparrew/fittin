@@ -28,7 +28,7 @@ export default async function Instellingen() {
   const tokenSet = !!(nukiRow?.nuki_api_token);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Instellingen</h1>
       <p className="mt-1 text-sm text-brand/50">Algemene gegevens van de gym.</p>
 

@@ -27,7 +27,7 @@ export default async function Activatie() {
   );
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Activatie</h1>
       <p className="mt-1 text-sm text-brand/50">Motivatie-campagnes die automatisch leden activeren — bv. wie 10 dagen niet kwam, krijgt een duwtje.</p>
 

@@ -30,7 +30,7 @@ export default async function AdminNotificaties() {
   ].sort((a, b) => new Date(b.when) - new Date(a.when)).slice(0, 60);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Notificaties</h1>
       <p className="mt-1 text-sm text-brand/50">Alles wat er leeft in je gym — boekingen, betalingen, inschrijvingen, coach-acties.</p>
 

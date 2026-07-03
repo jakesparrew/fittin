@@ -31,7 +31,7 @@ export default async function CoachBerichten({ searchParams }) {
   }
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Dashboard</Link>
       <h1 className="mt-2 text-3xl font-black text-brand">Berichten</h1>
       <p className="mt-1 text-sm text-brand/50">Chat rechtstreeks met je clienten.</p>

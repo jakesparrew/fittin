@@ -48,7 +48,7 @@ export default async function Betalingen({ searchParams }) {
   const shownTotal = (rows || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black text-brand">Betalingen</h1>

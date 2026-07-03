@@ -23,7 +23,7 @@ export default async function CoachBetalingen() {
   const month = purchases.filter((p) => p.created_at >= monthStart).reduce((a, p) => a + p.amount_cents, 0);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Dashboard</Link>
       <h1 className="mt-2 text-3xl font-black text-brand">Betalingen</h1>
       <p className="mt-1 max-w-2xl text-sm text-brand/50">

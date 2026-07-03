@@ -60,7 +60,7 @@ export default async function Boekingen({ searchParams }) {
   const coachOpts = (coaches || []).map((c) => ({ id: c.id, label: c.full_name || c.email }));
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-black text-brand">Boekingen</h1>
         <div className="flex items-center gap-2 text-sm font-bold">

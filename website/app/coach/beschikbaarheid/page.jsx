@@ -24,7 +24,7 @@ export default async function Beschikbaarheid() {
   for (let h = gym.open_hour; h <= gym.close_hour; h += 0.5) hours.push(h);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Beschikbaarheid</h1>
       <p className="mt-1 text-sm text-brand/50">Stel in wanneer leden jou kunnen boeken voor personal training.</p>
 

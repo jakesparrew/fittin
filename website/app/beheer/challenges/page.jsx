@@ -17,7 +17,7 @@ export default async function Challenges() {
     .order("created_at", { ascending: false });
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Challenges</h1>
       <p className="mt-1 text-sm text-brand/50">Maandelijkse uitdagingen, beloond in sessies.</p>
       <QuickStart title="Een challenge opzetten" steps={[

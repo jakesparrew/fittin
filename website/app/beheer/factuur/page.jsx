@@ -77,7 +77,7 @@ export default async function FactuurPage({ searchParams }) {
   }
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="mb-4 flex items-center justify-between print:hidden">
         <Link href="/beheer/betalingen" className="text-sm font-semibold text-brand/50 hover:text-brand">← Betalingen</Link>
         <PrintButton />
@@ -88,5 +88,5 @@ export default async function FactuurPage({ searchParams }) {
 }
 
 function Missing({ msg = "Niet gevonden." }) {
-  return <div className="px-8 py-8">{msg} <Link href="/beheer/betalingen" className="text-accentdark">Terug</Link></div>;
+  return <div className="px-4 py-6 md:px-8 md:py-8">{msg} <Link href="/beheer/betalingen" className="text-accentdark">Terug</Link></div>;
 }

@@ -14,11 +14,11 @@ export default async function InboxItem({ params }) {
   if (profile.role !== "beheerder") return <div className="px-8 py-8 text-brand/60">Geen toegang.</div>;
 
   const { data: m } = await supabase.from("inbound_emails").select("*").eq("id", id).eq("gym_id", gym.id).single();
-  if (!m) return <div className="px-8 py-8">Bericht niet gevonden. <Link href="/beheer/inbox" className="text-accentdark">← Inbox</Link></div>;
+  if (!m) return <div className="px-4 py-6 md:px-8 md:py-8">Bericht niet gevonden. <Link href="/beheer/inbox" className="text-accentdark">← Inbox</Link></div>;
   if (!m.read) { try { await markRead(id); } catch {} }
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex items-center justify-between">
         <Link href="/beheer/inbox" className="text-sm font-semibold text-brand/50 hover:text-brand">← Inbox</Link>
         <form action={archiveInbox}><input type="hidden" name="id" value={m.id} /><button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/60 hover:bg-borderc">Archiveren</button></form>

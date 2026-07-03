@@ -19,7 +19,7 @@ export default async function Programmas() {
   ]);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-black text-brand">Programma's</h1>
         <Link href="/beheer/oefeningen" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">≣ Oefeningenbibliotheek →</Link>

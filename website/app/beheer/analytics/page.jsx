@@ -109,7 +109,7 @@ export default async function Analytics() {
   const showHours = activeHours.length ? activeHours : hours.filter((h) => h >= 7 && h <= 22);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Analytics</h1>
       <p className="mt-1 text-sm text-brand/50">De gezondheid van je business in één oogopslag — omzet, groei, retentie en bezetting.</p>
 

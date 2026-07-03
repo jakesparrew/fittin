@@ -16,7 +16,7 @@ export default async function CampaignDetail({ params }) {
   const { supabase, gym } = ctx;
 
   const { data: c } = await supabase.from("campaigns").select("*").eq("id", id).eq("gym_id", gym.id).single();
-  if (!c) return <div className="px-8 py-8">Campagne niet gevonden. <Link href="/beheer/nieuwsbrief" className="text-accentdark">Terug</Link></div>;
+  if (!c) return <div className="px-4 py-6 md:px-8 md:py-8">Campagne niet gevonden. <Link href="/beheer/nieuwsbrief" className="text-accentdark">Terug</Link></div>;
 
   const isDrip = c.kind === "drip";
   const { count: subCount } = await supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "active");
@@ -40,7 +40,7 @@ export default async function CampaignDetail({ params }) {
   }
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href="/beheer/nieuwsbrief" className="text-sm font-semibold text-brand/50 hover:text-brand">← Campagnes</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <div>

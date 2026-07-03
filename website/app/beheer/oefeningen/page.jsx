@@ -13,7 +13,7 @@ export default async function Oefeningen() {
   const { data: exercises } = await supabase.from("exercises").select("*").eq("gym_id", gym.id).order("name");
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Oefeningen</h1>
       <p className="mt-1 text-sm text-brand/50">De gym-bibliotheek: demo, doelspieren en uitleg. Leden zien deze in /oefeningen en hun schema.</p>
 

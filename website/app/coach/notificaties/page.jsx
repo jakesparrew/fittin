@@ -34,7 +34,7 @@ export default async function CoachNotificaties() {
   if (unread > 0) { try { await supabase.from("notifications").update({ read: true }).eq("user_id", user.id).eq("read", false); } catch {} }
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Coach dashboard</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-black text-brand">Notificaties</h1>

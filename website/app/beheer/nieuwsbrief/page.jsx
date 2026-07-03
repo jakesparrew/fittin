@@ -31,7 +31,7 @@ export default async function Newsletter() {
   const totOpened = sentCampaigns.reduce((a, c) => a + (c.opened || 0), 0);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black text-brand">Nieuwsbrief & campagnes</h1>

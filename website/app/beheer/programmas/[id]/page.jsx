@@ -33,7 +33,7 @@ export default async function ProgramBuilder({ params }) {
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).order("full_name"),
   ]);
 
-  if (!program) return <div className="px-8 py-8">Programma niet gevonden. <Link href="/beheer/programmas" className="text-accentdark">Terug</Link></div>;
+  if (!program) return <div className="px-4 py-6 md:px-8 md:py-8">Programma niet gevonden. <Link href="/beheer/programmas" className="text-accentdark">Terug</Link></div>;
   const days = [...(program.program_days || [])].sort((a, b) => a.day_no - b.day_no);
 
   // Member progress: when assigned, show what the member has actually been logging/marking done.
@@ -61,7 +61,7 @@ export default async function ProgramBuilder({ params }) {
   const fmtDay = (d) => (d ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(d)) : null);
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href="/beheer/programmas" className="text-sm font-semibold text-brand/50 hover:text-brand">← Programma's</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-black text-brand">{program.name}</h1>

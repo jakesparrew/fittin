@@ -62,7 +62,7 @@ export default async function MemberDetail({ params }) {
     adminDb.from("payments").select("amount_cents, status").eq("user_id", id),
   ]);
 
-  if (!member) return <div className="px-8 py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
+  if (!member) return <div className="px-4 py-6 md:px-8 md:py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
 
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
   const credits = ledger || 0;
@@ -77,7 +77,7 @@ export default async function MemberDetail({ params }) {
   const memberSince = member.created_at || null;
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href="/beheer/leden" className="text-sm font-semibold text-brand/50 hover:text-brand">← Leden</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <div>

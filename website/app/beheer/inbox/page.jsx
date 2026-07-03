@@ -44,7 +44,7 @@ export default async function Inbox({ searchParams }) {
   const AUTO_STATUS = { sent: "bg-paper text-brand/50", delivered: "bg-accent/15 text-accentdark", opened: "bg-accent/15 text-accentdark", bounced: "bg-red-100 text-red-600", failed: "bg-red-100 text-red-600" };
 
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black text-brand">Inbox</h1>
