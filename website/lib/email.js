@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Transactional email via Resend. Degrades to a no-op until configured.
 const key = process.env.RESEND_API_KEY;
@@ -58,8 +59,24 @@ function shell({ title, intro, rows = [], body = "", cta }) {
   </div>`;
 }
 
-async function send(to, subject, html, from = FROM, replyTo = REPLY_TO) {
+// Fire-and-forget log into email_log (Batch 6.2) so the cockpit can show what went out + status.
+// Never throws into the caller — a logging hiccup must not affect the actual send result.
+async function logEmail({ to, subject, kind, status, resendId, error }) {
+  try {
+    await createAdminClient().from("email_log").insert({
+      to_email: Array.isArray(to) ? to.join(", ") : to,
+      subject: subject || null,
+      kind: kind || null,
+      status,
+      resend_id: resendId || null,
+      error: error ? String(error).slice(0, 500) : null,
+    });
+  } catch (e) { console.error("email_log insert failed:", e?.message); }
+}
+
+async function send(to, subject, html, from = FROM, replyTo = REPLY_TO, kind = null) {
   if (!resend || !to) return { ok: false, skipped: true };
+  let result, status, logErr = null, resendId = null;
   try {
     // Resend's SDK returns { data, error } and does NOT throw on API errors (unverified domain,
     // rate limit, suppression). Check res.error explicitly so a rejected send is never treated as
@@ -67,13 +84,20 @@ async function send(to, subject, html, from = FROM, replyTo = REPLY_TO) {
     const res = await resend.emails.send({ from, to, replyTo, subject, html });
     if (res?.error) {
       console.error("email send error:", subject, res.error?.message || JSON.stringify(res.error));
-      return { ok: false, error: res.error };
+      result = { ok: false, error: res.error };
+      status = "failed"; logErr = res.error?.message || JSON.stringify(res.error);
+    } else {
+      resendId = res?.data?.id;
+      result = { ok: true, id: resendId };
+      status = "sent";
     }
-    return { ok: true, id: res?.data?.id };
   } catch (e) {
     console.error("email send failed:", subject, e?.message);
-    return { ok: false, error: e };
+    result = { ok: false, error: e };
+    status = "failed"; logErr = e?.message;
   }
+  await logEmail({ to, subject, kind, status, resendId, error: logErr });
+  return result;
 }
 
 // ---- Member: booking confirmed ----

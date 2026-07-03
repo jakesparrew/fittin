@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { recordResendEvent } from "@/lib/newsletter";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+// Resend event type → transactional email_log status (Batch 6.2).
+const EMAIL_LOG_STATUS = {
+  "email.delivered": "delivered",
+  "email.opened": "opened",
+  "email.bounced": "bounced",
+  "email.complained": "bounced",
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -48,6 +57,13 @@ export async function POST(req) {
     await recordResendEvent(event?.type, event?.data?.email_id);
   } catch (e) {
     console.error("resend webhook:", event?.type, e?.message);
+  }
+  // Also reflect delivery status on the transactional email log (matched by Resend id).
+  const emailId = event?.data?.email_id;
+  const newStatus = EMAIL_LOG_STATUS[event?.type];
+  if (emailId && newStatus) {
+    try { await createAdminClient().from("email_log").update({ status: newStatus }).eq("resend_id", emailId); }
+    catch (e) { console.error("email_log status update:", e?.message); }
   }
   return NextResponse.json({ received: true });
 }

@@ -25,5 +25,7 @@ export async function GET(req) {
   // any expired/orphan "Fittin …" codes as a backstop against accumulation.
   try { revoked = await revokeExpiredKeypadCodes(createAdminClient()); } catch (e) { errors.push(`revoke: ${e?.message}`); console.error("cron revoke failed:", e?.message); }
   try { swept = await reconcileKeypadCodes(createAdminClient()); } catch (e) { errors.push(`sweep: ${e?.message}`); console.error("cron sweep failed:", e?.message); }
+  // Health heartbeat (Batch 6.5): one row per run so the cockpit shows this door-critical cron is alive.
+  try { await createAdminClient().from("cron_runs").insert({ job: "access_codes", ok: errors.length === 0, detail: { sent, revoked, swept, ...(errors.length ? { errors } : {}) } }); } catch {}
   return NextResponse.json({ sent, revoked, swept, ...(errors.length ? { errors } : {}) }, { status: errors.length ? 500 : 200 });
 }

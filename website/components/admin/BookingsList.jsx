@@ -16,15 +16,22 @@ const ago = (iso) => {
 // UNPAID €12 abo session with a green ✓, so the money was never chased.
 const bron = (b) => sourceLabel(b);
 
-export default function BookingsList({ bookings = [], coaches = [] }) {
+// Real money owed: a confirmed 'los'/'abo' booking that isn't settled yet.
+const isUnpaid = (b) => b.status === "bevestigd" && !isSettled(b) && (b.payment_source === "los" || b.payment_source === "abo") && (b.price_cents || 0) > 0;
+
+export default function BookingsList({ bookings = [], coaches = [], initialTab = "upcoming" }) {
   const [q, setQ] = useState("");
-  const [tab, setTab] = useState("upcoming");
+  const [tab, setTab] = useState(initialTab);
   const now = Date.now();
   const needle = q.trim().toLowerCase();
+
+  const unpaidCount = bookings.filter(isUnpaid).length;
+  const unpaidTotal = bookings.filter(isUnpaid).reduce((a, b) => a + (b.price_cents || 0), 0);
 
   let rows = bookings;
   if (tab === "upcoming") rows = rows.filter((b) => new Date(b.starts_at).getTime() >= now && b.status === "bevestigd");
   else if (tab === "past") rows = rows.filter((b) => new Date(b.starts_at).getTime() < now || b.status !== "bevestigd");
+  else if (tab === "onbetaald") rows = rows.filter(isUnpaid);
   if (needle) rows = rows.filter((b) => [b.member_name, b.service_name, b.coach_name].some((x) => (x || "").toLowerCase().includes(needle)));
   rows = [...rows].sort((a, b) => (tab === "past" ? new Date(b.starts_at) - new Date(a.starts_at) : new Date(a.starts_at) - new Date(b.starts_at)));
 
@@ -35,10 +42,15 @@ export default function BookingsList({ bookings = [], coaches = [] }) {
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek lid, sessie of coach…" className="w-64 max-w-full rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm text-brand outline-none transition focus:border-accent" />
       </div>
 
-      <div className="mt-3 inline-flex rounded-full border border-borderc bg-white p-1 text-sm font-bold">
-        {[["upcoming", "Komende"], ["past", "Verleden"], ["all", "Alle"]].map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={"rounded-full px-4 py-1.5 transition " + (tab === k ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>{l}</button>
-        ))}
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-full border border-borderc bg-white p-1 text-sm font-bold">
+          {[["upcoming", "Komende"], ["past", "Verleden"], ["all", "Alle"], ["onbetaald", `Onbetaald${unpaidCount ? ` (${unpaidCount})` : ""}`]].map(([k, l]) => (
+            <button key={k} onClick={() => setTab(k)} className={"rounded-full px-4 py-1.5 transition " + (tab === k ? (k === "onbetaald" ? "bg-red-500 text-white" : "bg-brand text-white") : "text-brand/60 hover:text-brand")}>{l}</button>
+          ))}
+        </div>
+        {tab === "onbetaald" && unpaidCount > 0 && (
+          <span className="rounded-full bg-red-50 px-3 py-1 text-sm font-bold text-red-600">€ {(unpaidTotal / 100).toFixed(2).replace(".", ",")} openstaand</span>
+        )}
       </div>
 
       <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-white">

@@ -107,7 +107,7 @@ export default async function Boekingen({ searchParams }) {
         coaches={coachOpts}
       />
 
-      <BookingsList bookings={bookingRows} coaches={coachOpts} />
+      <BookingsList bookings={bookingRows} coaches={coachOpts} initialTab={sp.filter === "onbetaald" ? "onbetaald" : "upcoming"} />
     </div>
   );
 }

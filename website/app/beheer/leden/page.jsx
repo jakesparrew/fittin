@@ -7,10 +7,12 @@ import MembersTable from "@/components/admin/MembersTable";
 
 export const dynamic = "force-dynamic";
 
-export default async function Leden() {
+export default async function Leden({ searchParams }) {
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym, profile } = ctx;
+  const sp = (await searchParams) || {};
+  const atRiskOnly = sp.filter === "atrisk";
 
   const adminDb = createAdminClient();
   const [{ data: members }, { data: ledger }, { data: links }, { data: doorRows }] = await Promise.all([
@@ -42,15 +44,31 @@ export default async function Leden() {
 
   const isBeheerder = profile.role === "beheerder";
 
+  // At-risk filter (Batch 6.4): members (lid) who never visited or whose last visit is > 30 days ago,
+  // sorted oldest-visit first — the owner's one-tap outreach list.
+  const d30 = Date.now() - 30 * 86400000;
+  let shown = members || [];
+  if (atRiskOnly) {
+    shown = shown
+      .filter((m) => m.role === "lid" && (!lastVisit[m.id] || new Date(lastVisit[m.id]).getTime() < d30))
+      .sort((a, b) => (new Date(lastVisit[a.id] || 0).getTime()) - (new Date(lastVisit[b.id] || 0).getTime()));
+  }
+
   return (
-    <div className="px-8 py-8">
+    <div className="px-4 py-6 md:px-8 md:py-8">
       <MemberDrawer />
       <h1 className="text-3xl font-black text-brand">Leden</h1>
-      <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · klik een naam voor het volledige overzicht.</p>
+      {atRiskOnly ? (
+        <p className="mt-1 text-sm text-brand/50">
+          {shown.length} leden die al {">"}30 dagen niet kwamen — oudste eerst. <Link href="/beheer/leden" className="font-bold text-accentdark hover:underline">Toon alle leden</Link>
+        </p>
+      ) : (
+        <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · klik een naam voor het volledige overzicht.</p>
+      )}
 
-      {isBeheerder && <div className="mt-6"><AddMemberForm /></div>}
+      {isBeheerder && !atRiskOnly && <div className="mt-6"><AddMemberForm /></div>}
 
-      <MembersTable members={members || []} credits={credits} coachOf={coachOf} lastLogin={lastLogin} lastVisit={lastVisit} isBeheerder={isBeheerder} />
+      <MembersTable members={shown} credits={credits} coachOf={coachOf} lastLogin={lastLogin} lastVisit={lastVisit} isBeheerder={isBeheerder} />
     </div>
   );
 }

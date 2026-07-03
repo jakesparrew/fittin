@@ -101,6 +101,7 @@ export default async function Betalingen({ searchParams }) {
             <tr>
               <th className="px-5 py-3">Lid</th>
               <th className="px-5 py-3">Type</th>
+              <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3">Omschrijving</th>
               <th className="px-5 py-3 text-right">Bedrag</th>
               <th className="px-5 py-3 text-right">Datum</th>
@@ -118,6 +119,15 @@ export default async function Betalingen({ searchParams }) {
                   )}
                 </td>
                 <td className="px-5 py-3"><span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-brand/70">{KIND[p.kind] || p.kind}</span></td>
+                <td className="px-5 py-3">
+                  {(() => {
+                    const s = p.status || "betaald";
+                    const ok = s === "betaald" || s === "paid";
+                    const refund = s === "refunded" || s === "terugbetaald";
+                    const cls = ok ? "bg-accent/15 text-accentdark" : refund ? "bg-paper text-brand/50" : "bg-red-100 text-red-600";
+                    return <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold capitalize " + cls}>{s}</span>;
+                  })()}
+                </td>
                 <td className="px-5 py-3 text-brand/50">{p.description || "—"}</td>
                 <td className="px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
                 <td className="px-5 py-3 text-right text-xs text-brand/40">{fmt(p.created_at)}</td>
@@ -125,7 +135,7 @@ export default async function Betalingen({ searchParams }) {
               </tr>
             ))}
             {(!rows || rows.length === 0) && (
-              <tr><td colSpan={6} className="px-5 py-8 text-center text-sm text-brand/40">Nog geen betalingen. Ze verschijnen hier automatisch zodra Stripe ze bevestigt.</td></tr>
+              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-brand/40">Nog geen betalingen. Ze verschijnen hier automatisch zodra Stripe ze bevestigt.</td></tr>
             )}
           </tbody>
         </table>

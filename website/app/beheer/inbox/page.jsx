@@ -14,7 +14,8 @@ export default async function Inbox({ searchParams }) {
   if (!ctx) return null;
   const { supabase, gym, profile } = ctx;
   if (profile.role !== "beheerder") return <div className="px-8 py-8 text-brand/60">Enkel de beheerder kan de inbox bekijken.</div>;
-  const box = (await searchParams)?.box === "sent" ? "sent" : "inbox";
+  const boxParam = (await searchParams)?.box;
+  const box = boxParam === "sent" ? "sent" : boxParam === "auto" ? "auto" : "inbox";
 
   // Pull any new mail from Resend, then read from our DB.
   try { await syncInbox(gym.id); } catch {}
@@ -34,7 +35,13 @@ export default async function Inbox({ searchParams }) {
     .order("created_at", { ascending: false })
     .limit(100);
 
+  // Automated transactional mail log (Batch 6.2) — only fetched when its tab is open.
+  const { data: autoMails } = box === "auto"
+    ? await supabase.from("email_log").select("id, to_email, kind, subject, status, error, created_at").order("created_at", { ascending: false }).limit(100)
+    : { data: null };
+
   const unread = (mails || []).filter((m) => !m.read).length;
+  const AUTO_STATUS = { sent: "bg-paper text-brand/50", delivered: "bg-accent/15 text-accentdark", opened: "bg-accent/15 text-accentdark", bounced: "bg-red-100 text-red-600", failed: "bg-red-100 text-red-600" };
 
   return (
     <div className="px-8 py-8">
@@ -55,9 +62,31 @@ export default async function Inbox({ searchParams }) {
       <div className="mt-6 flex gap-2 text-sm font-bold">
         <Link href="/beheer/inbox" className={"rounded-full px-4 py-1.5 transition " + (box === "inbox" ? "bg-brand text-white" : "bg-paper text-brand/60 hover:bg-accent/15")}>Ontvangen{unread > 0 && ` (${unread})`}</Link>
         <Link href="/beheer/inbox?box=sent" className={"rounded-full px-4 py-1.5 transition " + (box === "sent" ? "bg-brand text-white" : "bg-paper text-brand/60 hover:bg-accent/15")}>Verzonden</Link>
+        <Link href="/beheer/inbox?box=auto" className={"rounded-full px-4 py-1.5 transition " + (box === "auto" ? "bg-brand text-white" : "bg-paper text-brand/60 hover:bg-accent/15")}>Automatisch</Link>
       </div>
 
-      {box === "inbox" ? (
+      {box === "auto" ? (
+        <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-white">
+          {(autoMails || []).map((m) => {
+            const failed = m.status === "failed" || m.status === "bounced";
+            return (
+              <div key={m.id} className={"border-b border-borderc px-5 py-3.5 last:border-0 " + (failed ? "bg-red-50/50" : "")}>
+                <div className="flex flex-wrap items-center gap-2">
+                  {m.kind && <span className="shrink-0 rounded-full bg-paper px-2 py-0.5 text-[10px] font-bold text-brand/50">{m.kind}</span>}
+                  <p className="truncate text-sm font-bold text-brand">aan {m.to_email || "—"}</p>
+                  <span className={"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold capitalize " + (AUTO_STATUS[m.status] || "bg-paper text-brand/50")}>{m.status}</span>
+                  <span className="ml-auto shrink-0 text-xs text-brand/40">{fmt(m.created_at)}</span>
+                </div>
+                <p className="mt-1 truncate text-sm text-brand/70">{m.subject}</p>
+                {m.error && <p className="mt-1 truncate text-xs text-red-500">{m.error}</p>}
+              </div>
+            );
+          })}
+          {(!autoMails || autoMails.length === 0) && (
+            <p className="px-5 py-10 text-center text-sm text-brand/40">Nog geen automatische e-mails gelogd. Boekingsbevestigingen, deurcodes en herinneringen verschijnen hier zodra ze verstuurd worden.</p>
+          )}
+        </div>
+      ) : box === "inbox" ? (
         <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-white">
           {(mails || []).map((m) => (
             <Link key={m.id} href={`/beheer/inbox/${m.id}`} className={"flex items-center gap-4 border-b border-borderc px-5 py-3.5 transition last:border-0 hover:bg-paper " + (!m.read ? "bg-accent/5" : "")}>

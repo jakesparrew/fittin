@@ -32,6 +32,8 @@ export async function GET(req) {
   try { guestFollowups = await sendGuestFollowups(); } catch (e) { console.error("cron guest followups failed:", e?.message); }
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
+  // Health heartbeat (Batch 6.5).
+  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups } }); } catch {}
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.
   after(async () => {
     try { await fetch(`${SITE}/api/queue/process`, { cache: "no-store", headers: { Authorization: `Bearer ${secret}` } }); } catch {}
