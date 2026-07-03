@@ -2,6 +2,7 @@ import "./globals.css";
 import { Lato, Bricolage_Grotesque } from "next/font/google";
 import PWARegister from "../components/PWARegister";
 import PWAInstallPrompt from "../components/PWAInstallPrompt";
+import IosReloginNudge from "../components/IosReloginNudge";
 import PageView from "../components/analytics/PageView";
 import ErrorLogger from "../components/ErrorLogger";
 
@@ -62,6 +63,7 @@ export default function RootLayout({ children }) {
         <PWARegister />
         {children}
         <PWAInstallPrompt />
+        <IosReloginNudge />
         <PageView />
         <ErrorLogger />
       </body>
