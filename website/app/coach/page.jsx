@@ -192,6 +192,21 @@ export default async function CoachDashboard({ searchParams }) {
         </details>
       </section>
 
+      {/* How payment works — the two money flows (buy credits vs. invoice clients) confuse new coaches. */}
+      <details className="mt-6 rounded-2xl border border-borderc bg-paper/50 p-4">
+        <summary className="cursor-pointer text-sm font-black text-brand">💰 Zo werkt betalen als coach</summary>
+        <div className="mt-3 grid gap-3 text-sm text-brand/70 sm:grid-cols-2">
+          <div className="rounded-xl bg-white p-4">
+            <p className="font-bold text-brand">1. Jij betaalt de gym</p>
+            <p className="mt-1 text-xs leading-relaxed">Elke sessie die je met een client boekt kost jou <b>1 sessietegoed (€ 12)</b>. Koop tegoed vooraf hieronder bij <b>Coach-sessies kopen</b>, of vraag het aan de beheerder.</p>
+          </div>
+          <div className="rounded-xl bg-white p-4">
+            <p className="font-bold text-brand">2. Je client betaalt jou</p>
+            <p className="mt-1 text-xs leading-relaxed">De prijs die je je client aanrekent, spreek je zelf af. Stuur een <b>betaalverzoek</b> vanaf de clientpagina (die betaalt via de app), of laat je client je rechtstreeks betalen (bv. Bancontact).</p>
+          </div>
+        </div>
+      </details>
+
       {/* Billing summary */}
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Aankomende sessies" value={upcoming.length} />
