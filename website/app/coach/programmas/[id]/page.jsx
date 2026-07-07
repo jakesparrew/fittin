@@ -12,6 +12,7 @@ import {
 import ExercisePicker from "@/components/admin/ExercisePicker";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ActionForm from "@/components/ui/ActionForm";
+import ConfirmSubmit from "@/components/ui/ConfirmSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export default async function CoachProgramBuilder({ params }) {
         <h1 className="text-3xl font-black text-brand">{program.name}</h1>
         <form action={coachDeleteProgram}>
           <input type="hidden" name="id" value={program.id} />
-          <button className="text-xs font-bold text-red-500 hover:underline">Programma verwijderen</button>
+          <ConfirmSubmit message={program.member_id ? "Dit programma verwijderen? De client verliest dit schema onder 'Training'." : "Dit sjabloon verwijderen?"} className="text-xs font-bold text-red-500 hover:underline">Programma verwijderen</ConfirmSubmit>
         </form>
       </div>
 
@@ -82,7 +83,7 @@ export default async function CoachProgramBuilder({ params }) {
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Toewijzen aan client</span>
           <SearchSelect name="memberId" defaultValue={program.member_id || ""} placeholder="— Sjabloon (niemand) —" options={[{ value: "", label: "— Sjabloon (niemand) —" }, ...clients.map((c) => ({ value: c.id, label: c.full_name || c.email }))]} />
         </label>
-        <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</button>
+        <ConfirmSubmit message="Programma toewijzen? De gekozen client krijgt een kopie onder 'Training' en een melding." className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</ConfirmSubmit>
         {program.member_id && (
           <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
         )}

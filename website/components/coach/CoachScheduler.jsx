@@ -10,8 +10,11 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
   const router = useRouter();
   const [offset, setOffset] = useState(0); // 0 = this week, 7 = next week
   const [slot, setSlot] = useState(null); // { dateStr, hour, label }
+  const [mobileDay, setMobileDay] = useState(null); // selected day on the phone layout
   const takenSet = new Set(taken);
   const week = days.slice(offset, offset + 7);
+  const activeDay = week.find((d) => d.dateStr === mobileDay) ? mobileDay : week[0]?.dateStr;
+  const activeDayObj = week.find((d) => d.dateStr === activeDay);
 
   const [state, action, pending] = useActionState(async (_prev, formData) => {
     const res = await coachBookSession(formData);
@@ -36,7 +39,8 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
       </div>
       <p className="mt-1 text-xs text-brand/50">Klik op een vrij uur om een sessie met een client in te plannen.</p>
 
-      <div className="mt-4 overflow-x-auto">
+      {/* Desktop: full week grid */}
+      <div className="mt-4 hidden overflow-x-auto md:block">
         <div className="min-w-[640px]">
           {/* Day header */}
           <div className="grid" style={{ gridTemplateColumns: `48px repeat(${week.length}, 1fr)` }}>
@@ -72,6 +76,38 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
               })}
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Mobile: pick a day, then tap a free hour — no horizontal scrolling */}
+      <div className="mt-4 md:hidden">
+        <div className="flex gap-1 overflow-x-auto pb-1">
+          {week.map((d) => {
+            const act = activeDay === d.dateStr;
+            return (
+              <button key={d.dateStr} onClick={() => setMobileDay(d.dateStr)} className={"flex-1 shrink-0 rounded-xl border-2 px-2 py-1.5 text-center transition " + (act ? "border-accent bg-accent/15" : "border-borderc")}>
+                <span className="block text-[9px] font-bold uppercase text-brand/40">{d.weekday}</span>
+                <span className="block text-xs font-black text-brand">{d.dayMonth.split(" ")[0]}</span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          {hours.map((h) => {
+            const key = `${activeDay}:${h}`;
+            const own = mine[key];
+            const isTaken = takenSet.has(key);
+            const past = slotInstant(activeDay, h).getTime() < Date.now();
+            if (own) return <div key={h} className="rounded-xl bg-accent/25 py-2 text-center text-[10px] font-bold leading-tight text-accentdark">{hourLabel(h)}<br />{own.name?.split(" ")[0] || "Client"}</div>;
+            if (isTaken) return <div key={h} className="rounded-xl bg-paper py-2 text-center text-[10px] leading-tight text-brand/30">{hourLabel(h)}<br />bezet</div>;
+            if (past) return <div key={h} className="rounded-xl bg-paper/60 py-2 text-center text-[10px] text-brand/25">{hourLabel(h)}</div>;
+            return (
+              <button key={h} onClick={() => setSlot({ dateStr: activeDay, hour: h, label: `${activeDayObj?.weekday} ${activeDayObj?.dayMonth} · ${hourLabel(h)}` })}
+                className="rounded-xl border-2 border-dashed border-borderc py-2 text-center text-xs font-bold text-brand/50 transition hover:border-accent hover:bg-accent/10 hover:text-accentdark">
+                {hourLabel(h)}
+              </button>
+            );
+          })}
         </div>
       </div>
 
