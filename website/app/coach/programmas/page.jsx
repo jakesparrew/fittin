@@ -35,6 +35,15 @@ export default async function CoachProgrammas() {
           <input name="name" required placeholder="bv. Full body — 3x/week" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
         </label>
         <label className="block">
+          <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Startpunt</span>
+          <select name="preset" defaultValue="" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm">
+            <option value="">Leeg (1 dag)</option>
+            <option value="full_body_3">Full body — 3 dagen</option>
+            <option value="upper_lower_4">Upper/Lower — 4 dagen</option>
+            <option value="ppl_3">Push/Pull/Benen — 3 dagen</option>
+          </select>
+        </label>
+        <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Direct toewijzen aan (optioneel)</span>
           <SearchSelect name="memberId" placeholder="— Template (niemand) —" options={[{ value: "", label: "— Template (niemand) —" }, ...clients.map((c) => ({ value: c.id, label: c.full_name || c.email }))]} />
         </label>

@@ -65,6 +65,12 @@ export async function coachQuickExercise(name) {
 }
 
 // ---- Programs (coach's own templates) ----
+// Starter presets scaffold the DAY structure (a coach fills in exercises after) — beats a blank page.
+const PROGRAM_PRESETS = {
+  full_body_3: ["Dag 1", "Dag 2", "Dag 3"],
+  upper_lower_4: ["Upper A", "Lower A", "Upper B", "Lower B"],
+  ppl_3: ["Push", "Pull", "Benen"],
+};
 export async function coachCreateProgram(formData) {
   const { supabase, profile, userId, error } = await requireCoach();
   if (error) return { error };
@@ -75,7 +81,8 @@ export async function coachCreateProgram(formData) {
     .select("id")
     .single();
   if (e) return { error: e.message };
-  await supabase.from("program_days").insert({ program_id: data.id, day_no: 1, name: "Dag 1" });
+  const dayNames = PROGRAM_PRESETS[formData.get("preset")] || ["Dag 1"];
+  await supabase.from("program_days").insert(dayNames.map((name, i) => ({ program_id: data.id, day_no: i + 1, name })));
   redirect(`/coach/programmas/${data.id}`);
 }
 
