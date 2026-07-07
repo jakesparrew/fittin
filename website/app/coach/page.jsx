@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { coachBookSession, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
+import { coachBookSession, coachBulkBook, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import CoachScheduler from "@/components/coach/CoachScheduler";
 import AddClientInline from "@/components/coach/AddClientInline";
@@ -153,6 +153,33 @@ export default async function CoachDashboard({ searchParams }) {
         <p className="mt-2 text-xs text-brand/50">Tip: laat <strong>Client</strong> leeg om enkel het uur te reserveren. Je kan later bij de sessie een client toevoegen via <strong>+ Client toevoegen</strong>.</p>
         <AddClientInline />
         <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). Je clienten betalen jou rechtstreeks (bv. Bancontact), los van het platform.</p>
+
+        {/* Recurring series — book the same weekday+hour for N weeks (with a client, or reserve-only). */}
+        <details className="mt-4 rounded-2xl border border-borderc bg-paper/50 p-4">
+          <summary className="cursor-pointer text-sm font-black text-brand">🔁 Reeks inplannen (elke week hetzelfde uur)</summary>
+          <p className="mt-2 text-xs text-brand/55">Boekt dezelfde weekdag + uur voor een aantal weken. Laat <b>Client</b> leeg om enkel de slots te reserveren. Elke sessie kost 1 sessietegoed (€ 12) — bezette of voorbije weken worden overgeslagen, en het stopt zodra je tegoed op is.</p>
+          <ActionForm action={coachBulkBook} success="Reeks ingepland ✓" className="mt-3 flex flex-wrap items-end gap-3">
+            <input type="hidden" name="serviceId" value={ptService?.id || ""} />
+            <Lbl t="Client (optioneel)">
+              <SearchSelect name="clientId" placeholder="Zoek een lid… (of leeg = reserveren)" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+            </Lbl>
+            <Lbl t="Weekdag">
+              <select name="weekday" defaultValue={1} className="rounded-lg border-2 border-borderc px-2 py-2 text-sm">
+                {[[1, "Maandag"], [2, "Dinsdag"], [3, "Woensdag"], [4, "Donderdag"], [5, "Vrijdag"], [6, "Zaterdag"], [0, "Zondag"]].map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </Lbl>
+            <Lbl t="Uur">
+              <select name="hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-2 text-sm">
+                {hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}
+              </select>
+            </Lbl>
+            <Lbl t="Weken"><input name="weeks" type="number" min="1" max="26" defaultValue="8" className="w-16 rounded-lg border-2 border-borderc px-2 py-2 text-sm" /></Lbl>
+            <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-2 text-sm" /></Lbl>
+            <SubmitButton className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Plan reeks in</SubmitButton>
+          </ActionForm>
+        </details>
       </section>
 
       {/* Billing summary */}

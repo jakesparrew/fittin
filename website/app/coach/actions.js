@@ -141,13 +141,13 @@ export async function coachAssignClient(formData) {
 export async function coachBulkBook(formData) {
   const { supabase, profile, userId, error } = await requireCoach();
   if (error) return { error };
-  const clientId = formData.get("clientId");
+  const clientId = formData.get("clientId") || null; // null = reserveer enkel de slots (client optioneel)
   const serviceId = formData.get("serviceId");
   const weekday = num(formData.get("weekday"), 1); // 0=zo..6=za
   const hour = numF(formData.get("hour"), 9);
   const weeks = Math.min(26, Math.max(1, num(formData.get("weeks"), 4)));
   const persons = num(formData.get("persons"), 1);
-  if (!clientId || !serviceId) return { error: "Kies een client en een sessie." };
+  if (!serviceId) return { error: "Kies een sessie." };
 
   const fmtDate = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d);
   const start = new Date(); start.setHours(0, 0, 0, 0);
@@ -167,15 +167,20 @@ export async function coachBulkBook(formData) {
   }
 
   try {
-    const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", clientId).single();
-    await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "booked", summary: `Reeks van ${booked} sessies ingepland met ${cl?.full_name || "client"}` });
-    if (booked > 0) await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "coach_booked", title: `Je coach plande ${booked} sessies voor je in`, link: "/account" });
+    if (clientId) {
+      const { data: cl } = await supabase.from("profiles").select("full_name").eq("id", clientId).single();
+      await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "booked", summary: `Reeks van ${booked} sessies ingepland met ${cl?.full_name || "client"}` });
+      if (booked > 0) await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "coach_booked", title: `Je coach plande ${booked} sessies voor je in`, link: "/account" });
+    } else {
+      await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "booked", summary: `Reeks van ${booked} slots gereserveerd (nog geen client)` });
+    }
   } catch {}
 
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
-  if (booked === 0) return { error: firstErr || "Geen sessies ingepland." };
-  return { ok: true, message: `${booked} sessies ingepland${firstErr ? " (sommige overgeslagen/onvoldoende tegoed)" : ""} ✓` };
+  if (booked === 0) return { error: firstErr || "Geen sessies ingepland (slot bezet of onvoldoende tegoed)." };
+  const noun = clientId ? "sessies ingepland" : "slots gereserveerd";
+  return { ok: true, message: `${booked} ${noun}${firstErr ? " (sommige overgeslagen/onvoldoende tegoed)" : ""} ✓` };
 }
 
 export async function cancelCoachBooking(formData) {
