@@ -531,12 +531,20 @@ export default async function AccountPage({ searchParams }) {
 
           {upcomingPaid.length === 0 ? (
             <div className="mt-5 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
-              <p className="font-semibold text-brand/70">Je hebt nog geen sessies geboekt.</p>
+              {!profile?.welcome_code_used && profile?.welcome_status === "eligible" ? (
+                <>
+                  <p className="text-2xl">🎁</p>
+                  <p className="mt-2 font-black text-brand">Je gratis eerste sessie staat klaar</p>
+                  <p className="mt-1 text-sm text-brand/60">Ze wordt automatisch verrekend — kies gewoon een moment dat past.</p>
+                </>
+              ) : (
+                <p className="font-semibold text-brand/70">Je hebt nog geen sessies geboekt.</p>
+              )}
               <Link
                 href="/boeken"
                 className="mt-5 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90"
               >
-                Reserveer de gym
+                {!profile?.welcome_code_used && profile?.welcome_status === "eligible" ? "Boek je gratis sessie" : "Reserveer de gym"}
               </Link>
             </div>
           ) : (
