@@ -154,16 +154,24 @@ export async function coachBulkBook(formData) {
   const diff = (weekday - start.getDay() + 7) % 7;
   start.setDate(start.getDate() + diff);
 
-  let booked = 0; let firstErr = null;
+  let booked = 0; let firstErr = null; const bookedIds = [];
   for (let i = 0; i < weeks; i++) {
     const d = new Date(start.getTime() + i * 7 * 86400000);
-    const { error: e } = await supabase.rpc("coach_book_session", { p_client: clientId, p_service: serviceId, p_date: fmtDate(d), p_hour: hour, p_persons: persons });
+    const { data: bid, error: e } = await supabase.rpc("coach_book_session", { p_client: clientId, p_service: serviceId, p_date: fmtDate(d), p_hour: hour, p_persons: persons });
     if (e) {
       firstErr = e.message;
       if (/Onvoldoende|tegoed|credit/i.test(e.message)) break; // out of credits → stop
       continue; // slot taken / past → skip this week
     }
     booked++;
+    if (bid) bookedIds.push(bid);
+  }
+
+  // Tag the created bookings with one series_id so the coach can cancel the whole series at once.
+  // Best-effort: if the series_id column isn't migrated yet, this no-ops and the sessions still stand.
+  const seriesId = crypto.randomUUID();
+  if (bookedIds.length) {
+    try { await supabase.from("bookings").update({ series_id: seriesId }).in("id", bookedIds).eq("coach_id", userId); } catch {}
   }
 
   try {
@@ -215,6 +223,46 @@ export async function cancelCoachBooking(formData) {
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
   return { ok: true, message: "Sessie geannuleerd ✓" };
+}
+
+// Cancel a WHOLE recurring series at once: every still-upcoming session (>6h away) that shares this
+// series_id and belongs to the coach. Per-row credit refund is handled by the same DB trigger as a
+// single cancel; each freed slot notifies its client + the waitlist.
+export async function cancelCoachSeries(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const seriesId = formData.get("seriesId");
+  if (!seriesId) return { error: "Geen reeks." };
+  const cutoff = new Date(Date.now() + 6 * 3600000).toISOString();
+  let cancelled;
+  try {
+    const res = await supabase
+      .from("bookings")
+      .update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
+      .eq("series_id", seriesId)
+      .eq("coach_id", userId)
+      .eq("status", "bevestigd")
+      .gt("starts_at", cutoff)
+      .select("id, starts_at, user_id, services(name)");
+    cancelled = res.data;
+  } catch { cancelled = null; }
+  if (!cancelled || cancelled.length === 0) return { error: "Geen toekomstige sessies in deze reeks om te annuleren." };
+
+  const admin = createAdminClient();
+  for (const b of cancelled) {
+    try {
+      if (b.user_id) {
+        const { data: client } = await supabase.from("profiles").select("email, full_name, gym_id").eq("id", b.user_id).single();
+        if (client?.email) await sendBookingCancelled({ to: client.email, name: client.full_name, serviceName: b.services?.name || "Sessie", startsAt: b.starts_at });
+        if (client) await notify({ gymId: client.gym_id, userId: b.user_id, actorId: userId, type: "coach_booked", title: "Je coach heeft een sessie geannuleerd", body: b.services?.name || "Sessie", link: "/account" });
+        await notifyInviteesOfChange(admin, { id: b.id, user_id: b.user_id, starts_at: b.starts_at, services: b.services }, "cancelled");
+        if (client?.gym_id) { const { notifyWaitlist } = await import("@/lib/waitlist"); await notifyWaitlist(admin, { gymId: client.gym_id, slotInstant: b.starts_at, serviceName: b.services?.name || "Sessie" }); }
+      }
+    } catch (e) { console.error("cancelCoachSeries side-effect failed:", b.id, e?.message); }
+  }
+  revalidatePath("/coach");
+  revalidatePath("/coach/agenda");
+  return { ok: true, message: `Reeks geannuleerd — ${cancelled.length} sessie${cancelled.length === 1 ? "" : "s"} afgezegd ✓` };
 }
 
 // Coach moves one of their sessions to a free slot (up to 6h before; the RPC re-checks hours/overlap/blocks).

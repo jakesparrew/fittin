@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { coachRescheduleBooking, cancelCoachBooking, coachDayAvailability, coachAssignClient } from "@/app/coach/actions";
+import { coachRescheduleBooking, cancelCoachBooking, cancelCoachSeries, coachDayAvailability, coachAssignClient } from "@/app/coach/actions";
 
 const pad = (n) => String(n).padStart(2, "0");
 const fh = (h) => `${pad(Math.floor(h))}:${h % 1 ? "30" : "00"}`;
@@ -10,7 +10,7 @@ const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(
 
 // Per-session controls for a coach: Verplaats (to a free slot) + Annuleer. Both only up to 6h before.
 // `reserved` = slot booked without a client yet; `clients` = [{id,label}] connected clients to assign.
-export default function CoachSessionActions({ bookingId, startsAt, reserved = false, clients = [] }) {
+export default function CoachSessionActions({ bookingId, startsAt, reserved = false, clients = [], seriesId = null }) {
   const router = useRouter();
   const locked = Date.now() > new Date(startsAt).getTime() - 6 * 3600000;
   const [mode, setMode] = useState(null); // null | 'move' | 'assign'
@@ -62,6 +62,17 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
     router.refresh();
   }
 
+  async function doCancelSeries() {
+    if (!window.confirm("De hele reeks annuleren? Alle toekomstige sessies in deze reeks (>6u weg) worden afgezegd en de clients krijgen een mail.")) return;
+    setBusy(true);
+    const fd = new FormData(); fd.set("seriesId", seriesId);
+    const res = await cancelCoachSeries(fd);
+    setBusy(false);
+    if (res?.error) { toast("error", res.error); return; }
+    toast("success", res?.message || "Reeks geannuleerd ✓");
+    router.refresh();
+  }
+
   if (mode === "move") {
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -96,6 +107,9 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
       )}
       <button onClick={openMove} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent hover:text-accentdark">Verplaats</button>
       <button onClick={doCancel} disabled={busy} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer</button>
+      {seriesId && (
+        <button onClick={doCancelSeries} disabled={busy} title="Annuleer alle toekomstige sessies in deze reeks" className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand/70 transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer reeks 🔁</button>
+      )}
     </div>
   );
 }

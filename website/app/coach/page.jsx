@@ -67,6 +67,16 @@ export default async function CoachDashboard({ searchParams }) {
   const creditBalance = (ledger || []).reduce((a, r) => a + r.delta, 0);
   const all = bookings || [];
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= Date.now());
+  // Which upcoming sessions belong to a recurring series (drives the "cancel series" button). Kept a
+  // separate best-effort query so the dashboard survives even before the series_id column is migrated.
+  const seriesById = {};
+  try {
+    const ids = upcoming.map((b) => b.id);
+    if (ids.length) {
+      const { data: sr } = await supabase.from("bookings").select("id, series_id").in("id", ids);
+      for (const r of sr || []) if (r.series_id) seriesById[r.id] = r.series_id;
+    }
+  } catch {}
   const monthCharges = all
     .filter((b) => b.status === "bevestigd" && b.coach_billing === "invoice" && new Date(b.starts_at) >= monthStart)
     .reduce((a, b) => a + (b.coach_charge_cents || 0), 0);
@@ -352,7 +362,7 @@ export default async function CoachDashboard({ searchParams }) {
                   <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
                     {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                   </span>
-                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
+                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
                 </div>
               </div>
               );
