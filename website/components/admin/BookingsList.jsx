@@ -23,14 +23,18 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
   const [q, setQ] = useState("");
   const [tab, setTab] = useState(initialTab);
   const now = Date.now();
+  // "Komende" = vanaf het begin van vandaag, zodat een sessie van eerder vandaag niet meteen
+  // uit de standaardlijst verdwijnt (owner denkt in dagen, niet in "vanaf dit exacte minuut").
+  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+  const dayStartMs = todayStart.getTime();
   const needle = q.trim().toLowerCase();
 
   const unpaidCount = bookings.filter(isUnpaid).length;
   const unpaidTotal = bookings.filter(isUnpaid).reduce((a, b) => a + (b.price_cents || 0), 0);
 
   let rows = bookings;
-  if (tab === "upcoming") rows = rows.filter((b) => new Date(b.starts_at).getTime() >= now && b.status === "bevestigd");
-  else if (tab === "past") rows = rows.filter((b) => new Date(b.starts_at).getTime() < now || b.status !== "bevestigd");
+  if (tab === "upcoming") rows = rows.filter((b) => new Date(b.starts_at).getTime() >= dayStartMs && b.status === "bevestigd");
+  else if (tab === "past") rows = rows.filter((b) => new Date(b.starts_at).getTime() < dayStartMs || b.status !== "bevestigd");
   else if (tab === "onbetaald") rows = rows.filter(isUnpaid);
   if (needle) rows = rows.filter((b) => [b.member_name, b.service_name, b.coach_name].some((x) => (x || "").toLowerCase().includes(needle)));
   rows = [...rows].sort((a, b) => (tab === "past" ? new Date(b.starts_at) - new Date(a.starts_at) : new Date(a.starts_at) - new Date(b.starts_at)));
