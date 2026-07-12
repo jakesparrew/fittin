@@ -45,11 +45,13 @@ export default async function Plannen() {
         <h1 className="mt-4 text-3xl font-black md:text-4xl">Mijn trainingsplannen</h1>
         <p className="mt-2 text-brand/60">Bouw je eigen plan of kies een sjabloon. Het actieve plan verschijnt in “Mijn training”.</p>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <form action={createPlan} className="flex gap-2">
             <input name="name" placeholder="Naam van je plan" aria-label="Naam van je plan" className="rounded-full border-2 border-borderc bg-white px-4 py-2.5 text-sm text-brand outline-none focus:border-accent" />
             <SubmitButton className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand">+ Nieuw plan</SubmitButton>
           </form>
+          <span className="text-sm text-brand/40">of</span>
+          <Link href="/plannen/genereer" className="rounded-full border-2 border-accent bg-accent/5 px-5 py-2.5 text-sm font-black text-accentdark transition hover:bg-accent/15">🪄 Laat een schema voor je maken</Link>
         </div>
 
         {/* Member's plans */}

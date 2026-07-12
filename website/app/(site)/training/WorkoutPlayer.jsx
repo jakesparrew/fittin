@@ -42,6 +42,11 @@ export default function WorkoutPlayer({ days }) {
     setEntries((e) => ({ ...e, [peId]: (e[peId] || []).map((r, idx) => (idx === i ? { ...r, [field]: val } : r)) }));
   const addRow = (peId) => setEntries((e) => ({ ...e, [peId]: [...(e[peId] || []), { reps: "", weight_kg: "" }] }));
   const removeRow = (peId) => setEntries((e) => ({ ...e, [peId]: (e[peId] || []).length > 1 ? e[peId].slice(0, -1) : e[peId] || [] }));
+  // One-tap "repeat last session" — fill every set with last time's reps + weight.
+  const repeatLast = (peId, lastSets) => {
+    if (!lastSets?.length) return;
+    setEntries((e) => ({ ...e, [peId]: lastSets.map((s) => ({ reps: s.reps ?? "", weight_kg: s.weight_kg ?? "" })) }));
+  };
 
   const doLog = (peId) => {
     const fd = new FormData();
@@ -135,6 +140,7 @@ export default function WorkoutPlayer({ days }) {
                       <div className="flex flex-wrap items-center gap-2 pt-1">
                         <button onClick={() => addRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand">+ set</button>
                         {rows.length > 1 && <button onClick={() => removeRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/40 hover:text-brand">− set</button>}
+                        {last && <button onClick={() => repeatLast(pe.peId, pe.lastSets)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand" title="Vul in met vorige sessie">↻ herhaal vorige</button>}
                         {pe.rest_sec ? <button onClick={() => setRest({ left: pe.rest_sec, total: pe.rest_sec })} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand">⏱ rust {pe.rest_sec}s</button> : null}
                         <button disabled={busyPe === pe.peId} onClick={() => doLog(pe.peId)} className="rounded-full bg-accent px-5 py-1.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">Log{rows.length > 1 ? " sets" : ""}</button>
                         <button disabled={busyPe === pe.peId} onClick={() => doToggle(pe.peId)} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-lav disabled:opacity-50">{pe.doneToday ? "Ongedaan" : "Klaar ✓"}</button>
