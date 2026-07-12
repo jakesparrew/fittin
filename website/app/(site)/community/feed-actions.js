@@ -43,6 +43,21 @@ export async function createPost(formData) {
   return { ok: true, message: kind === "coach_tip" ? "Tip geplaatst ✓" : "Geplaatst ✓" };
 }
 
+// W6 — share a completed workout to the feed (closes the log → celebrate → community loop).
+export async function shareWorkoutDone(formData) {
+  const { supabase, user, profile, error } = await me();
+  if (error) return { error };
+  const name = String(formData.get("name") || "workout").trim().slice(0, 80);
+  const count = parseInt(formData.get("count"), 10) || 0;
+  const body = `Rondde “${name}” af 💪${count ? ` — ${count} oefeningen` : ""}`;
+  const { error: e } = await supabase.from("posts").insert({
+    gym_id: profile.gym_id, author_id: user.id, kind: "achievement", body, audience: "gym", meta: { workout: name, count },
+  });
+  if (e) return { error: e.message };
+  revalidatePath("/community");
+  return { ok: true, message: "Gedeeld in de community 🎉" };
+}
+
 export async function deletePost(formData) {
   const { supabase, error } = await me();
   if (error) return { error };

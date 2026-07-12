@@ -3,6 +3,7 @@ import { useState, useEffect, useTransition } from "react";
 import ExerciseDetail from "@/components/exercises/ExerciseDetail";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
 import { logExercise, toggleExerciseDone } from "./actions";
+import { shareWorkoutDone } from "@/app/(site)/community/feed-actions";
 
 const fmtSets = (sets) =>
   sets && sets.length
@@ -15,7 +16,20 @@ export default function WorkoutPlayer({ days }) {
   const [rest, setRest] = useState(null); // { left, total }
   const [feedback, setFeedback] = useState({});
   const [busyPe, setBusyPe] = useState(null);
+  const [shared, setShared] = useState({});
   const [, startTransition] = useTransition();
+
+  const doShare = (day, count) => {
+    const fd = new FormData(); fd.set("name", day.name || `Dag ${day.day_no}`); fd.set("count", String(count));
+    setShared((s) => ({ ...s, [day.id]: "busy" }));
+    startTransition(async () => {
+      try {
+        const res = await shareWorkoutDone(fd);
+        setShared((s) => ({ ...s, [day.id]: res?.error ? null : "done" }));
+        window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type: res?.error ? "error" : "success", msg: res?.error || "Gedeeld in de community 🎉" } }));
+      } catch { setShared((s) => ({ ...s, [day.id]: null })); }
+    });
+  };
 
   // Prefill set inputs from the last session (or the target) so logging is fast.
   const [entries, setEntries] = useState(() => {
@@ -82,9 +96,16 @@ export default function WorkoutPlayer({ days }) {
         const done = day.exercises.filter((pe) => pe.doneToday).length;
         return (
           <section key={day.id} className="rounded-3xl border border-borderc bg-white p-5 md:p-6">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
-              <span className="text-xs font-bold text-brand/40">{done}/{day.exercises.length} klaar</span>
+              <div className="flex items-center gap-2">
+                {done > 0 && done === day.exercises.length && (
+                  shared[day.id] === "done"
+                    ? <span className="text-xs font-bold text-accentdark">gedeeld 🎉</span>
+                    : <button onClick={() => doShare(day, day.exercises.length)} disabled={shared[day.id] === "busy"} className="rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accentdark transition hover:bg-accent/25 disabled:opacity-50">🎉 Deel</button>
+                )}
+                <span className="text-xs font-bold text-brand/40">{done}/{day.exercises.length} klaar</span>
+              </div>
             </div>
             <div className="mt-4 space-y-3">
               {day.exercises.map((pe) => {
