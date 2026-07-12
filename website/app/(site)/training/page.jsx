@@ -4,6 +4,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import MessageThread from "@/components/MessageThread";
+import ProgressPanel from "@/components/progress/ProgressPanel";
 import WorkoutPlayer from "./WorkoutPlayer";
 
 export const dynamic = "force-dynamic";
@@ -105,6 +106,9 @@ export default async function Training() {
             </div>
           </section>
         )}
+
+        {/* Progress spans ALL logged workouts (own plans + public + coach program), not just today's plan. */}
+        <ProgressPanel userId={user.id} />
 
         {!program ? (
           <div className="mt-6 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">

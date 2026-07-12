@@ -372,6 +372,7 @@ export default async function AccountPage({ searchParams }) {
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold">
           <Link href="/boeken" className="rounded-full bg-accent px-5 py-2.5 text-brand transition hover:opacity-90">+ Boek een sessie</Link>
           <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Mijn training</Link>
+          <Link href="/training#voortgang" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">📈 Voortgang</Link>
           <Link href="/oefeningen" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Oefeningen</Link>
           <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Community</Link>
         </div>
