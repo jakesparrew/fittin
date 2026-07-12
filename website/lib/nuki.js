@@ -154,6 +154,26 @@ export function openDoorViaNuki(cfg) {
   return nukiFetch(cfg, `/smartlock/${cfg.smartlockId}/action`, { method: "POST", body: { action: 3 } });
 }
 
+// Is the lock actually reachable by the Nuki cloud right now? When the Bridge/Wi-Fi drops, the Web API
+// still lists cached auths and even accepts new ones, but they never sync to the physical keypad — so a
+// freshly minted per-booking code silently doesn't work at the door. We detect that here: a non-OK
+// serverState, or a "last seen" timestamp that's gone stale, means codes won't reach the keypad.
+const LOCK_STALE_MIN = 90;
+export async function getLockHealth(cfg) {
+  if (!cfg?.hasToken || !cfg?.hasLock) return { checked: false, stale: false };
+  try {
+    const r = await nukiFetch(cfg, `/smartlock/${cfg.smartlockId}`);
+    if (!r.ok) return { checked: true, reachable: false, stale: true, reason: `status ${r.status}` };
+    const l = await r.json();
+    const lastSeen = l?.state?.timestamp || l?.updateDate || null;
+    const ageMin = lastSeen ? (Date.now() - new Date(lastSeen).getTime()) / 60000 : Infinity;
+    const stale = l?.serverState !== 0 || ageMin > LOCK_STALE_MIN;
+    return { checked: true, reachable: true, stale, serverState: l?.serverState, lastSeen, ageMin: Math.round(ageMin) };
+  } catch {
+    return { checked: true, reachable: false, stale: true, reason: "unreachable" };
+  }
+}
+
 // Settings test: confirm the token works and (optionally) that the smartlock id exists.
 export async function testNuki(token, smartlockId) {
   try {

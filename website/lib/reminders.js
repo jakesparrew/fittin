@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSessionReminder, sendAccessCode, sendCreditsExpiring, sendFirstSessionFollowup, sendGuestFollowup } from "@/lib/email";
-import { getNukiConfig, ensureBookingKeypadCode } from "@/lib/nuki";
+import { getNukiConfig, ensureBookingKeypadCode, getLockHealth } from "@/lib/nuki";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import { notify } from "@/lib/notify";
 
@@ -174,6 +174,7 @@ export async function sendDueAccessCodes() {
   };
   let sent = 0;
   const failures = []; // door-critical mint/config problems, surfaced to the cron so they're never silent
+  const healthByGym = new Map(); // lock reachability, checked once per gym per run
   for (const b of rows || []) {
     const address = b.gym?.address || "Aannemersstraat 186, 9040 Gent";
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
@@ -196,6 +197,11 @@ export async function sendDueAccessCodes() {
     let personal = false;
     let mintFailed = false;
     if (cfg?.enabled) {
+      // If the lock is offline, a freshly minted code exists in the cloud but never reaches the physical
+      // keypad → the member's code silently doesn't work. Flag it (once per gym) so the owner can act.
+      if (!healthByGym.has(b.gym_id)) healthByGym.set(b.gym_id, await getLockHealth(cfg));
+      const health = healthByGym.get(b.gym_id);
+      if (health?.stale) failures.push(`Nuki-slot lijkt offline${health.lastSeen ? ` (laatst gezien ${new Date(health.lastSeen).toISOString()}, ${health.ageMin} min geleden)` : ""} — een persoonlijke deurcode syncet mogelijk niet naar het keypad; controleer de Bridge/Wi-Fi. Een statische reservecode werkt wél offline.`);
       try {
         code = await ensureBookingKeypadCode(admin, cfg, b);
         personal = true;

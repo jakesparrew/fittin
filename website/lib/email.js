@@ -334,6 +334,7 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
       intro: `Hallo ${esc(name) || "daar"}, je sessie start zo meteen. Hier is alles om binnen te raken:`,
       rows: [
         ["Sessie", esc(serviceName)],
+        ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
         ...(address ? [["Adres", address]] : []),
       ],
