@@ -20,7 +20,12 @@ export async function GET(req) {
   // Log every failure and return non-200 so Vercel's cron monitoring can alert on it.
   const errors = [];
   let sent = 0, revoked = 0, swept = 0;
-  try { sent = await sendDueAccessCodes(); } catch (e) { errors.push(`access: ${e?.message}`); console.error("cron access codes failed:", e?.message); }
+  try {
+    const r = await sendDueAccessCodes();
+    sent = r?.sent ?? 0;
+    // Door-code mint/config failures are door-critical → treat as cron errors so the run is flagged (500 + ok=false).
+    if (r?.failures?.length) { errors.push(...r.failures); console.error("cron access code problems:", r.failures.join("; ")); }
+  } catch (e) { errors.push(`access: ${e?.message}`); console.error("cron access codes failed:", e?.message); }
   // Clean up keypad codes for sessions that ended (+grace) or were cancelled, then sweep the lock for
   // any expired/orphan "Fittin …" codes as a backstop against accumulation.
   try { revoked = await revokeExpiredKeypadCodes(createAdminClient()); } catch (e) { errors.push(`revoke: ${e?.message}`); console.error("cron revoke failed:", e?.message); }

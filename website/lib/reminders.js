@@ -173,6 +173,7 @@ export async function sendDueAccessCodes() {
     return secretsByGym.get(gymId);
   };
   let sent = 0;
+  const failures = []; // door-critical mint/config problems, surfaced to the cron so they're never silent
   for (const b of rows || []) {
     const address = b.gym?.address || "Aannemersstraat 186, 9040 Gent";
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
@@ -193,14 +194,27 @@ export async function sendDueAccessCodes() {
     // Otherwise (or if Nuki fails) fall back to the static gym code so a member is never locked out.
     let code = await staticCode(b.gym_id);
     let personal = false;
+    let mintFailed = false;
     if (cfg?.enabled) {
       try {
         code = await ensureBookingKeypadCode(admin, cfg, b);
         personal = true;
-      } catch {
-        code = await staticCode(b.gym_id); // fail-safe fallback
+      } catch (e) {
+        mintFailed = true;
+        code = await staticCode(b.gym_id); // fail-safe fallback (a permanent local PIN, works even if Nuki is unreachable)
       }
     }
+
+    // No usable code (personal mint failed AND no static backup configured). Emailing an empty code would
+    // strand the member at the door, and access_sent is already claimed so it would never retry. Instead:
+    // release the claim so the next 5-min tick tries again, and surface the failure loudly.
+    if (!code) {
+      await admin.from("bookings").update({ access_sent: false }).eq("id", b.id);
+      failures.push(`geen toegangscode voor boeking ${b.id} — Nuki-code mislukte en er is géén statische reservecode ingesteld`);
+      continue;
+    }
+    // Personal mint failed but a static backup saved us — still worth flagging so the owner sees the blip.
+    if (mintFailed) failures.push(`Nuki-code minten mislukte voor boeking ${b.id} — statische reservecode verstuurd`);
 
     if (b.member?.email) {
       try {
@@ -230,5 +244,5 @@ export async function sendDueAccessCodes() {
       });
     }
   }
-  return sent;
+  return { sent, failures };
 }
