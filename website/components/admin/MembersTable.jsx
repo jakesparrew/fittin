@@ -17,8 +17,26 @@ const tone = (iso) => {
   const d = (Date.now() - new Date(iso).getTime()) / 86400000;
   return d > 30 ? "font-bold text-red-500" : d > 14 ? "font-semibold text-amber-500" : "text-brand/70";
 };
+// How long someone has held the abo, in whole months (min "1 mnd").
+const tenure = (iso) => {
+  if (!iso) return "";
+  const mo = Math.floor((Date.now() - new Date(iso).getTime()) / (30 * 86400000));
+  return mo >= 12 ? `${Math.floor(mo / 12)} jr` : `${Math.max(1, mo)} mnd`;
+};
 
-export default function MembersTable({ members = [], credits = {}, coachOf = {}, lastLogin = {}, lastVisit = {}, isBeheerder }) {
+function SubBadge({ sub }) {
+  if (!sub || sub.status !== "actief") return <span className="text-xs text-brand/25">—</span>;
+  return (
+    <span className="inline-flex flex-col gap-0.5">
+      <span className="inline-flex w-fit items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accentdark">
+        ★ Abo · {tenure(sub.started_at)}
+      </span>
+      {sub.cancel_at_period_end && <span className="text-[10px] font-bold text-amber-500">opgezegd — loopt af</span>}
+    </span>
+  );
+}
+
+export default function MembersTable({ members = [], credits = {}, coachOf = {}, lastLogin = {}, lastVisit = {}, subOf = {}, isBeheerder }) {
   const [q, setQ] = useState("");
   const needle = q.trim().toLowerCase();
   const rows = needle
@@ -42,8 +60,9 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
             <tr>
               <th className="px-5 py-3">Naam</th>
               <th className="px-5 py-3">Rol</th>
+              <th className="px-5 py-3">Abonnement</th>
               <th className="px-5 py-3">Coach</th>
-              <th className="px-5 py-3">Sessies</th>
+              <th className="px-5 py-3" title="Resterend sessietegoed (beurtenkaart + abo)">Tegoed</th>
               <th className="px-5 py-3">Laatste login</th>
               <th className="px-5 py-3">Laatste bezoek</th>
               <th className="px-5 py-3">Acties</th>
@@ -69,6 +88,7 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                     <span className="font-semibold capitalize text-brand/70">{m.role}</span>
                   )}
                 </td>
+                <td className="px-5 py-4"><SubBadge sub={subOf[m.id]} /></td>
                 <td className="px-5 py-4">
                   {(coachOf[m.id] || []).length ? (
                     <span className="text-xs font-semibold text-brand/70">{coachOf[m.id].join(", ")}</span>
@@ -78,6 +98,7 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                 </td>
                 <td className="px-5 py-4">
                   <span className="font-black text-brand">{credits[m.id] || 0}</span>
+                  <span className="ml-1 text-[10px] text-brand/40">sess.</span>
                 </td>
                 <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastLogin[m.id])}>{ago(lastLogin[m.id])}</span></td>
                 <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastVisit[m.id])}>{ago(lastVisit[m.id])}</span></td>

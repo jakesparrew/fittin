@@ -11,6 +11,10 @@ export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+// Session date for a booking payment — this is what disambiguates two same-minute rows.
+const fmtSession = (iso) =>
+  new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+const SRC = { abo: "Abo", credit: "Beurtenkaart", gratis_code: "Gratis", stripe: "Los", los: "Los" };
 const KIND = { booking: "Boeking", beurtenkaart: "Beurtenkaart", abonnement: "Abonnement", coach_credits: "Coach-sessies", overig: "Overig" };
 const TABS = [
   { v: "", l: "Alles" },
@@ -35,7 +39,7 @@ export default async function Betalingen({ searchParams }) {
 
   let q = supabase
     .from("payments")
-    .select("id, amount_cents, kind, description, created_at, status, member:profiles!payments_user_id_fkey(id, full_name, email)")
+    .select("id, amount_cents, kind, description, created_at, status, stripe_id, member:profiles!payments_user_id_fkey(id, full_name, email)")
     .eq("gym_id", gym.id)
     .order("created_at", { ascending: false })
     .limit(200);
@@ -47,6 +51,19 @@ export default async function Betalingen({ searchParams }) {
   const monthTotal = (monthRows || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
   const todayTotal = (monthRows || []).filter((p) => new Date(p.created_at) >= dayStart).reduce((a, p) => a + (p.amount_cents || 0), 0);
   const shownTotal = (rows || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
+
+  // Enrich booking payments with their session (payments.stripe_id == bookings.stripe_session_id).
+  // Two legitimate bookings paid seconds apart otherwise look like a duplicate — the session date tells them apart.
+  const bookingStripeIds = [...new Set((rows || []).filter((p) => p.kind === "booking" && p.stripe_id).map((p) => p.stripe_id))];
+  const sessionByStripe = {};
+  if (bookingStripeIds.length) {
+    const { data: bk } = await supabase
+      .from("bookings")
+      .select("stripe_session_id, starts_at, persons, payment_source, services(name)")
+      .eq("gym_id", gym.id)
+      .in("stripe_session_id", bookingStripeIds);
+    for (const b of bk || []) sessionByStripe[b.stripe_session_id] = b;
+  }
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -139,7 +156,26 @@ export default async function Betalingen({ searchParams }) {
                     );
                   })()}
                 </td>
-                <td className="px-5 py-3 text-brand/50">{p.description || "—"}</td>
+                <td className="px-5 py-3 text-brand/50">
+                  {(() => {
+                    const bk = p.kind === "booking" ? sessionByStripe[p.stripe_id] : null;
+                    if (bk) {
+                      return (
+                        <span className="flex flex-col gap-0.5">
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-brand/70">{bk.services?.name || "Sessie"}</span>
+                            {bk.persons > 1 && <span className="text-brand/40">· {bk.persons}p</span>}
+                            {bk.payment_source && SRC[bk.payment_source] && (
+                              <span className={"rounded-full px-1.5 py-0.5 text-[10px] font-bold " + (bk.payment_source === "abo" ? "bg-accent/15 text-accentdark" : "bg-paper text-brand/50")}>{SRC[bk.payment_source]}</span>
+                            )}
+                          </span>
+                          <span className="text-xs text-brand/40">🗓 {fmtSession(bk.starts_at)}</span>
+                        </span>
+                      );
+                    }
+                    return p.description || "—";
+                  })()}
+                </td>
                 <td className="px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
                 <td className="px-5 py-3 text-right text-xs text-brand/40">{fmt(p.created_at)}</td>
                 <td className="px-5 py-3 text-right"><Link href={`/beheer/factuur?payment=${p.id}`} className="text-xs font-bold text-accentdark hover:underline">Factuur →</Link></td>

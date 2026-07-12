@@ -76,9 +76,6 @@ export default async function Boekingen({ searchParams }) {
           <Lbl t="Boeking voor lid">
             <SearchSelect name="memberId" required placeholder="Kies lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
-          <Lbl t="Coach (optioneel)">
-            <SearchSelect name="coachId" placeholder="Geen coach" options={coachOpts.map((c) => ({ value: c.id, label: c.label }))} />
-          </Lbl>
           <Lbl t="Sessie">
             <select name="serviceId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
               {(services || []).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
@@ -91,6 +88,11 @@ export default async function Boekingen({ searchParams }) {
             <input type="checkbox" name="useCredit" className="h-4 w-4 accent-[#5fda6b]" />
             Trek 1 sessie af
           </label>
+          {/* Coach is rarely relevant for a normal gym session → opt-in toggle instead of an always-visible field. */}
+          <details className="pb-1">
+            <summary className="cursor-pointer list-none pb-1 text-[10px] font-bold uppercase tracking-wide text-lav transition hover:text-brand">+ Coach</summary>
+            <SearchSelect name="coachId" placeholder="Geen coach" options={coachOpts.map((c) => ({ value: c.id, label: c.label }))} />
+          </details>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</SubmitButton>
         </ActionForm>
       </div>
