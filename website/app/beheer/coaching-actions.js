@@ -8,6 +8,17 @@ const num = (v, d = null) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
 };
+const flt = (v) => { const n = parseFloat(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : null; };
+// Rich per-exercise prescription fields (W2), shared by add + update.
+function peRichFields(formData) {
+  return {
+    notes: (formData.get("notes") || "").toString().trim() || null,
+    tempo: (formData.get("tempo") || "").toString().trim() || null,
+    target_weight_kg: flt(formData.get("target_weight_kg")),
+    rpe: (() => { const r = num(formData.get("rpe")); return r != null ? Math.max(1, Math.min(10, r)) : null; })(),
+    superset_group: num(formData.get("superset_group")),
+  };
+}
 
 // ---------------- Exercises ----------------
 export async function upsertExercise(formData) {
@@ -87,8 +98,23 @@ export async function addProgramExercise(formData) {
     sets: num(formData.get("sets")),
     reps: num(formData.get("reps")),
     rest_sec: num(formData.get("rest_sec")),
+    ...peRichFields(formData),
   });
   revalidatePath(`/beheer/programmas/${formData.get("programId")}`);
+}
+
+// Edit an existing program-exercise (beheerder).
+export async function updateProgramExercise(formData) {
+  const { supabase, error } = await requireStaff(true);
+  if (error) return { error };
+  await supabase.from("program_exercises").update({
+    sets: num(formData.get("sets")),
+    reps: num(formData.get("reps")),
+    rest_sec: num(formData.get("rest_sec")),
+    ...peRichFields(formData),
+  }).eq("id", formData.get("id"));
+  revalidatePath(`/beheer/programmas/${formData.get("programId")}`);
+  return { ok: true, message: "Bijgewerkt ✓" };
 }
 
 export async function deleteProgramExercise(formData) {

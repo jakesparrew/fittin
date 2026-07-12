@@ -4,12 +4,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   coachAddProgramDay,
   coachAddProgramExercise,
+  coachUpdateProgramExercise,
   coachDeleteProgramExercise,
   coachAssignProgram,
   coachDeleteProgram,
   coachQuickExercise,
 } from "../../coaching-actions";
 import ExercisePicker from "@/components/admin/ExercisePicker";
+import ProgramExerciseEditor from "@/components/workouts/ProgramExerciseEditor";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ActionForm from "@/components/ui/ActionForm";
 import ConfirmSubmit from "@/components/ui/ConfirmSubmit";
@@ -26,7 +28,7 @@ export default async function CoachProgramBuilder({ params }) {
     supabase
       .from("programs")
       .select(
-        "id, name, coach_id, is_template, member_id, program_days(id, day_no, name, program_exercises(id, sets, reps, rest_sec, exercises(name)))"
+        "id, name, coach_id, is_template, member_id, program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(name)))"
       )
       .eq("id", id)
       .single(),
@@ -98,35 +100,39 @@ export default async function CoachProgramBuilder({ params }) {
               <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
               <div className="mt-3 space-y-2">
                 {exs.map((pe) => (
-                  <div key={pe.id} className="flex items-center justify-between rounded-xl bg-paper px-4 py-2.5 text-sm">
-                    <span className="font-bold text-brand">{pe.exercises?.name}</span>
-                    <div className="flex items-center gap-4 text-brand/60">
-                      {program.member_id && (
-                        lastByPe[pe.id]
-                          ? <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-bold text-accentdark">✓ {fmtDay(lastByPe[pe.id])}</span>
-                          : <span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-brand/40">nog niet</span>
-                      )}
-                      <span>{pe.sets ?? "–"} × {pe.reps ?? "–"}</span>
-                      <span>{pe.rest_sec ?? "–"}s rust</span>
-                      <ActionForm action={coachDeleteProgramExercise} success="Verwijderd ✓">
-                        <input type="hidden" name="id" value={pe.id} />
-                        <input type="hidden" name="programId" value={program.id} />
-                        <button className="text-xs font-bold text-red-500 hover:underline">×</button>
-                      </ActionForm>
-                    </div>
-                  </div>
+                  <ProgramExerciseEditor
+                    key={pe.id}
+                    pe={pe}
+                    programId={program.id}
+                    updateAction={coachUpdateProgramExercise}
+                    deleteAction={coachDeleteProgramExercise}
+                    showProgress={!!program.member_id}
+                    lastDate={lastByPe[pe.id] ? fmtDay(lastByPe[pe.id]) : null}
+                  />
                 ))}
                 {exs.length === 0 && <p className="text-xs text-brand/40">Nog geen oefeningen op deze dag.</p>}
               </div>
 
-              <ActionForm action={coachAddProgramExercise} success="Oefening toegevoegd ✓" className="mt-3 flex flex-wrap items-end gap-2">
+              <ActionForm action={coachAddProgramExercise} success="Oefening toegevoegd ✓" className="mt-3 rounded-xl border border-dashed border-borderc p-3">
                 <input type="hidden" name="programId" value={program.id} />
                 <input type="hidden" name="dayId" value={day.id} />
-                <ExercisePicker name="exerciseId" options={(exercises || []).map((e) => ({ id: e.id, name: e.name }))} addAction={coachQuickExercise} />
-                <input name="sets" type="number" placeholder="sets" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                <input name="reps" type="number" placeholder="reps" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                <input name="rest_sec" type="number" placeholder="rust(s)" className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Oefening</button>
+                <div className="flex flex-wrap items-end gap-2">
+                  <ExercisePicker name="exerciseId" options={(exercises || []).map((e) => ({ id: e.id, name: e.name }))} addAction={coachQuickExercise} />
+                  <input name="sets" type="number" placeholder="sets" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                  <input name="reps" type="number" placeholder="reps" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                  <input name="rest_sec" type="number" placeholder="rust(s)" className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                  <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Oefening</button>
+                </div>
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-xs font-bold text-brand/50">+ meer (notitie, streefgewicht, tempo, RPE, superset)</summary>
+                  <div className="mt-2 flex flex-wrap items-end gap-2">
+                    <input name="target_weight_kg" placeholder="streef kg" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                    <input name="tempo" placeholder="tempo 3-1-2" className="w-28 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                    <input name="rpe" type="number" min="1" max="10" placeholder="RPE" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                    <input name="superset_group" type="number" min="1" placeholder="superset #" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                    <input name="notes" placeholder="notitie voor de client" className="min-w-[12rem] flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+                  </div>
+                </details>
               </ActionForm>
             </div>
           );

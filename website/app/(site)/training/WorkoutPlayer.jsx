@@ -8,6 +8,7 @@ const fmtSets = (sets) =>
   sets && sets.length
     ? sets.map((s) => `${s.reps ?? "–"}${s.weight_kg ? `×${s.weight_kg}kg` : ""}`).join(", ")
     : null;
+const supLetter = (g) => (g ? String.fromCharCode(64 + Number(g)) : null);
 
 export default function WorkoutPlayer({ days }) {
   const [openDetail, setOpenDetail] = useState(null);
@@ -24,7 +25,7 @@ export default function WorkoutPlayer({ days }) {
       const last = pe.lastSets || [];
       m[pe.peId] = Array.from({ length: n }, (_, i) => ({
         reps: last[i]?.reps ?? pe.reps ?? "",
-        weight_kg: last[i]?.weight_kg ?? "",
+        weight_kg: last[i]?.weight_kg ?? (pe.targetWeight != null ? pe.targetWeight : ""),
       }));
     }
     return m;
@@ -94,14 +95,17 @@ export default function WorkoutPlayer({ days }) {
                       </button>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
+                          {pe.supersetGroup && <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-black text-white" title="Superset — doe deze back-to-back">Superset {supLetter(pe.supersetGroup)}</span>}
                           <p className="font-black text-brand">{pe.exercise?.name}</p>
                           {pe.pr > 0 && <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-black text-white">PR {pe.pr}kg</span>}
                           {pe.doneToday && <span className="text-xs font-bold text-accentdark">✓ klaar</span>}
                         </div>
                         <p className="text-xs text-brand/50">
-                          doel: {pe.sets ?? "–"} × {pe.reps ?? "–"}{pe.rest_sec ? ` · ${pe.rest_sec}s rust` : ""}
+                          doel: {pe.sets ?? "–"} × {pe.reps ?? "–"}{pe.targetWeight != null ? ` @ ${pe.targetWeight}kg` : ""}{pe.rest_sec ? ` · ${pe.rest_sec}s rust` : ""}
+                          {pe.tempo ? ` · tempo ${pe.tempo}` : ""}{pe.rpe != null ? ` · RPE ${pe.rpe}` : ""}
                           {pe.exercise?.primary_muscles?.[0] ? ` · ${pe.exercise.primary_muscles[0]}` : pe.exercise?.muscle ? ` · ${pe.exercise.muscle}` : ""}
                         </p>
+                        {pe.notes && <p className="mt-1 rounded-lg bg-accent/10 px-2 py-1 text-xs font-semibold text-accentdark">💬 {pe.notes}</p>}
                         {last && (
                           <p className="mt-0.5 text-xs text-brand/40">
                             vorige keer: {last}

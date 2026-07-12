@@ -13,7 +13,19 @@ const num = (v, d = null) => {
   const n = parseInt(v, 10);
   return Number.isFinite(n) ? n : d;
 };
+const flt = (v) => { const n = parseFloat(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : null; };
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
+
+// Rich per-exercise prescription fields (W2) shared by add + update. tempo/notes already existed.
+function peRichFields(formData) {
+  return {
+    notes: (formData.get("notes") || "").toString().trim() || null,
+    tempo: (formData.get("tempo") || "").toString().trim() || null,
+    target_weight_kg: flt(formData.get("target_weight_kg")),
+    rpe: (() => { const r = num(formData.get("rpe")); return r != null ? Math.max(1, Math.min(10, r)) : null; })(),
+    superset_group: num(formData.get("superset_group")),
+  };
+}
 
 // Coach-only guard (coaches manage their OWN exercises + program templates from /coach,
 // never the admin /beheer area).
@@ -118,8 +130,31 @@ export async function coachAddProgramExercise(formData) {
     sets: num(formData.get("sets")),
     reps: num(formData.get("reps")),
     rest_sec: num(formData.get("rest_sec")),
+    ...peRichFields(formData),
   });
   revalidatePath(`/coach/programmas/${programId}`);
+}
+
+// Edit an existing program-exercise (sets/reps/rest + rich prescription fields). Ownership-checked.
+export async function coachUpdateProgramExercise(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const programId = formData.get("programId");
+  if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
+  const peId = formData.get("id");
+  // Confirm the row hangs off a day of THIS owned program before updating.
+  const { data: pe } = await supabase.from("program_exercises").select("program_day_id").eq("id", peId).maybeSingle();
+  if (!pe) return { error: "Niet gevonden." };
+  const { data: pd } = await supabase.from("program_days").select("id").eq("id", pe.program_day_id).eq("program_id", programId).maybeSingle();
+  if (!pd) return { error: "Geen toegang." };
+  await supabase.from("program_exercises").update({
+    sets: num(formData.get("sets")),
+    reps: num(formData.get("reps")),
+    rest_sec: num(formData.get("rest_sec")),
+    ...peRichFields(formData),
+  }).eq("id", peId);
+  revalidatePath(`/coach/programmas/${programId}`);
+  return { ok: true, message: "Bijgewerkt ✓" };
 }
 
 export async function coachDeleteProgramExercise(formData) {
