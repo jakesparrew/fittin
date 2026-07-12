@@ -70,7 +70,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
       <table className="w-full min-w-[760px] text-xs">
         <thead>
           <tr className="border-b border-borderc text-brand/50">
-            <th className="w-12 px-2 py-2"></th>
+            <th className="sticky left-0 z-20 w-12 border-r border-borderc bg-white px-2 py-2"></th>
             {days.map((d) => (
               <th key={d.dateStr} className="px-2 py-2 font-bold">
                 <div className="uppercase">{d.weekday}</div>
@@ -82,7 +82,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
         <tbody className="select-none">
           {hours.map((h) => (
             <tr key={h} className="border-b border-borderc/60">
-              <td className="px-2 py-1 text-right font-bold text-brand/40">{fmtHour(h)}</td>
+              <td className="sticky left-0 z-10 border-r border-borderc bg-white px-2 py-1 text-right font-bold text-brand/40">{fmtHour(h)}</td>
               {days.map((d) => {
                 const t = slotInstant(d.dateStr, h).getTime();
                 const bk = bookMap.get(t);
