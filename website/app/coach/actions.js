@@ -466,6 +466,27 @@ export async function coachSaveClientNote(formData) {
   return { ok: true, message: "Notitie opgeslagen ✓" };
 }
 
+// W3 — coach gives feedback to a client on their training. The client sees it under /training and
+// gets a bell notification. (Private note = for the coach; feedback = shown to the client.)
+export async function coachGiveFeedback(formData) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+  const clientId = formData.get("clientId");
+  const body = String(formData.get("body") || "").trim();
+  if (!clientId || !body) return { error: "Schrijf een bericht." };
+  const { data: link } = await supabase.from("coach_clients").select("id").eq("coach_id", userId).eq("client_id", clientId).eq("status", "accepted").maybeSingle();
+  if (!link) return { error: "Dit is niet jouw client." };
+  const { error: e } = await supabase.from("workout_feedback").insert({ gym_id: profile.gym_id, coach_id: userId, client_id: clientId, body });
+  if (e) return { error: e.message };
+  try {
+    const { data: me } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    await notify({ gymId: profile.gym_id, userId: clientId, actorId: userId, type: "coach_booked", title: `Feedback van ${me?.full_name || "je coach"} 💬`, body: body.slice(0, 90), link: "/training#voortgang" });
+    await logCoachActivity({ gymId: profile.gym_id, coachId: userId, type: "message", summary: "Feedback gegeven aan client" });
+  } catch {}
+  revalidatePath(`/coach/clienten/${clientId}`);
+  return { ok: true, message: "Feedback verstuurd ✓" };
+}
+
 // ── Coach ↔ client connection requests ──────────────────────────────────────
 // Coach invites a member to connect. The member gets a notification to accept. Until accepted the
 // client is "pending" and not bookable. (If the member already requested this coach, this accepts it.)

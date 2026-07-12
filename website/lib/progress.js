@@ -16,6 +16,12 @@ export function logVolume(sj) {
   return Math.round(v);
 }
 export const logTopWeight = (sj) => asSets(sj).reduce((m, s) => Math.max(m, Number(s?.weight_kg) || 0), 0);
+// Best estimated 1RM in a log (Epley: w × (1 + reps/30)), capped at 12 reps where the formula holds.
+export const logBestE1rm = (sj) =>
+  asSets(sj).reduce((m, s) => {
+    const w = Number(s?.weight_kg) || 0, r = Math.min(12, Number(s?.reps) || 0);
+    return w > 0 && r > 0 ? Math.max(m, w * (1 + r / 30)) : m;
+  }, 0);
 
 const dayStr = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d);
 function weekStart(dateStr) {
@@ -92,13 +98,14 @@ export async function getMemberProgress(userId) {
     if (!n) continue;
     const w = logTopWeight(l.sets_json);
     if (w <= 0) continue; // skip bodyweight/done-only for the weight chart
-    const e = (byName[n] ||= { name: n, byDay: {} });
+    const e = (byName[n] ||= { name: n, byDay: {}, e1rm: 0 });
     e.byDay[l.logged_on] = Math.max(e.byDay[l.logged_on] || 0, w);
+    e.e1rm = Math.max(e.e1rm, logBestE1rm(l.sets_json));
   }
   const topExercises = Object.values(byName)
     .map((e) => {
       const pts = Object.entries(e.byDay).sort((a, b) => a[0].localeCompare(b[0])).slice(-12).map(([date, w]) => ({ date, w }));
-      return { name: e.name, points: pts, best: Math.max(...pts.map((p) => p.w)) };
+      return { name: e.name, points: pts, best: Math.max(...pts.map((p) => p.w)), e1rm: Math.round(e.e1rm) };
     })
     .filter((e) => e.points.length >= 2)
     .sort((a, b) => b.points.length - a.points.length)

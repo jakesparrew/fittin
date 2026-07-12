@@ -2,8 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCoachContext } from "@/lib/coach";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendCoachPaymentRequest, cancelCoachPaymentRequest, coachSaveClientNote } from "@/app/coach/actions";
+import { sendCoachPaymentRequest, cancelCoachPaymentRequest, coachSaveClientNote, coachGiveFeedback } from "@/app/coach/actions";
 import ActionForm from "@/components/ui/ActionForm";
+import ProgressPanel from "@/components/progress/ProgressPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +27,11 @@ export default async function CoachClientDetail({ params }) {
   // Cross-user reads (client's profile / logs / weight) need the service role — authorized above by
   // the accepted coach_clients link. The coach's own rows (bookings/requests/note) use their client.
   const admin = createAdminClient();
-  const [{ data: client }, { data: bookings }, { data: logs }, { data: weights }, { data: reqs }, { data: note }] = await Promise.all([
+  const [{ data: client }, { data: bookings }, { data: logs }, { data: feedback }, { data: weights }, { data: reqs }, { data: note }] = await Promise.all([
     admin.from("profiles").select("id, full_name, email").eq("id", id).single(),
     supabase.from("bookings").select("id, starts_at, ends_at, status, persons, services(name)").eq("coach_id", userId).eq("user_id", id).order("starts_at", { ascending: false }).limit(50),
     admin.from("workout_logs").select("logged_on").eq("user_id", id).gte("logged_on", since30.slice(0, 10)),
+    admin.from("workout_feedback").select("id, body, created_at").eq("coach_id", userId).eq("client_id", id).order("created_at", { ascending: false }).limit(8),
     admin.from("body_metrics").select("logged_on, weight_kg").eq("user_id", id).order("logged_on", { ascending: false }).limit(1),
     supabase.from("coach_payment_requests").select("id, amount_cents, description, status, created_at, paid_at").eq("coach_id", userId).eq("client_id", id).order("created_at", { ascending: false }).limit(10),
     supabase.from("coach_client_notes").select("body").eq("coach_id", userId).eq("client_id", id).maybeSingle(),
@@ -64,6 +66,9 @@ export default async function CoachClientDetail({ params }) {
         <Mini label="Workouts gelogd (30d)" value={logDays} hint="dagen actief in de app" />
         <Mini label="Laatste gewicht" value={lastWeight ? `${Number(lastWeight.weight_kg).toFixed(1)} kg` : "—"} hint={lastWeight ? fmtDay(lastWeight.logged_on) : "nog niet gelogd"} />
       </div>
+
+      {/* Client's training progress (same charts the member sees) — authorized by the accepted link above. */}
+      <ProgressPanel userId={client.id} />
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {/* Sessions */}
@@ -109,6 +114,27 @@ export default async function CoachClientDetail({ params }) {
               <textarea name="body" rows={5} defaultValue={note?.body || ""} placeholder="Notities over deze client…" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
               <button className="mt-2 rounded-full bg-brand px-5 py-2 text-sm font-bold text-white transition hover:opacity-90">Opslaan</button>
             </ActionForm>
+          </section>
+
+          {/* Feedback to the client (W3) — the client sees this under /training + gets a notification. */}
+          <section className="rounded-3xl border border-borderc bg-white p-6">
+            <h2 className="font-black text-brand">Feedback aan client 💬</h2>
+            <p className="mt-1 text-xs text-brand/50">Dit ziet de client wél — bv. “top PR!” of “let op je vorm bij squats”.</p>
+            <ActionForm action={coachGiveFeedback} success="Feedback verstuurd ✓" className="mt-3">
+              <input type="hidden" name="clientId" value={client.id} />
+              <textarea name="body" rows={3} placeholder="Schrijf feedback voor je client…" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
+              <button className="mt-2 rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand transition hover:opacity-90">Verstuur feedback</button>
+            </ActionForm>
+            {(feedback || []).length > 0 && (
+              <div className="mt-4 space-y-2 border-t border-borderc pt-3">
+                {feedback.map((f) => (
+                  <div key={f.id} className="rounded-xl bg-paper px-3 py-2 text-sm">
+                    <p className="text-brand/80">{f.body}</p>
+                    <p className="mt-0.5 text-[10px] text-brand/40">{fmtDay(f.created_at)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Payment requests (Batch 3.6) */}

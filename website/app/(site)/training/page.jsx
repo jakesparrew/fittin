@@ -22,7 +22,7 @@ export default async function Training() {
   if (!user) redirect("/login?next=/training");
 
   const supabase = await createClient();
-  const [{ data: program }, { data: logs }, { data: coachLink }] = await Promise.all([
+  const [{ data: program }, { data: logs }, { data: coachLink }, { data: feedback }] = await Promise.all([
     supabase
       .from("programs")
       .select(`id, name, coach:profiles!programs_coach_id_fkey(full_name), program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(${EX_FIELDS})))`)
@@ -38,6 +38,7 @@ export default async function Training() {
       .order("created_at", { ascending: false })
       .limit(300),
     supabase.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", user.id).eq("status", "accepted").limit(1).maybeSingle(),
+    supabase.from("workout_feedback").select("id, body, created_at, coach:profiles!workout_feedback_coach_id_fkey(full_name)").eq("client_id", user.id).order("created_at", { ascending: false }).limit(5),
   ]);
 
   const myCoachId = coachLink?.coach?.id || null;
@@ -108,6 +109,21 @@ export default async function Training() {
             <p className="mt-1 text-sm text-brand/60">Stel een vraag of deel je voortgang.</p>
             <div className="mt-4">
               <MessageThread coachId={myCoachId} clientId={user.id} meId={user.id} messages={coachMessages} otherName={coachName} />
+            </div>
+          </section>
+        )}
+
+        {/* Coach feedback (W3) */}
+        {(feedback || []).length > 0 && (
+          <section className="mt-6 rounded-3xl border border-accent/40 bg-accent/5 p-6">
+            <h2 className="font-black text-brand">Feedback van je coach 💬</h2>
+            <div className="mt-3 space-y-2">
+              {feedback.map((f) => (
+                <div key={f.id} className="rounded-2xl bg-white p-3 text-sm">
+                  <p className="text-brand/80">{f.body}</p>
+                  <p className="mt-1 text-[11px] text-brand/40">{f.coach?.full_name || "Je coach"} · {new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(f.created_at))}</p>
+                </div>
+              ))}
             </div>
           </section>
         )}

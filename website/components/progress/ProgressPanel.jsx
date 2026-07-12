@@ -45,6 +45,7 @@ export default async function ProgressPanel({ userId }) {
                   <p className="truncate text-sm font-bold text-brand">{e.name}</p>
                   <span className="shrink-0 text-xs font-black text-accentdark">{e.best} kg</span>
                 </div>
+                {e.e1rm > 0 && <p className="text-[10px] text-brand/40">geschatte 1RM ~{e.e1rm} kg</p>}
                 <div className="mt-2"><Sparkline points={e.points} /></div>
               </div>
             ))}
