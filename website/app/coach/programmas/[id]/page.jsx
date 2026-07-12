@@ -12,6 +12,7 @@ import {
 } from "../../coaching-actions";
 import ExercisePicker from "@/components/admin/ExercisePicker";
 import ProgramExerciseEditor from "@/components/workouts/ProgramExerciseEditor";
+import PublishWorkoutPanel from "@/components/workouts/PublishWorkoutPanel";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ActionForm from "@/components/ui/ActionForm";
 import ConfirmSubmit from "@/components/ui/ConfirmSubmit";
@@ -28,7 +29,7 @@ export default async function CoachProgramBuilder({ params }) {
     supabase
       .from("programs")
       .select(
-        "id, name, coach_id, is_template, member_id, program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(name)))"
+        "id, name, coach_id, is_template, member_id, is_public, slug, subtitle, level, est_minutes, focus, category, description, program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(name)))"
       )
       .eq("id", id)
       .single(),
@@ -90,6 +91,11 @@ export default async function CoachProgramBuilder({ params }) {
           <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
         )}
       </ActionForm>
+
+      {/* Publish this template as a public follow-along workout on /workouts (templates only). */}
+      {!program.member_id && (
+        <div className="mt-4"><PublishWorkoutPanel program={program} /></div>
+      )}
 
       {/* Days */}
       <div className="mt-6 space-y-5">
