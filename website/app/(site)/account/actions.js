@@ -293,3 +293,26 @@ export async function openDoorAction() {
     return { error: "Kon het deursysteem niet bereiken. Probeer opnieuw." };
   }
 }
+
+// A member deliberately reports a problem ("de deur ging niet open", "betalen lukte niet").
+// Lands in problem_reports (0113) + rings every beheerder's bell → /beheer/meldingen.
+export async function reportProblem(formData) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const message = String(formData.get("message") || "").trim().slice(0, 2000);
+  if (message.length < 5) return { error: "Beschrijf kort wat er misliep." };
+  const page = String(formData.get("page") || "").slice(0, 300) || null;
+  const admin = createAdminClient();
+  const { data: p } = await admin.from("profiles").select("gym_id, full_name").eq("id", user.id).single();
+  if (!p?.gym_id) return { error: "Geen gym gevonden bij je account." };
+  const { error: e } = await admin.from("problem_reports").insert({ gym_id: p.gym_id, user_id: user.id, message, page });
+  if (e) return { error: e.message };
+  try {
+    const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", p.gym_id).eq("role", "beheerder");
+    for (const a of admins || []) {
+      await notify({ gymId: p.gym_id, userId: a.id, actorId: user.id, type: "system", title: `🛟 Probleemmelding van ${p.full_name || "een lid"}`, body: message.slice(0, 80), link: "/beheer/meldingen" });
+    }
+  } catch {}
+  return { ok: true, message: "Bedankt voor je melding — we bekijken het zo snel mogelijk! 🙏" };
+}

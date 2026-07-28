@@ -50,6 +50,7 @@ export default async function BeheerDashboard() {
     { count: prevWeekBk },
     { data: weekPay },
     { data: prevWeekPay },
+    { count: openReports },
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid"),
     supabase.from("payments").select("amount_cents, created_at").eq("gym_id", gym.id).gte("created_at", monthStart.toISOString()),
@@ -76,6 +77,7 @@ export default async function BeheerDashboard() {
     supabase.from("bookings").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", prevWeekStart.toISOString()).lt("starts_at", weekStart.toISOString()),
     supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).gte("created_at", weekStart.toISOString()),
     supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).gte("created_at", prevWeekStart.toISOString()).lt("created_at", weekStart.toISOString()),
+    supabase.from("problem_reports").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "open"),
   ]);
 
   const nameOf = new Map((lidRows || []).map((m) => [m.id, m.full_name || "Lid"]));
@@ -178,6 +180,7 @@ export default async function BeheerDashboard() {
           <Chip href="/beheer/coaches#aanvragen" warn={!!pendingReq} label={`Coach-aanvragen: ${pendingReq || 0}`} />
           <Chip href="/beheer/betalingen" warn={!!openPayments} label={`Open facturen: ${openPayments || 0}`} />
           <Chip href="/beheer/inbox" warn={!!unreadInbox} label={`Inbox: ${unreadInbox || 0}`} />
+          <Chip href="/beheer/meldingen" warn={!!openReports} label={`Probleemmeldingen: ${openReports || 0}`} />
           <Chip href="/beheer/leden?filter=atrisk" label={`At-risk leden: ${atRiskCount}`} />
         </div>
       </section>
@@ -256,7 +259,7 @@ export default async function BeheerDashboard() {
         <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
           <Health label="Deurcode-cron" ok={!accessBad} detail={access ? `${accessMin} min geleden` : "nog niet gedraaid"} critical />
           <Health label="Activatie-cron" ok={activation ? activation.ok !== false : null} detail={activation ? `${agoMin(activation.created_at)} min geleden` : "nog niet gedraaid"} />
-          <Health label="Client-fouten (24u)" ok={(recentErrors || 0) === 0} detail={`${recentErrors || 0} gemeld`} />
+          <Health label="Client-fouten (24u)" ok={(recentErrors || 0) === 0} detail={`${recentErrors || 0} gemeld — bekijk in Meldingen`} href="/beheer/meldingen" />
         </div>
       </section>
     </div>
@@ -286,16 +289,21 @@ function Chip({ href, label, warn }) {
   );
 }
 
-function Health({ label, ok, detail, critical }) {
+function Health({ label, ok, detail, critical, href }) {
   const dot = ok === null ? "bg-brand/20" : ok ? "bg-accent" : critical ? "bg-red-500" : "bg-amber-400";
-  return (
-    <div className="flex items-center gap-3 rounded-xl bg-paper px-4 py-3">
+  const inner = (
+    <>
       <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + dot} />
       <div>
         <p className="font-bold text-brand">{label}</p>
         <p className="text-xs text-brand/50">{detail}</p>
       </div>
-    </div>
+    </>
+  );
+  return href ? (
+    <Link href={href} className="flex items-center gap-3 rounded-xl bg-paper px-4 py-3 transition hover:bg-accent/10">{inner}</Link>
+  ) : (
+    <div className="flex items-center gap-3 rounded-xl bg-paper px-4 py-3">{inner}</div>
   );
 }
 

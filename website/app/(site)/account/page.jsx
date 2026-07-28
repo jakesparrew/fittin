@@ -20,6 +20,7 @@ import RescheduleBooking from "@/components/booking/RescheduleBooking";
 import ShareRank from "@/components/ShareRank";
 import ShareReferral from "@/components/ShareReferral";
 import AccountSettings from "@/components/account/AccountSettings";
+import ProblemReport from "@/components/ProblemReport";
 import AccountLinking from "@/components/account/AccountLinking";
 import BodyMetricsForm from "@/components/account/BodyMetricsForm";
 
@@ -661,6 +662,7 @@ export default async function AccountPage({ searchParams }) {
 
         <AccountSettings userId={user.id} initialName={profile?.full_name || ""} initialPhone={profile?.phone || ""} />
         <AccountLinking providers={user.app_metadata?.providers || (user.app_metadata?.provider ? [user.app_metadata.provider] : [])} />
+        <div className="mt-6"><ProblemReport /></div>
       </div>
     </main>
   );

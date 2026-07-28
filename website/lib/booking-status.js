@@ -21,6 +21,11 @@ export function sourceLabel(b, { coachName } = {}) {
   if (s === "credit") return "Beurtenkaart";
   if (s === "gratis_code") return "Gratis code";
   if (s === "invite") return "Uitgenodigd";
+  // Admin-created comp booking (admin_create_booking inserts 'los' + € 0 + paid): booked on the
+  // member's behalf, free by design — label it so "boekingen zonder betaling" stops looking like
+  // missing money in the lists and the notifications feed. Only when the row actually carries
+  // price info (DTOs without price/paid must fall through to Via coach / Online).
+  if (s === "los" && (b.price_cents ?? b.priceCents) != null && cents(b) === 0 && b.paid === true) return "Ingepland door beheer";
   if (coachName || b.coach_name || b.coachName) return "Via coach";
   return "Online";
 }

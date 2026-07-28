@@ -42,4 +42,11 @@ describe("sourceLabel", () => {
   it("plain online booking", () => {
     expect(sourceLabel({ payment_source: "los" })).toBe("Online");
   });
+  it("admin comp booking (los + €0 + paid) is labelled as such", () => {
+    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true })).toBe("Ingepland door beheer");
+  });
+  it("unpaid €0 or unknown price never claims 'door beheer'", () => {
+    expect(sourceLabel({ payment_source: "los", price_cents: 1500, paid: true })).toBe("Online");
+    expect(sourceLabel({ payment_source: "los", paid: true })).toBe("Online");
+  });
 });

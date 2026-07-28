@@ -855,3 +855,15 @@ export async function adminSetRole(formData) {
   revalidatePath(`/beheer/leden/${memberId}`);
   return { ok: true };
 }
+
+// Mark a member problem report as handled (staff). RLS enforces gym scope + staff role.
+export async function resolveProblemReport(formData) {
+  const { supabase, error } = await requireStaff();
+  if (error) return { error };
+  const id = formData.get("id");
+  if (!id) return { error: "Geen melding gekozen." };
+  const { error: e } = await supabase.from("problem_reports").update({ status: "afgehandeld" }).eq("id", id);
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/meldingen");
+  return { ok: true, message: "Melding afgehandeld ✓" };
+}
