@@ -65,15 +65,16 @@ async function recordPayment(admin, { gymId, userId, amountCents, kind, descript
   );
 }
 
-async function grantCredits(admin, userId, credits, reason, withPunchcard = false, stripeRef = null) {
+async function grantCredits(admin, userId, credits, reason, withPunchcard = false, stripeRef = null, expiresAtOverride = null) {
   if (!userId || !credits) return;
   const { data: prof } = await admin.from("profiles").select("gym_id").eq("id", userId).single();
   if (!prof) return;
   const expiresAt = new Date(Date.now() + 180 * 86400000).toISOString(); // 6-month validity (punch cards)
-  // The abo's included session is use-it-or-lose-it: it expires at the end of the current calendar
-  // month, so monthly credits never accumulate (each renewal grants a fresh one).
+  // The abo's included session is use-it-or-lose-it: it never accumulates. It stays valid for one
+  // full BILLING month (caller passes the invoice's period end) — a calendar-month cutoff gave
+  // members renewing late in the month only days of validity. Fallback: one month from now.
   const now = new Date();
-  const endOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString();
+  const oneBillingMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate())).toISOString();
   if (withPunchcard) {
     await admin.from("punch_cards").upsert(
       { gym_id: prof.gym_id, user_id: userId, credits_initial: credits, expires_at: expiresAt, stripe_ref: stripeRef },
@@ -81,9 +82,9 @@ async function grantCredits(admin, userId, credits, reason, withPunchcard = fals
     );
   }
   // stripe_ref makes the grant idempotent: a retried webhook adds the credits exactly once.
-  // Punch-card credits expire after 6 months; the abo's monthly session expires at month end.
+  // Punch-card credits expire after 6 months; the abo's monthly session at the next renewal.
   await admin.from("credits_ledger").upsert(
-    { gym_id: prof.gym_id, user_id: userId, delta: credits, reason, stripe_ref: stripeRef, expires_at: withPunchcard ? expiresAt : endOfMonth },
+    { gym_id: prof.gym_id, user_id: userId, delta: credits, reason, stripe_ref: stripeRef, expires_at: withPunchcard ? expiresAt : (expiresAtOverride || oneBillingMonth) },
     { onConflict: "stripe_ref", ignoreDuplicates: true }
   );
 }
@@ -410,7 +411,10 @@ async function handleEvent(event, admin) {
       if (!reason.startsWith("subscription")) return;
       const prof = await profileFromCustomer(admin, obj.customer);
       if (!prof) return;
-      await grantCredits(admin, prof.id, 1, "abo", false, obj.id);
+      // The included session stays valid until the NEXT renewal (owner decision 2026-07-29):
+      // use the paid invoice line's period end; grantCredits falls back to +1 month.
+      const periodEndSec = obj.lines?.data?.[0]?.period?.end || null;
+      await grantCredits(admin, prof.id, 1, "abo", false, obj.id, periodEndSec ? new Date(periodEndSec * 1000).toISOString() : null);
       await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
       if (obj.hosted_invoice_url) await admin.from("payments").update({ receipt_url: obj.hosted_invoice_url }).eq("stripe_id", obj.id);
       await admin.rpc("reward_pending_referral", { p_user: prof.id });
