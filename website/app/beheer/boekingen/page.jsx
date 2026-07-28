@@ -35,21 +35,33 @@ export default async function Boekingen({ searchParams }) {
   const to = new Date(slotInstant(days[6].dateStr, 23).getTime() + 3600000).toISOString();
 
   const listFrom = new Date(Date.now() - 30 * 86400000).toISOString(); // overview: last 30 days + all upcoming
-  const [{ data: bookings }, { data: blocks }, { data: members }, { data: services }, { data: allBookings }, { data: taken }, { data: coaches }] = await Promise.all([
-    supabase.from("bookings").select("id, user_id, coach_id, starts_at, status, persons, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", from).lt("starts_at", to),
+  const [{ data: bookings }, { data: blocks }, { data: members }, { data: services }, { data: allBookings }, { data: taken }, { data: coaches }, { data: creditRows }, { data: coachLedger }] = await Promise.all([
+    supabase.from("bookings").select("id, user_id, coach_id, starts_at, status, persons, notes, member:profiles!bookings_user_id_fkey(full_name), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", from).lt("starts_at", to),
     supabase.from("slot_blocks").select("id, starts_at, reason").eq("gym_id", gym.id).gte("starts_at", from).lt("starts_at", to),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).order("full_name"),
     supabase.from("services").select("id, name").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
-    supabase.from("bookings").select("id, created_at, starts_at, ends_at, status, persons, paid, price_cents, payment_source, coach_id, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
+    supabase.from("bookings").select("id, created_at, starts_at, ends_at, status, persons, paid, price_cents, payment_source, coach_billing, user_id, coach_id, notes, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
     // Every 30-min cell that a booking covers (1h sessions span 2 cells) — so continuation cells show as "bezet", not free.
     supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from, p_to: to }),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
+    // Remaining session credit per member (shown on beurtenkaart-paid rows) + coach credit balances.
+    supabase.rpc("gym_credit_balances", { p_gym: gym.id }),
+    supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
   ]);
+
+  const creditsByUser = {};
+  for (const r of creditRows || []) creditsByUser[r.user_id] = r.balance;
+  const coachCredits = {};
+  for (const r of coachLedger || []) coachCredits[r.coach_id] = (coachCredits[r.coach_id] || 0) + (r.delta || 0);
 
   const bookingRows = (allBookings || []).map((b) => ({
     id: b.id, created_at: b.created_at, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status, persons: b.persons,
-    paid: b.paid, price_cents: b.price_cents, payment_source: b.payment_source,
+    paid: b.paid, price_cents: b.price_cents, payment_source: b.payment_source, coach_billing: b.coach_billing, notes: b.notes,
     member_name: b.member?.full_name || b.member?.email, coach_id: b.coach_id, coach_name: b.coach?.full_name, service_name: b.services?.name,
+    // A coach reserving gym time for their own (external / not-yet-linked) client books onto themself.
+    reserved: !!b.coach_id && b.user_id === b.coach_id,
+    credits_left: b.payment_source === "credit" ? (creditsByUser[b.user_id] ?? null) : null,
+    coach_credits_left: b.coach_billing === "credit" && b.coach_id ? (coachCredits[b.coach_id] ?? null) : null,
   }));
 
   const hours = [];
@@ -101,7 +113,7 @@ export default async function Boekingen({ searchParams }) {
       <AdminWeekGrid
         days={days}
         hours={hours}
-        bookings={(bookings || []).map((b) => ({ t: new Date(b.starts_at).getTime(), id: b.id, name: b.member?.full_name, serviceName: b.services?.name, persons: b.persons, reserved: !!b.coach_id && b.user_id === b.coach_id }))}
+        bookings={(bookings || []).map((b) => ({ t: new Date(b.starts_at).getTime(), id: b.id, name: b.member?.full_name, serviceName: b.services?.name, persons: b.persons, reserved: !!b.coach_id && b.user_id === b.coach_id, coachName: b.coach?.full_name, notes: b.notes }))}
         takenSlots={(taken || []).map((t) => t.starts_at)}
         blocks={(blocks || []).map((b) => ({ t: new Date(b.starts_at).getTime(), id: b.id, reason: b.reason }))}
         members={memberOpts}

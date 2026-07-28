@@ -152,6 +152,9 @@ export default async function CoachDashboard({ searchParams }) {
           <Lbl t="Client (optioneel)">
             <SearchSelect name="clientId" placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
+          <Lbl t="Of naam (niet op platform)">
+            <input name="clientName" placeholder="bv. Sarah" className="w-36 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+          </Lbl>
           <Lbl t="Sessie">
             <div className="rounded-lg border-2 border-borderc bg-paper px-3 py-2 text-sm font-semibold text-brand">{ptService?.name || "Personal training"}</div>
             <input type="hidden" name="serviceId" value={ptService?.id || ""} />
@@ -160,7 +163,7 @@ export default async function CoachDashboard({ searchParams }) {
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
         </ActionForm>
-        <p className="mt-2 text-xs text-brand/50">Tip: laat <strong>Client</strong> leeg om enkel het uur te reserveren. Je kan later bij de sessie een client toevoegen via <strong>+ Client toevoegen</strong>.</p>
+        <p className="mt-2 text-xs text-brand/50">Tip: laat <strong>Client</strong> leeg om enkel het uur te reserveren. Train je iemand die (nog) niet op het platform zit? Vul dan de <strong>naam</strong> in — zo weet de gym met wie je traint. Later koppelen kan via <strong>+ Client toevoegen</strong>.</p>
         <AddClientInline />
         <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). Je clienten betalen jou rechtstreeks (bv. Bancontact), los van het platform.</p>
 

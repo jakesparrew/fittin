@@ -439,6 +439,12 @@ async function handleEvent(event, admin) {
         // E-mail too — a failing card is preventable churn and the bell alone is easy to miss.
         const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", prof.id).single();
         if (m?.email) await sendMembershipPaymentFailed({ to: m.email, name: m.full_name });
+        // Tell the owner too — a past_due abo was previously invisible in /beheer (member silently
+        // dropped back to € 15 and the owner only found out when revenue dipped).
+        const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", prof.gym_id).eq("role", "beheerder");
+        for (const a of admins || []) {
+          await admin.from("notifications").insert({ gym_id: prof.gym_id, user_id: a.id, type: "system", title: `⚠️ Abo-betaling mislukt — ${m?.full_name || "lid"}`, body: "Stripe probeert automatisch opnieuw. Het lid kreeg een mail om de betaalmethode bij te werken; tot dan boekt het weer aan € 15.", link: "/beheer/leden" });
+        }
       } catch (e) { console.error("payment-failed notice:", e?.message); }
       return;
     }

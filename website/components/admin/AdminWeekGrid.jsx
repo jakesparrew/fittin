@@ -100,8 +100,10 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                         title="Versleep naar een vrij uur om te verplaatsen"
                         className={"flex h-full cursor-move flex-col justify-center rounded-lg px-1.5 py-1 leading-tight transition hover:ring-2 hover:ring-accent " + (reserved ? "bg-brand/10" : "bg-accent/20") + (dragBk?.id === bk.id ? " opacity-40" : "")}
                       >
-                        <BookingDetail bookingId={bk.id} className="block truncate font-bold text-brand">{reserved ? "Gereserveerd" : (bk.name || "Lid")}</BookingDetail>
-                        <span className="truncate text-[10px] text-brand/50">{bk.serviceName} · {bk.persons}p</span>
+                        <BookingDetail bookingId={bk.id} className="block truncate font-bold text-brand">{reserved ? `🧑‍🏫 ${bk.coachName || "Coach"}` : (bk.name || "Lid")}</BookingDetail>
+                        <span className="truncate text-[10px] text-brand/50">
+                          {reserved ? (bk.notes ? `PT · ${bk.notes}` : "PT · nog geen client") : `${bk.serviceName} · ${bk.persons}p`}
+                        </span>
                         <div className="flex items-center gap-2 leading-none">
                           <button type="button" onClick={() => setMoveModal({ bk, date: d.dateStr })} className="text-[10px] font-bold text-accentdark hover:underline">verplaats</button>
                           <form action={adminCancelBooking} className="leading-none" onSubmit={(e) => { if (!confirm("Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.")) e.preventDefault(); }}>

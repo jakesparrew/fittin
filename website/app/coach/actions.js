@@ -80,6 +80,7 @@ export async function coachBookSession(formData) {
   const { supabase, userId, profile, error } = await requireCoach();
   if (error) return { error };
   const clientId = formData.get("clientId") || null; // null = reserveer enkel het slot (client later toevoegen)
+  const clientName = String(formData.get("clientName") || "").trim().slice(0, 60); // externe client (niet op platform)
   const { data: bookingId, error: e } = await supabase.rpc("coach_book_session", {
     p_client: clientId,
     p_service: formData.get("serviceId"),
@@ -88,6 +89,11 @@ export async function coachBookSession(formData) {
     p_persons: num(formData.get("persons"), 1),
   });
   if (e) return { error: e.message };
+  // The RPC has no notes param — record the external client's name on the booking afterwards,
+  // so the gym sees WHO the coach trains with (admin grid + list show it on reserved slots).
+  if (!clientId && clientName) {
+    try { await createAdminClient().from("bookings").update({ notes: clientName }).eq("id", bookingId).eq("coach_id", userId); } catch {}
+  }
 
   try {
     const { data: booking } = await supabase.from("bookings").select("starts_at, ends_at, services(name)").eq("id", bookingId).single();

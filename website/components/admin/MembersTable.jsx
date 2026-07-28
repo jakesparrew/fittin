@@ -25,7 +25,12 @@ const tenure = (iso) => {
 };
 
 function SubBadge({ sub }) {
-  if (!sub || sub.status !== "actief") return <span className="text-xs text-brand/25">—</span>;
+  if (!sub) return <span className="text-xs text-brand/25">—</span>;
+  // Failing renewal payment (Stripe retries) — the member books at € 15 again until it clears.
+  if (sub.status === "past_due") {
+    return <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600" title="De maandbetaling mislukte; Stripe probeert opnieuw. Tot dan geen € 12-tarief.">⚠ Abo · betaling mislukt</span>;
+  }
+  if (sub.status !== "actief") return <span className="text-xs text-brand/25">—</span>;
   return (
     <span className="inline-flex flex-col gap-0.5">
       <span className="inline-flex w-fit items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accentdark">

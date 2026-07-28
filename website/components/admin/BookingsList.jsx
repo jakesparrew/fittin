@@ -81,9 +81,29 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                 <tr key={b.id} className={b.status !== "bevestigd" ? "opacity-50" : ""}>
                   <td className="whitespace-nowrap px-4 py-3 capitalize text-brand/70">{fmt(b.starts_at)}</td>
                   <td className="whitespace-nowrap px-4 py-3 text-xs text-brand/50">{b.created_at ? <>{fmt(b.created_at)}<span className="block text-brand/35">{ago(b.created_at)}</span></> : "—"}</td>
-                  <td className="px-4 py-3 font-semibold text-brand"><BookingDetail bookingId={b.id} className="font-semibold text-brand">{b.member_name || "—"}</BookingDetail></td>
+                  <td className="px-4 py-3 font-semibold text-brand">
+                    {b.reserved ? (
+                      // Coach reserved gym time for their own (external / not-yet-linked) PT client —
+                      // the "member" is the coach themself, so label it loudly instead of masquerading as a lid.
+                      <span className="flex flex-col gap-0.5">
+                        <span className="flex items-center gap-1.5">
+                          <BookingDetail bookingId={b.id} className="font-semibold text-brand">🧑‍🏫 {b.coach_name || "Coach"}</BookingDetail>
+                          <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-black text-white">COACH</span>
+                        </span>
+                        <span className="text-xs font-normal text-brand/50">{b.notes ? `PT met ${b.notes}` : "PT — nog geen client gekoppeld"}</span>
+                      </span>
+                    ) : (
+                      <BookingDetail bookingId={b.id} className="font-semibold text-brand">{b.member_name || "—"}</BookingDetail>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-brand/70">{b.service_name || "Sessie"}</td>
-                  <td className="px-4 py-3"><span className="rounded-full bg-paper px-2 py-0.5 text-xs font-semibold text-brand/60">{bron(b)}</span></td>
+                  <td className="px-4 py-3">
+                    <span className="flex flex-col gap-0.5">
+                      <span className={"w-fit rounded-full px-2 py-0.5 text-xs font-semibold " + (b.reserved ? "bg-brand/10 text-brand" : "bg-paper text-brand/60")}>{bron(b)}</span>
+                      {b.credits_left != null && <span className={"text-[10px] font-bold " + (b.credits_left <= 1 ? "text-amber-500" : "text-brand/40")}>tegoed: nog {b.credits_left}</span>}
+                      {b.coach_credits_left != null && <span className={"text-[10px] font-bold " + (b.coach_credits_left <= 1 ? "text-amber-500" : "text-brand/40")}>coach-tegoed: nog {b.coach_credits_left}</span>}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">
                     {upcoming && b.status === "bevestigd" ? (
                       <ActionForm action={adminAssignCoach} success="Coach bijgewerkt ✓" className="flex items-center gap-1">
