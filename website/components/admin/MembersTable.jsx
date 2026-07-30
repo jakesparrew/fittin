@@ -41,35 +41,89 @@ function SubBadge({ sub }) {
   );
 }
 
+// Sort rank for the abo column: actief (nieuwste eerst) > past_due > opgezegd > geen abo.
+const subRank = (s) => (!s ? 0 : s.status === "actief" ? (s.cancel_at_period_end ? 2 : 3) : s.status === "past_due" ? 1 : 0);
+
+// Clickable column header. Shows ▲/▼ on the active column, a faint ↕ hint on the rest.
+function SortTh({ k, sort, onSort, children, title }) {
+  const active = sort.key === k;
+  return (
+    <th className="px-5 py-3" title={title}>
+      <button onClick={() => onSort(k)} className={"group inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-brand " + (active ? "text-brand" : "")}>
+        {children}
+        <span className={active ? "text-accentdark" : "opacity-0 transition group-hover:opacity-40"}>{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
 export default function MembersTable({ members = [], credits = {}, coachOf = {}, lastLogin = {}, lastVisit = {}, subOf = {}, isBeheerder }) {
   const [q, setQ] = useState("");
+  // Default: nieuwste account eerst (zoals voorheen — de server levert al op created_at desc).
+  const [sort, setSort] = useState({ key: null, dir: "asc" });
   const needle = q.trim().toLowerCase();
-  const rows = needle
+  const filtered = needle
     ? members.filter((m) => (m.full_name || "").toLowerCase().includes(needle) || (m.email || "").toLowerCase().includes(needle))
     : members;
 
+  // Per kolom één waarde-functie; tekst sorteert alfabetisch, de rest numeriek (datums als ms).
+  const val = {
+    naam: (m) => (m.full_name || m.email || "").toLowerCase(),
+    rol: (m) => m.role || "",
+    abo: (m) => subRank(subOf[m.id]),
+    coach: (m) => (coachOf[m.id] || []).join(", ").toLowerCase(),
+    tegoed: (m) => credits[m.id] || 0,
+    login: (m) => (lastLogin[m.id] ? new Date(lastLogin[m.id]).getTime() : 0),
+    bezoek: (m) => (lastVisit[m.id] ? new Date(lastVisit[m.id]).getTime() : 0),
+  };
+
+  let rows = filtered;
+  if (sort.key && val[sort.key]) {
+    const f = val[sort.key];
+    rows = [...filtered].sort((a, b) => {
+      const x = f(a), y = f(b);
+      const cmp = typeof x === "string" ? x.localeCompare(y, "nl") : x - y;
+      return sort.dir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  // Klik = sorteer; opnieuw klikken keert om. Tekstkolommen starten A→Z, cijfer/datum hoog→laag
+  // (de meest bruikbare eerste blik: meeste tegoed, meest recent bezoek, abonnees bovenaan).
+  const toggle = (key) => {
+    setSort((s) => {
+      if (s.key === key) return { key, dir: s.dir === "asc" ? "desc" : "asc" };
+      const textCol = key === "naam" || key === "rol" || key === "coach";
+      return { key, dir: textCol ? "asc" : "desc" };
+    });
+  };
+
   return (
     <>
-      <div className="mt-6 max-w-sm">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Zoek op naam of e-mail…"
-          className="w-full rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm text-brand outline-none transition focus:border-accent"
+          className="w-full max-w-sm rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm text-brand outline-none transition focus:border-accent"
         />
+        {sort.key && (
+          <button onClick={() => setSort({ key: null, dir: "asc" })} className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand/60 transition hover:border-lav hover:text-brand">
+            ↺ Sortering wissen
+          </button>
+        )}
       </div>
 
       <div className="mt-4 overflow-x-auto rounded-2xl border border-borderc bg-white">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
-              <th className="px-5 py-3">Naam</th>
-              <th className="px-5 py-3">Rol</th>
-              <th className="px-5 py-3">Abonnement</th>
-              <th className="px-5 py-3">Coach</th>
-              <th className="px-5 py-3" title="Resterend sessietegoed (beurtenkaart + abo)">Tegoed</th>
-              <th className="px-5 py-3">Laatste login</th>
-              <th className="px-5 py-3">Laatste bezoek</th>
+              <SortTh k="naam" sort={sort} onSort={toggle}>Naam</SortTh>
+              <SortTh k="rol" sort={sort} onSort={toggle}>Rol</SortTh>
+              <SortTh k="abo" sort={sort} onSort={toggle}>Abonnement</SortTh>
+              <SortTh k="coach" sort={sort} onSort={toggle}>Coach</SortTh>
+              <SortTh k="tegoed" sort={sort} onSort={toggle} title="Resterend sessietegoed (beurtenkaart + abo)">Tegoed</SortTh>
+              <SortTh k="login" sort={sort} onSort={toggle}>Laatste login</SortTh>
+              <SortTh k="bezoek" sort={sort} onSort={toggle}>Laatste bezoek</SortTh>
               <th className="px-5 py-3">Acties</th>
             </tr>
           </thead>

@@ -13,10 +13,13 @@ export default async function Agenda() {
   if (!ctx) return null;
   const { supabase, userId } = ctx;
   const [{ data: bookings }, { data: clientLinks }] = await Promise.all([
+    // coach_id = sessies die de coach geeft; user_id = sessies die hij ZELF boekte (eigen training).
+    // Enkel op coach_id filteren maakte een zelf geboekte sessie onzichtbaar in de eigen agenda —
+    // de 0094-trigger vult coach_id namelijk bewust niet in bij zelf-boekingen.
     supabase
       .from("bookings")
-      .select("id, user_id, starts_at, ends_at, status, persons, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)")
-      .eq("coach_id", userId)
+      .select("id, user_id, coach_id, starts_at, ends_at, status, persons, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)")
+      .or(`coach_id.eq.${userId},user_id.eq.${userId}`)
       .order("starts_at", { ascending: true }),
     supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
   ]);
@@ -56,21 +59,24 @@ export default async function Agenda() {
               <p className="text-sm font-black capitalize text-brand">{fmtDay(d + "T12:00:00")}</p>
               <div className="mt-2 space-y-2">
                 {byDay[d].map((b) => {
-                  const reserved = b.user_id === userId; // slot booked without a client yet
+                  // Eigen training: zelf geboekt buiten de coach-flow (geen coach_id) → geen client-slot.
+                  const own = b.user_id === userId && !b.coach_id;
+                  const reserved = b.user_id === userId && !!b.coach_id; // slot booked without a client yet
                   return (
                   <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
                     <div className="flex items-center gap-3">
                       <span className="rounded-md bg-accent px-2 py-0.5 text-sm font-black text-brand">{fmtTime(b.starts_at)}</span>
                       <div>
-                        <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
-                        <p className="text-xs text-brand/50">{b.services?.name} · {b.persons}p</p>
+                        <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{own ? "🏋️ Mijn eigen training" : reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
+                        <p className="text-xs text-brand/50">{b.services?.name} · {b.persons}p{own ? " · zelf geboekt" : ""}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
                         {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                       </span>
-                      <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} clients={clientOpts} />
+                      {/* Eigen training: geen client-toewijzing aanbieden (het slot is van hemzelf). */}
+                      <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={own ? false : reserved} clients={clientOpts} />
                     </div>
                   </div>
                   );
