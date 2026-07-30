@@ -50,3 +50,18 @@ describe("sourceLabel", () => {
     expect(sourceLabel({ payment_source: "los", paid: true })).toBe("Online");
   });
 });
+
+describe("sourceLabel · coach & credit zichtbaarheid", () => {
+  it("coach-sessie via tegoed is GEEN beheer-boeking", () => {
+    // coach_book_session schrijft los + €0 + paid, net als een admin-comp — coach_billing beslist.
+    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true, coach_billing: "credit" })).toBe("Coach-tegoed");
+  });
+  it("coach-factuur en gratis coach-sessie", () => {
+    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true, coach_billing: "invoice" })).toBe("Coach-factuur");
+    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true, coach_billing: "free" })).toBe("Coach · gratis");
+  });
+  it("beurtenkaart en abonnement blijven herkenbaar", () => {
+    expect(sourceLabel({ payment_source: "credit", price_cents: 0, paid: true })).toBe("Beurtenkaart");
+    expect(sourceLabel({ payment_source: "abo", price_cents: 1200, paid: true })).toBe("Abonnement");
+  });
+});

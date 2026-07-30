@@ -21,6 +21,13 @@ export function sourceLabel(b, { coachName } = {}) {
   if (s === "credit") return "Beurtenkaart";
   if (s === "gratis_code") return "Gratis code";
   if (s === "invite") return "Uitgenodigd";
+  // A coach booking through their own dashboard: coach_book_session also writes 'los' + € 0 + paid,
+  // so this MUST be checked before the admin-comp rule below or every coach session reads as
+  // "Ingepland door beheer". coach_billing tells us how the coach settles it.
+  const cb = b.coach_billing ?? b.coachBilling;
+  if (cb === "credit") return "Coach-tegoed";
+  if (cb === "invoice") return "Coach-factuur";
+  if (cb === "free") return "Coach · gratis";
   // Admin-created comp booking (admin_create_booking inserts 'los' + € 0 + paid): booked on the
   // member's behalf, free by design — label it so "boekingen zonder betaling" stops looking like
   // missing money in the lists and the notifications feed. Only when the row actually carries

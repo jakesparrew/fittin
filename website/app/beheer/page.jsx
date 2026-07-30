@@ -51,6 +51,7 @@ export default async function BeheerDashboard() {
     { data: weekPay },
     { data: prevWeekPay },
     { count: openReports },
+    { data: coachLedger },
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid"),
     supabase.from("payments").select("amount_cents, created_at").eq("gym_id", gym.id).gte("created_at", monthStart.toISOString()),
@@ -65,7 +66,8 @@ export default async function BeheerDashboard() {
     admin.from("cron_runs").select("job, ok, created_at").order("created_at", { ascending: false }).limit(20),
     admin.from("client_errors").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 24 * 3600000).toISOString()),
     // At-risk: lid-accounts without a confirmed session in the last 30 days (booking-based estimate).
-    supabase.from("profiles").select("id, full_name").eq("gym_id", gym.id).eq("role", "lid"),
+    // Alle profielen (niet enkel leden) — de namen zijn ook nodig voor coach-actiepunten.
+    supabase.from("profiles").select("id, full_name, role").eq("gym_id", gym.id),
     supabase.from("bookings").select("user_id").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 30 * 86400000).toISOString()).lt("starts_at", nowIso),
     // Open invoice posts (coach-credit grants etc.) — money the gym is still owed.
     supabase.from("payments").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "onbetaald"),
@@ -78,9 +80,15 @@ export default async function BeheerDashboard() {
     supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).gte("created_at", weekStart.toISOString()),
     supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).gte("created_at", prevWeekStart.toISOString()).lt("created_at", weekStart.toISOString()),
     supabase.from("problem_reports").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "open"),
+    // Coach-sessietegoed: een negatief saldo = de coach boekte meer sessies dan hij vooraf kocht.
+    supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
   ]);
 
   const nameOf = new Map((lidRows || []).map((m) => [m.id, m.full_name || "Lid"]));
+  const ledenOnly = (lidRows || []).filter((m) => m.role === "lid");
+  // Coach-sessietegoed per coach; negatief = meer geboekt dan gekocht → geld te innen.
+  const coachBal = {};
+  for (const r of coachLedger || []) coachBal[r.coach_id] = (coachBal[r.coach_id] || 0) + (r.delta || 0);
   const revenue = (monthPay || []).reduce((a, r) => a + (r.amount_cents || 0), 0);
   const revenueToday = (monthPay || []).filter((r) => new Date(r.created_at) >= dayStart).reduce((a, r) => a + (r.amount_cents || 0), 0);
   const revenuePrev = (prevPay || []).reduce((a, r) => a + (r.amount_cents || 0), 0);
@@ -93,7 +101,7 @@ export default async function BeheerDashboard() {
   const unpaidTotal = unpaid.reduce((a, b) => a + (b.price_cents || 0), 0);
   // At-risk = lid without a confirmed session in the last 30 days.
   const active30 = new Set((recent30 || []).map((b) => b.user_id));
-  const atRiskCount = (lidRows || []).filter((m) => !active30.has(m.id)).length;
+  const atRiskCount = ledenOnly.filter((m) => !active30.has(m.id)).length;
 
   // ---- Subscriptions ----
   const mems = memRows || [];
@@ -108,13 +116,25 @@ export default async function BeheerDashboard() {
   const hasAbo = new Set(mems.filter((m) => m.status === "actief" || m.status === "past_due").map((m) => m.user_id));
   // Abo-candidates: leden met ≥3 los/kaart-boekingen in 60d zonder abo → concreet voorstel waard.
   const payCount = {};
+  const lidIds = new Set(ledenOnly.map((m) => m.id)); // enkel leden zijn abo-kandidaat, geen coaches
   for (const b of bk60 || []) {
-    if (!b.user_id || hasAbo.has(b.user_id) || !nameOf.has(b.user_id)) continue;
+    if (!b.user_id || hasAbo.has(b.user_id) || !lidIds.has(b.user_id)) continue;
     if (b.payment_source === "los" || b.payment_source === "credit") payCount[b.user_id] = (payCount[b.user_id] || 0) + 1;
   }
   const candidates = Object.entries(payCount).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 5);
 
+  // Coaches met een negatief sessietegoed: ze boekten meer dan ze vooraf kochten → openstaand geld.
+  const coachDebt = Object.entries(coachBal)
+    .filter(([, n]) => n < 0)
+    .sort((a, b) => a[1] - b[1]);
+
   const personActions = [
+    ...coachDebt.map(([cid, n]) => ({
+      icon: "🧾", tone: "warn",
+      title: `${nameOf.get(cid) || "Coach"} staat ${n} sessietegoed — € ${Math.abs(n) * 12} te innen`,
+      sub: `Deze coach boekte ${Math.abs(n)} sessies méér dan hij vooraf kocht. Laat hem bijkopen via zijn coach-dashboard, of factureer het bedrag.`,
+      href: "/beheer/coaches",
+    })),
     ...pastDue.map((m) => ({
       icon: "💳", tone: "warn",
       title: `Spreek ${nameOf.get(m.user_id) || "lid"} aan — abo-betaling mislukt`,

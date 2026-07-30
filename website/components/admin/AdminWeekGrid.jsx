@@ -22,6 +22,35 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
   // continuation cell of a multi-cell session as "bezet" so it isn't shown as a free drop target.
   const takenSet = new Set(takenSlots.map((s) => new Date(s).getTime()));
 
+  // De zaal is 06:00–23:00 open = 34 halfuur-rijen, meestal grotendeels leeg. Lange lege stroken
+  // vouwen we samen tot één regel; klikken opent die strook alsnog (plannen/blokkeren blijft mogelijk).
+  const [openGaps, setOpenGaps] = useState(() => new Set());
+  const [showAll, setShowAll] = useState(false);
+
+  const busyHour = (h) =>
+    days.some((d) => {
+      const t = slotInstant(d.dateStr, h).getTime();
+      return bookMap.has(t) || blockMap.has(t) || takenSet.has(t);
+    });
+
+  const gridRows = [];
+  {
+    let run = [];
+    const flush = () => {
+      if (!run.length) return;
+      // Korte gaten (< 3 rijen) gewoon tonen — inklappen zou dan meer ruis dan winst zijn.
+      if (showAll || run.length < 3 || openGaps.has(run[0])) gridRows.push(...run.map((h) => ({ kind: "hour", h })));
+      else gridRows.push({ kind: "gap", hours: [...run] });
+      run = [];
+    };
+    for (const h of hours) {
+      if (busyHour(h)) { flush(); gridRows.push({ kind: "hour", h }); }
+      else run.push(h);
+    }
+    flush();
+  }
+  const hiddenCount = gridRows.reduce((a, r) => a + (r.kind === "gap" ? r.hours.length : 0), 0);
+
   const [drag, setDrag] = useState(null); // { date, from, to } while drag-selecting empty cells to block
   const [planModal, setPlanModal] = useState(null); // { date, hour, label }
   const [rangeModal, setRangeModal] = useState(null); // { date, from, to, label }
@@ -80,7 +109,22 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
           </tr>
         </thead>
         <tbody className="select-none">
-          {hours.map((h) => (
+          {gridRows.map((row) => {
+            if (row.kind === "gap") return (
+              <tr key={`gap-${row.hours[0]}`} className="border-b border-borderc/60">
+                <td colSpan={days.length + 1} className="p-0">
+                  <button
+                    onClick={() => setOpenGaps((s) => new Set(s).add(row.hours[0]))}
+                    className="w-full py-1.5 text-[11px] font-bold text-brand/30 transition hover:bg-paper hover:text-brand"
+                    title="Klik om deze uren te tonen (plannen of blokkeren)"
+                  >
+                    ⌄ {row.hours.length} vrije halfuren · {fmtHour(row.hours[0])}–{fmtHour(row.hours[row.hours.length - 1] + 0.5)}
+                  </button>
+                </td>
+              </tr>
+            );
+            const h = row.h;
+            return (
             <tr key={h} className="border-b border-borderc/60">
               <td className="sticky left-0 z-10 border-r border-borderc bg-white px-2 py-1 text-right font-bold text-brand/40">{fmtHour(h)}</td>
               {days.map((d) => {
@@ -142,9 +186,21 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                 );
               })}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
+      {hiddenCount > 0 && (
+        <div className="flex items-center justify-between border-t border-borderc/60 px-4 py-2">
+          <span className="text-[11px] text-brand/35">{hiddenCount} lege halfuren samengevouwen</span>
+          <button onClick={() => { setShowAll(true); setOpenGaps(new Set()); }} className="text-[11px] font-bold text-accentdark hover:underline">Toon alle uren</button>
+        </div>
+      )}
+      {showAll && (
+        <div className="border-t border-borderc/60 px-4 py-2 text-right">
+          <button onClick={() => setShowAll(false)} className="text-[11px] font-bold text-brand/50 hover:text-brand">⌃ Vouw lege uren weer samen</button>
+        </div>
+      )}
 
       {planModal && (
         <PlanModal modal={planModal} members={members} services={services} coaches={coaches} onClose={() => setPlanModal(null)} onDone={() => { setPlanModal(null); router.refresh(); }} />

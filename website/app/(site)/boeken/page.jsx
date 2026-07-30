@@ -85,6 +85,9 @@ export default async function BoekenPage({ searchParams }) {
       supabase.from("buddies").select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)").eq("status", "accepted"),
     ]);
     isMember = !!activeMember;
+    // Staff-tarief (0114): coaches/beheerders krijgen op de publieke boekingspagina hetzelfde
+    // € 12-tarief als members — de UI moet tonen wat create_booking effectief aanrekent.
+    if (profile?.role === "coach" || profile?.role === "beheerder") isMember = true;
     myBooked = count || 0;
     credits = ledger || 0;
     buddies = (links || []).map((l) => {
