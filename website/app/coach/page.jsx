@@ -123,15 +123,33 @@ export default async function CoachDashboard({ searchParams }) {
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
 
-      {/* Negatief saldo = de coach boekte meer dan hij kocht. Boeken blokkeert bewust niet (flexibiliteit),
-          maar het openstaande bedrag moet luid zichtbaar zijn — dit stond nergens. */}
+      {/* Sinds 0115 blokkeert boeken bij saldo < 1 — een openstaand (negatief) saldo dus ook.
+          Bijkopen kan altijd: de aankoop vult eerst de put aan, daarna kan de coach weer boeken. */}
       {mode === "credit" && creditBalance < 0 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
-          <div>
-            <p className="font-black text-red-600">⚠ Je sessietegoed staat op {creditBalance}</p>
-            <p className="mt-0.5 text-sm text-brand/70">Je boekte {Math.abs(creditBalance)} sessies meer dan je kocht — <b>€ {Math.abs(creditBalance) * 12} openstaand</b> aan de gym. Koop tegoed bij om dit aan te zuiveren.</p>
+        <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="font-black text-red-600">⛔ Boeken staat op pauze — je saldo is {creditBalance}</p>
+              <p className="mt-0.5 text-sm text-brand/70">
+                Je boekte {Math.abs(creditBalance)} sessies meer dan je kocht — <b>€ {Math.abs(creditBalance) * 12} openstaand</b> aan de gym.
+                Zuiver je saldo aan (of koop meteen meer): daarna kan je direct weer boeken. Je bestaande sessies blijven gewoon staan.
+              </p>
+            </div>
+            <ActionForm action={buyCoachCredits} className="shrink-0">
+              <input type="hidden" name="qty" value={Math.abs(creditBalance)} />
+              <SubmitButton className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">
+                Betaal achterstand (€ {Math.abs(creditBalance) * 12}) →
+              </SubmitButton>
+            </ActionForm>
           </div>
-          <a href="#tegoed" className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Tegoed bijkopen ↓</a>
+          <p className="mt-2 text-xs text-brand/50">Tip: koop hieronder bij <a href="#tegoed" className="font-bold text-accentdark hover:underline">Coach-sessies kopen</a> meteen méér — de eerste {Math.abs(creditBalance)} dekken je achterstand, de rest is nieuw tegoed.</p>
+        </div>
+      )}
+      {/* Saldo exact 0 (geen schuld, wel op): zachtere melding, zelfde regel. */}
+      {mode === "credit" && creditBalance === 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+          <p className="text-sm font-bold text-brand">Je sessietegoed is op — koop bij om nieuwe sessies te kunnen boeken.</p>
+          <a href="#tegoed" className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Tegoed kopen ↓</a>
         </div>
       )}
 
@@ -162,6 +180,11 @@ export default async function CoachDashboard({ searchParams }) {
           De prijs die je je client(en) aanrekent, reken je apart af.
         </p>
         <Link href="/coach/clienten" className="mt-1 inline-block text-xs font-bold text-accentdark hover:underline">Zie je je client niet in de lijst? Verbind je clienten hier →</Link>
+        {mode === "credit" && creditBalance < 1 && (
+          <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
+            ⛔ Boeken kan pas weer met minstens 1 sessietegoed (saldo: {creditBalance}). <a href="#tegoed" className="underline">Koop tegoed bij ↓</a>
+          </p>
+        )}
         {members.length === 0 && (
           <div className="mt-3 rounded-2xl border-2 border-dashed border-accent/50 bg-accent/5 p-4 text-sm">
             <p className="font-bold text-brand">Je hebt nog geen verbonden clienten.</p>

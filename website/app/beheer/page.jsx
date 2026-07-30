@@ -132,7 +132,7 @@ export default async function BeheerDashboard() {
     ...coachDebt.map(([cid, n]) => ({
       icon: "🧾", tone: "warn",
       title: `${nameOf.get(cid) || "Coach"} staat ${n} sessietegoed — € ${Math.abs(n) * 12} te innen`,
-      sub: `Deze coach boekte ${Math.abs(n)} sessies méér dan hij vooraf kocht. Laat hem bijkopen via zijn coach-dashboard, of factureer het bedrag.`,
+      sub: `Nieuwe boekingen zijn voor deze coach geblokkeerd tot het saldo is aangezuiverd. Op zijn dashboard staat een "Betaal achterstand"-knop — een aankoop vult eerst de put aan.`,
       href: "/beheer/coaches",
     })),
     ...pastDue.map((m) => ({
