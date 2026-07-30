@@ -70,12 +70,14 @@ export default async function Home() {
         <div className="animate-floaty pointer-events-none absolute -left-32 -top-24 h-[28rem] w-[28rem] rounded-full bg-accent/25 blur-2xl" />
         <div className="animate-floaty-slow pointer-events-none absolute -bottom-40 -right-24 h-[32rem] w-[32rem] rounded-full bg-lav/20 blur-2xl" />
 
-        <div className="relative mx-auto max-w-6xl px-5 py-28 md:py-36">
+        {/* Mobiel compacter (padding/typo kleiner) zodat BEIDE CTA-knoppen boven de vouw staan —
+            met de oude maten viel "Reserveer de gym" net onder het eerste scherm. Desktop ongewijzigd. */}
+        <div className="relative mx-auto max-w-6xl px-5 py-14 sm:py-28 md:py-36">
           <Reveal eager>
             <p className="text-sm font-black uppercase tracking-[0.3em] text-accent">Get Fittin&rsquo; · Gent</p>
           </Reveal>
           <Reveal eager delay={80}>
-            <h1 className="mt-5 max-w-4xl text-5xl font-black leading-[0.98] tracking-tight md:text-7xl">
+            <h1 className="mt-4 max-w-4xl text-4xl font-black leading-[0.98] tracking-tight sm:mt-5 sm:text-5xl md:text-7xl">
               Train in jouw eigen{" "}
               <span className="relative whitespace-nowrap text-accent">
                 privégym
@@ -86,22 +88,21 @@ export default async function Home() {
             </h1>
           </Reveal>
           <Reveal eager delay={160}>
-            <p className="mt-7 max-w-xl text-lg leading-relaxed text-white/70 md:text-xl">
+            <p className="mt-4 max-w-xl text-base leading-relaxed text-white/70 sm:mt-7 sm:text-lg md:text-xl">
               Een modern uitgeruste zaal, exclusief voor jou. Reserveer per uur, open de deur met de
               app en train wanneer het jou past — alleen, met je coach of met je vrienden.
             </p>
           </Reveal>
           <Reveal eager delay={240}>
-            {/* Mobile: full-width stacked pills (auto-width pills wrapped awkwardly just under the fold). */}
-            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
-              <Link href="/login?mode=signup" className="shine w-full rounded-full bg-accent px-8 py-4 text-center text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40 sm:w-auto">
+            <div className="mt-6 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-4">
+              <Link href="/login?mode=signup" className="shine w-full rounded-full bg-accent px-8 py-3.5 text-center text-base font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40 sm:w-auto sm:py-4 sm:text-lg">
                 Maak gratis account
               </Link>
-              <Link href="/boeken" className="w-full rounded-full border-2 border-white/30 px-8 py-4 text-center text-lg font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10 sm:w-auto">
+              <Link href="/boeken" className="w-full rounded-full border-2 border-white/30 px-8 py-3.5 text-center text-base font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10 sm:w-auto sm:py-4 sm:text-lg">
                 Reserveer de gym
               </Link>
             </div>
-            <p className="mt-4 text-sm font-semibold text-white/60">
+            <p className="mt-3 text-sm font-semibold text-white/60 sm:mt-4">
               Je eerste uur is <span className="font-black text-accent">automatisch gratis</span> bij je eerste boeking · geen lidgeld, geen verplichtingen.
             </p>
           </Reveal>
