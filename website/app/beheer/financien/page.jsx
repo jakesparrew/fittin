@@ -2,10 +2,10 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getGymSecrets } from "@/lib/gym-secrets";
-import { invoiceCoachSessions } from "../actions";
-import { markPaymentPaid } from "../actions";
+import { invoiceCoachSessions, markPaymentPaid, createManualInvoice } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
 import PrintButton from "@/components/admin/PrintButton";
+import SearchSelect from "@/components/admin/SearchSelect";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +32,7 @@ export default async function Financien({ searchParams }) {
   const periodFrom = jaar ? new Date(from.getFullYear(), 0, 1) : from;
   const periodTo = jaar ? new Date(from.getFullYear() + 1, 0, 1) : to;
 
-  const [{ data: pays }, { data: invoiceRows }, { data: coachLedger }, secrets] = await Promise.all([
+  const [{ data: pays }, { data: invoiceRows }, { data: coachLedger }, secrets, { data: people }] = await Promise.all([
     supabase
       .from("payments")
       .select("id, amount_cents, kind, description, status, created_at, invoice_no, member:profiles!payments_user_id_fkey(id, full_name, email)")
@@ -53,6 +53,7 @@ export default async function Financien({ searchParams }) {
       .order("starts_at"),
     supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
     getGymSecrets(admin, gym.id),
+    supabase.from("profiles").select("id, full_name, email, role").eq("gym_id", gym.id).order("full_name"),
   ]);
 
   const rows = pays || [];
@@ -127,6 +128,31 @@ export default async function Financien({ searchParams }) {
         <Kpi label="Btw-bedrag" value={euro(btw)} sub={`${btwPct}% · vzw sport`} />
         <Kpi label="Nog te ontvangen" value={euro(openTotaal + teFactureenTotaal)} sub={`${open.length} open post(en) + ${teFactureren.length} coach(es)`} warn={openTotaal + teFactureenTotaal > 0} />
       </div>
+
+      {/* Zelf een factuur opmaken — vrije post voor alles wat niet via Stripe loopt
+          (bv. sponsoring, verhuur van de zaal, een aparte afspraak met een coach of lid). */}
+      <details className="mt-6 rounded-2xl border-2 border-accent bg-accent/5 p-5 print:hidden">
+        <summary className="cursor-pointer text-sm font-black text-brand">🧾 Nieuwe factuur opmaken</summary>
+        <p className="mt-2 text-xs text-brand/55">
+          Kies voor wie, geef een omschrijving en het bedrag <b>incl. {btwPct}% btw</b>. De factuur verschijnt bij
+          <b> Open posten</b> — daar genereer je de PDF (met automatisch volgnummer) en vink je "ontvangen" aan zodra betaald.
+        </p>
+        <ActionForm action={createManualInvoice} className="mt-3 flex flex-wrap items-end gap-3">
+          <div className="min-w-[15rem]">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Voor wie</span>
+            <SearchSelect name="userId" required placeholder="Zoek lid of coach…" options={(people || []).map((p) => ({ value: p.id, label: `${p.full_name || p.email}${p.role !== "lid" ? ` (${p.role})` : ""}` }))} />
+          </div>
+          <label className="block flex-1 min-w-[14rem]">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Omschrijving (komt op de factuur)</span>
+            <input name="description" required placeholder="bv. Verhuur zaal · 2u privéles · sponsoring" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Bedrag € (incl. btw)</span>
+            <input name="amount_eur" required inputMode="decimal" placeholder="bv. 120,00" className="w-32 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+          </label>
+          <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">+ Maak factuur</button>
+        </ActionForm>
+      </details>
 
       {/* Omzet per soort */}
       <section className="mt-6 rounded-2xl border border-borderc bg-white p-6">
@@ -238,16 +264,17 @@ export default async function Financien({ searchParams }) {
                 const incl = p.amount_cents || 0;
                 const ex = Math.round(incl / (1 + btwPct / 100));
                 const isOpen = p.status === "onbetaald";
+                const isRefund = p.status === "refunded" || p.status === "terugbetaald";
                 return (
-                  <tr key={p.id}>
+                  <tr key={p.id} className={isRefund ? "opacity-60" : ""}>
                     <td className="py-2 whitespace-nowrap text-brand/60">{fmtDay(p.created_at)}</td>
                     <td className="py-2 font-semibold text-brand">{p.member?.full_name || "—"}</td>
                     <td className="py-2 text-brand/60">{KIND[p.kind] || p.kind}</td>
                     <td className="py-2 text-brand/50">{p.description || "—"}</td>
                     <td className="py-2 text-right text-brand/60">{euro(ex)}</td>
                     <td className="py-2 text-right text-brand/60">{euro(incl - ex)}</td>
-                    <td className="py-2 text-right font-black text-brand">{euro(incl)}</td>
-                    <td className={"py-2 text-xs font-bold " + (isOpen ? "text-red-600" : "text-accentdark")}>{isOpen ? "open" : "betaald"}</td>
+                    <td className={"py-2 text-right font-black " + (isRefund ? "text-brand/40 line-through" : "text-brand")}>{euro(incl)}</td>
+                    <td className={"py-2 text-xs font-bold " + (isOpen ? "text-red-600" : isRefund ? "text-brand/40" : "text-accentdark")}>{isOpen ? "open" : isRefund ? "terugbetaald" : "betaald"}</td>
                   </tr>
                 );
               })}

@@ -273,6 +273,11 @@ async function handleRefund(admin, charge) {
       await reverseLedger(admin, "coach_ledger", ref, charge.id);
       await reverseLedger(admin, "coach_credit_ledger", ref, charge.id);
     }
+    // Boekhouding: markeer de betaalrij(en) als terugbetaald — anders blijft een volledig
+    // gerefund bedrag als omzet meetellen in /beheer/betalingen en /beheer/financien.
+    if (refs.length) {
+      try { await admin.from("payments").update({ status: "refunded" }).in("stripe_id", refs); } catch (e) { console.error("refund: payments status not updated:", e?.message); }
+    }
     // Tell the member their money is on its way back (previously: nothing — they might still show up).
     try {
       if (!member) { const p = await profileFromCustomer(admin, charge.customer); member = p?.id || null; }

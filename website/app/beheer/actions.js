@@ -909,3 +909,28 @@ export async function invoiceCoachSessions(formData) {
   revalidatePath("/beheer/betalingen");
   return { ok: true, paymentId: pay?.id, message: `Factuur opgemaakt: ${list.length} sessies · € ${(total / 100).toFixed(2).replace(".", ",")} — staat als open post bij Betalingen.` };
 }
+
+// Zelf een factuur opmaken (vrije post): kies een lid/coach, omschrijving en bedrag (incl. btw).
+// Boekt een OPEN post onder Betalingen/Financiën; de factuur-PDF met volgnummer komt uit
+// /beheer/factuur?payment=<id> (assign_invoice_no kent het nummer toe bij de eerste render).
+export async function createManualInvoice(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const userId = formData.get("userId");
+  const description = String(formData.get("description") || "").trim().slice(0, 200);
+  const amount = Math.round(parseFloat(String(formData.get("amount_eur") || "").replace(",", ".")) * 100);
+  if (!userId) return { error: "Kies voor wie de factuur is." };
+  if (!description) return { error: "Geef een omschrijving (komt op de factuur)." };
+  if (!Number.isFinite(amount) || amount <= 0) return { error: "Geef een geldig bedrag (incl. btw)." };
+  const admin = createAdminClient();
+  const { data: who } = await admin.from("profiles").select("id, full_name").eq("id", userId).eq("gym_id", profile.gym_id).maybeSingle();
+  if (!who) return { error: "Onbekende persoon." };
+  const { data: pay, error: e } = await admin.from("payments").insert({
+    gym_id: profile.gym_id, user_id: userId, amount_cents: amount, kind: "overig",
+    description, status: "onbetaald",
+  }).select("id").single();
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/financien");
+  revalidatePath("/beheer/betalingen");
+  return { ok: true, paymentId: pay?.id, message: `Factuur voor ${who.full_name || "—"} aangemaakt (€ ${(amount / 100).toFixed(2).replace(".", ",")}) — staat bij Open posten, klik daar "Factuur" voor de PDF.` };
+}
