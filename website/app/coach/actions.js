@@ -110,7 +110,16 @@ export async function coachBookSession(formData) {
 
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
-  return { ok: true, message: clientId ? "Sessie geboekt ✓" : "Slot gereserveerd ✓ — voeg later een client toe" };
+  // Nieuw saldo meegeven in de bevestiging — een coach zag voorheen nooit dat hij negatief ging.
+  let saldoNote = "";
+  if (profile.coach_billing_mode === "credit") {
+    try {
+      const { data: led } = await supabase.from("coach_ledger").select("delta").eq("coach_id", userId);
+      const bal = (led || []).reduce((a, r) => a + (r.delta || 0), 0);
+      saldoNote = bal < 0 ? ` — ⚠ tegoed: ${bal} (€ ${Math.abs(bal) * 12} openstaand, koop bij)` : ` — tegoed: nog ${bal}`;
+    } catch {}
+  }
+  return { ok: true, message: (clientId ? "Sessie geboekt ✓" : "Slot gereserveerd ✓ — voeg later een client toe") + saldoNote };
 }
 
 // Assign a client to a slot the coach reserved earlier (the booking is currently the coach's own).
@@ -148,6 +157,7 @@ export async function coachBulkBook(formData) {
   const { supabase, profile, userId, error } = await requireCoach();
   if (error) return { error };
   const clientId = formData.get("clientId") || null; // null = reserveer enkel de slots (client optioneel)
+  const bulkClientName = String(formData.get("clientName") || "").trim().slice(0, 60); // externe client (niet op platform)
   const serviceId = formData.get("serviceId");
   const weekday = num(formData.get("weekday"), 1); // 0=zo..6=za
   const hour = numF(formData.get("hour"), 9);
@@ -178,6 +188,10 @@ export async function coachBulkBook(formData) {
   const seriesId = crypto.randomUUID();
   if (bookedIds.length) {
     try { await supabase.from("bookings").update({ series_id: seriesId }).in("id", bookedIds).eq("coach_id", userId); } catch {}
+    // Externe client (niet op platform): naam op elke boeking, zodat beheer ziet met wie de coach traint.
+    if (!clientId && bulkClientName) {
+      try { await createAdminClient().from("bookings").update({ notes: bulkClientName }).in("id", bookedIds).eq("coach_id", userId); } catch {}
+    }
   }
 
   try {

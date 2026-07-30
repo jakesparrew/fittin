@@ -168,7 +168,8 @@ export default async function CoachClienten() {
                 <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                   <Mini label="Laatst actief" value={fmtDay(lastActive[c.id])} />
                   <Mini label="Volgende" value={next ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(next.starts_at)) : "—"} />
-                  <Mini label="Sessietegoed" value={creditByClient[c.id] || 0} />
+                  {/* Beurten die deze client bij JOU prepaid heeft (coach_credit_ledger) — niet het gym-tegoed. */}
+                  <Mini label="Beurten bij jou" value={creditByClient[c.id] || 0} />
                 </div>
 
                 {next && <p className="mt-3 text-xs capitalize text-brand/50">Volgende sessie: {fmt(next.starts_at)} · {next.services?.name}</p>}

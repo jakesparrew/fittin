@@ -11,8 +11,9 @@ const items = [
   { href: "/coach/clienten", label: "Mijn clienten", icon: "◍" },
   { href: "/coach/berichten", label: "Berichten", icon: "✉" },
   { href: "/coach/betalingen", label: "Betalingen", icon: "◈" },
+  // "Events" verwijderd: die pagina is nog een ComingSoon-stub — een dood menu-item wekt een
+  // onafgewerkte indruk. Terugzetten zodra coach-events echt bestaan.
   { href: "/coach/programmas", label: "Programma's & oefeningen", icon: "✎" },
-  { href: "/coach/events", label: "Events", icon: "◆" },
   { href: "/coach/beschikbaarheid", label: "Beschikbaarheid", icon: "◷" },
 ];
 

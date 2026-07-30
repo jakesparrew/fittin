@@ -123,6 +123,18 @@ export default async function CoachDashboard({ searchParams }) {
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
 
+      {/* Negatief saldo = de coach boekte meer dan hij kocht. Boeken blokkeert bewust niet (flexibiliteit),
+          maar het openstaande bedrag moet luid zichtbaar zijn — dit stond nergens. */}
+      {mode === "credit" && creditBalance < 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
+          <div>
+            <p className="font-black text-red-600">⚠ Je sessietegoed staat op {creditBalance}</p>
+            <p className="mt-0.5 text-sm text-brand/70">Je boekte {Math.abs(creditBalance)} sessies meer dan je kocht — <b>€ {Math.abs(creditBalance) * 12} openstaand</b> aan de gym. Koop tegoed bij om dit aan te zuiveren.</p>
+          </div>
+          <a href="#tegoed" className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Tegoed bijkopen ↓</a>
+        </div>
+      )}
+
       {/* First-run checklist (Batch 2.8) — only for real coaches, not the beheerder "view as" mode. */}
       {!ctx.viewingAs && (
         <CoachChecklist steps={[
@@ -140,7 +152,15 @@ export default async function CoachDashboard({ searchParams }) {
           <h2 className="text-xl font-black text-brand">Sessie boeken met een client</h2>
           <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-black text-accentdark">Hoofdactie</span>
         </div>
-        <p className="mt-1 text-sm text-brand/60">Kies je client en moment. Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen. De prijs die je je client(en) aanrekent, reken je apart af.</p>
+        <p className="mt-1 text-sm text-brand/60">
+          Kies je client en moment.{" "}
+          {mode === "invoice"
+            ? <>Elke boeking wordt <strong>maandelijks gefactureerd ({euro(profile.coach_session_price_cents || 1200)}/sessie)</strong>, ongeacht het aantal personen.</>
+            : mode === "free"
+              ? <>Jouw boekingen zijn <strong>gratis</strong> (afspraak met de gym), ongeacht het aantal personen.</>
+              : <>Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen.</>}{" "}
+          De prijs die je je client(en) aanrekent, reken je apart af.
+        </p>
         <Link href="/coach/clienten" className="mt-1 inline-block text-xs font-bold text-accentdark hover:underline">Zie je je client niet in de lijst? Verbind je clienten hier →</Link>
         {members.length === 0 && (
           <div className="mt-3 rounded-2xl border-2 border-dashed border-accent/50 bg-accent/5 p-4 text-sm">
@@ -175,6 +195,9 @@ export default async function CoachDashboard({ searchParams }) {
             <input type="hidden" name="serviceId" value={ptService?.id || ""} />
             <Lbl t="Client (optioneel)">
               <SearchSelect name="clientId" placeholder="Zoek een lid… (of leeg = reserveren)" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+            </Lbl>
+            <Lbl t="Of naam (niet op platform)">
+              <input name="clientName" placeholder="bv. Sarah" className="w-36 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
             </Lbl>
             <Lbl t="Weekdag">
               <select name="weekday" defaultValue={1} className="rounded-lg border-2 border-borderc px-2 py-2 text-sm">
@@ -214,7 +237,7 @@ export default async function CoachDashboard({ searchParams }) {
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Aankomende sessies" value={upcoming.length} />
         {mode === "credit" ? (
-          <Stat label="Coach-sessies (saldo)" value={creditBalance} accent={creditBalance > 0 && creditBalance <= 2} />
+          <Stat label={creditBalance < 0 ? `Saldo (€ ${Math.abs(creditBalance) * 12} openstaand)` : "Coach-sessies (saldo)"} value={creditBalance} accent={creditBalance > 0 && creditBalance <= 2} danger={creditBalance <= 0} />
         ) : mode === "invoice" ? (
           <Stat label="Te factureren (deze maand)" value={euro(monthCharges)} />
         ) : (
@@ -280,6 +303,72 @@ export default async function CoachDashboard({ searchParams }) {
         </div>
       )}
 
+      {/* Interactive schedule — dagelijks werk, dus vóór referral/activiteit/tools (belangrijk eerst). */}
+      <div className="mt-6">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-xl font-black text-brand">Planning</h2>
+          <div className="flex items-center gap-2 text-sm font-bold">
+            {planW > 0 ? (
+              <Link href={`/coach?w=${planW - 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">←</Link>
+            ) : (
+              <span className="rounded-full border-2 border-borderc px-4 py-1.5 opacity-30">←</span>
+            )}
+            <span className="text-brand/60">{schedDays[0].dayMonth} – {schedDays[13].dayMonth}</span>
+            <Link href={`/coach?w=${planW + 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">→</Link>
+          </div>
+        </div>
+        <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={ptServices} />
+      </div>
+
+      {/* Upcoming sessions */}
+      <section className="mt-6">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-black text-brand">Aankomende sessies</h2>
+          <Link href="/coach/agenda" className="text-sm font-bold text-accentdark">Volledige agenda →</Link>
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="mt-4 text-sm text-brand/50">Nog geen geplande sessies.</p>
+        ) : (
+          <div className="mt-4 space-y-2">
+            {upcoming.slice(0, 8).map((b) => {
+              const reserved = b.user_id === userId; // slot booked without a client yet
+              return (
+              <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
+                <div>
+                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
+                  <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
+                    {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
+                  </span>
+                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
+                </div>
+              </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      {/* Coaching tools — build your own exercises + program templates, assign to clients */}
+      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+        <Link href="/coach/programmas" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
+          <div>
+            <p className="font-bold text-brand">Programma's</p>
+            <p className="mt-0.5 text-xs text-brand/50">Maak je eigen templates en wijs ze toe aan clienten.</p>
+          </div>
+          <span className="text-accentdark">→</span>
+        </Link>
+        <Link href="/coach/oefeningen" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
+          <div>
+            <p className="font-bold text-brand">Oefeningen</p>
+            <p className="mt-0.5 text-xs text-brand/50">Bouw je eigen oefeningenbibliotheek op.</p>
+          </div>
+          <span className="text-accentdark">→</span>
+        </Link>
+      </div>
+
       {/* Referral — bring members along, earn a free invite session (no cash commission) */}
       <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -322,81 +411,15 @@ export default async function CoachDashboard({ searchParams }) {
           </div>
         </div>
       )}
-
-      {/* Coaching tools — build your own exercises + program templates, assign to clients */}
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Link href="/coach/programmas" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
-          <div>
-            <p className="font-bold text-brand">Programma's</p>
-            <p className="mt-0.5 text-xs text-brand/50">Maak je eigen templates en wijs ze toe aan clienten.</p>
-          </div>
-          <span className="text-accentdark">→</span>
-        </Link>
-        <Link href="/coach/oefeningen" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
-          <div>
-            <p className="font-bold text-brand">Oefeningen</p>
-            <p className="mt-0.5 text-xs text-brand/50">Bouw je eigen oefeningenbibliotheek op.</p>
-          </div>
-          <span className="text-accentdark">→</span>
-        </Link>
-      </div>
-
-      {/* Interactive schedule */}
-      <div className="mt-8">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-black text-brand">Planning</h2>
-          <div className="flex items-center gap-2 text-sm font-bold">
-            {planW > 0 ? (
-              <Link href={`/coach?w=${planW - 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">←</Link>
-            ) : (
-              <span className="rounded-full border-2 border-borderc px-4 py-1.5 opacity-30">←</span>
-            )}
-            <span className="text-brand/60">{schedDays[0].dayMonth} – {schedDays[13].dayMonth}</span>
-            <Link href={`/coach?w=${planW + 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">→</Link>
-          </div>
-        </div>
-        <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={ptServices} />
-      </div>
-
-      {/* Upcoming sessions */}
-      <section className="mt-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-black text-brand">Aankomende sessies</h2>
-          <Link href="/coach/agenda" className="text-sm font-bold text-accentdark">Volledige agenda →</Link>
-        </div>
-        {upcoming.length === 0 ? (
-          <p className="mt-4 text-sm text-brand/50">Nog geen geplande sessies.</p>
-        ) : (
-          <div className="mt-4 space-y-2">
-            {upcoming.slice(0, 8).map((b) => {
-              const reserved = b.user_id === userId; // slot booked without a client yet
-              return (
-              <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
-                <div>
-                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
-                  <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
-                    {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
-                  </span>
-                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
-                </div>
-              </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
 
-function Stat({ label, value, accent }) {
+function Stat({ label, value, accent, danger }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
-      <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-2xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+    <div className={"rounded-2xl border bg-white p-5 " + (danger ? "border-red-300 bg-red-50/50" : "border-borderc")}>
+      <p className={"text-xs font-bold uppercase tracking-widest " + (danger ? "text-red-500" : "text-lav")}>{label}</p>
+      <p className={"mt-2 text-2xl font-black " + (danger ? "text-red-600" : accent ? "text-accentdark" : "text-brand")}>{value}</p>
     </div>
   );
 }

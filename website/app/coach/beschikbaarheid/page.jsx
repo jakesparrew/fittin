@@ -26,7 +26,10 @@ export default async function Beschikbaarheid() {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Beschikbaarheid</h1>
-      <p className="mt-1 text-sm text-brand/50">Stel in wanneer leden jou kunnen boeken voor personal training.</p>
+      <p className="mt-1 text-sm text-brand/50">
+        Deze uren verschijnen op je <b>publieke coachprofiel</b> zodat leden weten wanneer je werkt.
+        Boeken gebeurt niet rechtstreeks — geïnteresseerden vragen een gratis proeftraining aan of contacteren je.
+      </p>
 
       <ActionForm action={addOwnAvailability} success="Beschikbaarheid toegevoegd ✓" className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
         <Lbl t="Dag">
