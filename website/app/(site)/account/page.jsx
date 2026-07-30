@@ -139,9 +139,6 @@ export default async function AccountPage({ searchParams }) {
   const upcomingPaid = upcoming.filter(isSettled);
   const nextSession = upcomingPaid[0]; // sorted ascending by starts_at
   const bookedCount = all.filter((b) => b.status === "bevestigd").length; // lifetime confirmed (scoreboard)
-  // Honest membership nudge (Batch 2.3): how many paid single ("los") sessions in the last 30 days?
-  const since30 = now - 30 * 86400000;
-  const losCount = (bookings || []).filter((b) => b.payment_source === "los" && b.paid && b.created_at && new Date(b.created_at).getTime() >= since30).length;
   // Abo-kandidaat (automatische nudge): trainde ≥3× in 60 dagen op eigen kosten (los mét prijs, of
   // beurtenkaart) zonder abonnement. Admin-ingeplande gratis sessies (los + € 0) tellen niet mee.
   const since60 = now - 60 * 86400000;
@@ -395,10 +392,12 @@ export default async function AccountPage({ searchParams }) {
             <p className="text-sm font-semibold text-accentdark">
               Betaling gelukt — je boeking is bevestigd. Je ontvangt een bevestiging per e-mail.
             </p>
-            {!membership && losCount >= 2 && (
+            {/* S4 checkout-nudge: zelfde 60d-berekening als de banner + de suggestie-mail, zodat het lid
+                overal hetzelfde bedrag ziet. Vanaf 2 sessies al — dit moment (net betaald) is het meest ontvankelijk. */}
+            {!membership && !aboPastDue && nudgeSessions >= 2 && (
               <p className="mt-2 text-sm text-brand/70">
-                Dit was je {losCount}e losse sessie deze maand (€{losCount * 15}). Met de beurtenkaart betaalde je ±€{((losCount * 1364) / 100).toFixed(2).replace(".", ",")}, met het abo €{losCount * 12}.{" "}
-                <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Bekijk de opties →</Link>
+                Dat waren al {nudgeSessions} zelfbetaalde sessies in 60 dagen. Met het Member-abonnement (€ 12/sessie + elke maand 1 gratis) was dat ≈ € {nudgeSaving} voordeel.{" "}
+                <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Bekijk het abonnement →</Link>
               </p>
             )}
             {profile?.referral_code && (

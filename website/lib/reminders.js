@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendSessionReminder, sendAccessCode, sendCreditsExpiring, sendFirstSessionFollowup, sendGuestFollowup } from "@/lib/email";
+import { sendSessionReminder, sendAccessCode, sendCreditsExpiring, sendFirstSessionFollowup, sendGuestFollowup, sendAboSuggestion } from "@/lib/email";
 import { getNukiConfig, ensureBookingKeypadCode, getLockHealth } from "@/lib/nuki";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import { notify } from "@/lib/notify";
@@ -251,4 +251,43 @@ export async function sendDueAccessCodes() {
     }
   }
   return { sent, failures };
+}
+
+// S5 — abo-suggestie-sweep (dagelijkse activatie-cron): leden met ≥3 zelfbetaalde sessies
+// (los mét prijs, of beurtenkaart) in 60 dagen en zonder abo krijgen één visuele mail met hun
+// echte besparing. Zelfde regel als de /account-banner. Max 1 mail/60 dagen (email_log-dedupe),
+// past_due telt als "heeft al een abo", admin-comp-sessies (los + € 0) tellen niet mee.
+export async function sendAboSuggestions() {
+  const admin = createAdminClient();
+  const since60 = new Date(Date.now() - 60 * 86400000).toISOString();
+  const [{ data: leden }, { data: mems }, { data: bks }, { data: logged }] = await Promise.all([
+    admin.from("profiles").select("id, email, full_name").eq("role", "lid").not("email", "is", null),
+    admin.from("memberships").select("user_id, status").in("status", ["actief", "past_due"]),
+    admin.from("bookings").select("user_id, payment_source, price_cents, paid").eq("status", "bevestigd").gte("starts_at", since60),
+    admin.from("email_log").select("to_email").eq("kind", "abo_suggestie").gte("created_at", since60),
+  ]);
+  const hasAbo = new Set((mems || []).map((m) => m.user_id));
+  const recent = new Set((logged || []).map((l) => (l.to_email || "").toLowerCase()));
+  const stats = {};
+  for (const b of bks || []) {
+    if (!b.user_id) continue;
+    if (b.payment_source === "los" && (b.price_cents || 0) > 0 && b.paid) (stats[b.user_id] ||= { los: 0, credit: 0 }).los++;
+    else if (b.payment_source === "credit") (stats[b.user_id] ||= { los: 0, credit: 0 }).credit++;
+  }
+  let sent = 0;
+  for (const m of leden || []) {
+    if (sent >= 20) break; // safety cap per run
+    const s = stats[m.id];
+    if (!s) continue;
+    const sessions = s.los + s.credit;
+    if (sessions < 3 || hasAbo.has(m.id) || recent.has((m.email || "").toLowerCase())) continue;
+    const saving = Math.round(s.los * 3 + s.credit * 1.64 + 24); // €3/losse sessie + €1,64/kaartsessie + 2 gratis maandsessies
+    try {
+      const r = await sendAboSuggestion({ to: m.email, name: m.full_name, sessions, losCount: s.los, creditCount: s.credit, saving });
+      if (r?.ok !== false) sent++;
+    } catch (e) {
+      console.error("abo suggestion failed:", m.id, e?.message);
+    }
+  }
+  return sent;
 }

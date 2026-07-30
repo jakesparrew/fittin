@@ -769,3 +769,59 @@ export async function sendBuddyInvite({ to, fromName, refCode }) {
     })
   );
 }
+
+// S5 — persoonlijke abo-suggestie voor leden die vaak op eigen kosten trainen zonder abonnement.
+// Visueel (e-mail-safe, inline CSS): besparing-hero, sessie-blokjes, prijsvergelijker met de
+// Member-kolom uitgelicht. Max 1×/60 dagen per lid (afgedwongen door de caller via email_log).
+export async function sendAboSuggestion({ to, name, sessions, losCount, creditCount, saving }) {
+  const shown = Math.min(sessions, 12);
+  const blocks = Array.from({ length: shown })
+    .map(() => `<td style="padding:2px"><div style="width:22px;height:22px;border-radius:6px;background:#5FDA6B"></div></td>`)
+    .join("");
+  const extra = sessions > shown ? `<td style="padding:2px 6px;font-weight:800;color:#33B24A;font-size:13px">+${sessions - shown}</td>` : "";
+  const parts = [
+    losCount ? `${losCount} los betaald` : null,
+    creditCount ? `${creditCount} met beurtenkaart` : null,
+  ].filter(Boolean).join(" · ");
+  const body = `
+    <div style="margin:14px 0 4px;background:#f0fdf1;border:2px solid #5FDA6B;border-radius:14px;padding:16px 18px;text-align:center">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#33B24A;font-weight:bold">Jouw voordeel met het abonnement</div>
+      <div style="font-size:34px;font-weight:800;color:#22194F;margin-top:4px">&asymp; &euro; ${saving}</div>
+      <div style="font-size:12px;color:#6b6685;margin-top:2px">berekend op jouw eigen laatste 60 dagen</div>
+    </div>
+    <p style="margin:16px 0 6px;font-size:14px;color:#22194F"><b>Jouw sessies (laatste 60 dagen)</b></p>
+    <table style="border-collapse:collapse"><tr>${blocks}${extra}</tr></table>
+    <p style="margin:4px 0 0;font-size:12px;color:#6b6685">${sessions} sessies · ${parts}</p>
+    <p style="margin:18px 0 6px;font-size:14px;color:#22194F"><b>Wat kost een sessie jou?</b></p>
+    <table style="border-collapse:separate;border-spacing:6px 0;width:100%;text-align:center">
+      <tr>
+        <td style="width:33%;background:#f6f5fb;border-radius:12px;padding:12px 6px;vertical-align:top">
+          <div style="font-size:12px;color:#6b6685">Losse sessie</div>
+          <div style="font-size:20px;font-weight:800;color:#22194F">&euro; 15</div>
+        </td>
+        <td style="width:33%;background:#f6f5fb;border-radius:12px;padding:12px 6px;vertical-align:top">
+          <div style="font-size:12px;color:#6b6685">Beurtenkaart</div>
+          <div style="font-size:20px;font-weight:800;color:#22194F">&euro; 13,64</div>
+        </td>
+        <td style="width:33%;background:#22194F;border-radius:12px;padding:12px 6px;vertical-align:top">
+          <div style="font-size:11px;color:#C6F24E;font-weight:bold">MEMBER &middot; &euro; 12/mnd</div>
+          <div style="font-size:20px;font-weight:800;color:#ffffff">&euro; 12</div>
+          <div style="font-size:11px;color:#B2ADC2">+ elke maand 1 sessie gratis</div>
+        </td>
+      </tr>
+    </table>
+    <p style="margin:16px 0 0;font-size:13px;color:#6b6685">Maandelijks opzegbaar, geen verplichtingen — je boekt gewoon zoals nu, alleen voordeliger. Je krijgt zo'n tip hoogstens één keer per twee maanden.</p>`;
+  return send(
+    to,
+    `Jij traint vaak bij Fittin' — member zijn scheelt je ± € ${saving}`,
+    shell({
+      title: "Jij traint vaak. Word member? 💪",
+      intro: `Hallo ${esc(name) || "daar"}, je trainde <b>${sessions}×</b> in de laatste 60 dagen — sterk bezig! Daarmee is het Member-abonnement voor jou de voordeligste formule:`,
+      body,
+      cta: { href: `${SITE}/lidmaatschap`, label: "Bekijk het abonnement →" },
+    }),
+    undefined,
+    undefined,
+    "abo_suggestie"
+  );
+}

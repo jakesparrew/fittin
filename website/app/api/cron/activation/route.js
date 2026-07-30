@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { runAllActivations } from "@/lib/activation";
-import { sendDueReminders, sendCreditExpiryWarnings, sendFirstSessionFollowups, sendGuestFollowups } from "@/lib/reminders";
+import { sendDueReminders, sendCreditExpiryWarnings, sendFirstSessionFollowups, sendGuestFollowups, sendAboSuggestions } from "@/lib/reminders";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -27,16 +27,18 @@ export async function GET(req) {
   try { reminders = await sendDueReminders(); } catch (e) { console.error("cron reminders failed:", e?.message); }
   try { await sendCreditExpiryWarnings(); } catch (e) { console.error("cron credit-expiry warnings failed:", e?.message); }
   // Lifecycle spine (Batch 2): first-session follow-up + guest→member funnel (both idempotent).
-  let firstFollowups = 0, guestFollowups = 0;
+  let firstFollowups = 0, guestFollowups = 0, aboSuggestions = 0;
   try { firstFollowups = await sendFirstSessionFollowups(); } catch (e) { console.error("cron first-session followups failed:", e?.message); }
   try { guestFollowups = await sendGuestFollowups(); } catch (e) { console.error("cron guest followups failed:", e?.message); }
+  // S5 — abo-suggestie voor veelboekers zonder abo (max 1 mail/60d per lid, email_log-dedupe).
+  try { aboSuggestions = await sendAboSuggestions(); } catch (e) { console.error("cron abo suggestions failed:", e?.message); }
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Health heartbeat (Batch 6.5).
-  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups } }); } catch {}
+  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions } }); } catch {}
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.
   after(async () => {
     try { await fetch(`${SITE}/api/queue/process`, { cache: "no-store", headers: { Authorization: `Bearer ${secret}` } }); } catch {}
   });
-  return NextResponse.json({ ran: results.length, sent, reminders, firstFollowups, guestFollowups, results });
+  return NextResponse.json({ ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, results });
 }
