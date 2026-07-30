@@ -129,8 +129,8 @@ export default async function BeheerDashboard() {
     })),
     ...candidates.map(([uid, n]) => ({
       icon: "⭐", tone: "tip",
-      title: `Stel ${nameOf.get(uid)} een abonnement voor`,
-      sub: `${n} sessies (los/kaart) in 60 dagen zonder abo — met een abo is elke sessie € 12.`,
+      title: `Abo-kandidaat: ${nameOf.get(uid)}`,
+      sub: `${n} sessies (los/kaart) in 60 dagen zonder abo. De app toont dit lid automatisch een abo-voorstel met zijn besparing op /account — een persoonlijk woordje in de gym werkt er bovenop het best.`,
       href: "/beheer/leden",
     })),
   ];
@@ -162,16 +162,16 @@ export default async function BeheerDashboard() {
           <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/50">Niets dringends — alle abo's betalen en er zijn geen opzeggingen. 🎉</p>
         ) : (
           <div className="mt-3 space-y-2">
-            {personActions.map((a, i) => (
-              <Link key={i} href={a.href} className={"flex items-start gap-3 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm " + (a.tone === "warn" ? "border-amber-300 bg-amber-50" : "border-accent/40 bg-accent/5")}>
-                <span className="text-xl leading-none">{a.icon}</span>
-                <span className="min-w-0">
-                  <span className="block font-black text-brand">{a.title}</span>
-                  <span className="mt-0.5 block text-sm text-brand/60">{a.sub}</span>
-                </span>
-                <span className="ml-auto self-center font-black text-brand/30">→</span>
-              </Link>
-            ))}
+            {/* Cap at 3 so a long queue never buries the week/month numbers; the rest folds open. */}
+            {personActions.slice(0, 3).map((a, i) => <ActionRow key={i} a={a} />)}
+            {personActions.length > 3 && (
+              <details className="rounded-2xl border border-borderc bg-white">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-brand/60 transition hover:text-brand">+ nog {personActions.length - 3} actiepunten — toon alles</summary>
+                <div className="space-y-2 p-3 pt-0">
+                  {personActions.slice(3).map((a, i) => <ActionRow key={i} a={a} />)}
+                </div>
+              </details>
+            )}
           </div>
         )}
         {/* Kleinere werklijst-tellers (waren vroeger grote kaarten) */}
@@ -263,6 +263,19 @@ export default async function BeheerDashboard() {
         </div>
       </section>
     </div>
+  );
+}
+
+function ActionRow({ a }) {
+  return (
+    <Link href={a.href} className={"flex items-start gap-3 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm " + (a.tone === "warn" ? "border-amber-300 bg-amber-50" : "border-accent/40 bg-accent/5")}>
+      <span className="text-xl leading-none">{a.icon}</span>
+      <span className="min-w-0">
+        <span className="block font-black text-brand">{a.title}</span>
+        <span className="mt-0.5 block text-sm text-brand/60">{a.sub}</span>
+      </span>
+      <span className="ml-auto self-center font-black text-brand/30">→</span>
+    </Link>
   );
 }
 

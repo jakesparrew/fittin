@@ -67,7 +67,7 @@ export default async function AccountPage({ searchParams }) {
     , // expire rpc result (ignored)
     { data: bookings },
     { data: ledger },
-    { data: membership },
+    { data: myMems },
     { data: invitedRows },
     { data: coachLinks },
     { data: payReqs },
@@ -81,7 +81,7 @@ export default async function AccountPage({ searchParams }) {
     supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
     supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
     supabase.rpc("credits_balance_detail", { p_user: user.id }),
-    supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).eq("status", "actief").maybeSingle(),
+    supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).in("status", ["actief", "past_due"]),
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
     admin.from("coach_clients").select("id, status, requested_by, coach:profiles!coach_clients_coach_id_fkey(id, full_name, email)").eq("client_id", user.id),
     supabase.from("coach_payment_requests").select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)").eq("client_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
@@ -100,6 +100,10 @@ export default async function AccountPage({ searchParams }) {
   // credits_balance_detail returns one row: { balance, next_expiry, expiring }.
   const creditDetail = (Array.isArray(ledger) ? ledger[0] : ledger) || {};
   const credits = creditDetail.balance ?? 0;
+  // Active abo drives the € 12 UI; past_due suppresses the "word member"-nudge (they HAVE an abo,
+  // their payment is just failing — Stripe retries + they already got the fix-your-card mail).
+  const membership = (myMems || []).find((m) => m.status === "actief") || null;
+  const aboPastDue = (myMems || []).some((m) => m.status === "past_due");
   const invitedSessions = (invitedRows || [])
     .map((r) => r.booking)
     // Only surface an invited session once the booker actually paid (or it's a free/credit session).
@@ -138,6 +142,14 @@ export default async function AccountPage({ searchParams }) {
   // Honest membership nudge (Batch 2.3): how many paid single ("los") sessions in the last 30 days?
   const since30 = now - 30 * 86400000;
   const losCount = (bookings || []).filter((b) => b.payment_source === "los" && b.paid && b.created_at && new Date(b.created_at).getTime() >= since30).length;
+  // Abo-kandidaat (automatische nudge): trainde ≥3× in 60 dagen op eigen kosten (los mét prijs, of
+  // beurtenkaart) zonder abonnement. Admin-ingeplande gratis sessies (los + € 0) tellen niet mee.
+  const since60 = now - 60 * 86400000;
+  const nudgeLos = (bookings || []).filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= since60 && b.payment_source === "los" && (b.price_cents || 0) > 0 && b.paid).length;
+  const nudgeCredit = (bookings || []).filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= since60 && b.payment_source === "credit").length;
+  const nudgeSessions = nudgeLos + nudgeCredit;
+  // Besparing t.o.v. wat ze betaalden: los € 15→€ 12, kaart ± € 13,64→€ 12, + 2 inclusieve sessies (€ 24) over 60d.
+  const nudgeSaving = Math.round(nudgeLos * 3 + nudgeCredit * 1.64 + 24);
   // First-visit state (Batch 2.6): has this member actually trained yet? Drives the "eerste bezoek" card.
   const hasVisited = all.some((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() < now);
   const gymAddress = gym?.address || "Aannemersstraat 186, 9040 Gent";
@@ -415,6 +427,32 @@ export default async function AccountPage({ searchParams }) {
             <form action={openBillingPortal}>
               <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Beheer abonnement</button>
             </form>
+          </div>
+        )}
+
+        {/* Automatische abo-nudge: veelboeker zonder abo ziet zijn eigen cijfers + echte besparing.
+            past_due wordt uitgesloten (die heeft al een abo — enkel de betaling hapert). */}
+        {!membership && !aboPastDue && nudgeSessions >= 3 && (
+          <div className="mt-6 rounded-3xl border-2 border-accent bg-accent/10 p-6">
+            <p className="font-black text-brand">💡 Jij traint vaak — het abonnement is voor jou voordeliger</p>
+            <p className="mt-1 text-sm text-brand/70">
+              Je trainde <b>{nudgeSessions}×</b> in de laatste 60 dagen. Met het Member-abonnement (€ 12/mnd) betaal je <b>€ 12 per sessie</b> én
+              krijg je <b>elke maand 1 sessie gratis</b> — voor jou was dat ≈ <b>€ {nudgeSaving} voordeel</b> geweest.
+            </p>
+            <Link href="/lidmaatschap" className="mt-3 inline-block rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">Word member →</Link>
+          </div>
+        )}
+
+        {/* Automatische abo-nudge: wie vaak op eigen kosten traint ziet zijn eigen cijfers + besparing.
+            Zelfde signaal als de "abo-kandidaat"-lijst op het beheer-dashboard — de app verkoopt mee. */}
+        {!membership && !aboPastDue && nudgeSessions >= 3 && (
+          <div className="mt-6 rounded-3xl border-2 border-accent bg-accent/10 p-6">
+            <p className="font-black text-brand">💡 Jij traint vaak — het abonnement is voor jou goedkoper</p>
+            <p className="mt-1 text-sm text-brand/70">
+              Je trainde <b>{nudgeSessions}×</b> in de laatste 60 dagen. Met het Member-abonnement (€ 12/mnd) betaal je <b>€ 12 per sessie</b> én
+              krijg je <b>elke maand 1 sessie gratis</b> — voor jou was dat ≈ <b>€ {nudgeSaving} voordeel</b> geweest.
+            </p>
+            <Link href="/lidmaatschap" className="mt-3 inline-block rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">Word member →</Link>
           </div>
         )}
 

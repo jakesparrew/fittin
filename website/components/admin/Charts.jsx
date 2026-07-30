@@ -1,9 +1,14 @@
 // Dependency-free SVG charts (server-rendered). Brand: navy #22194f, lime #5fda6b.
 
-// Vertical bar chart with labels under each bar.
+// Vertical bar chart with labels under each bar. Sparse charts (≤14 bars, e.g. monthly) show a
+// value + label per bar; dense charts (daily, 30+ bars) skip per-bar values and thin the labels —
+// the old version overlaid the value row on the label row with a negative margin, which turned
+// 30-day charts into unreadable mush.
 export function BarChart({ data, height = 140, format = (v) => v, accentLast = true }) {
   const max = Math.max(1, ...data.map((d) => d.value));
   const bw = 100 / data.length;
+  const dense = data.length > 14;
+  const step = dense ? Math.ceil(data.length / 7) : 1; // dense: ~7 evenly spaced date labels
   return (
     <div>
       <svg viewBox={`0 0 100 ${100}`} preserveAspectRatio="none" className="w-full" style={{ height }}>
@@ -18,11 +23,17 @@ export function BarChart({ data, height = 140, format = (v) => v, accentLast = t
           );
         })}
       </svg>
-      <div className="mt-1 flex text-center text-[10px] font-bold text-brand/40">
-        {data.map((d, i) => <div key={i} style={{ width: bw + "%" }}>{d.label}</div>)}
-      </div>
-      <div className="-mt-4 flex text-center text-[10px] font-black text-brand/70">
-        {data.map((d, i) => <div key={i} style={{ width: bw + "%" }}>{d.value ? format(d.value) : ""}</div>)}
+      {!dense && (
+        <div className="mt-1 flex text-center text-[10px] font-black text-brand/70">
+          {data.map((d, i) => <div key={i} style={{ width: bw + "%" }}>{d.value ? format(d.value) : ""}</div>)}
+        </div>
+      )}
+      <div className="mt-0.5 flex text-[10px] font-bold text-brand/40">
+        {data.map((d, i) => (
+          <div key={i} style={{ width: bw + "%" }} className="overflow-visible whitespace-nowrap text-center">
+            {dense ? (i % step === 0 ? d.label : "") : d.label}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -41,7 +41,7 @@ export default async function Verkeer({ searchParams }) {
     const key = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d);
     series.push({ label: fmtDay(d), value: n(byDay.get(key)?.views) });
   }
-  const chartData = days > 31 ? series.map((x, i) => ({ ...x, label: i % 7 === 0 ? x.label : "" })) : series;
+  const chartData = series; // BarChart thins labels itself on dense (daily) data
 
   const trend = (cur, old) => { cur = n(cur); old = n(old); if (!old) return cur ? "▲ nieuw" : "—"; const d = Math.round(((cur - old) / old) * 100); return (d >= 0 ? "▲ +" : "▼ ") + d + "% vs vorige periode"; };
   const totalDev = n(s.mobile) + n(s.desktop);

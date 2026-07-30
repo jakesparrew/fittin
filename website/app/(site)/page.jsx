@@ -92,11 +92,12 @@ export default async function Home() {
             </p>
           </Reveal>
           <Reveal eager delay={240}>
-            <div className="mt-10 flex flex-wrap gap-4">
-              <Link href="/login?mode=signup" className="shine rounded-full bg-accent px-8 py-4 text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40">
+            {/* Mobile: full-width stacked pills (auto-width pills wrapped awkwardly just under the fold). */}
+            <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
+              <Link href="/login?mode=signup" className="shine w-full rounded-full bg-accent px-8 py-4 text-center text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40 sm:w-auto">
                 Maak gratis account
               </Link>
-              <Link href="/boeken" className="rounded-full border-2 border-white/30 px-8 py-4 text-lg font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10">
+              <Link href="/boeken" className="w-full rounded-full border-2 border-white/30 px-8 py-4 text-center text-lg font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10 sm:w-auto">
                 Reserveer de gym
               </Link>
             </div>
@@ -223,11 +224,11 @@ export default async function Home() {
             ))}
           </div>
           <Reveal delay={120}>
-            <div className="mt-12 flex flex-wrap items-center gap-4">
-              <Link href="/login?mode=signup" className="inline-flex items-center gap-2 rounded-full bg-accent px-8 py-4 text-lg font-black text-brand transition hover:-translate-y-0.5 hover:opacity-90">
+            <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
+              <Link href="/login?mode=signup" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-8 py-4 text-lg font-black text-brand transition hover:-translate-y-0.5 hover:opacity-90 sm:w-auto">
                 Maak gratis account <span aria-hidden>→</span>
               </Link>
-              <Link href="/personal-training" className="inline-flex items-center gap-2 rounded-full border-2 border-white/30 px-7 py-4 font-bold text-white transition hover:border-white hover:bg-white/10">
+              <Link href="/personal-training" className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-white/30 px-7 py-4 text-center font-bold text-white transition hover:border-white hover:bg-white/10 sm:w-auto">
                 Liever met coach? Gratis proeftraining
               </Link>
             </div>

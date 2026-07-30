@@ -27,13 +27,15 @@ export default async function Analytics() {
   const d30 = new Date(now.getTime() - 30 * 86400000);
   const d60 = new Date(now.getTime() - 60 * 86400000);
 
-  const [{ data: payments }, { data: bookings }, { data: members }, { count: activeMemberships }, { count: subCount }] = await Promise.all([
+  const [{ data: payments }, { data: bookings }, { data: members }, { data: memRows }, { count: subCount }] = await Promise.all([
     supabase.from("payments").select("amount_cents, kind, created_at").eq("gym_id", gym.id).gte("created_at", yearAgo.toISOString()),
     supabase.from("bookings").select("starts_at, status, user_id, coach_id, created_at").eq("gym_id", gym.id).gte("starts_at", yearAgo.toISOString()),
     supabase.from("profiles").select("id, full_name, role, created_at").eq("gym_id", gym.id),
-    supabase.from("memberships").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "actief"),
+    supabase.from("memberships").select("user_id, status").eq("gym_id", gym.id),
     supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "active"),
   ]);
+  const subStatus = new Map((memRows || []).map((m) => [m.user_id, m.status]));
+  const activeMemberships = (memRows || []).filter((m) => m.status === "actief").length;
 
   const pays = payments || [];
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
@@ -161,10 +163,22 @@ export default async function Analytics() {
         </Card>
       </div>
 
-      {/* Tops */}
+      {/* Tops — the abo tag turns this from trivia into a conversion list: frequent members
+          WITHOUT an abo are exactly who to pitch (the app already nudges them on /account). */}
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <Card title="Meest actieve leden">
-          <TopList rows={topMembers.map(([id, n]) => ({ name: nameById.get(id), value: n + " sessies" }))} empty="Nog geen sessies." />
+        <Card title="Meest actieve leden" subtitle="wie vaak komt zonder abo = je beste abo-kandidaat">
+          <TopList
+            rows={topMembers.map(([id, n]) => {
+              const st = subStatus.get(id);
+              return {
+                name: nameById.get(id),
+                value: n + " sessies",
+                tag: st === "actief" ? "★ Abo" : st === "past_due" ? "⚠ abo" : "geen abo",
+                tagTone: st === "actief" ? "ok" : st === "past_due" ? "warn" : "amber",
+              };
+            })}
+            empty="Nog geen sessies."
+          />
         </Card>
         <Card title="Drukste coaches">
           <TopList rows={topCoaches.map(([id, n]) => ({ name: nameById.get(id), value: n + " sessies" }))} empty="Nog geen coach-sessies." />
@@ -177,18 +191,20 @@ export default async function Analytics() {
           <p className="mb-3 text-sm text-brand/60">Piek: <span className="font-bold text-brand">{({ ma: "maandag", di: "dinsdag", wo: "woensdag", do: "donderdag", vr: "vrijdag", za: "zaterdag", zo: "zondag" })[peakDay[0]]}</span> en rond <span className="font-bold text-brand">{peakHour?.[0]}:00</span>.</p>
         )}
         <div className="overflow-x-auto">
-          <table className="text-xs">
-            <thead><tr className="text-brand/40"><th className="px-2 py-1"></th>{WD.map((d) => <th key={d} className="px-2 py-1 font-bold uppercase">{d}</th>)}</tr></thead>
+          {/* Full-width grid — fixed 40px-wide cells left ~70% of the card empty. */}
+          <table className="w-full table-fixed text-xs">
+            <thead><tr className="text-brand/40"><th className="w-12 px-2 py-1"></th>{WD.map((d) => <th key={d} className="px-2 py-1 font-bold uppercase">{d}</th>)}</tr></thead>
             <tbody>
               {showHours.map((h) => (
                 <tr key={h}>
-                  <td className="px-2 py-0.5 text-right text-[10px] font-bold text-brand/40">{h}:00</td>
+                  <td className="w-12 px-2 py-0.5 text-right text-[10px] font-bold text-brand/40">{h}:00</td>
                   {WD.map((d) => {
                     const c = grid[`${d}-${h}`] || 0; const intensity = gmax ? c / gmax : 0;
                     return (
-                      <td key={d} className="px-1 py-0.5">
-                        <div className="flex h-5 w-10 items-center justify-center rounded text-[10px] font-bold"
-                          style={{ backgroundColor: c ? `rgba(95,218,107,${0.15 + intensity * 0.85})` : "#f5f6fa", color: intensity > 0.5 ? "#22194f" : "#9b97ab" }}>
+                      <td key={d} className="px-0.5 py-0.5">
+                        <div className="flex h-6 w-full items-center justify-center rounded-md text-[10px] font-bold"
+                          style={{ backgroundColor: c ? `rgba(95,218,107,${0.15 + intensity * 0.85})` : "#f5f6fa", color: intensity > 0.5 ? "#22194f" : "#9b97ab" }}
+                          title={c ? `${c} boekingen` : ""}>
                           {c || ""}
                         </div>
                       </td>
@@ -234,12 +250,17 @@ function Mini({ label, value, sub, warn }) {
 }
 function TopList({ rows, empty }) {
   if (!rows.length) return <p className="text-sm text-brand/40">{empty}</p>;
+  const tone = { ok: "bg-accent/15 text-accentdark", warn: "bg-red-100 text-red-600", amber: "bg-amber-100 text-amber-600" };
   return (
     <div className="space-y-1.5">
       {rows.map((r, i) => (
-        <div key={i} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-sm">
-          <span className="flex items-center gap-2 font-semibold text-brand"><span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand text-[10px] font-black text-white">{i + 1}</span>{r.name}</span>
-          <span className="text-xs font-bold text-brand/50">{r.value}</span>
+        <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-paper px-3 py-2 text-sm">
+          <span className="flex min-w-0 items-center gap-2 font-semibold text-brand">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[10px] font-black text-white">{i + 1}</span>
+            <span className="truncate">{r.name}</span>
+            {r.tag && <span className={"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black " + (tone[r.tagTone] || tone.amber)}>{r.tag}</span>}
+          </span>
+          <span className="shrink-0 text-xs font-bold text-brand/50">{r.value}</span>
         </div>
       ))}
     </div>
