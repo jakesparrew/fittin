@@ -37,7 +37,7 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
           <button onClick={() => setOffset(7)} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (offset === 7 ? "bg-brand text-white" : "bg-paper text-brand/60")}>Volgende week</button>
         </div>
       </div>
-      <p className="mt-1 text-xs text-brand/50">Klik op een vrij uur om een sessie met een client in te plannen.</p>
+      <p className="mt-1 text-xs text-brand/50">Klik op een vrij uur om een sessie in te plannen — met een client, of reserveer het uur alvast voor jezelf.</p>
 
       {/* Desktop: full week grid */}
       <div className="mt-4 hidden overflow-x-auto md:block">
@@ -125,17 +125,26 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
             <form action={action} className="mt-4 space-y-3">
               <input type="hidden" name="date" value={slot.dateStr} />
               <input type="hidden" name="hour" value={slot.hour} />
-              <Lbl t="Client">
-                <select name="clientId" required className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm">
-                  <option value="">Kies een lid…</option>
+              {/* Zelfde regels als het hoofdformulier: client is OPTIONEEL (leeg = uur reserveren),
+                  en een externe client (niet op platform) kan bij naam genoemd worden. */}
+              <Lbl t="Client (optioneel)">
+                <select name="clientId" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm">
+                  <option value="">Nog geen client — reserveer het uur</option>
                   {members.map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
                 </select>
               </Lbl>
-              <Lbl t="Sessie">
-                <select name="serviceId" required className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm">
-                  {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
+              <Lbl t="Of naam (niet op platform)">
+                <input name="clientName" placeholder="bv. Sarah" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </Lbl>
+              {services.length === 1 ? (
+                <input type="hidden" name="serviceId" value={services[0].id} />
+              ) : (
+                <Lbl t="Sessie">
+                  <select name="serviceId" required className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm">
+                    {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </Lbl>
+              )}
               <Lbl t="Personen">
                 <input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-20 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </Lbl>

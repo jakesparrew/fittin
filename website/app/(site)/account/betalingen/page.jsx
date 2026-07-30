@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import ActionForm from "@/components/ui/ActionForm";
 import { saveBillingDetails } from "../actions";
+import PrintButton from "@/components/admin/PrintButton";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -28,8 +29,11 @@ export default async function AccountBetalingen() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-      <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand">← Mijn account</Link>
-      <h1 className="mt-2 text-3xl font-black text-brand">Betalingen &amp; facturen</h1>
+      <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand print:hidden">← Mijn account</Link>
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-3xl font-black text-brand">Betalingen &amp; facturen</h1>
+        <PrintButton label="⬇ Overzicht als PDF" />
+      </div>
       <p className="mt-1 max-w-2xl text-sm text-brand/60">Download je <b>betaalbewijs</b> of een <b>factuur</b> per betaling. Wil je een factuur op je bedrijfsnaam (B2B)? Vul hieronder je gegevens in.</p>
 
       {/* Billing details — optional, for an invoice on a company name */}

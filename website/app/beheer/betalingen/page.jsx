@@ -72,12 +72,15 @@ export default async function Betalingen({ searchParams }) {
           <h1 className="text-3xl font-black text-brand">Betalingen</h1>
           <p className="mt-1 text-sm text-brand/50">Alle Stripe-betalingen van je leden en coaches.</p>
         </div>
-        <a
-          href={`/beheer/betalingen/export${filter ? `?kind=${filter}` : ""}`}
-          className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
-        >
-          ⬇ Exporteer CSV
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <Link href="/beheer/financien" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">€ Financieel overzicht →</Link>
+          <a
+            href={`/beheer/betalingen/export${filter ? `?kind=${filter}` : ""}`}
+            className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
+          >
+            ⬇ Exporteer CSV
+          </a>
+        </div>
       </div>
 
       {/* Invoice / non-profit billing details (used on generated invoices) */}

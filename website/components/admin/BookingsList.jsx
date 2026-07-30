@@ -35,16 +35,21 @@ function SourceChip({ b }) {
   const label = sourceLabel(b);
   const st = SRC_STYLE[label] || SRC_STYLE["Online"];
   const short = label === "Ingepland door beheer" ? "Door beheer" : label;
-  const credits = b.credits_left;      // resterend lidtegoed (beurtenkaart/abo)
+  const credits = b.credits_left;      // HUIDIG lidtegoed — niet de betaalstatus van déze sessie
   const cc = b.coach_credits_left;     // resterend coach-tegoed
   return (
     <span className="block">
-      <span className={"inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold " + st.cls}>
+      <span
+        className={"inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold " + st.cls}
+        title={label === "Beurtenkaart" ? "Betaald: de beurt is bij het boeken van de kaart afgetrokken." : undefined}
+      >
         <span aria-hidden>{st.icon}</span>{short}
       </span>
-      {credits != null && (
-        <span className={"mt-0.5 block text-[10px] font-bold " + (credits <= 1 ? "text-amber-600" : "text-brand/40")}>
-          nog {credits} {credits === 1 ? "beurt" : "beurten"} over
+      {/* Het saldo hieronder is het HUIDIGE tegoed van het lid, niet de status van deze sessie —
+          "nog 0 over" naast een betaalde sessie las als "onbetaald". Enkel tonen als er actie is. */}
+      {credits != null && credits <= 2 && (
+        <span className="mt-0.5 block text-[10px] font-bold text-amber-600">
+          {credits === 0 ? "kaart is op → nieuwe verkopen" : `nog ${credits} ${credits === 1 ? "beurt" : "beurten"} op de kaart`}
         </span>
       )}
       {/* Coach-tegoed enkel tonen wanneer er actie nodig is (op of onder nul). Een gezond saldo op

@@ -10,6 +10,7 @@ const groups = [
     { href: "/beheer/leden", label: "Leden", icon: "◍" },
     { href: "/beheer/coaches", label: "Coaches", icon: "♦" },
     { href: "/beheer/betalingen", label: "Betalingen", icon: "◈" },
+    { href: "/beheer/financien", label: "Financiën", icon: "€" },
   ] },
   { title: "Coaching", items: [
     { href: "/beheer/programmas", label: "Programma's & oefeningen", icon: "✎" },

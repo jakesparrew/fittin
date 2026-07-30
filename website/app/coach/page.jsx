@@ -191,24 +191,35 @@ export default async function CoachDashboard({ searchParams }) {
             <p className="mt-0.5 text-brand/60">Verbind eerst een client via <Link href="/coach/clienten" className="font-bold text-accentdark underline">Mijn clienten</Link> — pas daarna kan je hier een sessie met hen boeken.</p>
           </div>
         )}
-        <ActionForm action={coachBookSession} success="Sessie geboekt ✓" className="mt-4 flex flex-wrap items-end gap-3">
-          <Lbl t="Client (optioneel)">
-            <SearchSelect name="clientId" placeholder="Zoek een lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
-          </Lbl>
-          <Lbl t="Of naam (niet op platform)">
-            <input name="clientName" placeholder="bv. Sarah" className="w-36 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-          </Lbl>
-          <Lbl t="Sessie">
-            <div className="rounded-lg border-2 border-borderc bg-paper px-3 py-2 text-sm font-semibold text-brand">{ptService?.name || "Personal training"}</div>
-            <input type="hidden" name="serviceId" value={ptService?.id || ""} />
-          </Lbl>
-          <CoachSlotPicker defaultDate={todayStr} openHour={gym.open_hour} closeHour={gym.close_hour} />
-          <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boek sessie</SubmitButton>
+        <ActionForm action={coachBookSession} success="Sessie geboekt ✓" className="mt-4 space-y-3">
+          <input type="hidden" name="serviceId" value={ptService?.id || ""} />
+          {/* Twee duidelijke stappen i.p.v. zeven velden naast elkaar: WIE (mag leeg) en WANNEER. */}
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl bg-paper/60 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-lav">1 · Wie train je?</p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <div className="min-w-[13rem] flex-1">
+                  <SearchSelect name="clientId" placeholder="Zoek een lid… (leeg = uur reserveren)" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+                </div>
+                <span className="text-xs font-bold text-brand/40">of</span>
+                <input name="clientName" placeholder="naam (niet op platform)" className="w-44 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+              </div>
+            </div>
+            <div className="rounded-2xl bg-paper/60 p-4">
+              <p className="text-[10px] font-black uppercase tracking-widest text-lav">2 · Wanneer?</p>
+              <div className="mt-2 flex flex-wrap items-end gap-2">
+                <CoachSlotPicker defaultDate={todayStr} openHour={gym.open_hour} closeHour={gym.close_hour} />
+                <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                <SubmitButton className="rounded-full bg-accent px-6 py-2 text-sm font-black text-brand">+ Boek sessie</SubmitButton>
+              </div>
+            </div>
+          </div>
         </ActionForm>
-        <p className="mt-2 text-xs text-brand/50">Tip: laat <strong>Client</strong> leeg om enkel het uur te reserveren. Train je iemand die (nog) niet op het platform zit? Vul dan de <strong>naam</strong> in — zo weet de gym met wie je traint. Later koppelen kan via <strong>+ Client toevoegen</strong>.</p>
+        <p className="mt-2 text-xs text-brand/45">
+          Client leeg = uur reserveren (later koppelen kan altijd) · externe client? vul de naam in, zo weet de gym met wie je traint ·
+          groep? verhoog <b>Pers</b> — blijft {mode === "invoice" ? "één gefactureerde sessie" : mode === "free" ? "gratis" : "1 sessietegoed (€ 12)"}. Liever visueel? Kies een vrij uur in de <a href="#planning" className="font-bold text-accentdark hover:underline">Planning ↓</a>.
+        </p>
         <AddClientInline />
-        <p className="mt-2 text-xs text-brand/40">Groepstraining? Verhoog "Pers" — je betaalt nog steeds 1 sessietegoed (€ 12). Je clienten betalen jou rechtstreeks (bv. Bancontact), los van het platform.</p>
 
         {/* Recurring series — book the same weekday+hour for N weeks (with a client, or reserve-only). */}
         <details className="mt-4 rounded-2xl border border-borderc bg-paper/50 p-4">
@@ -327,7 +338,7 @@ export default async function CoachDashboard({ searchParams }) {
       )}
 
       {/* Interactive schedule — dagelijks werk, dus vóór referral/activiteit/tools (belangrijk eerst). */}
-      <div className="mt-6">
+      <div id="planning" className="mt-6 scroll-mt-8">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xl font-black text-brand">Planning</h2>
           <div className="flex items-center gap-2 text-sm font-bold">

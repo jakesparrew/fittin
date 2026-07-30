@@ -867,3 +867,45 @@ export async function resolveProblemReport(formData) {
   revalidatePath("/beheer/meldingen");
   return { ok: true, message: "Melding afgehandeld ✓" };
 }
+
+// Maak één factuur op voor alle nog niet-gefactureerde 'op factuur'-sessies van een coach.
+// Boekt een OPEN post onder Betalingen (zelfde flow als coach-tegoed op aanvraag) en markeert de
+// sessies als gefactureerd, zodat ze nooit twee keer op een factuur belanden.
+export async function invoiceCoachSessions(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const coachId = formData.get("coachId");
+  if (!coachId) return { error: "Geen coach gekozen." };
+  const admin = createAdminClient();
+
+  const { data: rows } = await admin
+    .from("bookings")
+    .select("id, coach_charge_cents, starts_at")
+    .eq("gym_id", profile.gym_id)
+    .eq("coach_id", coachId)
+    .eq("coach_billing", "invoice")
+    .eq("status", "bevestigd")
+    .is("coach_invoiced_at", null)
+    .lte("starts_at", new Date().toISOString()); // enkel reeds plaatsgevonden sessies factureren
+
+  const list = rows || [];
+  if (!list.length) return { error: "Geen openstaande sessies om te factureren." };
+  const total = list.reduce((a, b) => a + (b.coach_charge_cents || 0), 0);
+  if (total <= 0) return { error: "Deze sessies staan op € 0 — stel eerst een tarief in bij de coach." };
+
+  const { data: c } = await admin.from("profiles").select("full_name, email").eq("id", coachId).single();
+  const { data: pay, error: pe } = await admin.from("payments").insert({
+    gym_id: profile.gym_id, user_id: coachId, amount_cents: total, kind: "coach_credits", status: "onbetaald",
+    description: `Coach-sessies op factuur · ${list.length} sessies`,
+  }).select("id").single();
+  if (pe) return { error: pe.message };
+
+  await admin.from("bookings").update({ coach_invoiced_at: new Date().toISOString() }).in("id", list.map((b) => b.id));
+  try {
+    await notify({ gymId: profile.gym_id, userId: coachId, type: "system", title: "Factuur voor je coach-sessies", body: `${list.length} sessies · € ${(total / 100).toFixed(2).replace(".", ",")}`, link: "/coach/betalingen" });
+  } catch {}
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/financien");
+  revalidatePath("/beheer/betalingen");
+  return { ok: true, paymentId: pay?.id, message: `Factuur opgemaakt: ${list.length} sessies · € ${(total / 100).toFixed(2).replace(".", ",")} — staat als open post bij Betalingen.` };
+}

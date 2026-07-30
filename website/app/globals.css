@@ -114,3 +114,18 @@ h1, h2, h3, .font-display {
 .scrollbar-slim::-webkit-scrollbar-thumb { background: transparent; border-radius: 9999px; }
 .scrollbar-slim:hover::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.22); }
 .scrollbar-slim::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.4); }
+
+/* ---- Afdrukken / "Opslaan als PDF" (financiën, facturen, exports) ----
+   De beheer-layout is een sidebar + scrollende kolom; zonder deze regels komt de navigatie mee
+   in de PDF en wordt de tabel afgekapt. `print:hidden` op componenten doet de rest. */
+@media print {
+  aside,
+  nav,
+  .print\:hidden { display: none !important; }
+  html, body { background: #fff !important; }
+  main, .scrollbar-slim { overflow: visible !important; height: auto !important; }
+  /* Tabellen niet midden in een rij afbreken. */
+  tr, section { break-inside: avoid; }
+  table { width: 100% !important; font-size: 11px; }
+  @page { margin: 14mm; }
+}

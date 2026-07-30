@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import { createAdminClient } from "@/lib/supabase/admin";
+import PrintButton from "@/components/admin/PrintButton";
 
 export const dynamic = "force-dynamic";
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -24,8 +25,11 @@ export default async function CoachBetalingen() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Dashboard</Link>
-      <h1 className="mt-2 text-3xl font-black text-brand">Betalingen</h1>
+      <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand print:hidden">← Dashboard</Link>
+      <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
+        <h1 className="text-3xl font-black text-brand">Betalingen</h1>
+        <PrintButton label="⬇ PDF / afdrukken" />
+      </div>
       <p className="mt-1 max-w-2xl text-sm text-brand/50">
         Je betalingen aan Fittin: aankopen van <b>sessietegoed (€ 12 / sessie)</b> waarmee je je clienten in de zaal boekt.
         Wat je clienten jóu betalen, reken je rechtstreeks af (bv. Bancontact) — dat loopt niet via het platform.
@@ -37,7 +41,7 @@ export default async function CoachBetalingen() {
         <Stat label="Gekocht (totaal)" value={euro(total)} />
       </div>
 
-      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent bg-accent/5 p-5">
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent bg-accent/5 p-5 print:hidden">
         <p className="text-sm font-semibold text-brand/70">Sessietegoed bijkopen? Dat doe je op je dashboard.</p>
         <Link href="/coach#tegoed" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">Naar dashboard →</Link>
       </div>
