@@ -160,7 +160,7 @@ export async function sendDueAccessCodes() {
   const to = new Date(Date.now() + 16 * 60000).toISOString();
   const { data: rows } = await admin
     .from("bookings")
-    .select("id, gym_id, user_id, starts_at, ends_at, nuki_auth_name, services(name), gym:gyms(access_info, address), member:profiles!bookings_user_id_fkey(email, full_name)")
+    .select("id, gym_id, user_id, coach_id, starts_at, ends_at, nuki_auth_name, services(name), gym:gyms(access_info, address), member:profiles!bookings_user_id_fkey(email, full_name), coach:profiles!bookings_coach_id_fkey(email, full_name)")
     .eq("status", "bevestigd")
     .eq("access_sent", false)
     .or("paid.eq.true,payment_source.in.(credit,gratis_code)") // never hand a door code to an unpaid los/abo booking
@@ -238,6 +238,26 @@ export async function sendDueAccessCodes() {
         sent++;
       } catch {}
     }
+    // Coach-sessie: de COACH staat óók voor die deur. Voorheen ging de code enkel naar de client
+    // (bookings.user_id), zodat een coach zonder zijn client niet binnen raakte. Stuur hem dezelfde
+    // code — apart, zodat een mislukte mail naar de één de ander niet blokkeert.
+    const coachEmail = b.coach_id && b.coach_id !== b.user_id ? b.coach?.email : null;
+    if (coachEmail && coachEmail !== b.member?.email) {
+      try {
+        await sendAccessCode({
+          to: coachEmail,
+          name: b.coach?.full_name,
+          serviceName: `${b.services?.name || "Sessie"} — met ${b.member?.full_name || "je client"}`,
+          startsAt: b.starts_at,
+          endsAt: b.ends_at,
+          accessCode: code,
+          personal,
+          address,
+          mapsUrl,
+        });
+        sent++;
+      } catch (e) { console.error("access code to coach failed:", b.id, e?.message); }
+    }
     // In-app backup (bell + /account) so a time-sensitive code reaches the member even if e-mail lags.
     if (code) {
       await notify({
@@ -248,6 +268,16 @@ export async function sendDueAccessCodes() {
         body: `Code ${code}${personal ? " — werkt enkel tijdens je sessie." : ""}`,
         link: "/account",
       });
+      if (b.coach_id && b.coach_id !== b.user_id) {
+        await notify({
+          gymId: b.gym_id,
+          userId: b.coach_id,
+          type: "system",
+          title: "Toegangscode voor je coach-sessie 🔑",
+          body: `Code ${code} · met ${b.member?.full_name || "je client"}`,
+          link: "/coach/agenda",
+        });
+      }
     }
   }
   return { sent, failures };

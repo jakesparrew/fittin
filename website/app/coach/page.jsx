@@ -51,7 +51,9 @@ export default async function CoachDashboard({ searchParams }) {
   ] = await Promise.all([
     supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
-    supabase.from("bookings").select("id, user_id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").eq("coach_id", userId).order("starts_at", { ascending: true }),
+    // coach_id = sessies die hij geeft; user_id = sessies die hij ZELF boekte (bv. via /boeken).
+    // Enkel op coach_id filteren liet een zelf geboekte sessie van het dashboard verdwijnen.
+    supabase.from("bookings").select("id, user_id, coach_id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").or(`coach_id.eq.${userId},user_id.eq.${userId}`).order("starts_at", { ascending: true }),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
     supabase.from("coach_session_requests").select("qty, status, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(5),
     supabase.from("notifications").select("id, type, title, body, link, read, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(6),
@@ -99,7 +101,11 @@ export default async function CoachDashboard({ searchParams }) {
   const takenKeys = (takenRows || []).map((t) => keyOf(t.starts_at));
   const mineMap = {};
   for (const b of all) {
-    if (b.status === "bevestigd" && new Date(b.starts_at) >= schedFrom) mineMap[keyOf(b.starts_at)] = { name: b.user_id === userId ? "Gereserveerd" : (b.member?.full_name || "Client"), service: b.services?.name || "Sessie" };
+    if (b.status === "bevestigd" && new Date(b.starts_at) >= schedFrom) {
+      const isOwn = b.user_id === userId && !b.coach_id;   // zelf geboekte eigen training
+      const isRes = b.user_id === userId && !!b.coach_id;  // slot gereserveerd, client volgt
+      mineMap[keyOf(b.starts_at)] = { name: isOwn ? "Eigen training" : isRes ? "Gereserveerd" : (b.member?.full_name || "Client"), service: b.services?.name || "Sessie" };
+    }
   }
   const schedDays = [];
   for (let i = 0; i < 14; i++) {
@@ -365,18 +371,19 @@ export default async function CoachDashboard({ searchParams }) {
         ) : (
           <div className="mt-4 space-y-2">
             {upcoming.slice(0, 8).map((b) => {
-              const reserved = b.user_id === userId; // slot booked without a client yet
+              const own = b.user_id === userId && !b.coach_id;       // zelf geboekt (eigen training)
+              const reserved = b.user_id === userId && !!b.coach_id; // slot zonder client, via coach-flow
               return (
               <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
                 <div>
-                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
-                  <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}</p>
+                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{own ? "🏋️ Mijn eigen training" : reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
+                  <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}{own ? " · zelf geboekt" : ""}</p>
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
-                    {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
+                    {own ? "eigen boeking" : b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                   </span>
-                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
+                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={own ? false : reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
                 </div>
               </div>
               );
