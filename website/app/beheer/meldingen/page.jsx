@@ -48,11 +48,18 @@ export default async function Meldingen() {
         Problemen gemeld door leden (via “🛟 Werkt iets niet?” op hun account) én automatische foutlogs uit de app.
       </p>
 
+      {/* Samenvatting bovenaan: wie via "Client-fouten" binnenkomt, ziet meteen waar de inhoud zit —
+          voorheen begon de pagina met een grote lege "Van leden"-staat en leken de foutlogs onvindbaar. */}
+      <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
+        <span className={"rounded-full px-3.5 py-1.5 " + (open.length ? "bg-amber-100 text-amber-700" : "bg-white text-brand/50 border border-borderc")}>Van leden: {open.length} open</span>
+        <a href="#foutlogs" className={"rounded-full px-3.5 py-1.5 transition hover:opacity-80 " + ((errors || []).length ? "bg-brand text-white" : "bg-white text-brand/50 border border-borderc")}>Foutlogs (7d): {(errors || []).length} ↓</a>
+      </div>
+
       {/* ---- Member reports ---- */}
       <section className="mt-6">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Van leden{open.length ? ` · ${open.length} open` : ""}</h2>
         {(reports || []).length === 0 && (
-          <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/50">Nog geen meldingen van leden. Leden vinden de meldknop onderaan hun account-pagina.</p>
+          <p className="mt-3 text-sm text-brand/40">Nog geen meldingen van leden — zij vinden de meldknop onderaan hun account-pagina.</p>
         )}
         <div className="mt-3 space-y-2">
           {open.map((r) => (
@@ -87,8 +94,8 @@ export default async function Meldingen() {
       </section>
 
       {/* ---- Automatic client errors ---- */}
-      <section className="mt-8">
-        <h2 className="text-xs font-black uppercase tracking-widest text-lav">Automatische foutlogs (7 dagen)</h2>
+      <section id="foutlogs" className="mt-8 scroll-mt-6">
+        <h2 className="text-xs font-black uppercase tracking-widest text-lav">Automatische foutlogs (7 dagen) · {(errors || []).length}</h2>
         <p className="mt-1 text-xs text-brand/45">JS-fouten uit de browser van bezoekers, automatisch gelogd — geen actie van het lid nodig. Vaak technisch; kijk vooral naar herhaling.</p>
         {(errors || []).length === 0 ? (
           <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/50">Geen client-fouten de afgelopen 7 dagen. 🎉</p>

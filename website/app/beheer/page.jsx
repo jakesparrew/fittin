@@ -279,7 +279,7 @@ export default async function BeheerDashboard() {
         <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
           <Health label="Deurcode-cron" ok={!accessBad} detail={access ? `${accessMin} min geleden` : "nog niet gedraaid"} critical />
           <Health label="Activatie-cron" ok={activation ? activation.ok !== false : null} detail={activation ? `${agoMin(activation.created_at)} min geleden` : "nog niet gedraaid"} />
-          <Health label="Client-fouten (24u)" ok={(recentErrors || 0) === 0} detail={`${recentErrors || 0} gemeld — bekijk in Meldingen`} href="/beheer/meldingen" />
+          <Health label="Client-fouten (24u)" ok={(recentErrors || 0) === 0} detail={`${recentErrors || 0} gemeld — bekijk in Meldingen`} href="/beheer/meldingen#foutlogs" />
         </div>
       </section>
     </div>
