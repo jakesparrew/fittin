@@ -2,9 +2,11 @@
 import { useId, useState } from "react";
 
 // Hoe wordt deze beheer-boeking betaald? Dit was één vinkje "Trek 1 sessie af" dat standaard UIT
-// stond — vergeten = de sessie was gratis (±9 keer gebeurd, ±€ 96 nooit gefactureerd). En had het
-// lid geen tegoed, dan wás gratis de enige uitweg. Nu: afboeken is de standaard, "gratis" een
-// bewuste keuze mét reden, en er is een derde weg — laten betalen aan de balie.
+// stond — vergeten = de sessie was gratis (±9 keer gebeurd, ±€ 96 nooit gefactureerd).
+// Nu: afboeken is de standaard en "gratis" een bewuste keuze mét reden.
+// Bewust GEEN "laat het lid betalen"-modus: de gym is onbemand (geen balie) en een onbetaalde
+// boeking wordt na 15 min automatisch vrijgegeven — die zou dus vanzelf verdwijnen. Moet een lid
+// zelf betalen, dan boekt het via de site; daar loopt de Stripe-flow.
 const REDENEN = [
   "Compensatie (klacht of panne)",
   "Proefsessie / kennismaking",
@@ -20,7 +22,7 @@ export default function PayModePicker({ className = "" }) {
       <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Betaalwijze</span>
       <input type="hidden" name="payMode" value={mode} />
       <div className="inline-flex flex-wrap rounded-full border border-borderc bg-white p-1 text-xs font-bold">
-        {[["credit", "🎟 Van tegoed"], ["charge", "💳 Te betalen"], ["gratis", "🎁 Gratis"]].map(([k, l]) => (
+        {[["credit", "🎟 Van tegoed"], ["gratis", "🎁 Gratis"]].map(([k, l]) => (
           <button
             key={k}
             type="button"
@@ -32,10 +34,7 @@ export default function PayModePicker({ className = "" }) {
         ))}
       </div>
       {mode === "credit" && (
-        <p className="mt-1 text-[11px] text-brand/45">Wordt van het tegoed van het lid afgetrokken (90 min = 1,5 beurt).</p>
-      )}
-      {mode === "charge" && (
-        <p className="mt-1 text-[11px] text-brand/45">Komt bij <b>Onbetaald</b> te staan — vink “✓ cash” aan zodra het geld binnen is.</p>
+        <p className="mt-1 text-[11px] text-brand/45">Wordt van het tegoed van het lid afgetrokken (90 min = 1,5 beurt). Heeft het lid te weinig tegoed, dan zegt het systeem dat — laat het dan zelf boeken via de site.</p>
       )}
       {mode === "gratis" && (
         <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 p-3">

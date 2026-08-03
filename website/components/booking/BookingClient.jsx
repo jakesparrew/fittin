@@ -103,7 +103,10 @@ export default function BookingClient({
     const d = sp.get("d");
     const h = parseFloat(sp.get("h"));
     if (!d || Number.isNaN(h)) return;
-    const u = Math.min(4, Math.max(1, parseInt(sp.get("u"), 10) || 1));
+    // parseInt kapte 1.5 af naar 1 → een 90-minutensuggestie (en de gast-signup-terugkeer met
+    // ?u=1.5) werd stil 1 uur. Ontbreekt ?u=, hou dan de duur die al uit ?duur= kwam.
+    const uRaw = sp.get("u") != null ? parseFloat(sp.get("u")) : duration;
+    const u = Math.min(4, Math.max(1, Math.round((Number.isFinite(uRaw) ? uRaw : 1) * 2) / 2));
     if (!days.some((x) => x.dateStr === d) || !canBook(d, h, u)) return;
     setSelected({ dateStr: d, hour: h });
     setMobileDay(d);
@@ -329,7 +332,7 @@ export default function BookingClient({
                     if (taken) return <WaitlistSlot key={h} date={activeDay} hour={h} label={label} isLoggedIn={isLoggedIn} />;
                     if (!inRange && !canBook(activeDay, h, 1)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/20">{label}</div>;
                     return (
-                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); setDuration(1); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
+                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); if (!canBook(activeDay, h, duration)) setDuration(1); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
                         {label}{isSel ? " ✓" : ""}
                       </button>
                     );
@@ -369,7 +372,7 @@ export default function BookingClient({
                           return (
                             <button
                               key={d.dateStr}
-                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); setDuration(1); track("booking_slot_chosen"); }}
+                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); if (!canBook(d.dateStr, h, duration)) setDuration(1); track("booking_slot_chosen"); }}
                               className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
                             >
                               {isSel ? "✓" : inRange ? "•" : ""}
@@ -562,7 +565,7 @@ export default function BookingClient({
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">
               <span className="text-lav">Totaal</span>
               <span className="text-3xl font-black text-accent">
-                {welcomeApplies ? "Gratis" : creditApplies ? `${duration} sessie${duration > 1 ? "s" : ""}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}
+                {welcomeApplies ? "Gratis" : creditApplies ? `${sess(duration)} sessie${duration === 1 ? "" : "s"}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}
               </span>
             </div>
 
@@ -597,7 +600,7 @@ export default function BookingClient({
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-brand">{days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · {slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}</p>
-              <p className="text-sm font-black text-accentdark">{welcomeApplies ? "Gratis" : creditApplies ? `${duration} sessie${duration > 1 ? "s" : ""}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}</p>
+              <p className="text-sm font-black text-accentdark">{welcomeApplies ? "Gratis" : creditApplies ? `${sess(duration)} sessie${duration === 1 ? "" : "s"}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}</p>
             </div>
             {isLoggedIn ? (
               <button onClick={submit} disabled={busy} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30 transition enabled:hover:-translate-y-0.5 disabled:opacity-50">

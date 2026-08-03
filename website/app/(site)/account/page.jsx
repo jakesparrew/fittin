@@ -150,14 +150,15 @@ export default async function AccountPage({ searchParams }) {
   // First-visit state (Batch 2.6): has this member actually trained yet? Drives the "eerste bezoek" card.
   const hasVisited = all.some((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() < now);
   const gymAddress = gym?.address || "Aannemersstraat 186, 9040 Gent";
-  // Pending payment: confirmed-but-unpaid 'los' bookings (20-min window from creation).
+  // Pending payment: bevestigde maar onbetaalde 'los'-boekingen. De reservering duurt 15 min
+  // (0121) — daarna geeft de sweep het uur weer vrij, zodat niemand slots kan blokkeren.
   const pendingPay = upcoming
     .filter((b) => !b.paid && (b.payment_source === "los" || b.payment_source === "abo") && b.price_cents > 0)
     .map((b) => ({
       id: b.id,
       name: b.services?.name || "Sessie",
       price: b.price_cents,
-      deadline: new Date(new Date(b.created_at).getTime() + 35 * 60000).toISOString(),
+      deadline: new Date(new Date(b.created_at).getTime() + 15 * 60000).toISOString(),
     }));
   const history = all
     .filter((b) => !(b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now))

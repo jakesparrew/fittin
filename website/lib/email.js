@@ -117,8 +117,8 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
   } else if (paymentSource === "gratis_code") {
     rows.push(["Prijs", `<span style="color:#33B24A">Gratis (FittinWelcome)</span>`]);
   } else if (amountDueCents > 0) {
-    // Beheer plande dit in met "te betalen aan de balie" (0119) — de mail mag dan niet "Gratis" zeggen.
-    rows.push(["Prijs", `<b>€ ${(amountDueCents / 100).toFixed(2).replace(".", ",")}</b> — te betalen aan de balie`]);
+    // Onbetaalde boeking: de mail mag dan nooit "Gratis" zeggen.
+    rows.push(["Prijs", `<b>€ ${(amountDueCents / 100).toFixed(2).replace(".", ",")}</b> — nog te betalen`]);
   } else if (free) {
     rows.push(["Prijs", `<span style="color:#33B24A">Gratis</span>`]);
   }
