@@ -132,10 +132,12 @@ export default async function AccountPage({ searchParams }) {
   const gymOpen = gym?.open_hour ?? 6;
   const gymClose = gym?.close_hour ?? 23;
 
-  // Deurcode-venster. Zolang Nuki niet actief is blijft bookings.nuki_code leeg en mailt de app
-  // de STATISCHE gymcode — precies wat het lid ~5 min vooraf ontvangt. Die code hier tonen is dus
-  // dezelfde info aan dezelfde persoon op hetzelfde moment, niet méér. Strikt gated: enkel als de
-  // toegangsmail effectief vertrok (access_sent) én we binnen het tijdslot zitten.
+  // Deurcode-venster. Nuki is actief: de access-cron laat Nuki ~5 min vóór elke sessie een verse
+  // keypadcode aanmaken, zet die in bookings.nuki_code, en revokeExpiredKeypadCodes() wist hem weer
+  // zodra de sessie voorbij is. nuki_code bestaat dus PRECIES tijdens het venster waarin het lid
+  // hem nodig heeft — dat is meteen de beveiliging: buiten dat venster is er niets te tonen.
+  // De statische gymcode hieronder is enkel de reserve als het minten faalt (staat vandaag leeg;
+  // dan valt de kaart terug op "je code verschijnt hier"). Strikt gated op access_sent + tijdslot.
   // gym_integrations heeft geen RLS-policies (service-role only) → via admin, en NOOIT het hele
   // configobject doorgeven (dat bevat de Nuki-token); enkel de code-string gaat naar de client.
   const [{ access_code: staticDoorCode }, { data: keypadCfg }] = await Promise.all([

@@ -5,9 +5,9 @@ import { useState } from "react";
 // bookings.notes). Die client kreeg dus nooit een bevestiging: de coach typte datum, uur en
 // adres met de hand over in WhatsApp — met de fouten van dien. Deze knop maakt dat bericht.
 //
-// Bewust GEEN deurcode in het bericht: zolang Nuki niet actief is, is de gymcode voor iedereen
-// dezelfde en permanent. Zo'n code belandt in een chat die blijft bestaan, doorgestuurd en
-// gescreenshot kan worden. De coach is bij een PT-sessie zelf aanwezig en laat de client binnen,
+// Bewust GEEN deurcode in het bericht. Niet uit voorzichtigheid, maar omdat ze nog niet bestaat:
+// Nuki maakt de keypadcode voor een boeking pas ~5 min vóór de start aan, en dit bericht stuur je
+// dagen op voorhand. De coach is bij een PT-sessie sowieso zelf aanwezig en laat de client binnen,
 // dus het bericht zegt dat gewoon.
 export default function ShareSession({ text, className = "" }) {
   const [copied, setCopied] = useState(false);
