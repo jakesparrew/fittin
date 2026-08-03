@@ -7,6 +7,7 @@ import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
 import BookingsList from "@/components/admin/BookingsList";
 import SubmitButton from "@/components/ui/SubmitButton";
 import ActionForm from "@/components/ui/ActionForm";
+import PayModePicker from "@/components/admin/PayModePicker";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function Boekingen({ searchParams }) {
     supabase.from("slot_blocks").select("id, starts_at, reason").eq("gym_id", gym.id).gte("starts_at", from).lt("starts_at", to),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).order("full_name"),
     supabase.from("services").select("id, name").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
-    supabase.from("bookings").select("id, created_at, starts_at, ends_at, status, persons, paid, price_cents, payment_source, coach_billing, user_id, coach_id, notes, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
+    supabase.from("bookings").select("id, created_at, starts_at, ends_at, status, persons, paid, price_cents, payment_source, coach_billing, user_id, coach_id, notes, comp_reason, comp_value_cents, member:profiles!bookings_user_id_fkey(full_name, email), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", listFrom).order("starts_at", { ascending: true }).limit(1000),
     // Every 30-min cell that a booking covers (1h sessions span 2 cells) — so continuation cells show as "bezet", not free.
     supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from, p_to: to }),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
@@ -57,6 +58,7 @@ export default async function Boekingen({ searchParams }) {
   const bookingRows = (allBookings || []).map((b) => ({
     id: b.id, created_at: b.created_at, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status, persons: b.persons,
     paid: b.paid, price_cents: b.price_cents, payment_source: b.payment_source, coach_billing: b.coach_billing, notes: b.notes,
+    comp_reason: b.comp_reason, comp_value_cents: b.comp_value_cents,
     member_name: b.member?.full_name || b.member?.email, coach_id: b.coach_id, coach_name: b.coach?.full_name, service_name: b.services?.name,
     // A coach reserving gym time for their own (external / not-yet-linked) client books onto themself.
     reserved: !!b.coach_id && b.user_id === b.coach_id,
@@ -96,10 +98,7 @@ export default async function Boekingen({ searchParams }) {
           <Lbl t="Datum"><input name="date" type="date" required defaultValue={days[0].dateStr} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
           <Lbl t="Uur"><HourSelect name="hour" hours={hours} /></Lbl>
           <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-          <label className="flex items-center gap-2 pb-1 text-xs font-bold text-brand/70">
-            <input type="checkbox" name="useCredit" className="h-4 w-4 accent-[#5fda6b]" />
-            Trek 1 sessie af
-          </label>
+          <PayModePicker className="max-w-xs" />
           {/* Coach is rarely relevant for a normal gym session → opt-in toggle instead of an always-visible field. */}
           <details className="pb-1">
             <summary className="cursor-pointer list-none pb-1 text-[10px] font-bold uppercase tracking-wide text-lav transition hover:text-brand">+ Coach</summary>

@@ -28,6 +28,9 @@ export function sourceLabel(b, { coachName } = {}) {
   if (cb === "credit") return "Coach-tegoed";
   if (cb === "invoice") return "Coach-factuur";
   if (cb === "free") return "Coach · gratis";
+  // Bewust weggegeven sessie (0119): draagt een reden, dus benoem dat expliciet — "Ingepland door
+  // beheer" verhulde dat er geld werd weggegeven.
+  if (b.comp_reason ?? b.compReason) return "Gratis gegeven";
   // Admin-created comp booking (admin_create_booking inserts 'los' + € 0 + paid): booked on the
   // member's behalf, free by design — label it so "boekingen zonder betaling" stops looking like
   // missing money in the lists and the notifications feed. Only when the row actually carries

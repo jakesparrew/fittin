@@ -65,3 +65,16 @@ describe("sourceLabel · coach & credit zichtbaarheid", () => {
     expect(sourceLabel({ payment_source: "abo", price_cents: 1200, paid: true })).toBe("Abonnement");
   });
 });
+
+describe("sourceLabel · gratis gegeven (0119)", () => {
+  it("boeking met reden heet 'Gratis gegeven', niet 'Ingepland door beheer'", () => {
+    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true, comp_reason: "Compensatie" })).toBe("Gratis gegeven");
+  });
+  it("zonder reden blijft het de gewone beheer-boeking", () => {
+    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true })).toBe("Ingepland door beheer");
+  });
+  it("te betalen aan de balie is géén gratis boeking", () => {
+    // charge-modus: los + volle prijs + onbetaald → gewone 'Online'-bron, verschijnt bij Onbetaald.
+    expect(sourceLabel({ payment_source: "los", price_cents: 1500, paid: false })).toBe("Online");
+  });
+});

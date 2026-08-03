@@ -3,6 +3,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminCreateBooking, adminBlockSlot } from "@/app/beheer/actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import PayModePicker from "@/components/admin/PayModePicker";
 
 // An empty calendar cell on /beheer/boekingen. Click → modal to plan a session (member + service)
 // OR block the slot (no member/service needed).
@@ -57,11 +58,8 @@ export default function PlanSlotCell({ date, hour, label, members = [], services
                   <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Pers</span>
                   <input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-20 rounded-lg border-2 border-borderc px-3 py-2" />
                 </label>
-                <label className="mt-4 flex items-center gap-2 text-xs font-bold text-brand/70">
-                  <input type="checkbox" name="useCredit" className="h-4 w-4 accent-[#5fda6b]" />
-                  Trek 1 sessie af
-                </label>
               </div>
+              <PayModePicker />
               {state?.error && <p className="text-sm font-semibold text-red-600">{state.error}</p>}
               <button disabled={pending} className="w-full rounded-full bg-accent px-5 py-2.5 font-black text-brand transition hover:opacity-90 disabled:opacity-50">
                 {pending ? "Bezig…" : "+ Boeken"}

@@ -101,7 +101,7 @@ async function send(to, subject, html, from = FROM, replyTo = REPLY_TO, kind = n
 }
 
 // ---- Member: booking confirmed ----
-export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address, paymentSource, creditBalance, nudgeCount }) {
+export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address, paymentSource, creditBalance, nudgeCount, amountDueCents }) {
   const addr = address || "Aannemersstraat 186, 9040 Gent";
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`;
   const rows = [
@@ -116,6 +116,9 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
     rows.push(["Prijs", `<span style="color:#33B24A">Betaald met je beurtenkaart${Number.isInteger(creditBalance) ? ` (saldo: ${creditBalance})` : ""}</span>`]);
   } else if (paymentSource === "gratis_code") {
     rows.push(["Prijs", `<span style="color:#33B24A">Gratis (FittinWelcome)</span>`]);
+  } else if (amountDueCents > 0) {
+    // Beheer plande dit in met "te betalen aan de balie" (0119) — de mail mag dan niet "Gratis" zeggen.
+    rows.push(["Prijs", `<b>€ ${(amountDueCents / 100).toFixed(2).replace(".", ",")}</b> — te betalen aan de balie`]);
   } else if (free) {
     rows.push(["Prijs", `<span style="color:#33B24A">Gratis</span>`]);
   }

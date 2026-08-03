@@ -236,6 +236,11 @@ export async function adminCreateBooking(formData) {
   if (error) return { error };
   const memberId = formData.get("memberId");
   const coachId = formData.get("coachId") || null; // optioneel: koppel een coach → sessie in zijn agenda
+  // 0119: expliciete betaalwijze i.p.v. één vinkje. Ontbreekt payMode (oud formulier in een open
+  // tab), dan valt hij terug op het vinkje; de RPC weigert alsnog een stille gratis sessie.
+  const payMode = String(formData.get("payMode") || "") || (formData.get("useCredit") === "on" ? "credit" : "");
+  const compReason = String(formData.get("compReason") || "").trim().slice(0, 200);
+  if (payMode === "gratis" && compReason.length < 3) return { error: "Geef een reden op waarom deze sessie gratis is." };
   const { data: bookingId, error: e } = await supabase.rpc("admin_create_booking", {
     p_member: memberId,
     p_service: formData.get("serviceId"),
@@ -243,6 +248,8 @@ export async function adminCreateBooking(formData) {
     p_hour: numF(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
     p_use_credit: formData.get("useCredit") === "on",
+    p_mode: payMode || null,
+    p_comp_reason: payMode === "gratis" ? compReason : null,
   });
   if (e) return { error: e.message };
   // Confirm the booking to the member by email (+ attach a coach if one was chosen).
@@ -257,13 +264,19 @@ export async function adminCreateBooking(formData) {
       }
     }
     const [{ data: bk }, { data: m }] = await Promise.all([
-      admin.from("bookings").select("gym_id, starts_at, ends_at, persons, payment_source, services(name)").eq("id", bookingId).single(),
+      admin.from("bookings").select("gym_id, starts_at, ends_at, persons, payment_source, price_cents, paid, services(name)").eq("id", bookingId).single(),
       admin.from("profiles").select("email, full_name").eq("id", memberId).single(),
     ]);
     if (bk && m?.email) {
       const { sendBookingConfirmation } = await import("@/lib/email");
-      // paymentSource keeps the label honest: credit → "Betaald met je beurtenkaart", comp → "Gratis".
-      await sendBookingConfirmation({ to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie", startsAt: bk.starts_at, endsAt: bk.ends_at, persons: bk.persons, free: true, paymentSource: bk.payment_source });
+      // free stond hier hardcoded op true — bij "te betalen aan de balie" loog de mail dus dat de
+      // sessie gratis was. Nu volgt de mail de echte boeking.
+      await sendBookingConfirmation({
+        to: m.email, name: m.full_name, serviceName: bk.services?.name || "Sessie",
+        startsAt: bk.starts_at, endsAt: bk.ends_at, persons: bk.persons,
+        free: !!bk.paid, paymentSource: bk.payment_source,
+        amountDueCents: bk.paid ? 0 : (bk.price_cents || 0),
+      });
     }
     if (bk) await notify({ gymId: bk.gym_id, userId: memberId, type: "coach_booked", title: "Er is een sessie voor je geboekt", body: bk.services?.name || "Sessie", link: "/account" });
     if (bk && coach) await notify({ gymId: bk.gym_id, userId: coachId, type: "coach_booked", title: "Een sessie is aan jou toegewezen", body: bk.services?.name || "Sessie", link: "/coach/agenda" });

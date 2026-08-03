@@ -28,6 +28,7 @@ const SRC_STYLE = {
   "Coach-factuur": { icon: "🧾", cls: "bg-brand/10 text-brand" },
   "Coach · gratis": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
   "Ingepland door beheer": { icon: "🏠", cls: "bg-paper text-brand/55" },
+  "Gratis gegeven": { icon: "🎁", cls: "bg-amber-100 text-amber-700" },
   "Via coach": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
   "Online": { icon: "💳", cls: "bg-paper text-brand/55" },
 };
@@ -46,6 +47,12 @@ function SourceChip({ b }) {
       >
         <span aria-hidden>{st.icon}</span>{short}
       </span>
+      {/* Waarom gaven we deze sessie weg? Zonder deze regel was "gratis" een blinde vlek. */}
+      {b.comp_reason && (
+        <span className="mt-0.5 block text-[10px] font-bold text-amber-700">
+          {b.comp_reason}{b.comp_value_cents ? ` · € ${(b.comp_value_cents / 100).toFixed(2).replace(".", ",")} weggegeven` : ""}
+        </span>
+      )}
       {/* Het saldo hieronder is het HUIDIGE tegoed van het lid, niet de status van deze sessie —
           "nog 0 over" naast een betaalde sessie las als "onbetaald". Enkel tonen als er actie is. */}
       {credits != null && credits <= 2 && (
