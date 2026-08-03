@@ -156,7 +156,7 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                   )}
                 </td>
                 <td className="px-5 py-4">
-                  <span className="font-black text-brand">{credits[m.id] || 0}</span>
+                  <span className="font-black text-brand">{String(credits[m.id] || 0).replace(".", ",")}</span>
                   <span className="ml-1 text-[10px] text-brand/40">sess.</span>
                 </td>
                 <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastLogin[m.id])}>{ago(lastLogin[m.id])}</span></td>
@@ -164,7 +164,7 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                 <td className="px-5 py-4">
                   <ActionForm action={adminAdjustCredits} success="Sessietegoed aangepast ✓" className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="memberId" value={m.id} />
-                    <input name="delta" type="number" placeholder="+3 of -3" title="+ = sessies bijgeven, - = sessies afhalen" className="w-24 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
+                    <input name="delta" placeholder="+3, -3 of 0,5" title="+ = sessies bijgeven, - = afhalen · halve beurten mogen (0,5)" className="w-24 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
                     <input name="reason" placeholder="reden (lid krijgt mail)" className="w-36 rounded-lg border-2 border-borderc px-2 py-1 text-sm" />
                     <button className="rounded-lg bg-accent px-3 py-1 text-xs font-bold text-brand">Bijwerken</button>
                   </ActionForm>

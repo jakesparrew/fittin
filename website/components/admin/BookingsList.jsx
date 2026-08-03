@@ -49,14 +49,14 @@ function SourceChip({ b }) {
           "nog 0 over" naast een betaalde sessie las als "onbetaald". Enkel tonen als er actie is. */}
       {credits != null && credits <= 2 && (
         <span className="mt-0.5 block text-[10px] font-bold text-amber-600">
-          {credits === 0 ? "kaart is op → nieuwe verkopen" : `nog ${credits} ${credits === 1 ? "beurt" : "beurten"} op de kaart`}
+          {credits === 0 ? "kaart is op → nieuwe verkopen" : `nog ${String(credits).replace(".", ",")} ${credits === 1 ? "beurt" : "beurten"} op de kaart`}
         </span>
       )}
       {/* Coach-tegoed enkel tonen wanneer er actie nodig is (op of onder nul). Een gezond saldo op
           élke rij herhalen was ruis — en negatief betekent: de coach boekte meer dan hij kocht. */}
       {cc != null && cc <= 1 && (
         <span className={"mt-0.5 block text-[10px] font-bold " + (cc < 0 ? "text-red-600" : "text-amber-600")}>
-          {cc < 0 ? `coach ${cc} → € ${Math.abs(cc) * 12} te innen` : `coach: nog ${cc} sessie${cc === 1 ? "" : "s"}`}
+          {cc < 0 ? `coach ${String(cc).replace(".", ",")} → € ${Math.ceil(Math.abs(cc) * 12)} te innen` : `coach: nog ${String(cc).replace(".", ",")} sessie${cc === 1 ? "" : "s"}`}
         </span>
       )}
     </span>

@@ -165,8 +165,8 @@ export default async function Coaches() {
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{cls.length} clients</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{upcoming} gepland</span>
                   {c.coach_billing_mode === "credit" && ((balance[c.id] || 0) < 0
-                    ? <span className="rounded-full bg-amber-100 px-3 py-1 font-bold text-amber-700">Openstaand: {Math.abs(balance[c.id])} (€ {Math.abs(balance[c.id]) * 12})</span>
-                    : <span className="rounded-full bg-paper px-3 py-1 text-brand/60">Saldo: {balance[c.id] || 0}</span>)}
+                    ? <span className="rounded-full bg-amber-100 px-3 py-1 font-bold text-amber-700">Openstaand: {String(Math.abs(balance[c.id])).replace(".", ",")} (€ {Math.ceil(Math.abs(balance[c.id]) * 12)})</span>
+                    : <span className="rounded-full bg-paper px-3 py-1 text-brand/60">Saldo: {String(balance[c.id] || 0).replace(".", ",")}</span>)}
                   {c.coach_billing_mode === "invoice" && <span className="rounded-full bg-accent/15 px-3 py-1 text-accentdark">Te factureren: {euro(invoice[c.id] || 0)}</span>}
                   {commByCoach[c.id] > 0 && <span className="rounded-full bg-paper px-3 py-1 text-brand/70">Commissie: {euro(commByCoach[c.id])}</span>}
                 </div>

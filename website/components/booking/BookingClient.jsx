@@ -531,7 +531,7 @@ export default function BookingClient({
             {isFit60 && !welcomeApplies && creditBalance >= 1 && (
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
                 <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
-                <span className="text-lav">Betaal met je <span className="font-bold text-accent">beurtenkaart</span> — saldo: {creditBalance}{creditApplies ? ` · je gebruikt ${duration}, daarna ${creditBalance - duration}` : useCredit ? "" : " · vink uit om cash/kaart te betalen"}</span>
+                <span className="text-lav">Betaal met je <span className="font-bold text-accent">beurtenkaart</span> — saldo: {String(creditBalance).replace(".", ",")}{creditApplies ? ` · je gebruikt ${String(duration).replace(".", ",")}, daarna ${String(creditBalance - duration).replace(".", ",")}` : useCredit ? "" : " · vink uit om cash/kaart te betalen"}</span>
               </label>
             )}
 

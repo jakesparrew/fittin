@@ -522,7 +522,8 @@ export async function adminAdjustCredits(formData) {
   const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const memberId = formData.get("memberId");
-  const delta = num(formData.get("delta"));
+  // Halve beurten toegestaan (0117/0118): "0,5" of "-1,5" — afgerond op 0,5.
+  const delta = Math.round((parseFloat(String(formData.get("delta") || "").replace(",", ".")) || 0) * 2) / 2;
   const reason = formData.get("reason") || "correctie";
   if (!delta) return { error: "Geef een aantal (+ erbij, − eraf)." };
   const { error: e } = await supabase.rpc("admin_adjust_credits", { p_member: memberId, p_delta: delta, p_reason: reason });
@@ -562,8 +563,9 @@ export async function grantCoachCredits(formData) {
   const { profile, error } = await requireStaff(true);
   if (error) return { error };
   const coachId = formData.get("coachId");
-  const delta = num(formData.get("delta"));
-  if (!coachId || !delta) return { error: "Geef een aantal sessietegoed (+ erbij, − eraf)." };
+  // Halve stappen toegestaan (0117) — bv. +0,5 correctie na een 1u30-sessie.
+  const delta = Math.round((parseFloat(String(formData.get("delta") || "").replace(",", ".")) || 0) * 2) / 2;
+  if (!coachId || !delta) return { error: "Geef een aantal sessietegoed (+ erbij, − eraf, mag 0,5 zijn)." };
   // coach_ledger writes are service-role only since 0081 → use the admin client after the staff check.
   const admin = createAdminClient();
   const { error: e } = await admin.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: coachId, delta, reason: "grant" });
@@ -574,7 +576,7 @@ export async function grantCoachCredits(formData) {
     // Negative deltas are corrections — no invoice.
     try {
       await admin.from("payments").insert({
-        gym_id: profile.gym_id, user_id: coachId, amount_cents: delta * 1200,
+        gym_id: profile.gym_id, user_id: coachId, amount_cents: Math.round(delta * 1200),
         kind: "coach_credits", description: `Coach-sessietegoed · ${delta} sessies (toegekend)`, status: "onbetaald",
       });
     } catch (err) { console.error("grant payment row failed:", err?.message); }

@@ -9,6 +9,7 @@ import CoachSessionActions from "@/components/coach/CoachSessionActions";
 import CoachChecklist from "@/components/coach/CoachChecklist";
 import BookingDetail from "@/components/BookingDetail";
 import { fmtHour } from "@/lib/time";
+import { sess } from "@/lib/format";
 import SubmitButton from "@/components/ui/SubmitButton";
 import ActionForm from "@/components/ui/ActionForm";
 
@@ -135,20 +136,22 @@ export default async function CoachDashboard({ searchParams }) {
         <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="font-black text-red-600">⛔ Boeken staat op pauze — je saldo is {creditBalance}</p>
+              <p className="font-black text-red-600">⛔ Boeken staat op pauze — je saldo is {sess(creditBalance)}</p>
               <p className="mt-0.5 text-sm text-brand/70">
-                Je boekte {Math.abs(creditBalance)} sessies meer dan je kocht — <b>€ {Math.abs(creditBalance) * 12} openstaand</b> aan de gym.
+                Je boekte {sess(Math.abs(creditBalance))} sessies meer dan je kocht — <b>€ {Math.abs(creditBalance) * 12} openstaand</b> aan de gym.
                 Zuiver je saldo aan (of koop meteen meer): daarna kan je direct weer boeken. Je bestaande sessies blijven gewoon staan.
               </p>
             </div>
+            {/* Bij een halve-beurt-schuld (bv. -1,5) kan je enkel hele sessies kopen → rond OP,
+                zodat de knop de schuld altijd volledig dekt (rest wordt gewoon nieuw tegoed). */}
             <ActionForm action={buyCoachCredits} className="shrink-0">
-              <input type="hidden" name="qty" value={Math.abs(creditBalance)} />
+              <input type="hidden" name="qty" value={Math.ceil(Math.abs(creditBalance))} />
               <SubmitButton className="rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">
-                Betaal achterstand (€ {Math.abs(creditBalance) * 12}) →
+                Betaal achterstand (€ {Math.ceil(Math.abs(creditBalance)) * 12}) →
               </SubmitButton>
             </ActionForm>
           </div>
-          <p className="mt-2 text-xs text-brand/50">Tip: koop hieronder bij <a href="#tegoed" className="font-bold text-accentdark hover:underline">Coach-sessies kopen</a> meteen méér — de eerste {Math.abs(creditBalance)} dekken je achterstand, de rest is nieuw tegoed.</p>
+          <p className="mt-2 text-xs text-brand/50">Tip: koop hieronder bij <a href="#tegoed" className="font-bold text-accentdark hover:underline">Coach-sessies kopen</a> meteen méér — de eerste {sess(Math.abs(creditBalance))} dekken je achterstand, de rest is nieuw tegoed.</p>
         </div>
       )}
       {/* Saldo exact 0 (geen schuld, wel op): zachtere melding, zelfde regel. */}
@@ -188,7 +191,7 @@ export default async function CoachDashboard({ searchParams }) {
         <Link href="/coach/clienten" className="mt-1 inline-block text-xs font-bold text-accentdark hover:underline">Zie je je client niet in de lijst? Verbind je clienten hier →</Link>
         {mode === "credit" && creditBalance < 1 && (
           <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
-            ⛔ Boeken kan pas weer met minstens 1 sessietegoed (saldo: {creditBalance}). <a href="#tegoed" className="underline">Koop tegoed bij ↓</a>
+            ⛔ Boeken kan pas weer met minstens 1 sessietegoed (saldo: {sess(creditBalance)}). <a href="#tegoed" className="underline">Koop tegoed bij ↓</a>
           </p>
         )}
         {members.length === 0 && (
@@ -284,7 +287,7 @@ export default async function CoachDashboard({ searchParams }) {
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Aankomende sessies" value={upcoming.length} />
         {mode === "credit" ? (
-          <Stat label={creditBalance < 0 ? `Saldo (€ ${Math.abs(creditBalance) * 12} openstaand)` : "Coach-sessies (saldo)"} value={creditBalance} accent={creditBalance > 0 && creditBalance <= 2} danger={creditBalance <= 0} />
+          <Stat label={creditBalance < 0 ? `Saldo (€ ${Math.abs(creditBalance) * 12} openstaand)` : "Coach-sessies (saldo)"} value={sess(creditBalance)} accent={creditBalance > 0 && creditBalance <= 2} danger={creditBalance <= 0} />
         ) : mode === "invoice" ? (
           <Stat label="Te factureren (deze maand)" value={euro(monthCharges)} />
         ) : (

@@ -119,7 +119,8 @@ export async function coachBookSession(formData) {
     try {
       const { data: led } = await supabase.from("coach_ledger").select("delta").eq("coach_id", userId);
       const bal = (led || []).reduce((a, r) => a + Number(r.delta || 0), 0);
-      saldoNote = bal < 0 ? ` — ⚠ tegoed: ${bal} (€ ${Math.abs(bal) * 12} openstaand, koop bij)` : ` — tegoed: nog ${bal}`;
+      const balS = String(bal).replace(".", ","); // 1,5 i.p.v. 1.5 (0117: halve beurten)
+      saldoNote = bal < 0 ? ` — ⚠ tegoed: ${balS} (€ ${Math.ceil(Math.abs(bal) * 12)} openstaand, koop bij)` : ` — tegoed: nog ${balS}`;
     } catch {}
   }
   return { ok: true, message: (clientId ? "Sessie geboekt ✓" : "Slot gereserveerd ✓ — voeg later een client toe") + saldoNote };

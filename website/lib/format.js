@@ -42,3 +42,6 @@ export function tone(iso) {
   if (d > 14) return "text-amber-500";
   return "text-brand/50";
 }
+
+// "1,5" — sessietegoed met halve beurten (0117) in Vlaamse notatie; heel getal blijft "3".
+export const sess = (n) => String(Number(n) || 0).replace(".", ",");

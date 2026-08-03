@@ -222,7 +222,7 @@ export default async function AccountPage({ searchParams }) {
               <h2 className="mt-1 text-2xl font-black md:text-3xl">Boek jouw volgende sessie</h2>
               <p className="mt-2 text-sm leading-relaxed text-lav">
                 {credits > 0 ? (
-                  <>Je hebt <span className="font-black text-white">{credits} sessie{credits === 1 ? "" : "s"}</span> op je saldo — kies meteen een moment.</>
+                  <>Je hebt <span className="font-black text-white">{String(credits).replace(".", ",")} sessie{credits === 1 ? "" : "s"}</span> op je saldo — kies meteen een moment.</>
                 ) : profile?.welcome_status === "eligible" && !profile?.welcome_code_used ? (
                   <>Je <span className="font-black text-white">gratis sessie</span> staat klaar. Reserveer de hele zaal voor jezelf.</>
                 ) : (
@@ -264,7 +264,7 @@ export default async function AccountPage({ searchParams }) {
           <Stat label="Aankomende sessies" value={upcomingPaid.length} />
           <Stat
             label="Sessies (saldo)"
-            value={credits}
+            value={String(credits).replace(".", ",")}
             hint={creditDetail.next_expiry && creditDetail.expiring > 0
               ? `${creditDetail.expiring === credits ? "Vervalt" : `${creditDetail.expiring} vervalt`} op ${new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", year: "numeric" }).format(new Date(creditDetail.next_expiry))}`
               : null}
