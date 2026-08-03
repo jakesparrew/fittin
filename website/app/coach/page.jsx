@@ -7,6 +7,8 @@ import AddClientInline from "@/components/coach/AddClientInline";
 import CoachSlotPicker from "@/components/coach/CoachSlotPicker";
 import CoachSessionActions from "@/components/coach/CoachSessionActions";
 import CoachChecklist from "@/components/coach/CoachChecklist";
+import TodayStrip from "@/components/coach/TodayStrip";
+import ShareSession from "@/components/coach/ShareSession";
 import BookingDetail from "@/components/BookingDetail";
 import { fmtHour } from "@/lib/time";
 import { sess } from "@/lib/format";
@@ -54,7 +56,7 @@ export default async function CoachDashboard({ searchParams }) {
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
     // coach_id = sessies die hij geeft; user_id = sessies die hij ZELF boekte (bv. via /boeken).
     // Enkel op coach_id filteren liet een zelf geboekte sessie van het dashboard verdwijnen.
-    supabase.from("bookings").select("id, user_id, coach_id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, member:profiles!bookings_user_id_fkey(full_name), services(name)").or(`coach_id.eq.${userId},user_id.eq.${userId}`).order("starts_at", { ascending: true }),
+    supabase.from("bookings").select("id, user_id, coach_id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, notes, member:profiles!bookings_user_id_fkey(full_name), services(name)").or(`coach_id.eq.${userId},user_id.eq.${userId}`).order("starts_at", { ascending: true }),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
     supabase.from("coach_session_requests").select("qty, status, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(5),
     supabase.from("notifications").select("id, type, title, body, link, read, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(6),
@@ -108,6 +110,65 @@ export default async function CoachDashboard({ searchParams }) {
       mineMap[keyOf(b.starts_at)] = { name: isOwn ? "Eigen training" : isRes ? "Gereserveerd" : (b.member?.full_name || "Client"), service: b.services?.name || "Sessie" };
     }
   }
+  // ---- Vandaag-strip + deelbericht voor de client ----------------------------------------
+  // Wie zit er achter een boeking? bookings.notes bevat de naam van een EXTERNE client (iemand
+  // zonder Fittin-account) — precies de persoon die anders nooit een bevestiging kreeg.
+  const whoOf = (b) => {
+    if (b.user_id === userId && !b.coach_id) return "Mijn eigen training";
+    const name = b.member?.full_name || String(b.notes || "").trim();
+    if (b.user_id === userId && b.coach_id) return name || "Gereserveerd · nog geen client";
+    return name || "Client";
+  };
+  const hhmm = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  const dayLong = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long" }).format(new Date(iso));
+  const coachName = profile.full_name || "je coach";
+  const gymAddress = gym.address || "Aannemersstraat 186, 9040 Gent";
+  // Eigen trainingen krijgen geen deelbericht: daar is geen client om naar te sturen.
+  const shareTextFor = (b) => {
+    if (b.user_id === userId && !b.coach_id) return null;
+    const mins = Math.round((new Date(b.ends_at) - new Date(b.starts_at)) / 60000);
+    const dur = mins === 60 ? "1 uur" : mins === 90 ? "1,5 uur" : mins % 60 === 0 ? `${mins / 60} uur` : `${mins} min`;
+    return [
+      `Hey! Je sessie bij Fittin' staat vast 💪`,
+      ``,
+      `📅 ${dayLong(b.starts_at)}`,
+      `🕐 ${hhmm(b.starts_at)} – ${hhmm(b.ends_at)} (${dur})`,
+      `📍 Fittin', ${gymAddress}`,
+      `🏋️ Met ${coachName}`,
+      ``,
+      `Kom een paar minuten vroeger — ik laat je binnen aan de deur.`,
+      `Meebrengen: sportkleren, propere binnenschoenen en een handdoek.`,
+      ``,
+      `Route: https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("Fittin " + gymAddress)}`,
+    ].join("\n");
+  };
+
+  const nowMs = Date.now();
+  const todaySessions = all
+    .filter((b) => b.status === "bevestigd" && new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date(b.starts_at)) === todayStr)
+    .map((b) => {
+      const st = new Date(b.starts_at).getTime();
+      const en = new Date(b.ends_at).getTime();
+      const live = nowMs >= st && nowMs < en;
+      const done = nowMs >= en;
+      const inMin = Math.round((st - nowMs) / 60000);
+      return {
+        id: b.id,
+        time: hhmm(b.starts_at),
+        who: whoOf(b),
+        sub: `${b.services?.name || "Sessie"} · tot ${hhmm(b.ends_at)}`,
+        live,
+        done,
+        state: live ? "Nu bezig" : done ? "Afgelopen" : inMin < 60 ? `over ${inMin} min` : `over ${Math.round(inMin / 60)} u`,
+        needsClient: b.user_id === userId && !!b.coach_id && !String(b.notes || "").trim(),
+        shareText: shareTextFor(b),
+      };
+    });
+  const nextUp = upcoming.find((b) => !todaySessions.some((s) => s.id === b.id));
+  const nextSummary = nextUp
+    ? { when: `${dayLong(nextUp.starts_at)} om ${hhmm(nextUp.starts_at)}`, who: whoOf(nextUp), shareText: shareTextFor(nextUp) }
+    : null;
+
   const schedDays = [];
   for (let i = 0; i < 14; i++) {
     const d = new Date(schedFrom.getTime() + i * 86400000);
@@ -129,6 +190,8 @@ export default async function CoachDashboard({ searchParams }) {
       </div>
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
+
+      <TodayStrip sessions={todaySessions} next={nextSummary} />
 
       {/* Sinds 0115 blokkeert boeken bij saldo < 1 — een openstaand (negatief) saldo dus ook.
           Bijkopen kan altijd: de aankoop vult eerst de put aan, daarna kan de coach weer boeken. */}
@@ -386,13 +449,14 @@ export default async function CoachDashboard({ searchParams }) {
               return (
               <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
                 <div>
-                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{own ? "🏋️ Mijn eigen training" : reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
+                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{own ? "🏋️ Mijn eigen training" : whoOf(b)}</BookingDetail></p>
                   <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}{own ? " · zelf geboekt" : ""}</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
                     {own ? "eigen boeking" : b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                   </span>
+                  {!own && <ShareSession text={shareTextFor(b)} />}
                   <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={own ? false : reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
                 </div>
               </div>
