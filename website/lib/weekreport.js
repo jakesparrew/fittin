@@ -1,0 +1,190 @@
+import { createAdminClient } from "@/lib/supabase/admin";
+import { sendWeekReport } from "@/lib/email";
+
+// Data voor het wekelijkse rapport aan de beheerder.
+//
+// Leidraad (afspraak met de eigenaar): geen data om data te tonen. Elk cijfer hier moet leiden
+// tot een beslissing — waar promoten, wie aanspreken, wat blokkeert er geld. Wat de app zélf al
+// automatisch oplost (win-back-mails, abo-voorstellen, herinneringen) staat er als bevestiging
+// dat het draait, niet als actiepunt.
+//
+// De week loopt maandag→zondag en is ALTIJD de week die net is afgelopen; het rapport vertrekt
+// maandagochtend, dus een "lopende" week zou een half beeld geven.
+
+const bxlDay = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d);
+const WEEKDAYS = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
+
+export function lastWeekRange(now = new Date()) {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  const dow = (d.getDay() + 6) % 7;           // 0 = maandag
+  const thisMonday = new Date(d.getTime() - dow * 86400000);
+  const start = new Date(thisMonday.getTime() - 7 * 86400000);
+  return { start, end: thisMonday, prevStart: new Date(start.getTime() - 7 * 86400000) };
+}
+
+export async function buildWeekReport(gym, now = new Date()) {
+  const admin = createAdminClient();
+  const { start, end, prevStart } = lastWeekRange(now);
+  const sIso = start.toISOString(), eIso = end.toISOString(), pIso = prevStart.toISOString();
+  const d60 = new Date(start.getTime() - 60 * 86400000).toISOString();
+
+  const [
+    { data: wkBookings },
+    { data: pvBookings },
+    { data: wkPay },
+    { data: pvPay },
+    { count: newMembers },
+    { count: prevNewMembers },
+    { data: mems },
+    { data: bk60 },
+    { data: people },
+    { data: coachLedger },
+    { count: openReports },
+    { data: mailLog },
+    { data: cronRows },
+    { data: openInvoices },
+  ] = await Promise.all([
+    admin.from("bookings").select("starts_at, ends_at, status, persons, price_cents, paid, payment_source, user_id").eq("gym_id", gym.id).gte("starts_at", sIso).lt("starts_at", eIso),
+    admin.from("bookings").select("status, user_id").eq("gym_id", gym.id).gte("starts_at", pIso).lt("starts_at", sIso),
+    admin.from("payments").select("amount_cents, status, kind").eq("gym_id", gym.id).gte("created_at", sIso).lt("created_at", eIso),
+    admin.from("payments").select("amount_cents, status").eq("gym_id", gym.id).gte("created_at", pIso).lt("created_at", sIso),
+    admin.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid").gte("created_at", sIso).lt("created_at", eIso),
+    admin.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid").gte("created_at", pIso).lt("created_at", sIso),
+    admin.from("memberships").select("user_id, status, cancel_at_period_end, current_period_end, started_at").eq("gym_id", gym.id),
+    admin.from("bookings").select("user_id, payment_source").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", d60).lt("starts_at", eIso),
+    admin.from("profiles").select("id, full_name, role").eq("gym_id", gym.id),
+    admin.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
+    admin.from("problem_reports").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "open"),
+    admin.from("email_log").select("status").gte("created_at", sIso).lt("created_at", eIso),
+    admin.from("cron_runs").select("job, ok, created_at").order("created_at", { ascending: false }).limit(30),
+    admin.from("payments").select("amount_cents").eq("gym_id", gym.id).eq("status", "onbetaald"),
+  ]);
+
+  const nameOf = new Map((people || []).map((p) => [p.id, p.full_name || "Lid"]));
+  const lidIds = new Set((people || []).filter((p) => p.role === "lid").map((p) => p.id));
+  const held = (wkBookings || []).filter((b) => b.status === "bevestigd");
+  const cancelled = (wkBookings || []).filter((b) => b.status === "geannuleerd").length;
+  const prevHeld = (pvBookings || []).filter((b) => b.status === "bevestigd");
+
+  const paidOnly = (rows) => (rows || []).filter((p) => (p.status || "betaald") === "betaald" || p.status === "paid");
+  const revenue = paidOnly(wkPay).reduce((a, p) => a + (p.amount_cents || 0), 0);
+  const prevRevenue = paidOnly(pvPay).reduce((a, p) => a + (p.amount_cents || 0), 0);
+
+  const uniqueMembers = new Set(held.map((b) => b.user_id)).size;
+  const prevUnique = new Set(prevHeld.map((b) => b.user_id)).size;
+
+  // ---- Bezetting per weekdag -------------------------------------------------------------
+  // De zaal is exclusief per tijdslot, dus "hoeveel van de open halve uren waren geboekt" is
+  // een eerlijk bezettingscijfer — en meteen het antwoord op "welke dag moet ik promoten".
+  const slotsPerDay = Math.max(1, (gym.close_hour - gym.open_hour) * 2);
+  const bookedHalfHours = {};
+  const perHour = {};
+  for (const b of held) {
+    const day = bxlDay(new Date(b.starts_at));
+    const halves = Math.max(1, Math.round((new Date(b.ends_at) - new Date(b.starts_at)) / 1800000));
+    bookedHalfHours[day] = (bookedHalfHours[day] || 0) + halves;
+    const h = parseInt(new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", hour: "2-digit", hour12: false }).format(new Date(b.starts_at)), 10);
+    perHour[h] = (perHour[h] || 0) + 1;
+  }
+  const byDay = WEEKDAYS.map((label, i) => {
+    const key = bxlDay(new Date(start.getTime() + i * 86400000));
+    return { label, value: Math.round(((bookedHalfHours[key] || 0) / slotsPerDay) * 100) };
+  });
+  const busiestHours = Object.entries(perHour)
+    .map(([h, n]) => ({ label: `${String(h).padStart(2, "0")}:00`, value: n, hour: Number(h) }))
+    .sort((a, b) => b.value - a.value || a.hour - b.hour)
+    .slice(0, 6)
+    .sort((a, b) => a.hour - b.hour);
+  const quietDays = byDay.filter((d) => d.value < 15).map((d) => d.label);
+
+  // ---- Abonnementen ----------------------------------------------------------------------
+  const all = mems || [];
+  const active = all.filter((m) => m.status === "actief");
+  const pastDue = all.filter((m) => m.status === "past_due");
+  const ending = active.filter((m) => m.cancel_at_period_end);
+  const newAbos = all.filter((m) => m.started_at && m.started_at >= sIso && m.started_at < eIso).length;
+
+  // Abo-kandidaten: ≥3 los/kaart-sessies in 60 dagen zonder abo. Zelfde regel als het dashboard
+  // en als de automatische abo-mail, zodat de cijfers elkaar niet tegenspreken.
+  const hasAbo = new Set(all.filter((m) => m.status === "actief" || m.status === "past_due").map((m) => m.user_id));
+  const payCount = {};
+  for (const b of bk60 || []) {
+    if (!b.user_id || hasAbo.has(b.user_id) || !lidIds.has(b.user_id)) continue;
+    if (b.payment_source === "los" || b.payment_source === "credit") payCount[b.user_id] = (payCount[b.user_id] || 0) + 1;
+  }
+  const candidates = Object.entries(payCount).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 4)
+    .map(([uid, n]) => ({ name: nameOf.get(uid) || "Lid", sessions: n }));
+
+  // ---- Geld dat blijft hangen ------------------------------------------------------------
+  const coachBal = {};
+  for (const r of coachLedger || []) coachBal[r.coach_id] = (coachBal[r.coach_id] || 0) + Number(r.delta || 0);
+  const coachDebt = Object.entries(coachBal).filter(([, n]) => n < 0).sort((a, b) => a[1] - b[1])
+    .map(([cid, n]) => ({ name: nameOf.get(cid) || "Coach", sessions: n, euros: Math.ceil(Math.abs(n) * 12) }));
+  const openInvoiceCents = (openInvoices || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
+
+  // ---- Draait de machine? ----------------------------------------------------------------
+  const mailsSent = (mailLog || []).filter((m) => m.status === "sent").length;
+  const mailsFailed = (mailLog || []).filter((m) => m.status === "failed").length;
+  const lastRun = {};
+  for (const r of cronRows || []) if (!lastRun[r.job]) lastRun[r.job] = r;
+  const cronStale = (job, maxMin) => {
+    const r = lastRun[job];
+    if (!r) return true;
+    return r.ok === false || (Date.now() - new Date(r.created_at).getTime()) / 60000 > maxMin;
+  };
+  const health = {
+    mailsSent,
+    mailsFailed,
+    accessCronBad: cronStale("access_codes", 20),
+    activationCronBad: cronStale("activation", 60 * 30),
+  };
+
+  return {
+    range: { start, end },
+    sessions: { now: held.length, prev: prevHeld.length, cancelled },
+    revenue: { now: revenue, prev: prevRevenue },
+    members: { now: newMembers || 0, prev: prevNewMembers || 0 },
+    unique: { now: uniqueMembers, prev: prevUnique },
+    byDay,
+    busiestHours,
+    quietDays,
+    abo: { active: active.length, mrr: active.length * 1200, newAbos, pastDue: pastDue.map((m) => nameOf.get(m.user_id) || "Lid"), ending: ending.map((m) => ({ name: nameOf.get(m.user_id) || "Lid", until: m.current_period_end })) },
+    candidates,
+    coachDebt,
+    openInvoiceCents,
+    openReports: openReports || 0,
+    health,
+  };
+}
+
+// Verstuurt het rapport naar elke beheerder van elke gym. Ontvangers komen uit de rollen, niet
+// uit een instelling: wie beheerder wordt krijgt het rapport, wie het niet meer is niet — zo kan
+// er geen adres blijven hangen dat niemand meer beheert.
+//
+// Dedupe op email_log per ontvanger (kind = week_rapport, deze week): draait de cron twee keer,
+// of trekt Vercel de route opnieuw open, dan valt er geen tweede rapport in de bus.
+export async function sendWeekReports(now = new Date()) {
+  const admin = createAdminClient();
+  const { end: thisMonday } = lastWeekRange(now);
+  const [{ data: gyms }, { data: sentRows }] = await Promise.all([
+    admin.from("gyms").select("id, name, open_hour, close_hour"),
+    admin.from("email_log").select("to_email").eq("kind", "week_rapport").gte("created_at", thisMonday.toISOString()),
+  ]);
+  const already = new Set((sentRows || []).map((r) => String(r.to_email || "").toLowerCase()));
+
+  let sent = 0, skipped = 0;
+  for (const gym of gyms || []) {
+    const { data: admins } = await admin
+      .from("profiles").select("email, full_name").eq("gym_id", gym.id).eq("role", "beheerder");
+    const recipients = (admins || []).filter((a) => a.email && !already.has(a.email.toLowerCase()));
+    if (!recipients.length) { skipped += (admins || []).length; continue; }
+    const report = await buildWeekReport(gym, now);
+    for (const a of recipients) {
+      const res = await sendWeekReport({ to: a.email, name: a.full_name, report, gymName: gym.name || "Fittin'" });
+      if (res?.ok) sent++;
+      already.add(a.email.toLowerCase());
+    }
+  }
+  return { sent, skipped };
+}

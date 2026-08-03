@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { statGrid, barChart, sectionTitle, actionItem, calloutBox, delta, eur } from "@/lib/email-visuals";
 
 // Transactional email via Resend. Degrades to a no-op until configured.
 const key = process.env.RESEND_API_KEY;
@@ -826,5 +827,136 @@ export async function sendAboSuggestion({ to, name, sessions, losCount, creditCo
     undefined,
     undefined,
     "abo_suggestie"
+  );
+}
+
+// ---- Beheerder: wekelijks rapport ----
+// Maandagochtend, over de week die net afgelopen is. De opbouw volgt bewust de volgorde waarin
+// de eigenaar beslist: hoe ging het (met vergelijking), waar zit ruimte (bezetting), wie moet ik
+// aanspreken (namen + links), en draait de machine nog (mails/crons). Blokken zonder inhoud
+// worden weggelaten — een lege sectie leest als "hier is niets aan de hand" en dat is niet altijd waar.
+// Opbouw en versturen staan apart zodat de HTML te renderen valt zonder iemand te mailen
+// (scripts/preview-weekreport.mjs schrijft hem naar een bestand).
+export function weekReportHtml({ name, report }) {
+  const r = report;
+  const periode = `${fmt(r.range.start, { day: "numeric", month: "long" })} – ${fmt(new Date(r.range.end.getTime() - 86400000), { day: "numeric", month: "long" })}`;
+
+  // Eén zin bovenaan: wat is er deze week eigenlijk gebeurd?
+  const dSess = r.sessions.now - r.sessions.prev;
+  const kop = r.sessions.now === 0
+    ? `Er werd deze week <b>geen enkele sessie</b> geboekt. Dat is het signaal om iets te doen — zie de actiepunten hieronder.`
+    : `<b>${r.sessions.now} ${r.sessions.now === 1 ? "sessie" : "sessies"}</b> door <b>${r.unique.now} ${r.unique.now === 1 ? "lid" : "verschillende leden"}</b>, goed voor <b>${eur(r.revenue.now)}</b>.` +
+      (dSess === 0 ? " Even druk als vorige week." : dSess > 0 ? ` Dat zijn er <b>${dSess} meer</b> dan vorige week.` : ` Dat zijn er <b>${Math.abs(dSess)} minder</b> dan vorige week.`);
+
+  const stats = statGrid([
+    { label: "Sessies", value: String(r.sessions.now), delta: delta(r.sessions.now, r.sessions.prev) },
+    { label: "Omzet", value: eur(r.revenue.now), delta: delta(r.revenue.now, r.revenue.prev, { money: true }) },
+    { label: "Actieve leden", value: String(r.unique.now), delta: delta(r.unique.now, r.unique.prev) },
+    { label: "Nieuwe leden", value: String(r.members.now), delta: delta(r.members.now, r.members.prev) },
+  ]);
+
+  // ---- Bezetting: waar zit nog ruimte? ----
+  const bezet = sectionTitle(
+    "Bezetting per dag",
+    "Aandeel van de open halve uren dat geboekt was. Lage dagen zijn je promotieruimte — de zaal staat er toch."
+  ) + barChart(r.byDay, { unit: "%", highlight: (i) => i.value >= 50 })
+    + (r.quietDays.length
+      ? `<p style="margin:6px 0 0;font-size:12px;color:#6b6685;line-height:1.5">Rustig: <b style="color:#22194F">${r.quietDays.join(", ")}</b>. Een gerichte post of een tijdelijke actie op net die dag levert hier het meeste op.</p>`
+      : "");
+
+  const uren = r.busiestHours.length
+    ? sectionTitle("Drukste uren", "Handig om te weten wanneer je best zelf aanwezig bent of een coach inplant.")
+      + barChart(r.busiestHours, { unit: "×" })
+    : "";
+
+  // ---- Actiepunten: enkel wat een mens moet doen ----
+  const acties = [];
+  for (const c of r.coachDebt) {
+    acties.push(actionItem({
+      icon: "🧾",
+      title: `${esc(c.name)} staat op ${String(c.sessions).replace(".", ",")} sessietegoed — € ${c.euros} te innen`,
+      sub: "Boeken is voor deze coach geblokkeerd tot het saldo is aangezuiverd; op zijn dashboard staat een betaalknop klaar.",
+      href: `${SITE}/beheer/coaches`, label: "Naar coaches",
+    }));
+  }
+  for (const n of r.abo.pastDue) {
+    acties.push(actionItem({
+      icon: "💳",
+      title: `Abo-betaling van ${esc(n)} is mislukt`,
+      sub: "Stripe probeert automatisch opnieuw, maar tot dan betaalt dit lid weer € 15 per sessie. Eén berichtje om de kaart te vernieuwen volstaat meestal.",
+      href: `${SITE}/beheer/leden`, label: "Naar leden",
+    }));
+  }
+  for (const e of r.abo.ending) {
+    acties.push(actionItem({
+      icon: "👋",
+      title: `${esc(e.name)} zegde het abonnement op`,
+      sub: `Loopt af op ${e.until ? esc(dayLabel(e.until)) : "het einde van de periode"}. Vraag wat er scheelde — dat is de goedkoopste marktinfo die je krijgt.`,
+      href: `${SITE}/beheer/leden`, label: "Naar leden",
+    }));
+  }
+  if (r.candidates.length) {
+    acties.push(actionItem({
+      icon: "⭐",
+      title: `${r.candidates.length} abo-kandida${r.candidates.length === 1 ? "at" : "ten"}: ${r.candidates.map((c) => `${esc(c.name)} (${c.sessions}×)`).join(", ")}`,
+      sub: "Zij boeken vaak en betalen nog het volle tarief. De app toont hen automatisch hun besparing — een persoonlijk woordje in de zaal doet de rest.",
+      href: `${SITE}/beheer/leden`, label: "Naar leden",
+    }));
+  }
+  if (r.openReports) {
+    acties.push(actionItem({
+      icon: "🛠",
+      title: `${r.openReports} openstaande melding${r.openReports === 1 ? "" : "en"} van leden`,
+      sub: "Een gemelde panne die blijft liggen kost je stilzwijgend leden.",
+      href: `${SITE}/beheer/meldingen`, label: "Naar meldingen",
+    }));
+  }
+  if (r.openInvoiceCents > 0) {
+    acties.push(actionItem({
+      icon: "📄",
+      title: `${eur(r.openInvoiceCents)} staat open op factuur`,
+      sub: "Openstaande posten in Financiën — factureren of afboeken.",
+      href: `${SITE}/beheer/financien`, label: "Naar financiën",
+    }));
+  }
+  const actiesHtml = acties.length
+    ? sectionTitle(`Wat jij deze week best doet (${acties.length})`, "Alleen dingen waar een mens voor nodig is — de rest doet de app zelf.") + acties.join("")
+    : sectionTitle("Wat jij deze week best doet", "") + calloutBox("Niets dringends. Geen openstaande betalingen, geen mislukte abo's, geen meldingen. 👌", "good");
+
+  // ---- Draait de machine? ----
+  const machineOk = !r.health.mailsFailed && !r.health.accessCronBad && !r.health.activationCronBad;
+  const machine = sectionTitle("Draait de app?", "")
+    + (machineOk
+      ? calloutBox(`De app verstuurde deze week <b>${r.health.mailsSent} mails</b> (bevestigingen, deurcodes, herinneringen, win-backs) — <b>geen enkele mislukt</b>. Deurcodes en dagelijkse taken liepen op tijd.`, "good")
+      : calloutBox(
+          `<b>Let op — iets loopt niet.</b><ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">`
+          + (r.health.mailsFailed ? `<li><b>${r.health.mailsFailed} mail(s) mislukt</b> deze week. Check Resend (domein, suppressielijst).</li>` : "")
+          + (r.health.accessCronBad ? `<li><b>Deurcode-taak liep niet recent.</b> Leden kunnen daardoor zonder code voor de deur staan.</li>` : "")
+          + (r.health.activationCronBad ? `<li><b>Dagelijkse taak liep niet.</b> Herinneringen en win-backs staan stil.</li>` : "")
+          + `</ul>`, "warn"));
+
+  // ---- Abonnementen, in één regel ----
+  const abo = calloutBox(
+    `<b>${r.abo.active} actieve abonnementen</b> · ${eur(r.abo.mrr)} vast per maand`
+    + (r.abo.newAbos ? ` · <b style="color:#33B24A">${r.abo.newAbos} nieuw deze week</b>` : "")
+    + (r.sessions.cancelled ? `<br><span style="font-size:12px;color:#6b6685">${r.sessions.cancelled} geannuleerde boeking${r.sessions.cancelled === 1 ? "" : "en"} deze week.</span>` : "")
+  );
+
+  return shell({
+    title: `Je week in het kort`,
+    intro: `${esc(name) ? `Hallo ${esc(name)}, ` : ""}dit is <b>${periode}</b>.<br>${kop}`,
+    body: stats + abo + bezet + uren + actiesHtml + machine,
+    cta: { href: `${SITE}/beheer`, label: "Open het dashboard" },
+  });
+}
+
+export async function sendWeekReport({ to, name, report, gymName = "Fittin'" }) {
+  return send(
+    to,
+    `Weekrapport ${gymName} · ${report.sessions.now} sessies, ${eur(report.revenue.now)}`,
+    weekReportHtml({ name, report }),
+    undefined,
+    undefined,
+    "week_rapport"
   );
 }

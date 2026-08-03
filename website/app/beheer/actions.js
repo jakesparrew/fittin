@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted, sendBookingCancelled } from "@/lib/email";
+import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted, sendBookingCancelled, sendWeekReport } from "@/lib/email";
+import { buildWeekReport } from "@/lib/weekreport";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { notify } from "@/lib/notify";
@@ -948,4 +949,22 @@ export async function createManualInvoice(formData) {
   revalidatePath("/beheer/financien");
   revalidatePath("/beheer/betalingen");
   return { ok: true, paymentId: pay?.id, message: `Factuur voor ${who.full_name || "—"} aangemaakt (€ ${(amount / 100).toFixed(2).replace(".", ",")}) — staat bij Open posten, klik daar "Factuur" voor de PDF.` };
+}
+
+// Stuur het weekrapport nu meteen naar jezelf. Zonder dit moest je tot maandag wachten om te
+// zien wat de mail eigenlijk toont — en dan is bijsturen te laat.
+export async function sendWeekReportTest() {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const [{ data: gym }, { data: me }] = await Promise.all([
+    admin.from("gyms").select("id, name, open_hour, close_hour").eq("id", profile.gym_id).single(),
+    admin.from("profiles").select("email, full_name").eq("id", profile.id).single(),
+  ]);
+  if (!gym) return { error: "Gym niet gevonden." };
+  if (!me?.email) return { error: "Je profiel heeft geen e-mailadres." };
+  const report = await buildWeekReport(gym);
+  const res = await sendWeekReport({ to: me.email, name: me.full_name, report, gymName: gym.name || "Fittin'" });
+  if (!res?.ok) return { error: res?.skipped ? "E-mail is niet geconfigureerd." : "Versturen mislukt — check de e-mailinstellingen." };
+  return { ok: `Weekrapport verstuurd naar ${me.email} ✓` };
 }

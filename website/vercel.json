@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/access",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/weekreport",
+      "schedule": "0 6 * * 1"
     }
   ]
 }

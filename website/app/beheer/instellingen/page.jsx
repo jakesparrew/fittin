@@ -1,8 +1,9 @@
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { updateGymSettings } from "../actions";
+import { updateGymSettings, sendWeekReportTest } from "../actions";
 import NukiSettings from "@/components/admin/NukiSettings";
 import ActionForm from "@/components/ui/ActionForm";
+import SubmitButton from "@/components/ui/SubmitButton";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,26 @@ export default async function Instellingen() {
       </ActionForm>
 
       <NukiSettings initial={nukiInitial} tokenSet={tokenSet} envToken={false} readOnly={readOnly} />
+
+      {/* Weekrapport — de mail vertrekt maandagochtend vanzelf; deze knop laat je hem nu al zien. */}
+      <section className="mt-8 max-w-2xl rounded-2xl border border-borderc bg-white p-7">
+        <h2 className="text-xl font-black text-brand">📊 Wekelijks rapport</h2>
+        <p className="mt-1 text-sm leading-relaxed text-brand/60">
+          Elke <b>maandagochtend</b> krijgt elke beheerder een mail over de week ervoor: sessies, omzet en nieuwe leden
+          (telkens vergeleken met de week daarvoor), de bezetting per dag, de drukste uren, en een korte lijst met wat
+          jij zelf moet oppakken — openstaand geld, mislukte abo-betalingen, abo-kandidaten en meldingen.
+          Wat de app zelf afhandelt staat er alleen als bevestiging dat het draait.
+        </p>
+        <ActionForm action={sendWeekReportTest} className="mt-4">
+          <SubmitButton
+            disabled={readOnly}
+            className="rounded-full border-2 border-borderc bg-white px-6 py-2.5 text-sm font-bold text-brand transition hover:border-accent disabled:opacity-40"
+          >
+            Stuur mij het rapport nu
+          </SubmitButton>
+        </ActionForm>
+        <p className="mt-2 text-xs text-brand/40">Je krijgt het rapport over de week die net is afgelopen, op je eigen adres.</p>
+      </section>
     </div>
   );
 }
