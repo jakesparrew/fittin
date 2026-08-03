@@ -24,10 +24,11 @@ export default function ToastHost() {
           key={t.id}
           className={
             "pointer-events-auto flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand/20 " +
-            (t.type === "error" ? "bg-red-500" : "bg-brand")
+            (t.type === "error" ? "bg-red-500" : t.type === "info" ? "bg-brand/80" : "bg-brand")
           }
         >
-          <span>{t.type === "error" ? "⚠" : "✓"}</span>
+          {/* "info" is bezig-met-iets, geen bevestiging — een vinkje zou daar liegen. */}
+          <span>{t.type === "error" ? "⚠" : t.type === "info" ? "⟳" : "✓"}</span>
           {t.msg}
         </div>
       ))}

@@ -211,6 +211,47 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
   return { ok: true, checkoutUrl: session.url };
 }
 
+// Vind terug wat een afgebroken boeking heeft achtergelaten.
+//
+// Valt het netwerk weg NA het aanmaken van de boeking maar VÓÓR het antwoord, dan weet de
+// browser niet of er iets gebeurd is. Blind opnieuw proberen zou dan een tweede boeking maken
+// (en bij een betaalde sessie een tweede reservering). Daarom kijkt de client eerst hier:
+// bestaat er al een boeking van deze gebruiker op exact dit moment, aangemaakt in de laatste
+// 10 minuten? Zo ja, dan was de eerste poging geslaagd en mag er niets meer aangemaakt worden.
+const slotKeyOf = (iso) => {
+  const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(new Date(iso));
+  const g = (t) => p.find((x) => x.type === t)?.value;
+  let hh = g("hour"); if (hh === "24") hh = "0";
+  return `${g("year")}-${g("month")}-${g("day")}:${parseInt(hh, 10) + (parseInt(g("minute"), 10) >= 30 ? 0.5 : 0)}`;
+};
+
+export async function recoverBookingAction({ date, hour }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { found: false };
+
+  const since = new Date(Date.now() - 10 * 60000).toISOString();
+  const { data: rows } = await supabase
+    .from("bookings")
+    .select("id, starts_at, paid, price_cents, status")
+    .eq("user_id", user.id)
+    .eq("status", "bevestigd")
+    .gte("created_at", since)
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const want = `${date}:${Number(hour)}`;
+  const match = (rows || []).find((b) => slotKeyOf(b.starts_at) === want);
+  if (!match) return { found: false };
+  // Al rond (gratis, tegoed of betaald): niets meer doen, gewoon de bevestiging tonen.
+  if (match.paid || match.price_cents === 0) return { found: true, done: true };
+  // Onbetaalde reservering: geef een verse checkout-link mee, anders vervalt het slot na 15 min.
+  const url = await buildResumeCheckout(supabase, user, match.id);
+  return url ? { found: true, checkoutUrl: url } : { found: true, done: true };
+}
+
 // Resume payment for an existing unpaid booking (from the account page).
 export async function resumeCheckoutAction(formData) {
   const id = formData.get("bookingId");
@@ -220,6 +261,14 @@ export async function resumeCheckoutAction(formData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
+  const url = await buildResumeCheckout(supabase, user, id);
+  if (url) redirect(url);
+}
+
+// Gedeeld door "Afrekenen" op /account en door het netwerkherstel hierboven: maak een verse
+// Checkout-sessie voor een bestaande, nog onbetaalde reservering. Geeft null als dat niet (meer) mag.
+async function buildResumeCheckout(supabase, user, id) {
+  if (!id || !isStripeConfigured) return null;
 
   const { data: booking } = await supabase
     .from("bookings")
@@ -228,7 +277,7 @@ export async function resumeCheckoutAction(formData) {
     .eq("user_id", user.id)
     .single();
   // Only resume a still-held, unpaid booking. A cancelled/expired slot must not spawn a new checkout.
-  if (!booking || booking.paid || booking.status !== "bevestigd") return;
+  if (!booking || booking.paid || booking.status !== "bevestigd") return null;
 
   // Prevent a DOUBLE charge: expire the previous Checkout session before opening a new one, so a
   // slow payment on the old link can't land alongside the new one. Best-effort (old link may already
@@ -256,7 +305,7 @@ export async function resumeCheckoutAction(formData) {
     checkoutParams(booking, user.email, chargeCents, codeId)
   );
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", id);
-  redirect(session.url);
+  return session.url;
 }
 
 // Batch 5.5 — join/leave the waitlist for a full slot (logged-in members only). When the slot later

@@ -2,12 +2,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBookingAction, searchMembersAction, validateDiscountAction, toggleWaitlistAction } from "@/app/(site)/boeken/actions";
+import { createBookingAction, searchMembersAction, validateDiscountAction, toggleWaitlistAction, recoverBookingAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel, fmtHour } from "@/lib/time";
+import { isNetworkError, waitForNetwork } from "@/lib/net";
 import EventsBooking from "@/components/booking/EventsBooking";
 import { track } from "@/lib/track";
 
 const euro = (cents) => "€ " + (cents / 100).toFixed(2).replace(".", ",");
+const toast = (type, msg) => { try { window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type, msg } })); } catch {} };
 
 export default function BookingClient({
   gym,
@@ -165,9 +167,8 @@ export default function BookingClient({
     setBusy(true);
     setError("");
     track("checkout_started"); // funnel: confirm clicked (→ Stripe for paid, or instant for free/credit)
-    let res;
-    try {
-      res = await createBookingAction({
+
+    const payload = {
       serviceId: service.id,
       date: selected.dateStr,
       hour: selected.hour,
@@ -179,11 +180,42 @@ export default function BookingClient({
       discountCode: !welcomeApplies && !creditApplies ? discountCode.trim() : "",
       participantIds: invitees.map((i) => i.id),
       emailInvites: emailInvitees,
-      });
-    } catch {
-      setBusy(false);
-      setError("Er ging iets mis bij het boeken. Controleer je verbinding en probeer opnieuw.");
-      return;
+    };
+
+    // Valt het netwerk weg tijdens het bevestigen, dan is dit het pijnlijkste moment van de hele
+    // app: het lid weet niet of het geboekt is of niet, en durft niet opnieuw te klikken.
+    // We proberen daarom zelf opnieuw — maar NOOIT blind: eerst vragen we de server of de vorige
+    // poging tóch is aangekomen. Zo kan een herhaling geen tweede boeking maken.
+    let res;
+    try {
+      res = await createBookingAction(payload);
+    } catch (err) {
+      if (!isNetworkError(err)) {
+        setBusy(false);
+        setError("Er ging iets mis bij het boeken. Probeer het opnieuw.");
+        return;
+      }
+      toast("info", "Verbinding weggevallen — we proberen het even opnieuw…");
+      let recovered = null;
+      try { recovered = await recoverBookingAction({ date: selected.dateStr, hour: selected.hour }); } catch {}
+      if (recovered?.found) {
+        // De eerste poging was wél geslaagd. Niet opnieuw boeken.
+        if (recovered.checkoutUrl) { window.location.href = recovered.checkoutUrl; return; }
+        toast("success", "Je boeking was toch doorgekomen ✓");
+        setBusy(false);
+        router.refresh();
+        router.push("/account");
+        return;
+      }
+      await waitForNetwork();
+      try {
+        res = await createBookingAction(payload);
+      } catch {
+        setBusy(false);
+        setError("We konden je boeking niet doorsturen — je verbinding viel weg. Er is niets vastgelegd en er is niets aangerekend. Probeer het opnieuw zodra je weer online bent.");
+        toast("error", "Nog steeds geen verbinding — er is niets geboekt");
+        return;
+      }
     }
     if (res?.error) {
       setBusy(false);
