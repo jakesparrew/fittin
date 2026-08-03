@@ -21,6 +21,8 @@ import ShareRank from "@/components/ShareRank";
 import ShareReferral from "@/components/ShareReferral";
 import AccountSettings from "@/components/account/AccountSettings";
 import ProblemReport from "@/components/ProblemReport";
+import DoorCodeCard from "@/components/booking/DoorCodeCard";
+import { getGymSecrets } from "@/lib/gym-secrets";
 import AccountLinking from "@/components/account/AccountLinking";
 import BodyMetricsForm from "@/components/account/BodyMetricsForm";
 
@@ -43,6 +45,39 @@ function fmtRange(startIso, endIso) {
       minute: "2-digit",
     }).format(new Date(iso));
   return `${date} · ${t(startIso)}–${t(endIso)}`;
+}
+
+// "Boek opnieuw": zelfde duur/personen + een suggestie voor dezelfde weekdag+uur binnen 7 dagen.
+// Duur in HALVE uren (0117) — de oude link deed Math.round(ms/3600000) en maakte van 90 min 2 uur,
+// waardoor het lid 2 beurten betaalde i.p.v. 1,5. De suggestie is best-effort: BookingClient
+// valideert hem zelf met canBook() en laat hem vallen als het slot niet vrij is.
+const bxl = (iso, opts) => new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", ...opts }).format(new Date(iso));
+// "Boek opnieuw": neem personen, duur, weekdag en uur van de vorige sessie over en spring
+// naar de eerstvolgende keer dat die weekdag terugkomt. De oude versie rekende de duur met
+// /3600000 af te ronden, waardoor 90 min als 2 uur terugkwam — het lid kreeg dan 2 beurten
+// aangerekend in plaats van 1,5. Halfuurraster (/1800000) dus.
+function rebookHref(b) {
+  const durH = Math.min(4, Math.max(1, Math.round((new Date(b.ends_at) - new Date(b.starts_at)) / 1800000) / 2));
+  const persons = String(b.persons || 1);
+  const p = new URLSearchParams({ personen: persons, duur: String(durH) });
+  // Alles in Brusselse tijd bepalen: op de server (UTC) zou new Date().getDay() 's avonds
+  // een dag verkeerd zitten en dus de verkeerde weekdag voorstellen.
+  const wd = (iso) => bxl(iso, { weekday: "short" });
+  const hh = parseInt(bxl(b.starts_at, { hour: "2-digit", hour12: false }), 10);
+  const mm = parseInt(bxl(b.starts_at, { minute: "2-digit" }), 10);
+  if (Number.isFinite(hh)) {
+    const want = wd(b.starts_at);
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(Date.now() + i * 86400000);
+      if (wd(d.toISOString()) !== want) continue;
+      p.set("d", new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d));
+      p.set("h", String(hh + (mm >= 30 ? 0.5 : 0))); // decimaal uur op het halfuurrooster
+      p.set("u", String(durH));
+      p.set("p", persons);
+      break;
+    }
+  }
+  return `/boeken?${p.toString()}`;
 }
 
 const ROLE_LABEL = { lid: "Lid", coach: "Coach", beheerder: "Beheerder" };
@@ -79,10 +114,10 @@ export default async function AccountPage({ searchParams }) {
     { data: weights },
   ] = await Promise.all([
     supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
-    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
+    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, access_sent, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
     supabase.rpc("credits_balance_detail", { p_user: user.id }),
     supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).in("status", ["actief", "past_due"]),
-    admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
+    admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, nuki_code, access_sent, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
     admin.from("coach_clients").select("id, status, requested_by, coach:profiles!coach_clients_coach_id_fkey(id, full_name, email)").eq("client_id", user.id),
     supabase.from("coach_payment_requests").select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)").eq("client_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthIso).lt("starts_at", nowIso),
@@ -96,6 +131,25 @@ export default async function AccountPage({ searchParams }) {
   const { data: gym } = await supabase.from("gyms").select("open_hour, close_hour, address").eq("id", profile.gym_id).maybeSingle();
   const gymOpen = gym?.open_hour ?? 6;
   const gymClose = gym?.close_hour ?? 23;
+
+  // Deurcode-venster. Zolang Nuki niet actief is blijft bookings.nuki_code leeg en mailt de app
+  // de STATISCHE gymcode — precies wat het lid ~5 min vooraf ontvangt. Die code hier tonen is dus
+  // dezelfde info aan dezelfde persoon op hetzelfde moment, niet méér. Strikt gated: enkel als de
+  // toegangsmail effectief vertrok (access_sent) én we binnen het tijdslot zitten.
+  // gym_integrations heeft geen RLS-policies (service-role only) → via admin, en NOOIT het hele
+  // configobject doorgeven (dat bevat de Nuki-token); enkel de code-string gaat naar de client.
+  const [{ access_code: staticDoorCode }, { data: keypadCfg }] = await Promise.all([
+    getGymSecrets(admin, profile.gym_id).catch(() => ({})),
+    admin.from("gym_integrations").select("keypad_lead_min").eq("gym_id", profile.gym_id).maybeSingle(),
+  ]);
+  const leadMin = keypadCfg?.keypad_lead_min ?? 5;
+  const doorCodeFor = (b) => {
+    if (b.nuki_code) return b.nuki_code;                       // persoonlijke code (Nuki actief)
+    if (!b.access_sent || !staticDoorCode) return null;        // mail nog niet vertrokken → nog niets tonen
+    const t = Date.now();
+    const from = new Date(b.starts_at).getTime() - leadMin * 60000;
+    return t >= from && t <= new Date(b.ends_at).getTime() ? staticDoorCode : null;
+  };
 
   // credits_balance_detail returns one row: { balance, next_expiry, expiring }.
   const creditDetail = (Array.isArray(ledger) ? ledger[0] : ledger) || {};
@@ -632,16 +686,7 @@ export default async function AccountPage({ searchParams }) {
                     </a>
                   </div>
                   </div>
-                  {b.nuki_code && (
-                    <div className="mt-3 flex items-center gap-3 rounded-xl bg-accent/10 px-4 py-3">
-                      <span className="text-xl">🔑</span>
-                      <div>
-                        <p className="text-[11px] font-bold uppercase tracking-wide text-accentdark">Jouw deurcode</p>
-                        <p className="text-2xl font-black tracking-[0.2em] text-brand">{b.nuki_code}</p>
-                      </div>
-                      <span className="ml-auto text-xs text-brand/45">werkt tijdens je sessie</span>
-                    </div>
-                  )}
+                  <DoorCodeCard code={doorCodeFor(b)} leadMin={leadMin} />
                   {!b.invited && b.persons > 1 && (
                     <BookingBuddies bookingId={b.id} capacity={b.persons} participants={partMap[b.id] || []} paid={b.paid || b.price_cents === 0} />
                   )}
@@ -675,7 +720,7 @@ export default async function AccountPage({ searchParams }) {
                   <div className="flex items-center gap-3">
                     {b.status !== "geannuleerd" && b.services?.type !== "pt" && (
                       <Link
-                        href={`/boeken?personen=${b.persons || 1}&duur=${Math.max(1, Math.round((new Date(b.ends_at) - new Date(b.starts_at)) / 3600000))}`}
+                        href={rebookHref(b)}
                         className="rounded-full border-2 border-borderc bg-white px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent"
                       >
                         Boek opnieuw
