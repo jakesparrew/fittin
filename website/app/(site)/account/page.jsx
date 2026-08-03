@@ -114,10 +114,10 @@ export default async function AccountPage({ searchParams }) {
     { data: weights },
   ] = await Promise.all([
     supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
-    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, access_sent, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
+    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, nuki_cleaned, access_sent, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
     supabase.rpc("credits_balance_detail", { p_user: user.id }),
     supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).in("status", ["actief", "past_due"]),
-    admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, nuki_code, access_sent, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
+    admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, nuki_code, nuki_cleaned, access_sent, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
     admin.from("coach_clients").select("id, status, requested_by, coach:profiles!coach_clients_coach_id_fkey(id, full_name, email)").eq("client_id", user.id),
     supabase.from("coach_payment_requests").select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)").eq("client_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
     admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthIso).lt("starts_at", nowIso),
@@ -145,12 +145,17 @@ export default async function AccountPage({ searchParams }) {
     admin.from("gym_integrations").select("keypad_lead_min").eq("gym_id", profile.gym_id).maybeSingle(),
   ]);
   const leadMin = keypadCfg?.keypad_lead_min ?? 5;
+  // Geeft { code, personal } terug. De reservecode is permanent en voor iedereen dezelfde, dus die
+  // verschijnt ALLEEN als het minten van de persoonlijke code effectief mislukte (nuki_code leeg
+  // terwijl de toegangsmail al vertrok) én we in het tijdslot zitten — precies dezelfde code die
+  // dat lid op dat moment ook per mail kreeg, niet méér. Lukt het minten wel, dan zie je hem nooit.
   const doorCodeFor = (b) => {
-    if (b.nuki_code) return b.nuki_code;                       // persoonlijke code (Nuki actief)
-    if (!b.access_sent || !staticDoorCode) return null;        // mail nog niet vertrokken → nog niets tonen
+    if (b.nuki_code) return { code: b.nuki_code, personal: true };
+    if (!b.access_sent || !staticDoorCode || b.nuki_cleaned) return { code: null, personal: true };
     const t = Date.now();
     const from = new Date(b.starts_at).getTime() - leadMin * 60000;
-    return t >= from && t <= new Date(b.ends_at).getTime() ? staticDoorCode : null;
+    const inWindow = t >= from && t <= new Date(b.ends_at).getTime();
+    return inWindow ? { code: staticDoorCode, personal: false } : { code: null, personal: true };
   };
 
   // credits_balance_detail returns one row: { balance, next_expiry, expiring }.
@@ -688,7 +693,7 @@ export default async function AccountPage({ searchParams }) {
                     </a>
                   </div>
                   </div>
-                  <DoorCodeCard code={doorCodeFor(b)} leadMin={leadMin} />
+                  <DoorCodeCard {...doorCodeFor(b)} leadMin={leadMin} />
                   {!b.invited && b.persons > 1 && (
                     <BookingBuddies bookingId={b.id} capacity={b.persons} participants={partMap[b.id] || []} paid={b.paid || b.price_cents === 0} />
                   )}

@@ -7,7 +7,7 @@ import { useState } from "react";
 // toont ze hem groot en kopieerbaar.
 // Bewust geen Date.now() hier: de server beslist of er een code is, zodat SSR en client identiek
 // renderen (zie de hydration-fix in NextSessionTimer).
-export default function DoorCodeCard({ code, leadMin = 5, dark = false }) {
+export default function DoorCodeCard({ code, leadMin = 5, dark = false, personal = true }) {
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -43,7 +43,9 @@ export default function DoorCodeCard({ code, leadMin = 5, dark = false }) {
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xl leading-none">🔑</span>
         <div>
-          <p className={"text-[11px] font-bold uppercase tracking-wide " + (dark ? "text-accent" : "text-accentdark")}>Jouw deurcode</p>
+          <p className={"text-[11px] font-bold uppercase tracking-wide " + (dark ? "text-accent" : "text-accentdark")}>
+            {personal ? "Jouw deurcode" : "Reservecode"}
+          </p>
           <p className={"text-3xl font-black tabular-nums tracking-[0.2em] " + (dark ? "text-white" : "text-brand")}>{code}</p>
         </div>
         <button
@@ -54,9 +56,19 @@ export default function DoorCodeCard({ code, leadMin = 5, dark = false }) {
           {copied ? "Gekopieerd ✓" : "📋 Kopieer"}
         </button>
       </div>
-      <p className={"mt-2 text-xs " + (dark ? "text-lav" : "text-brand/55")}>
-        Toets hem in op het paneel naast de voordeur. De code werkt enkel tijdens jouw tijdslot.
-      </p>
+      {/* De waarheid verschilt per soort code, en dat verschil is niet cosmetisch: een persoonlijke
+          Nuki-code vervalt vanzelf, de reservecode blijft eeuwig geldig. "Werkt enkel tijdens jouw
+          tijdslot" bij die tweede zou mensen zorgeloos maken met een sleutel die nooit verandert. */}
+      {personal ? (
+        <p className={"mt-2 text-xs " + (dark ? "text-lav" : "text-brand/55")}>
+          Toets hem in op het paneel naast de voordeur. Deze code is enkel voor jouw sessie en vervalt daarna vanzelf.
+        </p>
+      ) : (
+        <p className={"mt-2 text-xs font-semibold " + (dark ? "text-amber-200" : "text-amber-700")}>
+          ⚠ Dit is de <b>reservecode</b> van de gym, omdat je persoonlijke code niet aangemaakt raakte.
+          Hij blijft altijd geldig — hou hem dus voor jezelf en geef hem aan niemand door.
+        </p>
+      )}
     </div>
   );
 }

@@ -320,10 +320,12 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
 
 // ---- Member: access code, sent ~5 minutes before the session starts ----
 export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl }) {
-  const codeCaption = personal ? "Jouw persoonlijke code" : "Toegangscode";
+  // Persoonlijk vs reserve is geen detail: de eerste vervalt vanzelf na de sessie, de tweede is de
+  // vaste code van de gym en blijft altijd geldig. Wie dat niet weet, stuurt hem gedachteloos door.
+  const codeCaption = personal ? "Jouw persoonlijke code" : "Reservecode";
   const codeNote = personal
     ? `<div style="font-size:11px;color:#6b6685;margin-top:8px">Deze code is voor jou en werkt enkel tijdens je sessie.</div>`
-    : "";
+    : `<div style="font-size:11px;color:#b45309;margin-top:8px;font-weight:bold">Je persoonlijke code raakte niet aangemaakt, dus dit is de reservecode van de gym. Die blijft altijd geldig — hou hem voor jezelf en deel hem met niemand.</div>`;
   const codeHtml = accessCode
     ? `<div style="margin:6px 0 4px;text-align:center"><div style="font-size:12px;color:#6b6685;letter-spacing:.08em;text-transform:uppercase">${codeCaption}</div><div style="font-size:34px;font-weight:800;letter-spacing:.18em;color:#22194F;background:#f0effa;border-radius:14px;padding:14px 0;margin-top:6px">${accessCode}</div>${codeNote}</div>`
     : `<p style="font-size:14px;color:#6b6685">Open de deur met de knop in je account zodra je sessie begint.</p>`;
