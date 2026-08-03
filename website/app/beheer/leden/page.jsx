@@ -24,7 +24,7 @@ export default async function Leden({ searchParams }) {
   ]);
 
   const credits = {};
-  for (const r of ledger || []) credits[r.user_id] = r.balance;
+  for (const r of ledger || []) credits[r.user_id] = Number(r.balance || 0);
   // Subscription (abo) status per member — shown so the owner sees who is a subscriber at a glance.
   const subOf = {};
   for (const s of subs || []) subOf[s.user_id] = s;

@@ -35,7 +35,8 @@ export default function BookingClient({
   const [selected, setSelected] = useState(null); // { dateStr, hour } — hour is decimal (6.5 = 06:30)
   // Quick-rebook: /boeken?personen=&duur= pre-fills persons + duration from a past session.
   const [persons, setPersons] = useState(Math.min(4, Math.max(1, Number(prefill.persons) || 1)));
-  const [duration, setDuration] = useState(Math.min(4, Math.max(1, Number(prefill.duration) || 1)));
+  // Duur in stappen van een half uur (1 · 1,5 · 2 · 3 · 4) — 90 min is een volwaardige optie.
+  const [duration, setDuration] = useState(Math.min(4, Math.max(1, Math.round((Number(prefill.duration) || 1) * 2) / 2)));
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
   // Auto-apply the beurtenkaart/abo balance by default (opt-OUT) — a €150-card holder should never
@@ -490,17 +491,17 @@ export default function BookingClient({
                 <div className="mt-5 border-t border-borderc pt-4">
                   <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
                   <div className="flex flex-wrap gap-2">
-                    {[1, 2, 3, 4].map((n) => {
+                    {[1, 1.5, 2, 3, 4].map((n) => {
                       const ok = selected && canBook(selected.dateStr, selected.hour, n);
                       return (
                         <button key={n} disabled={!ok} onClick={() => setDuration(n)} className={"rounded-2xl border-2 px-4 py-2.5 text-center transition disabled:opacity-30 " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                          <span className="block text-sm font-black text-brand">{n} uur</span>
+                          <span className="block text-sm font-black text-brand">{n % 1 ? `${Math.floor(n)}u30` : `${n} uur`}</span>
                         </button>
                       );
                     })}
                   </div>
                   {!selected && <p className="mt-2 text-xs text-brand/40">Kies eerst een startmoment hierboven.</p>}
-                  {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration} uur kost {duration} sessies.</p>}
+                  {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration % 1 ? `${Math.floor(duration)}u30` : `${duration} uur`} kost {String(duration).replace(".", ",")} sessie{duration === 1 ? "" : "s"}.</p>}
                   {welcomeAvailable && useWelcome && duration > 1 && (
                     <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {duration} uur betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
                   )}
@@ -517,7 +518,7 @@ export default function BookingClient({
               {isPT && <Row label="Coach" value={coaches.find((c) => c.id === coachId)?.full_name || "—"} />}
               <Row label="Moment" value={selected ? `${days.find((d) => d.dateStr === selected.dateStr)?.weekday || ""} ${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}` : "—"} />
               {isFit60 && <Row label="Personen" value={persons} />}
-              {isFit60 && <Row label="Duur" value={`${duration} uur`} />}
+              {isFit60 && <Row label="Duur" value={duration % 1 ? `${Math.floor(duration)}u30` : `${duration} uur`} />}
             </dl>
 
             {isFit60 && welcomeAvailable && (

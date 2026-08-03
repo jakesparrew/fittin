@@ -84,7 +84,7 @@ export default async function Financien({ searchParams }) {
 
   // Coaches met een negatief sessietegoed = nog te innen (ze boekten meer dan ze kochten).
   const coachBal = {};
-  for (const r of coachLedger || []) coachBal[r.coach_id] = (coachBal[r.coach_id] || 0) + (r.delta || 0);
+  for (const r of coachLedger || []) coachBal[r.coach_id] = (coachBal[r.coach_id] || 0) + Number(r.delta || 0);
 
   const label = jaar ? String(from.getFullYear()) : `${MAAND[from.getMonth()]} ${from.getFullYear()}`;
 

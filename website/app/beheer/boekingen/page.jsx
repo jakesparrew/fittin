@@ -50,9 +50,9 @@ export default async function Boekingen({ searchParams }) {
   ]);
 
   const creditsByUser = {};
-  for (const r of creditRows || []) creditsByUser[r.user_id] = r.balance;
+  for (const r of creditRows || []) creditsByUser[r.user_id] = Number(r.balance || 0);
   const coachCredits = {};
-  for (const r of coachLedger || []) coachCredits[r.coach_id] = (coachCredits[r.coach_id] || 0) + (r.delta || 0);
+  for (const r of coachLedger || []) coachCredits[r.coach_id] = (coachCredits[r.coach_id] || 0) + Number(r.delta || 0);
 
   const bookingRows = (allBookings || []).map((b) => ({
     id: b.id, created_at: b.created_at, starts_at: b.starts_at, ends_at: b.ends_at, status: b.status, persons: b.persons,

@@ -145,9 +145,18 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
                   </select>
                 </Lbl>
               )}
-              <Lbl t="Personen">
-                <input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-20 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
-              </Lbl>
+              <div className="flex gap-3">
+                <Lbl t="Duur">
+                  <select name="hours" defaultValue="1" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm">
+                    <option value="1">1 uur</option>
+                    <option value="1.5">1u30</option>
+                    <option value="2">2 uur</option>
+                  </select>
+                </Lbl>
+                <Lbl t="Personen">
+                  <input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-20 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+                </Lbl>
+              </div>
               {state?.error && <p className="text-sm font-semibold text-red-600">{state.error}</p>}
               <button disabled={pending} className="w-full rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">
                 {pending ? "Bezig…" : "Boek sessie"}

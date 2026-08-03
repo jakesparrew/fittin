@@ -58,7 +58,7 @@ export default async function CoachClienten() {
     } catch (e) { console.error("clienten lastLogin lookup failed:", e?.message); }
   }
   const creditByClient = {};
-  for (const r of creditRows) creditByClient[r.client_id] = (creditByClient[r.client_id] || 0) + r.delta;
+  for (const r of creditRows) creditByClient[r.client_id] = (creditByClient[r.client_id] || 0) + Number(r.delta || 0);
 
   // "Sessies (7d)" = bevestigde sessies in de laatste 7 dagen; "laatst actief" = max(login, laatste sessie).
   const lastSession = {}; const weekCount = {}; const nextByClient = {};

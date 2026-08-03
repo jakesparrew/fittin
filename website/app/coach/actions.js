@@ -81,12 +81,15 @@ export async function coachBookSession(formData) {
   if (error) return { error };
   const clientId = formData.get("clientId") || null; // null = reserveer enkel het slot (client later toevoegen)
   const clientName = String(formData.get("clientName") || "").trim().slice(0, 60); // externe client (niet op platform)
+  // Duur in halve uren (0117): 1 · 1,5 · 2 — kost naar rato sessietegoed (1u30 = 1,5 tegoed).
+  const hours = Math.min(4, Math.max(1, Math.round((parseFloat(formData.get("hours")) || 1) * 2) / 2));
   const { data: bookingId, error: e } = await supabase.rpc("coach_book_session", {
     p_client: clientId,
     p_service: formData.get("serviceId"),
     p_date: formData.get("date"),
     p_hour: numF(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
+    p_hours: hours,
   });
   if (e) return { error: e.message };
   // The RPC has no notes param — record the external client's name on the booking afterwards,
@@ -115,7 +118,7 @@ export async function coachBookSession(formData) {
   if (profile.coach_billing_mode === "credit") {
     try {
       const { data: led } = await supabase.from("coach_ledger").select("delta").eq("coach_id", userId);
-      const bal = (led || []).reduce((a, r) => a + (r.delta || 0), 0);
+      const bal = (led || []).reduce((a, r) => a + Number(r.delta || 0), 0);
       saldoNote = bal < 0 ? ` — ⚠ tegoed: ${bal} (€ ${Math.abs(bal) * 12} openstaand, koop bij)` : ` — tegoed: nog ${bal}`;
     } catch {}
   }

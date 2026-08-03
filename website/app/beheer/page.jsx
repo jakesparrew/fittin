@@ -88,7 +88,7 @@ export default async function BeheerDashboard() {
   const ledenOnly = (lidRows || []).filter((m) => m.role === "lid");
   // Coach-sessietegoed per coach; negatief = meer geboekt dan gekocht → geld te innen.
   const coachBal = {};
-  for (const r of coachLedger || []) coachBal[r.coach_id] = (coachBal[r.coach_id] || 0) + (r.delta || 0);
+  for (const r of coachLedger || []) coachBal[r.coach_id] = (coachBal[r.coach_id] || 0) + Number(r.delta || 0);
   const revenue = (monthPay || []).reduce((a, r) => a + (r.amount_cents || 0), 0);
   const revenueToday = (monthPay || []).filter((r) => new Date(r.created_at) >= dayStart).reduce((a, r) => a + (r.amount_cents || 0), 0);
   const revenuePrev = (prevPay || []).reduce((a, r) => a + (r.amount_cents || 0), 0);

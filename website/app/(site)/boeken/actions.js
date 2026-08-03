@@ -76,7 +76,9 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     p_use_welcome: !!useWelcome,
     p_coach: coachId || null,
     p_use_credit: !!useCredit,
-    p_hours: Math.min(4, Math.max(1, parseInt(hours, 10) || 1)),
+    // Halve uren toegestaan (0117): 1 · 1,5 · 2 · … · 4. Afronden op 0,5 zodat er nooit een
+    // ongeldige duur naar de RPC gaat (die valideert zelf ook).
+    p_hours: Math.min(4, Math.max(1, Math.round((parseFloat(hours) || 1) * 2) / 2)),
   });
   if (error) return { error: error.message };
 

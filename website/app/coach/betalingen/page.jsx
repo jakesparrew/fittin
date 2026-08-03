@@ -19,7 +19,7 @@ export default async function CoachBetalingen() {
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
   ]);
   const purchases = pays || [];
-  const balance = (ledger || []).reduce((a, r) => a + r.delta, 0);
+  const balance = (ledger || []).reduce((a, r) => a + Number(r.delta || 0), 0); // numeric-safe (0117)
   const total = purchases.reduce((a, p) => a + p.amount_cents, 0);
   const month = purchases.filter((p) => p.created_at >= monthStart).reduce((a, p) => a + p.amount_cents, 0);
 

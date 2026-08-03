@@ -66,7 +66,7 @@ export default async function CoachDashboard({ searchParams }) {
   // Only verbonden (accepted) clients are bookable. New clients are connected via /coach/clienten.
   const members = (clientLinks || []).map((l) => l.client).filter(Boolean).sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || ""));
 
-  const creditBalance = (ledger || []).reduce((a, r) => a + r.delta, 0);
+  const creditBalance = (ledger || []).reduce((a, r) => a + Number(r.delta || 0), 0); // numeric-safe (0117)
   const all = bookings || [];
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= Date.now());
   // Which upcoming sessions belong to a recurring series (drives the "cancel series" button). Kept a
@@ -215,6 +215,13 @@ export default async function CoachDashboard({ searchParams }) {
               <p className="text-[10px] font-black uppercase tracking-widest text-lav">2 · Wanneer?</p>
               <div className="mt-2 flex flex-wrap items-end gap-2">
                 <CoachSlotPicker defaultDate={todayStr} openHour={gym.open_hour} closeHour={gym.close_hour} />
+                <Lbl t="Duur">
+                  <select name="hours" defaultValue="1" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
+                    <option value="1">1 uur</option>
+                    <option value="1.5">1u30 · 1,5 tegoed</option>
+                    <option value="2">2 uur · 2 tegoed</option>
+                  </select>
+                </Lbl>
                 <Lbl t="Pers"><input name="persons" type="number" min="1" max="4" defaultValue="1" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
                 <SubmitButton className="rounded-full bg-accent px-6 py-2 text-sm font-black text-brand">+ Boek sessie</SubmitButton>
               </div>

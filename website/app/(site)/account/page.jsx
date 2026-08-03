@@ -99,7 +99,7 @@ export default async function AccountPage({ searchParams }) {
 
   // credits_balance_detail returns one row: { balance, next_expiry, expiring }.
   const creditDetail = (Array.isArray(ledger) ? ledger[0] : ledger) || {};
-  const credits = creditDetail.balance ?? 0;
+  const credits = Number(creditDetail.balance ?? 0); // numeric (0117) kan als string binnenkomen
   // Active abo drives the € 12 UI; past_due suppresses the "word member"-nudge (they HAVE an abo,
   // their payment is just failing — Stripe retries + they already got the fix-your-card mail).
   const membership = (myMems || []).find((m) => m.status === "actief") || null;

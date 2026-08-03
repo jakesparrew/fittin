@@ -89,7 +89,7 @@ export default async function BoekenPage({ searchParams }) {
     // € 12-tarief als members — de UI moet tonen wat create_booking effectief aanrekent.
     if (profile?.role === "coach" || profile?.role === "beheerder") isMember = true;
     myBooked = count || 0;
-    credits = ledger || 0;
+    credits = Number(ledger) || 0; // numeric (0117) kan als string binnenkomen
     buddies = (links || []).map((l) => {
       const other = l.requester_id === user.id ? l.addressee : l.requester;
       return { id: other?.id, name: other?.full_name || "Buddy" };
