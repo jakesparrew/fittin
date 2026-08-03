@@ -4,6 +4,7 @@ import { adminCancelBooking, adminAssignCoach, adminMarkBookingPaid } from "@/ap
 import ActionForm from "@/components/ui/ActionForm";
 import BookingDetail from "@/components/BookingDetail";
 import { isSettled, sourceLabel } from "@/lib/booking-status";
+import { slotInstant, brusselsDateStr } from "@/lib/time";
 
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -69,8 +70,10 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
   const now = Date.now();
   // "Komende" = vanaf het begin van vandaag, zodat een sessie van eerder vandaag niet meteen
   // uit de standaardlijst verdwijnt (owner denkt in dagen, niet in "vanaf dit exacte minuut").
-  const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-  const dayStartMs = todayStart.getTime();
+  // BRUSSELS-middernacht via lib/time, niet setHours(0,0,0,0): de server draait UTC, dus tussen
+  // 00:00–02:00 lokale tijd verschilde "vandaag" tussen server en browser → andere rijenset +
+  // teller → React #418 hydration mismatch (gebeurde effectief om 00:29).
+  const dayStartMs = slotInstant(brusselsDateStr(new Date()), 0).getTime();
   const needle = q.trim().toLowerCase();
 
   const unpaidCount = bookings.filter(isUnpaid).length;

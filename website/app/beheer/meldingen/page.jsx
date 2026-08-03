@@ -25,11 +25,25 @@ export default async function Meldingen() {
       .limit(100),
     admin
       .from("client_errors")
-      .select("message, path, ua, created_at, user_id")
+      .select("message, stack, path, ua, created_at, user_id")
       .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
       .order("created_at", { ascending: false })
-      .limit(50),
+      .limit(100),
   ]);
+
+  // Groepeer identieke fouten (zelfde message + pagina): "×6 · 3 gebruikers" zegt meer dan zes
+  // losse rijen — herhaling is hét signaal waar de owner op moet letten.
+  const groups = [];
+  {
+    const byKey = new Map();
+    for (const e of errors || []) {
+      const key = `${e.message}|${e.path}`;
+      if (!byKey.has(key)) { byKey.set(key, { ...e, count: 0, users: new Set(), last: e.created_at }); groups.push(byKey.get(key)); }
+      const g = byKey.get(key);
+      g.count++;
+      if (e.user_id) g.users.add(e.user_id);
+    }
+  }
 
   const open = (reports || []).filter((r) => r.status === "open");
   const done = (reports || []).filter((r) => r.status !== "open");
@@ -101,12 +115,21 @@ export default async function Meldingen() {
           <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/50">Geen client-fouten de afgelopen 7 dagen. 🎉</p>
         ) : (
           <div className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-white">
-            {(errors || []).map((e, i) => (
+            {groups.map((g, i) => (
               <div key={i} className="border-b border-borderc px-5 py-3 text-sm last:border-0">
-                <p className="font-mono text-xs text-brand/80 break-all">{e.message}</p>
-                <p className="mt-0.5 text-xs text-brand/40">
-                  {fmt(e.created_at)}{e.path ? ` · ${e.path}` : ""}{e.user_id ? ` · ${nameById[e.user_id] || "ingelogd lid"}` : " · anoniem"}
+                <p className="flex flex-wrap items-center gap-2">
+                  {g.count > 1 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">×{g.count}</span>}
+                  <span className="min-w-0 break-all font-mono text-xs text-brand/80">{g.message}</span>
                 </p>
+                <p className="mt-0.5 text-xs text-brand/40">
+                  laatst {fmt(g.last)}{g.path ? ` · ${g.path}` : ""} · {g.users.size > 0 ? `${g.users.size} ${g.users.size === 1 ? "gebruiker" : "gebruikers"}${g.users.size === 1 ? ` (${nameById[[...g.users][0]] || "ingelogd"})` : ""}` : "anoniem"}
+                </p>
+                {g.stack && (
+                  <details className="mt-1">
+                    <summary className="cursor-pointer text-[10px] font-bold text-brand/40 hover:text-brand">stacktrace</summary>
+                    <pre className="mt-1 max-h-40 overflow-auto rounded-lg bg-paper p-2 text-[10px] leading-relaxed text-brand/60">{g.stack}</pre>
+                  </details>
+                )}
               </div>
             ))}
           </div>
