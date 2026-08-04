@@ -3,6 +3,7 @@ import { after } from "next/server";
 import { runAllActivations } from "@/lib/activation";
 import { sendDueReminders, sendCreditExpiryWarnings, sendFirstSessionFollowups, sendGuestFollowups, sendAboSuggestions } from "@/lib/reminders";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkLockBatteries } from "@/lib/lock-battery";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,10 +33,14 @@ export async function GET(req) {
   try { guestFollowups = await sendGuestFollowups(); } catch (e) { console.error("cron guest followups failed:", e?.message); }
   // S5 — abo-suggestie voor veelboekers zonder abo (max 1 mail/60d per lid, email_log-dedupe).
   try { aboSuggestions = await sendAboSuggestions(); } catch (e) { console.error("cron abo suggestions failed:", e?.message); }
+  // Batterij van het deurslot. Dagelijks volstaat: een batterij zakt over dagen, niet over minuten,
+  // en dit meelaten liften in de 5-minutencron zou 288 Nuki-calls per dag kosten voor niets.
+  let battery = null;
+  try { battery = await checkLockBatteries(createAdminClient()); } catch (e) { console.error("cron lock battery failed:", e?.message); }
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Health heartbeat (Batch 6.5).
-  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions } }); } catch {}
+  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, battery } }); } catch {}
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.
   after(async () => {
     try { await fetch(`${SITE}/api/queue/process`, { cache: "no-store", headers: { Authorization: `Bearer ${secret}` } }); } catch {}

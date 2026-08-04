@@ -174,6 +174,29 @@ export async function getLockHealth(cfg) {
   }
 }
 
+// Batterijstand van slot én keypad. Apart van getLockHealth omdat die over bereikbaarheid gaat:
+// een slot kan perfect online zijn met een bijna lege batterij, en omgekeerd.
+// keypadBatteryCritical is even belangrijk als de slotbatterij zelf — een dood keypad betekent dat
+// geen enkele code nog werkt, hoe vol het slot ook zit.
+export async function getLockBattery(cfg) {
+  if (!cfg?.hasToken || !cfg?.hasLock) return { ok: false };
+  try {
+    const r = await nukiFetch(cfg, `/smartlock/${cfg.smartlockId}`);
+    if (!r.ok) return { ok: false, status: r.status };
+    const l = await r.json();
+    const pct = l?.state?.batteryCharge;
+    return {
+      ok: true,
+      percent: Number.isFinite(pct) ? pct : null,
+      critical: !!l?.state?.batteryCritical,
+      keypadCritical: !!l?.state?.keypadBatteryCritical,
+      charging: !!l?.state?.batteryCharging,
+    };
+  } catch {
+    return { ok: false };
+  }
+}
+
 // Settings test: confirm the token works and (optionally) that the smartlock id exists.
 export async function testNuki(token, smartlockId) {
   try {

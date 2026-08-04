@@ -962,3 +962,52 @@ export async function sendWeekReport({ to, name, report, gymName = "Fittin'" }) 
     "week_rapport"
   );
 }
+
+// ---- Beheerder: batterij van het deurslot ----
+// Door-kritiek en tijdgevoelig, dus bewust kaal en dwingend: wat is er aan de hand, hoe erg is het,
+// wat moet je doen. Geen dashboard-CTA als hoofdactie — er valt niets te klikken, er moeten
+// batterijen in.
+export async function sendLockBatteryAlert({ to, gymName = "Fittin'", percent, critical, keypadCritical }) {
+  const pct = Number.isFinite(percent) ? percent : null;
+  const urgent = critical || keypadCritical || (pct != null && pct <= 10);
+  const kleur = urgent ? "#dc2626" : pct != null && pct <= 20 ? "#d97706" : "#33B24A";
+
+  // Batterijbalk als tabel — <progress> en inline svg overleven Gmail niet.
+  const balk = pct != null
+    ? `<table role="presentation" width="100%" style="border-collapse:collapse;margin:14px 0"><tr>
+         <td style="padding:0">
+           <table role="presentation" width="100%" style="border-collapse:collapse;background:#ece9f5;border-radius:6px">
+             <tr><td width="${Math.max(2, pct)}%" style="background:${kleur};border-radius:6px;height:22px;font-size:0;line-height:22px">&nbsp;</td><td>&nbsp;</td></tr>
+           </table>
+         </td>
+         <td width="70" style="padding-left:12px;font-size:26px;font-weight:800;color:${kleur};text-align:right;white-space:nowrap">${pct}%</td>
+       </tr></table>`
+    : "";
+
+  const wat = keypadCritical
+    ? `<b style="color:#dc2626">De batterij van het KEYPAD is bijna leeg.</b> Zodra dat paneel uitvalt werkt geen enkele code nog — ook de reservecode niet, en ook niet als het slot zelf nog vol zit.`
+    : critical
+      ? `<b style="color:#dc2626">Het slot meldt zijn batterij als kritiek.</b> Vervang de batterijen vandaag: valt het slot uit, dan raakt niemand nog binnen.`
+      : `De batterij van het deurslot zakt richting leeg. Nu vervangen kost vijf minuten; te laat vervangen betekent leden die voor een dichte deur staan.`;
+
+  return send(
+    to,
+    `${urgent ? "🔴" : "🔋"} Deurslot ${esc(gymName)}: batterij ${pct != null ? pct + "%" : "laag"}${keypadCritical ? " — keypad kritiek" : ""}`,
+    shell({
+      title: urgent ? "Vervang de batterijen van het slot" : "Batterij van het deurslot wordt laag",
+      intro: wat,
+      body: balk + calloutBox(
+        `<b>Wat te doen</b><ol style="margin:8px 0 0;padding-left:18px;line-height:1.7">
+           <li>Nieuwe batterijen in de Nuki Smart Lock${keypadCritical ? " én in het keypad naast de deur" : ""}.</li>
+           <li>Test daarna één keer een code aan de deur.</li>
+         </ol>
+         <div style="margin-top:10px;font-size:12px;color:#6b6685">Je krijgt hierna pas opnieuw een mail als het niveau nóg een trap zakt, of als het kritiek wordt.</div>`,
+        urgent ? "warn" : "neutral"
+      ),
+      cta: { href: `${SITE}/beheer/instellingen`, label: "Slotinstellingen bekijken" },
+    }),
+    undefined,
+    undefined,
+    "slot_batterij"
+  );
+}

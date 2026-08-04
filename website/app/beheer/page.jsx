@@ -163,6 +163,19 @@ export default async function BeheerDashboard() {
   const accessMin = agoMin(access?.created_at);
   const accessBad = access ? (access.ok === false || (accessMin != null && accessMin > 15)) : true;
 
+  // Slotbatterij: laatste meting uit gym_integrations (service-role-only tabel, dus via admin).
+  // De dagelijkse cron schrijft ze weg; hier alleen lezen — geen Nuki-call bij elke pageload.
+  let batPct = null, batKeypadBad = false, batAgeH = null;
+  try {
+    const { data: bat } = await admin
+      .from("gym_integrations")
+      .select("battery_pct, battery_keypad_critical, battery_checked_at")
+      .eq("gym_id", gym.id).maybeSingle();
+    batPct = bat?.battery_pct ?? null;
+    batKeypadBad = !!bat?.battery_keypad_critical;
+    batAgeH = bat?.battery_checked_at ? Math.round((Date.now() - new Date(bat.battery_checked_at).getTime()) / 3600000) : null;
+  } catch {}
+
   const dateLabel = new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long" }).format(now);
 
   return (
@@ -276,8 +289,21 @@ export default async function BeheerDashboard() {
       {/* ============ SYSTEEM ============ */}
       <section className="mt-8 rounded-2xl border border-borderc bg-white p-5">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Systeem</h2>
-        <div className="mt-3 grid gap-3 text-sm sm:grid-cols-3">
+        <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Health label="Deurcode-cron" ok={!accessBad} detail={access ? `${accessMin} min geleden` : "nog niet gedraaid"} critical />
+          {/* Batterij van het slot: leeg = niemand raakt binnen, ook niet met een geldige code.
+              Toont de laatste dagelijkse meting (geen Nuki-call per pageload) mét meetmoment —
+              "60%" zonder te weten of dat van vandaag of van vorige maand is, zegt niets. */}
+          <Health
+            label="Slotbatterij"
+            ok={batPct == null ? null : !batKeypadBad && batPct > 30}
+            detail={
+              batPct == null
+                ? "nog niet gemeten"
+                : `${batPct}%${batKeypadBad ? " · keypad kritiek!" : ""} — gemeten ${batAgeH == null ? "?" : batAgeH < 24 ? `${batAgeH}u geleden` : `${Math.round(batAgeH / 24)}d geleden`}`
+            }
+            critical={batKeypadBad || (batPct != null && batPct <= 10)}
+          />
           <Health label="Activatie-cron" ok={activation ? activation.ok !== false : null} detail={activation ? `${agoMin(activation.created_at)} min geleden` : "nog niet gedraaid"} />
           <Health label="Client-fouten (24u)" ok={(recentErrors || 0) === 0} detail={`${recentErrors || 0} gemeld — bekijk in Meldingen`} href="/beheer/meldingen#foutlogs" />
         </div>
