@@ -6,22 +6,31 @@ import SubmitButton from "@/components/ui/SubmitButton";
 
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 
-// Sticky countdown for confirmed-but-unpaid bookings. When the 20-min window runs out the slot
+// Sticky countdown for confirmed-but-unpaid bookings. When the 15-minute window runs out the slot
 // is auto-released — the banner refreshes the page so it reflects reality.
+//
+// De klok start pas NA mount (now = null tijdens SSR én de eerste client-render). Met
+// `useState(() => Date.now())` als startwaarde stond er op de server per definitie een andere
+// tijd dan op de client, en die twee cijfers botsten bij hydratie → React #418. Zelfde oorzaak en
+// zelfde oplossing als in NextSessionTimer; die was gefixt, deze niet — vandaar dat #418 op
+// /account bleef terugkomen bij iedereen met een onbetaalde boeking.
 export default function PendingPaymentBanner({ items }) {
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(null);
   const router = useRouter();
 
   useEffect(() => {
+    setNow(Date.now());
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const live = items.filter((i) => new Date(i.deadline).getTime() > now);
+  // Vóór mount weten we de tijd niet, dus tonen we nog niets: een banner die "15:00" zegt en een
+  // tel later naar de echte waarde springt, is misleidender dan even niets.
+  const live = now == null ? [] : items.filter((i) => new Date(i.deadline).getTime() > now);
 
   useEffect(() => {
-    if (live.length < items.length) router.refresh(); // one expired → resync from server
-  }, [live.length, items.length, router]);
+    if (now != null && live.length < items.length) router.refresh(); // one expired → resync from server
+  }, [now, live.length, items.length, router]);
 
   if (!live.length) return null;
 

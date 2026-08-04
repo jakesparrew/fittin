@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSettled } from "@/lib/booking-status";
+import { classifyClientError } from "@/lib/error-triage";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +41,7 @@ export default async function BeheerDashboard() {
     { count: unreadInbox },
     { count: newMembers },
     { data: cronRows },
-    { count: recentErrors },
+    { data: errRows },
     { data: lidRows },
     { data: recent30 },
     { count: openPayments },
@@ -64,7 +65,9 @@ export default async function BeheerDashboard() {
     supabase.from("inbound_emails").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("archived", false).eq("read", false),
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid").gte("created_at", monthStart.toISOString()),
     admin.from("cron_runs").select("job, ok, created_at").order("created_at", { ascending: false }).limit(20),
-    admin.from("client_errors").select("id", { count: "exact", head: true }).gte("created_at", new Date(Date.now() - 24 * 3600000).toISOString()),
+    // Enkel nog-open fouten; afgevinkte tellen niet meer mee (anders blijft het lampje eeuwig
+    // rood na een fix). De berichten komen mee zodat omgevingsruis er hieronder uit valt.
+    admin.from("client_errors").select("message, stack").is("resolved_at", null).gte("created_at", new Date(Date.now() - 24 * 3600000).toISOString()).limit(200),
     // At-risk: lid-accounts without a confirmed session in the last 30 days (booking-based estimate).
     // Alle profielen (niet enkel leden) — de namen zijn ook nodig voor coach-actiepunten.
     supabase.from("profiles").select("id, full_name, role").eq("gym_id", gym.id),
@@ -83,6 +86,10 @@ export default async function BeheerDashboard() {
     // Coach-sessietegoed: een negatief saldo = de coach boekte meer sessies dan hij vooraf kocht.
     supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
   ]);
+
+  // Alleen échte app-fouten laten het systeemlampje kleuren. Een lid dat in de lift zijn
+  // verbinding verliest is geen storing, en dat elke dag als "fout" tonen maakt het lampje stom.
+  const recentErrors = (errRows || []).filter((e) => classifyClientError(e.message, e.stack) === "app").length;
 
   const nameOf = new Map((lidRows || []).map((m) => [m.id, m.full_name || "Lid"]));
   const ledenOnly = (lidRows || []).filter((m) => m.role === "lid");

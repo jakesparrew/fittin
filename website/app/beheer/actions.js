@@ -884,6 +884,28 @@ export async function resolveProblemReport(formData) {
   return { ok: true, message: "Melding afgehandeld ✓" };
 }
 
+// Sluit een automatische foutlog af. Markeert alle bestaande voorvallen van datzelfde soort fout
+// (zelfde melding + pagina) als afgehandeld. Gebeurt hij dáárna opnieuw, dan komt hij als nieuwe
+// open rij binnen en verschijnt hij vanzelf terug — dat is precies de bedoeling: een fout die je
+// hebt gefixt hoort weg te gaan, en een fout die terugkeert hoort je opnieuw te storen.
+export async function resolveClientError(formData) {
+  const { error } = await requireStaff(true);
+  if (error) return { error };
+  const message = String(formData.get("message") || "");
+  const path = formData.get("path") || null;
+  if (!message) return { error: "Geen fout gekozen." };
+
+  const admin = createAdminClient();
+  let q = admin.from("client_errors").update({ resolved_at: new Date().toISOString() })
+    .eq("message", message).is("resolved_at", null);
+  q = path ? q.eq("path", path) : q.is("path", null);
+  const { error: e } = await q;
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/meldingen");
+  revalidatePath("/beheer");
+  return { ok: true, message: "Foutlog afgesloten ✓" };
+}
+
 // Maak één factuur op voor alle nog niet-gefactureerde 'op factuur'-sessies van een coach.
 // Boekt een OPEN post onder Betalingen (zelfde flow als coach-tegoed op aanvraag) en markeert de
 // sessies als gefactureerd, zodat ze nooit twee keer op een factuur belanden.

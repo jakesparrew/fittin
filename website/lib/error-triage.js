@@ -1,0 +1,52 @@
+// Sorteer client-fouten in "kan ik dit fixen?"-categorieën.
+//
+// Waarom dit bestaat: de foutenlijst liep vol met dingen waar geen code aan te veranderen valt —
+// een telefoon die zijn verbinding verliest in de lift, of een vertaalhulpje dat de DOM verbouwt
+// onder React vandaan. Als die tussen de échte bugs staan, wordt de hele lijst genegeerd.
+// Ze wegmoffelen is óók fout (een golf netwerkfouten kan wél een storing zijn), dus: apart tonen.
+
+// WebKit zegt "Load failed" waar Chrome "Failed to fetch" zegt; beide betekenen simpelweg
+// "het verzoek is niet vertrokken". Onvermijdelijk op mobiel.
+const NETWERK = [
+  "load failed",
+  "failed to fetch",
+  "networkerror",
+  "network request failed",
+  "the network connection was lost",
+  "the request timed out",
+  "cancelled",
+  "geannuleerd",
+  "err_internet_disconnected",
+  "err_network_changed",
+];
+
+// Externe DOM-manipulatie: Google Translate, Safari Reader, in-app browsers en extensies halen
+// nodes weg onder React vandaan → NotFoundError bij removeChild/insertBefore. Klassiek, niet te
+// verhelpen vanuit onze code.
+const EXTERN = [
+  "the object can not be found here",
+  "notfounderror",
+  "failed to execute 'removechild'",
+  "failed to execute 'insertbefore'",
+  "resizeobserver loop",
+  "script error",
+];
+
+export function classifyClientError(message, stack = "") {
+  const m = String(message || "").toLowerCase();
+  const s = String(stack || "").toLowerCase();
+  if (NETWERK.some((n) => m.includes(n))) return "netwerk";
+  if (EXTERN.some((n) => m.includes(n))) return "extern";
+  // removeChild-fouten dragen de aanwijzing soms alleen in de stack.
+  if (s.includes("removechild") && (m.includes("not be found") || m.includes("not a child"))) return "extern";
+  return "app";
+}
+
+// Korte uitleg bij een groep, zodat de owner niet hoeft te raden wat hij ziet.
+export function explainClass(kind) {
+  if (kind === "netwerk") return "Verbinding weggevallen bij de bezoeker — niets aan te fixen in de code. Alleen een plotse golf wijst op een storing.";
+  if (kind === "extern") return "Veroorzaakt door iets buiten de app (vertaalfunctie van de browser, een extensie, leesweergave). Niet vanuit onze code op te lossen.";
+  return null;
+}
+
+export const isAppBug = (kind) => kind === "app";
