@@ -7,12 +7,26 @@ import { logBodyMetrics } from "@/app/(site)/account/actions";
 // Weight-first body logging. "Gewicht vandaag" is the prominent daily field; lengte + doelgewicht
 // are set once and shown read-only with an edit toggle (they only submit when you open the editor,
 // so the action keeps the stored values otherwise).
-export default function BodyMetricsForm({ heightCm, goalKg }) {
+export default function BodyMetricsForm({ heightCm, goalKg, healthConsent = true }) {
   const hasProfile = !!heightCm || !!goalKg;
   const [edit, setEdit] = useState(!hasProfile); // open the editor automatically the first time
 
   return (
     <ActionForm action={logBodyMetrics} success="Opgeslagen ✓" className="mt-4">
+      {/* Gewicht en lichaamsmaten zijn gezondheidsgegevens (art. 9 AVG): die mogen enkel met
+          uitdrukkelijke toestemming bewaard worden, en die toestemming moet aantoonbaar zijn.
+          Daarom éénmalig een expliciet vinkje — daarna verdwijnt het en vraagt de app het niet meer. */}
+      {!healthConsent && (
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-borderc bg-white p-3 text-xs leading-relaxed text-brand/70">
+          <input type="checkbox" name="acceptHealth" className="mt-0.5 h-4 w-4 shrink-0 accent-[#33B24A]" />
+          <span>
+            Ik geef Fittin&rsquo; toestemming om mijn gewicht en lichaamsgegevens bij te houden om mijn
+            evolutie te tonen. Dit zijn gezondheidsgegevens; je kan deze toestemming op elk moment
+            intrekken onderaan deze pagina, en dan wissen we ze meteen. Meer in ons{" "}
+            <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-bold text-accentdark underline">privacybeleid</a>.
+          </span>
+        </label>
+      )}
       {/* Main daily input */}
       <div className="flex flex-wrap items-end gap-3 rounded-2xl bg-paper p-4">
         <label className="block">

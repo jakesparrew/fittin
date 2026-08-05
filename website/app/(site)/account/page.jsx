@@ -25,6 +25,8 @@ import DoorCodeCard from "@/components/booking/DoorCodeCard";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import AccountLinking from "@/components/account/AccountLinking";
 import BodyMetricsForm from "@/components/account/BodyMetricsForm";
+import PrivacyControls from "@/components/account/PrivacyControls";
+import { hasConsent } from "@/lib/legal";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -145,6 +147,13 @@ export default async function AccountPage({ searchParams }) {
     admin.from("gym_integrations").select("keypad_lead_min").eq("gym_id", profile.gym_id).maybeSingle(),
   ]);
   const leadMin = keypadCfg?.keypad_lead_min ?? 5;
+
+  // AVG-status van dit lid: heeft hij toestemming gegeven voor gezondheidsgegevens, en loopt er
+  // een verwijderingsaanvraag? Bepaalt of het toestemmingsvinkje nog getoond moet worden.
+  const [healthConsent, { data: delRow }] = await Promise.all([
+    hasConsent(admin, user.id, "gezondheidsdata"),
+    admin.from("profiles").select("deletion_requested_at").eq("id", user.id).maybeSingle(),
+  ]);
   // Geeft { code, personal } terug. De reservecode is permanent en voor iedereen dezelfde, dus die
   // verschijnt ALLEEN als het minten van de persoonlijke code effectief mislukte (nuki_code leeg
   // terwijl de toegangsmail al vertrok) én we in het tijdslot zitten — precies dezelfde code die
@@ -485,8 +494,13 @@ export default async function AccountPage({ searchParams }) {
                 {membership.current_period_end ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(membership.current_period_end)) : "—"} · je boekt aan € 12
               </p>
             </div>
-            <form action={openBillingPortal}>
-              <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Beheer abonnement</button>
+            {/* Opzeggen moet even makkelijk zijn als inschrijven, en dat moet je ook kúnnen zien.
+                "Beheer abonnement" verzweeg waar je opzegt; nu staat het er letterlijk bij. */}
+            <form action={openBillingPortal} className="text-right">
+              <button className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">
+                Beheer of zeg op
+              </button>
+              <p className="mt-1.5 text-xs text-lav">Opzeggen kan op elk moment, zonder opzegtermijn.</p>
             </form>
           </div>
         )}
@@ -527,7 +541,7 @@ export default async function AccountPage({ searchParams }) {
             {bmi && <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">BMI {bmi}</span>}
           </div>
 
-          <BodyMetricsForm heightCm={bodyProfile?.height_cm} goalKg={bodyProfile?.goal_weight_kg} />
+          <BodyMetricsForm heightCm={bodyProfile?.height_cm} goalKg={bodyProfile?.goal_weight_kg} healthConsent={healthConsent} />
 
           <div className="mt-6">
             <WeightChart points={(weights || []).map((w) => ({ logged_on: w.logged_on, weight_kg: w.weight_kg }))} goal={bodyProfile?.goal_weight_kg ? Number(bodyProfile.goal_weight_kg) : null} />
@@ -709,6 +723,11 @@ export default async function AccountPage({ searchParams }) {
         {/* Payments & downloadable Stripe receipts */}
         <div className="mt-12">
           <Link href="/account/betalingen" className="inline-flex items-center gap-2 rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">💳 Betalingen &amp; betaalbewijzen →</Link>
+        </div>
+
+        {/* Rechten van betrokkenen (AVG): downloaden, gezondheidsgegevens wissen, verwijdering aanvragen. */}
+        <div>
+          <PrivacyControls healthConsent={healthConsent} deletionRequestedAt={delRow?.deletion_requested_at} />
         </div>
 
         {/* History */}

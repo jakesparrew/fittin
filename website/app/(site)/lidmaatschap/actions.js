@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
+import { recordConsent } from "@/lib/legal";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -15,12 +16,22 @@ export async function buyPackage(formData) {
   if (!user) redirect("/login?next=/lidmaatschap");
 
   // Coaches buy session credits (€12 each) via their own dashboard — never member packages.
-  const { data: meProf } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  const { data: meProf } = await supabase.from("profiles").select("role, gym_id").eq("id", user.id).single();
   if (meProf?.role === "coach") return { error: "Coaches kopen sessietegoed via hun coach-dashboard, geen ledenpakketten." };
 
   const { data: pkg } = await supabase.from("packages").select("*").eq("id", packageId).eq("active", true).single();
   if (!pkg) return { error: "Pakket niet gevonden." };
   if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };
+
+  // Beide verklaringen moeten hier opnieuw gecontroleerd worden. Een uitgeschakelde knop in de
+  // browser is geen bescherming én geen bewijs: wie het formulier rechtstreeks post, omzeilt ze.
+  if (formData.get("acceptTerms") !== "on") return { error: "Je moet akkoord gaan met de algemene voorwaarden en het privacybeleid." };
+  if (formData.get("acceptImmediate") !== "on") return { error: "Bevestig dat je meteen wil kunnen boeken — anders kunnen we je aankoop niet meteen activeren." };
+
+  const kindLabel = pkg.kind === "abonnement" ? "abonnement" : "beurtenkaart";
+  const gymId = meProf?.gym_id || null;
+  await recordConsent({ gymId, userId: user.id, kind: "voorwaarden", context: kindLabel });
+  await recordConsent({ gymId, userId: user.id, kind: "directe_start", context: kindLabel });
 
   const customer = await getOrCreateCustomer(supabase, user.id, user.email);
 

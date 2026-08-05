@@ -1,15 +1,16 @@
 "use client";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { captureUtm } from "@/lib/track";
+import { readUtm } from "@/lib/track";
 
 // First-party page-view tracker: fires one beacon per route change to /api/pv. Skips staff areas
-// (those are filtered server-side too). No cookies, no PII — see /api/pv.
+// (those are filtered server-side too). Geen cookies, geen sessionStorage, geen PII — daardoor is
+// er geen toestemmingsbanner nodig; zie /cookies en de toelichting in lib/track.js.
 export default function PageView() {
   const pathname = usePathname();
   useEffect(() => {
     if (!pathname || pathname.startsWith("/beheer") || pathname.startsWith("/coach")) return;
-    const utm = captureUtm() || {}; // campaign labels, attached to the first pageview of the session
+    const utm = readUtm() || {}; // campagnelabels uit de URL van dit bezoek, niets bewaard
     const payload = JSON.stringify({ path: pathname, ref: document.referrer || "", ...utm });
     try {
       if (navigator.sendBeacon) {

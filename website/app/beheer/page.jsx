@@ -70,7 +70,7 @@ export default async function BeheerDashboard() {
     admin.from("client_errors").select("message, stack").is("resolved_at", null).gte("created_at", new Date(Date.now() - 24 * 3600000).toISOString()).limit(200),
     // At-risk: lid-accounts without a confirmed session in the last 30 days (booking-based estimate).
     // Alle profielen (niet enkel leden) — de namen zijn ook nodig voor coach-actiepunten.
-    supabase.from("profiles").select("id, full_name, role").eq("gym_id", gym.id),
+    supabase.from("profiles").select("id, full_name, role, deletion_requested_at").eq("gym_id", gym.id),
     supabase.from("bookings").select("user_id").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 30 * 86400000).toISOString()).lt("starts_at", nowIso),
     // Open invoice posts (coach-credit grants etc.) — money the gym is still owed.
     supabase.from("payments").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "onbetaald"),
@@ -135,7 +135,22 @@ export default async function BeheerDashboard() {
     .filter(([, n]) => n < 0)
     .sort((a, b) => a[1] - b[1]);
 
+  // AVG-verzoeken bovenaan: hier loopt een wettelijke termijn van één maand, en een verzoek dat
+  // niemand ziet is een termijn die je mist. Ouder dan 21 dagen wordt extra dringend gemarkeerd.
+  const deletionRequests = (lidRows || [])
+    .filter((m) => m.deletion_requested_at)
+    .sort((a, b) => new Date(a.deletion_requested_at) - new Date(b.deletion_requested_at));
+
   const personActions = [
+    ...deletionRequests.map((m) => {
+      const dagen = Math.floor((Date.now() - new Date(m.deletion_requested_at).getTime()) / 86400000);
+      return {
+        icon: "🔒", tone: "warn",
+        title: `${m.full_name || "Lid"} vroeg verwijdering van zijn gegevens — ${dagen === 0 ? "vandaag" : `${dagen} dagen geleden`}`,
+        sub: `Wettelijk moet dit binnen 30 dagen behandeld zijn (AVG art. 17)${dagen >= 21 ? " — dit wordt dringend." : "."} Facturen mag en moet je wél 7 jaar bewaren; anonimiseer de rest.`,
+        href: "/beheer/leden",
+      };
+    }),
     ...coachDebt.map(([cid, n]) => ({
       icon: "🧾", tone: "warn",
       title: `${nameOf.get(cid) || "Coach"} staat ${String(n).replace(".", ",")} sessietegoed — € ${Math.ceil(Math.abs(n) * 12)} te innen`,

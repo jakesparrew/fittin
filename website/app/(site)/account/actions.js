@@ -7,6 +7,7 @@ import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingRescheduled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk } from "@/lib/email";
 import { notify, notifyMany } from "@/lib/notify";
 import { getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
+import { recordConsent, hasConsent, PRIVACY_VERSION } from "@/lib/legal";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -251,6 +252,19 @@ export async function logBodyMetrics(formData) {
   const { data: me } = await supabase.from("profiles").select("gym_id").eq("id", user.id).single();
   if (!me) return { error: "Profiel niet gevonden." };
 
+  // Gewicht, lengte en streefgewicht zijn gezondheidsgegevens (art. 9 AVG). Die mogen enkel op
+  // basis van UITDRUKKELIJKE toestemming — "je vult het zelf in" volstaat niet als grondslag, en
+  // de AVG vraagt bovendien dat je die toestemming kan aantonen (art. 7.1). Daarom: de eerste keer
+  // moet het vinkje mee, en leggen we de toestemming vast. Daarna niet meer vragen.
+  const admin = createAdminClient();
+  const alreadyConsented = await hasConsent(admin, user.id, "gezondheidsdata");
+  if (!alreadyConsented) {
+    if (formData.get("acceptHealth") !== "on") {
+      return { error: "Vink eerst aan dat we je gewicht en lichaamsgegevens mogen bijhouden." };
+    }
+    await recordConsent({ gymId: me.gym_id, userId: user.id, kind: "gezondheidsdata", context: "lichaamsmetingen", docVersion: PRIVACY_VERSION });
+  }
+
   const num = (v) => { const n = parseFloat(String(v ?? "").replace(",", ".")); return Number.isFinite(n) ? n : null; };
   const height = num(formData.get("height_cm"));
   const goal = num(formData.get("goal_weight_kg"));
@@ -315,4 +329,73 @@ export async function reportProblem(formData) {
     }
   } catch {}
   return { ok: true, message: "Bedankt voor je melding — we bekijken het zo snel mogelijk! 🙏" };
+}
+
+// ---- Rechten van betrokkenen (AVG) ------------------------------------------------------------
+
+// Recht op verwijdering (art. 17). We wissen hier NIETS zelf: dit is een productiedatabase met
+// boekhoudkundige bewaarplicht en met boekingen waar andere leden aan hangen. De aanvraag wordt
+// geregistreerd en bij de beheerder gemeld, die ze uitvoert binnen de wettelijke maand. Zo blijft
+// verwijderen een bewuste, controleerbare handeling in plaats van een onomkeerbare klik.
+export async function requestAccountDeletion() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+
+  const admin = createAdminClient();
+  const { data: me } = await admin.from("profiles").select("gym_id, full_name, deletion_requested_at").eq("id", user.id).single();
+  if (me?.deletion_requested_at) {
+    return { ok: true, message: "Je aanvraag liep al — we behandelen ze binnen 30 dagen." };
+  }
+
+  const { error } = await admin.from("profiles").update({ deletion_requested_at: new Date().toISOString() }).eq("id", user.id);
+  if (error) return { error: error.message };
+
+  // De beheerders moeten dit zien: de AVG-termijn loopt vanaf nu.
+  try {
+    const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", me?.gym_id).eq("role", "beheerder");
+    for (const a of admins || []) {
+      await notify({
+        gymId: me?.gym_id, userId: a.id, type: "system",
+        title: "Verzoek tot verwijdering van gegevens",
+        body: `${me?.full_name || user.email} vroeg zijn account te verwijderen. Te behandelen binnen 30 dagen (AVG art. 17).`,
+        link: "/beheer/leden",
+      });
+    }
+  } catch {}
+
+  revalidatePath("/account");
+  return { ok: true, message: "Je aanvraag is geregistreerd. We behandelen ze binnen 30 dagen en bevestigen per e-mail." };
+}
+
+// Een aanvraag moet je ook weer kunnen intrekken — bedenken mag.
+export async function cancelAccountDeletion() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  const { error } = await createAdminClient().from("profiles").update({ deletion_requested_at: null }).eq("id", user.id);
+  if (error) return { error: error.message };
+  revalidatePath("/account");
+  return { ok: true, message: "Je aanvraag is ingetrokken — je account blijft gewoon bestaan." };
+}
+
+// Toestemming voor gezondheidsgegevens intrekken (art. 7.3 AVG) en de gegevens meteen wissen.
+// Dit mag WEL onmiddellijk: het gaat uitsluitend om gegevens die het lid zelf heeft ingevuld, er
+// hangt geen boekhouding of andere persoon aan, en de AVG vraagt dat intrekken even eenvoudig is
+// als geven. Het streefgewicht en de lengte op het profiel gaan mee.
+export async function withdrawHealthConsent() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("body_metrics").delete().eq("user_id", user.id);
+  if (error) return { error: error.message };
+  await admin.from("profiles").update({ height_cm: null, goal_weight_kg: null }).eq("id", user.id);
+  await admin.from("legal_consents")
+    .update({ withdrawn_at: new Date().toISOString() })
+    .eq("user_id", user.id).eq("kind", "gezondheidsdata").is("withdrawn_at", null);
+
+  revalidatePath("/account");
+  return { ok: true, message: "Je gewichts- en lichaamsgegevens zijn gewist." };
 }

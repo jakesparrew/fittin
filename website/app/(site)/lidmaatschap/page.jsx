@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { buyPackage, openBillingPortal } from "./actions";
+import LegalConsent from "@/components/LegalConsent";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -121,7 +122,9 @@ export default async function Lidmaatschap() {
                 ) : user ? (
                   <form action={buyPackage} className="mt-5">
                     <input type="hidden" name="packageId" value={p.id} />
-                    <button className="w-full rounded-full bg-accent py-3 font-bold text-brand transition hover:opacity-90">{isAbo ? "Word member" : "Koop kaart"}</button>
+                    {/* Knoptekst vermeldt de betalingsverplichting (art. VI.46 §2 WER): "Word member"
+                        alleen zegt niet dat er betaald wordt. */}
+                    <LegalConsent label={isAbo ? `Word member — € 12/maand betalen` : `Koop kaart — ${eur0(p.price_cents)} betalen`} />
                   </form>
                 ) : (
                   <Link href="/login?mode=signup&next=/lidmaatschap" className="mt-5 block w-full rounded-full bg-accent py-3 text-center font-bold text-brand transition hover:opacity-90">{isAbo ? "Word member" : "Koop kaart"}</Link>

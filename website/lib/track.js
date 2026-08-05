@@ -2,21 +2,21 @@
 
 // Tiny first-party event beacon → /api/pv (same privacy pipeline as pageviews: no cookie, no PII).
 // Usage: import { track } from "@/lib/track"; track("checkout_started").
-// UTM params are captured once per session (first landing) and attached to the pageview beacon.
-
-const UTM_KEY = "fittin_utm";
-
-export function captureUtm() {
+//
+// UTM-labels worden rechtstreeks uit de URL gelezen en NIET bewaard. Dat is een bewuste juridische
+// keuze: artikel 5(3) van de ePrivacy-richtlijn vraagt toestemming voor élke opslag op het toestel
+// van de bezoeker die niet strikt noodzakelijk is — dus ook voor sessionStorage, niet enkel voor
+// cookies. Campagne-attributie is duidelijk niet strikt noodzakelijk, en één regel opslag zou de
+// hele site toestemmingsplichtig maken. Door niets weg te schrijven blijft Fittin' werken zonder
+// cookiebanner. De landingspagina draagt het UTM-label — precies wat je nodig hebt om een campagne
+// te tellen — en vervolgpagina's binnen hetzelfde bezoek tellen dus niet dubbel mee.
+export function readUtm() {
   if (typeof window === "undefined") return null;
   try {
     const sp = new URLSearchParams(window.location.search);
     const src = sp.get("utm_source");
-    if (src && !sessionStorage.getItem(UTM_KEY)) {
-      const utm = { utm_source: src, utm_medium: sp.get("utm_medium") || "", utm_campaign: sp.get("utm_campaign") || "" };
-      sessionStorage.setItem(UTM_KEY, JSON.stringify(utm));
-      return utm; // return so the very first pageview can attach it
-    }
-    return JSON.parse(sessionStorage.getItem(UTM_KEY) || "null");
+    if (!src) return null;
+    return { utm_source: src, utm_medium: sp.get("utm_medium") || "", utm_campaign: sp.get("utm_campaign") || "" };
   } catch { return null; }
 }
 
