@@ -18,6 +18,7 @@ const emptyReport = {
   abo: { active: 0, mrr: 0, newAbos: 0, pastDue: [], ending: [] },
   candidates: [],
   coachDebt: [],
+  toInvoice: [],
   openInvoiceCents: 0,
   openReports: 0,
   health: { mailsSent: 0, mailsFailed: 0, accessCronBad: false, activationCronBad: false },
@@ -46,6 +47,7 @@ const fullReport = {
   },
   candidates: [{ name: "Tim Van Damme", sessions: 7 }, { name: "Sara Willems", sessions: 4 }],
   coachDebt: [{ name: "Thomas De Witte", sessions: -1.5, euros: 18 }],
+  toInvoice: [{ name: "Jan Matthys", cents: 9600 }],
   openInvoiceCents: 14400,
   openReports: 2,
   health: { mailsSent: 61, mailsFailed: 0, accessCronBad: false, activationCronBad: false },
@@ -71,6 +73,10 @@ describe("weekReportHtml", () => {
     expect(html).toContain("Amine El Ouahabi");    // mislukte abo-betaling
     expect(html).toContain("Lotte Peeters");       // opzegging
     expect(html).toContain("Tim Van Damme");       // abo-kandidaat
+    // Nog niet gefactureerde coach-sessies: dit ontbrak in de eerste versie van het rapport,
+    // waardoor € 156 maandenlang onzichtbaar opliep.
+    expect(html).toContain("Jan Matthys");
+    expect(html).toContain("€ 96,00");
     expect(html).toContain("meldingen");
     expect(html).toContain("dinsdag, zaterdag, zondag"); // rustige dagen → promotieruimte
     expect(html).not.toContain("undefined");

@@ -923,8 +923,13 @@ export async function invoiceCoachSessions(formData) {
     .eq("coach_id", coachId)
     .eq("coach_billing", "invoice")
     .eq("status", "bevestigd")
-    .is("coach_invoiced_at", null)
-    .lte("starts_at", new Date().toISOString()); // enkel reeds plaatsgevonden sessies factureren
+    .is("coach_invoiced_at", null);
+  // Ook nog te komen sessies factureren. Sinds 0124 blokkeert élk openstaand bedrag de boekingen
+  // van die coach — ook dat van een sessie volgende week. Zouden we hier enkel voorbije sessies
+  // meenemen, dan kon je die coach nooit meer deblokkeren: hij staat vast op een bedrag dat jij
+  // niet mag factureren. De verplichting ontstaat bij het boeken, dus factureren mag ook dan.
+  // Wordt een gefactureerde sessie later toch geannuleerd, dan valt het bedrag weg uit de
+  // openstaande som (geannuleerde boekingen tellen niet mee) en corrigeer je de post handmatig.
 
   const list = rows || [];
   if (!list.length) return { error: "Geen openstaande sessies om te factureren." };

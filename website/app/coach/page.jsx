@@ -51,6 +51,8 @@ export default async function CoachDashboard({ searchParams }) {
     { data: meRef },
     { count: referredCount },
     { data: takenRows },
+    { data: openSessionRows },
+    { data: openInvoiceRows },
   ] = await Promise.all([
     supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
@@ -64,12 +66,23 @@ export default async function CoachDashboard({ searchParams }) {
     supabase.from("profiles").select("referral_code").eq("id", userId).single(),
     supabase.from("referrals").select("id", { count: "exact", head: true }).eq("referrer_id", userId),
     supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: schedFrom.toISOString(), p_to: schedTo.toISOString() }),
+    // Openstaand bedrag voor een factuur-coach: nog niet gefactureerde sessies + al gefactureerde
+    // maar onbetaalde posten. Exact dezelfde som als de rem in coach_book_session (0124), zodat
+    // het scherm nooit iets anders zegt dan wat de database doet.
+    supabase.from("bookings").select("coach_charge_cents").eq("coach_id", userId).eq("coach_billing", "invoice").eq("status", "bevestigd").is("coach_invoiced_at", null),
+    supabase.from("payments").select("amount_cents").eq("user_id", userId).eq("status", "onbetaald").eq("kind", "coach_credits"),
   ]);
   const refLink = `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/login?mode=signup&ref=${meRef?.referral_code || ""}`;
   // Only verbonden (accepted) clients are bookable. New clients are connected via /coach/clienten.
   const members = (clientLinks || []).map((l) => l.client).filter(Boolean).sort((a, b) => (a.full_name || a.email || "").localeCompare(b.full_name || b.email || ""));
 
   const creditBalance = (ledger || []).reduce((a, r) => a + Number(r.delta || 0), 0); // numeric-safe (0117)
+  // Openstaand bij de gym voor een factuur-coach (0124). Zolang dit > 0 staat, blokkeert de
+  // database elke nieuwe boeking — dus dat moet hier bovenaan staan en niet pas in een foutmelding.
+  const owedSessions = (openSessionRows || []).reduce((a, r) => a + (r.coach_charge_cents || 0), 0);
+  const owedInvoices = (openInvoiceRows || []).reduce((a, r) => a + (r.amount_cents || 0), 0);
+  const owedCents = owedSessions + owedInvoices;
+  const invoiceBlocked = profile.coach_billing_mode === "invoice" && owedCents > 0;
   const all = bookings || [];
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= Date.now());
   // Which upcoming sessions belong to a recurring series (drives the "cancel series" button). Kept a
@@ -217,6 +230,26 @@ export default async function CoachDashboard({ searchParams }) {
           <p className="mt-2 text-xs text-brand/50">Tip: koop hieronder bij <a href="#tegoed" className="font-bold text-accentdark hover:underline">Coach-sessies kopen</a> meteen méér — de eerste {sess(Math.abs(creditBalance))} dekken je achterstand, de rest is nieuw tegoed.</p>
         </div>
       )}
+      {/* Factuur-coach met openstaand bedrag (0124): de database weigert nieuwe boekingen, dus dat
+          moet hier staan en niet pas als foutmelding ná het invullen van het formulier. */}
+      {invoiceBlocked && (
+        <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
+          <p className="font-black text-red-600">⛔ Boeken staat op pauze — er staat {euro(owedCents)} open</p>
+          <p className="mt-0.5 text-sm text-brand/70">
+            Je sessies worden op factuur afgerekend aan {euro(profile.coach_session_price_cents || 1200)} per sessie.
+            Zolang er nog iets openstaat kan je geen nieuwe sessies boeken — je bestaande sessies blijven gewoon staan.
+            {owedInvoices > 0 && owedSessions > 0
+              ? ` Daarvan is ${euro(owedInvoices)} al gefactureerd en ${euro(owedSessions)} nog niet.`
+              : owedInvoices > 0
+                ? " Dat bedrag is al gefactureerd."
+                : " Dat bedrag is nog niet gefactureerd."}
+          </p>
+          <p className="mt-2 text-xs text-brand/50">
+            Betaal je openstaande factuur, of spreek de gym aan — zodra de betaling geregistreerd is, kan je meteen weer boeken.
+          </p>
+        </div>
+      )}
+
       {/* Saldo exact 0 (geen schuld, wel op): zachtere melding, zelfde regel. */}
       {mode === "credit" && creditBalance === 0 && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
@@ -245,7 +278,7 @@ export default async function CoachDashboard({ searchParams }) {
         <p className="mt-1 text-sm text-brand/60">
           Kies je client en moment.{" "}
           {mode === "invoice"
-            ? <>Elke boeking wordt <strong>maandelijks gefactureerd ({euro(profile.coach_session_price_cents || 1200)}/sessie)</strong>, ongeacht het aantal personen.</>
+            ? <>Elke boeking wordt <strong>gefactureerd ({euro(profile.coach_session_price_cents || 1200)}/sessie)</strong>, ongeacht het aantal personen. Zolang er nog iets openstaat, kan je geen nieuwe sessies boeken.</>
             : mode === "free"
               ? <>Jouw boekingen zijn <strong>gratis</strong> (afspraak met de gym), ongeacht het aantal personen.</>
               : <>Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen.</>}{" "}
@@ -255,6 +288,11 @@ export default async function CoachDashboard({ searchParams }) {
         {mode === "credit" && creditBalance < 1 && (
           <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
             ⛔ Boeken kan pas weer met minstens 1 sessietegoed (saldo: {sess(creditBalance)}). <a href="#tegoed" className="underline">Koop tegoed bij ↓</a>
+          </p>
+        )}
+        {invoiceBlocked && (
+          <p className="mt-3 rounded-xl border border-red-300 bg-red-50 px-3 py-2 text-xs font-bold text-red-600">
+            ⛔ Boeken kan pas weer als je openstaande {euro(owedCents)} aangezuiverd is.
           </p>
         )}
         {members.length === 0 && (

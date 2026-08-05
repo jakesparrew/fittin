@@ -881,6 +881,14 @@ export function weekReportHtml({ name, report }) {
       href: `${SITE}/beheer/coaches`, label: "Naar coaches",
     }));
   }
+  for (const c of r.toInvoice || []) {
+    acties.push(actionItem({
+      icon: "📌",
+      title: `${esc(c.name)}: ${eur(c.cents)} aan sessies nog niet gefactureerd`,
+      sub: "Deze coach kan pas weer boeken zodra dit aangezuiverd is. Maak de factuur op bij Financiën; zodra de betaling geregistreerd staat, is hij meteen weer los.",
+      href: `${SITE}/beheer/financien`, label: "Factureren",
+    }));
+  }
   for (const n of r.abo.pastDue) {
     acties.push(actionItem({
       icon: "💳",

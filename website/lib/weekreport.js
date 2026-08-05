@@ -44,6 +44,7 @@ export async function buildWeekReport(gym, now = new Date()) {
     { data: mailLog },
     { data: cronRows },
     { data: openInvoices },
+    { data: uninvoiced },
   ] = await Promise.all([
     admin.from("bookings").select("starts_at, ends_at, status, persons, price_cents, paid, payment_source, user_id").eq("gym_id", gym.id).gte("starts_at", sIso).lt("starts_at", eIso),
     admin.from("bookings").select("status, user_id").eq("gym_id", gym.id).gte("starts_at", pIso).lt("starts_at", sIso),
@@ -59,6 +60,11 @@ export async function buildWeekReport(gym, now = new Date()) {
     admin.from("email_log").select("status").gte("created_at", sIso).lt("created_at", eIso),
     admin.from("cron_runs").select("job, ok, created_at").order("created_at", { ascending: false }).limit(30),
     admin.from("payments").select("amount_cents").eq("gym_id", gym.id).eq("status", "onbetaald"),
+    // Sessies van factuur-coaches die nog nooit gefactureerd zijn. Dit ontbrak: het rapport keek
+    // enkel naar openstaande betaalposten, en zolang er niets gefactureerd wordt bestaat die post
+    // niet — waardoor € 156 maandenlang onzichtbaar bleef oplopen.
+    admin.from("bookings").select("coach_id, coach_charge_cents").eq("gym_id", gym.id)
+      .eq("coach_billing", "invoice").eq("status", "bevestigd").is("coach_invoiced_at", null),
   ]);
 
   const nameOf = new Map((people || []).map((p) => [p.id, p.full_name || "Lid"]));
@@ -122,6 +128,14 @@ export async function buildWeekReport(gym, now = new Date()) {
   const coachDebt = Object.entries(coachBal).filter(([, n]) => n < 0).sort((a, b) => a[1] - b[1])
     .map(([cid, n]) => ({ name: nameOf.get(cid) || "Coach", sessions: n, euros: Math.ceil(Math.abs(n) * 12) }));
   const openInvoiceCents = (openInvoices || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
+  // Nog te factureren coach-sessies, per coach. Sinds 0124 blokkeert dit bedrag hun boekingen,
+  // dus het is dubbel actiepunt: geld dat binnen moet én een coach die stilligt.
+  const uninvoicedByCoach = {};
+  for (const b of uninvoiced || []) uninvoicedByCoach[b.coach_id] = (uninvoicedByCoach[b.coach_id] || 0) + (b.coach_charge_cents || 0);
+  const toInvoice = Object.entries(uninvoicedByCoach)
+    .filter(([, c]) => c > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cid, cents]) => ({ name: nameOf.get(cid) || "Coach", cents }));
 
   // ---- Draait de machine? ----------------------------------------------------------------
   const mailsSent = (mailLog || []).filter((m) => m.status === "sent").length;
@@ -152,6 +166,7 @@ export async function buildWeekReport(gym, now = new Date()) {
     abo: { active: active.length, mrr: active.length * 1200, newAbos, pastDue: pastDue.map((m) => nameOf.get(m.user_id) || "Lid"), ending: ending.map((m) => ({ name: nameOf.get(m.user_id) || "Lid", until: m.current_period_end })) },
     candidates,
     coachDebt,
+    toInvoice,
     openInvoiceCents,
     openReports: openReports || 0,
     health,
