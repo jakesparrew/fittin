@@ -21,6 +21,41 @@ async function rfetch(path) {
   return r.json();
 }
 
+// Resend weigert een verzending boven ±40 MB. We blijven er bewust ónder: gaat de doorstuur stuk,
+// dan krijgt de owner NIETS — erger dan een bijlage die ontbreekt. Wat niet meegaat, wordt bij naam
+// vermeld in de mail; stil laten vallen is precies hoe die factuur-PDF's maandenlang verdwenen.
+const MAX_FORWARD_BYTES = 38 * 1024 * 1024;
+const fmtSize = (b) => (b >= 1048576 ? `${(b / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} kB`);
+
+// Haal de inhoud van de bijlagen op zodat ze mee kunnen in de doorstuur.
+// Resend geeft in de mail zelf enkel metadata; de bytes zitten achter een aparte call die een
+// tijdelijke download_url teruggeeft.
+async function fetchAttachments(emailId, list) {
+  const meegestuurd = [], overgeslagen = [];
+  let totaal = 0;
+  for (const meta of list || []) {
+    const naam = meta.filename || "bijlage";
+    const grootte = Number(meta.size) || 0;
+    if (grootte > 0 && totaal + grootte > MAX_FORWARD_BYTES) {
+      overgeslagen.push({ naam, grootte, reden: "te groot samen" });
+      continue;
+    }
+    try {
+      const info = await rfetch(`/emails/receiving/${emailId}/attachments/${meta.id}`);
+      if (!info?.download_url) { overgeslagen.push({ naam, grootte, reden: "geen download-link" }); continue; }
+      const res = await fetch(info.download_url);
+      if (!res.ok) { overgeslagen.push({ naam, grootte, reden: `download ${res.status}` }); continue; }
+      const buf = Buffer.from(await res.arrayBuffer());
+      if (totaal + buf.length > MAX_FORWARD_BYTES) { overgeslagen.push({ naam, grootte: buf.length, reden: "te groot samen" }); continue; }
+      totaal += buf.length;
+      meegestuurd.push({ filename: naam, content: buf.toString("base64"), contentType: meta.content_type || undefined });
+    } catch (e) {
+      overgeslagen.push({ naam, grootte, reden: e?.message || "fout bij ophalen" });
+    }
+  }
+  return { meegestuurd, overgeslagen, totaal };
+}
+
 // Store one received email (by Resend id) if it's for an @fittin.be address and not yet stored.
 export async function importReceived(gymId, resendId) {
   if (!KEY) return false;
@@ -56,13 +91,25 @@ export async function importReceived(gymId, resendId) {
     try {
       const { Resend } = await import("resend");
       const resend = new Resend(KEY);
+      // Bijlagen (facturen!) gingen voorheen verloren: de doorstuur nam enkel de tekst mee en de
+      // inbox bewaart ze niet, dus een PDF bestond daarna alleen nog binnen Resend.
+      const { meegestuurd, overgeslagen } = await fetchAttachments(resendId, full.attachments);
+      const bijlageRegel = meegestuurd.length
+        ? `<br><b>Bijlagen:</b> ${meegestuurd.map((a) => escFwd(a.filename)).join(", ")}`
+        : "";
+      const misteRegel = overgeslagen.length
+        ? `<div style="margin-top:8px;color:#b45309"><b>⚠ Niet meegestuurd:</b> ${overgeslagen
+            .map((a) => `${escFwd(a.naam)} (${fmtSize(a.grootte)} — ${escFwd(a.reden)})`)
+            .join(", ")}. Open de mail in Resend om ze op te halen.</div>`
+        : "";
       const banner =
         `<div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#555;background:#f6f5fb;border-radius:10px;padding:12px 14px;margin-bottom:14px">` +
         `📩 <b>Nieuwe mail aan Fittin'</b><br>` +
         `<b>Van:</b> ${escFwd(fromP.name)} &lt;${escFwd(fromP.email)}&gt;<br>` +
         `<b>Aan:</b> ${escFwd(to)}<br>` +
-        `<b>Onderwerp:</b> ${escFwd(full.subject || "")}<br>` +
-        `<span style="color:#888">Antwoord gewoon op deze mail — je antwoord gaat rechtstreeks naar de klant.</span></div>`;
+        `<b>Onderwerp:</b> ${escFwd(full.subject || "")}${bijlageRegel}<br>` +
+        `<span style="color:#888">Antwoord gewoon op deze mail — je antwoord gaat rechtstreeks naar de klant.</span>` +
+        misteRegel + `</div>`;
       const orig = full.html
         || (full.text ? `<pre style="white-space:pre-wrap;font-family:Arial,Helvetica,sans-serif;font-size:15px;color:#22194F;margin:0">${escFwd(full.text)}</pre>` : "<p>(geen inhoud)</p>");
       await resend.emails.send({
@@ -71,6 +118,7 @@ export async function importReceived(gymId, resendId) {
         replyTo: fromP.email || to,
         subject: full.subject || "(geen onderwerp)",
         html: banner + orig,
+        ...(meegestuurd.length ? { attachments: meegestuurd } : {}),
         headers: { "X-Fittin-Forward": "inbound" },
       });
     } catch (e) {
