@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { createBookingAction, searchMembersAction, validateDiscountAction, toggleWaitlistAction, recoverBookingAction } from "@/app/(site)/boeken/actions";
 import { slotInstant, brusselsDateStr, slotRangeLabel, fmtHour } from "@/lib/time";
 import { isNetworkError, waitForNetwork } from "@/lib/net";
+// sess() formatteert halve beurten met een komma (1,5). Deze import ONTBRAK terwijl sess() al in de
+// prijsregels stond: de fout sloeg enkel toe bij leden mét tegoed of abo, en die tak van de UI
+// wordt nooit geraakt door een uitgelogde test — vandaar dat build, tests én eigen klikwerk hem
+// misten tot een lid met een vers abonnement niet meer kon boeken.
+import { sess } from "@/lib/format";
 import EventsBooking from "@/components/booking/EventsBooking";
 import { track } from "@/lib/track";
 
