@@ -960,6 +960,33 @@ export function weekReportHtml({ name, report }) {
   });
 }
 
+// ---- Beheerder: nieuwe app-fout gedetecteerd ----
+// Dit alarm bestaat omdat Laura's boekingsfout een halve dag onbekeken in de logs stond. Het moet
+// in één oogopslag antwoorden: wat is er stuk, waar, wie raakt het, en waar kijk ik verder.
+export async function sendErrorAlert({ to, message, path, stack, count, userNames = [], firstSeen }) {
+  const wie = userNames.length
+    ? userNames.map((n) => esc(n)).join(", ")
+    : "een niet-ingelogde bezoeker";
+  return send(
+    to,
+    `🐛 Fout op ${path || "de site"} — ${userNames[0] ? esc(userNames[0]) : "bezoeker"} loopt vast`,
+    shell({
+      title: "Er gaat iets mis in de app",
+      intro: `Sinds ${fmt(firstSeen, { hour: "2-digit", minute: "2-digit" })} loopt <b>${wie}</b> vast op <b>${esc(path || "?")}</b>${count > 1 ? ` — al <b>${count}×</b>` : ""}.`,
+      body:
+        `<pre style="background:#f6f5fb;border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">${esc(message)}</pre>` +
+        (stack ? `<pre style="background:#f6f5fb;border-radius:10px;padding:12px 14px;font-size:10px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word;color:#6b6685;max-height:180px">${esc(String(stack).slice(0, 1200))}</pre>` : "") +
+        calloutBox(
+          `Dit is een automatische melding bij een <b>nieuwe</b> fout — verbindingsproblemen en browserextensies worden er niet uitgefilterd als vals alarm. Is de fout gefixt, vink ze dan af bij Meldingen; komt ze terug, dan krijg je opnieuw één mail.`,
+        ),
+      cta: { href: `${SITE}/beheer/meldingen#foutlogs`, label: "Bekijk de foutlogs" },
+    }),
+    undefined,
+    undefined,
+    "fout_alarm"
+  );
+}
+
 export async function sendWeekReport({ to, name, report, gymName = "Fittin'" }) {
   return send(
     to,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sendDueAccessCodes } from "@/lib/reminders";
 import { revokeExpiredKeypadCodes, reconcileKeypadCodes } from "@/lib/nuki";
+import { alertNewClientErrors } from "@/lib/error-alert";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
@@ -30,6 +31,10 @@ export async function GET(req) {
   // any expired/orphan "Fittin …" codes as a backstop against accumulation.
   try { revoked = await revokeExpiredKeypadCodes(createAdminClient()); } catch (e) { errors.push(`revoke: ${e?.message}`); console.error("cron revoke failed:", e?.message); }
   try { swept = await reconcileKeypadCodes(createAdminClient()); } catch (e) { errors.push(`sweep: ${e?.message}`); console.error("cron sweep failed:", e?.message); }
+  // Nieuwe app-fouten meteen melden (les van 5-6 aug: een fout in de boekflow stond een halve dag
+  // onbekeken in de logs terwijl een betalend lid niet kon boeken). Best-effort: een kapot alarm
+  // mag de deurcode-taak nooit meeslepen — de deur gaat vóór de telemetrie.
+  try { await alertNewClientErrors(createAdminClient()); } catch (e) { console.error("cron error-alert failed:", e?.message); }
   // Health heartbeat (Batch 6.5): one row per run so the cockpit shows this door-critical cron is alive.
   try { await createAdminClient().from("cron_runs").insert({ job: "access_codes", ok: errors.length === 0, detail: { sent, revoked, swept, ...(errors.length ? { errors } : {}) } }); } catch {}
   return NextResponse.json({ sent, revoked, swept, ...(errors.length ? { errors } : {}) }, { status: errors.length ? 500 : 200 });
