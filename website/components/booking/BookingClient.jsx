@@ -302,7 +302,9 @@ export default function BookingClient({
           <div className="space-y-6 lg:col-span-2">
             {/* Service */}
             <Card step="1" title="Kies je sessie">
-              <div className="grid gap-4 sm:grid-cols-3">
+              {/* Kolommen volgen het aantal diensten. Vast op 3 kolommen liet twee derde van de kaart
+                  leeg zodra er maar één sessietype aanstond — precies de situatie vandaag. */}
+              <div className={"grid gap-4 " + (services.length === 1 ? "sm:max-w-sm" : services.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
                 {services.map((s) => (
                   <button
                     key={s.id}
@@ -339,13 +341,46 @@ export default function BookingClient({
 
             {/* Persons */}
             {isFit60 && (
-              <Card step="2" title="Met hoeveel kom je?">
-                <div className="flex gap-3">
-                  {[1, 2, 3, 4].map((n) => (
-                    <button key={n} onClick={() => setPersons(n)} className={"h-12 w-12 rounded-2xl border-2 font-black transition " + (persons === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n}</button>
-                  ))}
+              <Card step="2" title="Met hoeveel &amp; hoe lang?">
+                {/* Personen en duur naast elkaar op desktop: twee korte keuzerijen onder elkaar lieten
+                    de halve kaartbreedte leeg en maakten de pagina onnodig lang. */}
+                <div className="grid gap-6 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-2 text-sm font-black text-brand">Met hoeveel kom je?</p>
+                    <div className="flex gap-3">
+                      {[1, 2, 3, 4].map((n) => (
+                        <button key={n} onClick={() => setPersons(n)} className={"h-12 w-12 rounded-2xl border-2 font-black transition " + (persons === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n}</button>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-xs text-brand/50">Zelfde prijs, ook met vrienden — geen extra kosten.</p>
+                    {/* Uitgelogd kan je nog niemand uitnodigen (dat vraagt een account). Zonder deze regel
+                        lijkt het alsof samen boeken niet bestaat — je ziet enkel dat er niets verschijnt. */}
+                    {!isLoggedIn && persons >= 2 && (
+                      <p className="mt-2 text-xs text-brand/50">
+                        Vrienden uitnodigen in de app kan zodra je een account hebt — ze krijgen dan zelf een
+                        uitnodiging. Je kan ze uiteraard ook gewoon meebrengen.
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="sm:border-l sm:border-borderc sm:pl-6">
+                    <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
+                    <div className="flex flex-wrap gap-2">
+                      {[1, 1.5, 2, 3, 4].map((n) => (
+                        // Altijd kiesbaar: de duur bepaalt wélke momenten het rooster hieronder toont, niet
+                        // omgekeerd. Ze grijs maken tot er een moment gekozen is, verborg 1u30 volledig.
+                        <button key={n} onClick={() => { setDuration(n); if (selected && !canBook(selected.dateStr, selected.hour, n)) setSelected(null); }} className={"rounded-2xl border-2 px-3.5 py-2.5 text-center transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                          <span className="block text-sm font-black text-brand">{n % 1 ? `${Math.floor(n)}u30` : `${n} uur`}</span>
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs text-brand/40">Hieronder zie je meteen welke momenten vrij zijn voor deze duur.</p>
+                    {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration % 1 ? `${Math.floor(duration)}u30` : `${duration} uur`} kost {String(duration).replace(".", ",")} sessie{duration === 1 ? "" : "s"}.</p>}
+                    {welcomeAvailable && useWelcome && duration > 1 && (
+                      <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {duration} uur betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
+                    )}
+                  </div>
                 </div>
-                <p className="mt-3 text-xs text-brand/50">Zelfde prijs, ook met vrienden — geen extra kosten.</p>
 
                 {/* Invite friends — members by name, or non-members straight by e-mail */}
                 {isLoggedIn && persons >= 2 && (
@@ -407,25 +442,6 @@ export default function BookingClient({
                   </div>
                 )}
 
-                <div className="mt-5 border-t border-borderc pt-4">
-                  <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
-                  <div className="flex flex-wrap gap-2">
-                    {[1, 1.5, 2, 3, 4].map((n) => {
-                      // Altijd kiesbaar: de duur bepaalt wélke momenten het rooster hieronder toont, niet
-                      // omgekeerd. Ze grijs maken tot er een moment gekozen is, verborg 1u30 volledig.
-                      return (
-                        <button key={n} onClick={() => { setDuration(n); if (selected && !canBook(selected.dateStr, selected.hour, n)) setSelected(null); }} className={"rounded-2xl border-2 px-4 py-2.5 text-center transition disabled:opacity-30 " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                          <span className="block text-sm font-black text-brand">{n % 1 ? `${Math.floor(n)}u30` : `${n} uur`}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="mt-2 text-xs text-brand/40">Hieronder zie je meteen welke momenten vrij zijn voor deze duur.</p>
-                  {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration % 1 ? `${Math.floor(duration)}u30` : `${duration} uur`} kost {String(duration).replace(".", ",")} sessie{duration === 1 ? "" : "s"}.</p>}
-                  {welcomeAvailable && useWelcome && duration > 1 && (
-                    <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {duration} uur betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
-                  )}
-                </div>
               </Card>
             )}
 
