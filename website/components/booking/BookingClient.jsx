@@ -96,10 +96,13 @@ export default function BookingClient({
     for (let h = gym.open_hour; h < gym.close_hour; h += 0.5) list.push(h);
     return list;
   }, [gym.open_hour, gym.close_hour]);
-  // Very-long (24/7) ranges get a daytime default + night toggle so the grid fits; normal
-  // opening hours (e.g. 6–23) just show every bookable hour.
-  const hasNight = allHours.some((h) => h < 6 || h >= 23);
-  const hours = !hasNight || showNight ? allHours : allHours.filter((h) => h >= 7 && h < 22);
+  // Het rooster toonde ALLE openingsuren: bij 06–23 zijn dat 34 halfuur-rijen, een scherm vol
+  // waar je doorheen moet vóór je de rest van het formulier ziet. De randuren dragen daar nauwelijks
+  // iets bij — in de praktijk komt minder dan 5 % van de boekingen vóór 07:00 of na 21:00. Die staan
+  // dus standaard dicht, met één knop om ze alsnog te tonen. Niets wordt onbereikbaar.
+  const CORE_FROM = 7, CORE_TO = 21;
+  const fringeCount = allHours.filter((h) => h < CORE_FROM || h >= CORE_TO).length;
+  const hours = !fringeCount || showNight ? allHours : allHours.filter((h) => h >= CORE_FROM && h < CORE_TO);
   const activeDay = (days.find((d) => d.dateStr === mobileDay) || days[0])?.dateStr;
 
   // Restore a slot chosen BEFORE signup (guest picks a moment → creates account → lands back on
@@ -116,6 +119,7 @@ export default function BookingClient({
     const u = Math.min(4, Math.max(1, Math.round((Number.isFinite(uRaw) ? uRaw : 1) * 2) / 2));
     if (!days.some((x) => x.dateStr === d) || !canBook(d, h, u)) return;
     setSelected({ dateStr: d, hour: h });
+    if (h < 7 || h >= 21) setShowNight(true); // randuur uit een deeplink: rooster meteen openvouwen
     setMobileDay(d);
     setDuration(u);
     const p = parseInt(sp.get("p"), 10);
@@ -142,6 +146,10 @@ export default function BookingClient({
     return true;
   }
 
+  // De duur waarop het ROOSTER moet toetsen. Sinds de duurkeuze bóven het rooster staat, toont het
+  // rooster enkel momenten waar de gekozen duur ook echt pást — daarvoor was elk slot groen en
+  // sprong de duur achteraf stilletjes terug naar 1 uur. PT boekt altijd één uur.
+  const fitDur = isFit60 ? duration : 1;
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
   const durFactor = 1; // geen korting op langere sessies — je betaalt (en gebruikt) 1 credit per uur
@@ -329,138 +337,9 @@ export default function BookingClient({
               </Card>
             )}
 
-            {/* Schedule grid */}
-            <Card step="2" title="Kies je moment">
-              <div className="mb-3 flex items-center justify-between">
-                <button onClick={() => setWeekOffset((w) => Math.max(0, w - 1))} disabled={weekOffset === 0} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">‹ vorige</button>
-                <span className="text-sm font-bold text-brand/60">{weekLabel}</span>
-                <button onClick={() => setWeekOffset((w) => Math.min(maxWeek, w + 1))} disabled={weekOffset >= maxWeek} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">volgende ›</button>
-              </div>
-              {/* Honest membership perk: members can book further ahead than non-members. */}
-              {!isMember && weekOffset >= maxWeek && (
-                <div className="mb-3 rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand/70">
-                  Leden boeken tot 8 weken vooruit (jij 2). <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Word lid →</Link>
-                </div>
-              )}
-
-              {/* Mobiel: dagkiezer + tijdslots in 1 kolom — geen horizontale scroll */}
-              <div className="md:hidden">
-                <div className="grid grid-cols-7 gap-1">
-                  {days.map((d) => {
-                    const act = activeDay === d.dateStr;
-                    return (
-                      <button key={d.dateStr} onClick={() => setMobileDay(d.dateStr)} className={"rounded-xl border-2 py-1.5 text-center transition " + (act ? "border-accent bg-accent/15" : "border-borderc")}>
-                        <span className="block text-[9px] font-bold uppercase text-brand/40">{d.weekday}</span>
-                        <span className="block text-xs font-black text-brand">{d.dayMonth.split(" ")[0]}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {hours.map((h) => {
-                    const t = slotInstant(activeDay, h).getTime();
-                    const taken = takenSet.has(t);
-                    const past = t < Date.now();
-                    const closed = !coachOpen(activeDay, h);
-                    const inRange = selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
-                    const isSel = selected && selected.dateStr === activeDay && selected.hour === h;
-                    const label = fmtHour(h);
-                    if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/25">{label}</div>;
-                    if (taken) return <WaitlistSlot key={h} date={activeDay} hour={h} label={label} isLoggedIn={isLoggedIn} />;
-                    if (!inRange && !canBook(activeDay, h, 1)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/20">{label}</div>;
-                    return (
-                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); if (!canBook(activeDay, h, duration)) setDuration(1); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
-                        {label}{isSel ? " ✓" : ""}
-                      </button>
-                    );
-                  })}
-                </div>
-                {hours.length === 0 && <p className="mt-2 text-xs text-brand/40">Geen vrije uren op deze dag.</p>}
-              </div>
-
-              {/* Desktop: volledige weekrooster */}
-              <div className="hidden overflow-x-auto md:block">
-                <div className="min-w-[620px]">
-                  {/* header */}
-                  <div className="grid grid-cols-[44px_repeat(7,1fr)] gap-1">
-                    <div />
-                    {days.map((d) => (
-                      <div key={d.dateStr} className="pb-1 text-center">
-                        <p className="text-[10px] font-bold uppercase text-brand/40">{d.weekday}</p>
-                        <p className="text-xs font-black text-brand">{d.dayMonth}</p>
-                      </div>
-                    ))}
-                  </div>
-                  {/* rows */}
-                  <div>
-                    {hours.map((h) => (
-                      <div key={h} className="grid grid-cols-[44px_repeat(7,1fr)] gap-1 py-0.5">
-                        <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-brand/30">{fmtHour(h)}</div>
-                        {days.map((d) => {
-                          const t = slotInstant(d.dateStr, h).getTime();
-                          const taken = takenSet.has(t);
-                          const past = t < Date.now();
-                          const closed = !coachOpen(d.dateStr, h);
-                          const inRange = selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
-                          const isSel = selected && selected.dateStr === d.dateStr && selected.hour === h;
-                          if (past || closed) return <div key={d.dateStr} className="h-7 rounded-md bg-paper" />;
-                          if (taken) return <WaitlistSlot key={d.dateStr} date={d.dateStr} hour={h} compact isLoggedIn={isLoggedIn} />;
-                          if (!inRange && !canBook(d.dateStr, h, 1)) return <div key={d.dateStr} className="h-7 rounded-md bg-paper/60" />;
-                          return (
-                            <button
-                              key={d.dateStr}
-                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); if (!canBook(d.dateStr, h, duration)) setDuration(1); track("booking_slot_chosen"); }}
-                              className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
-                            >
-                              {isSel ? "✓" : inRange ? "•" : ""}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-brand/40">Groen = vrij · grijs = geboekt · de zaal is exclusief van jou tijdens je sessie.</p>
-                {hasNight && (
-                  <button onClick={() => setShowNight((s) => !s)} className={"inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-xs font-black transition " + (showNight ? "border-brand bg-brand text-white" : "border-accent bg-accent/15 text-accentdark hover:bg-accent/30")}>
-                    🌙 {showNight ? "Verberg nachturen" : "Toon nachturen (22u–7u)"}
-                  </button>
-                )}
-              </div>
-            </Card>
-
-            {/* PT formule (1-op-1 / 1-op-2 / 1-op-3) met het tarief van de gekozen coach */}
-            {isPT && (
-              <Card step="3" title="Kies je formule">
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {[
-                    { n: 1, label: "1-op-1", price: ptCoach?.coach_pt_price_cents, per: "" },
-                    { n: 2, label: "1-op-2", price: ptCoach?.coach_pt2_price_cents, per: "p.p." },
-                    { n: 3, label: "1-op-3", price: ptCoach?.coach_pt3_price_cents, per: "p.p." },
-                  ].map((f) => {
-                    const offered = !ptCoach || f.n === 1 || f.price != null;
-                    return (
-                      <button key={f.n} type="button" disabled={!offered} onClick={() => offered && setPersons(f.n)}
-                        className={"rounded-2xl border-2 p-4 text-left transition disabled:opacity-40 " + (persons === f.n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                        <span className="block text-sm font-black text-brand">{f.label}</span>
-                        <span className="mt-0.5 block text-xs text-brand/55">{f.price != null ? `${euro(f.price)}${f.per ? " " + f.per : ""}` : (ptCoach ? "op aanvraag" : "—")}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {ptCoach && (
-                  <p className="mt-3 text-xs text-brand/50">
-                    1-op-2 en 1-op-3 zijn prijs per persoon. Totaal: <span className="font-bold text-brand">{euro(priceCents)}</span> voor {persons} {persons === 1 ? "persoon" : "personen"}.
-                  </p>
-                )}
-              </Card>
-            )}
-
             {/* Persons */}
             {isFit60 && (
-              <Card step="3" title="Met hoeveel kom je?">
+              <Card step="2" title="Met hoeveel kom je?">
                 <div className="flex gap-3">
                   {[1, 2, 3, 4].map((n) => (
                     <button key={n} onClick={() => setPersons(n)} className={"h-12 w-12 rounded-2xl border-2 font-black transition " + (persons === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n}</button>
@@ -532,15 +411,16 @@ export default function BookingClient({
                   <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
                   <div className="flex flex-wrap gap-2">
                     {[1, 1.5, 2, 3, 4].map((n) => {
-                      const ok = selected && canBook(selected.dateStr, selected.hour, n);
+                      // Altijd kiesbaar: de duur bepaalt wélke momenten het rooster hieronder toont, niet
+                      // omgekeerd. Ze grijs maken tot er een moment gekozen is, verborg 1u30 volledig.
                       return (
-                        <button key={n} disabled={!ok} onClick={() => setDuration(n)} className={"rounded-2xl border-2 px-4 py-2.5 text-center transition disabled:opacity-30 " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                        <button key={n} onClick={() => { setDuration(n); if (selected && !canBook(selected.dateStr, selected.hour, n)) setSelected(null); }} className={"rounded-2xl border-2 px-4 py-2.5 text-center transition disabled:opacity-30 " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
                           <span className="block text-sm font-black text-brand">{n % 1 ? `${Math.floor(n)}u30` : `${n} uur`}</span>
                         </button>
                       );
                     })}
                   </div>
-                  {!selected && <p className="mt-2 text-xs text-brand/40">Kies eerst een startmoment hierboven.</p>}
+                  <p className="mt-2 text-xs text-brand/40">Hieronder zie je meteen welke momenten vrij zijn voor deze duur.</p>
                   {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration % 1 ? `${Math.floor(duration)}u30` : `${duration} uur`} kost {String(duration).replace(".", ",")} sessie{duration === 1 ? "" : "s"}.</p>}
                   {welcomeAvailable && useWelcome && duration > 1 && (
                     <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {duration} uur betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
@@ -548,6 +428,143 @@ export default function BookingClient({
                 </div>
               </Card>
             )}
+
+            {/* Schedule grid */}
+            <Card step="3" title="Kies je moment">
+              <div className="mb-3 flex items-center justify-between">
+                <button onClick={() => setWeekOffset((w) => Math.max(0, w - 1))} disabled={weekOffset === 0} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">‹ vorige</button>
+                <span className="text-sm font-bold text-brand/60">{weekLabel}</span>
+                <button onClick={() => setWeekOffset((w) => Math.min(maxWeek, w + 1))} disabled={weekOffset >= maxWeek} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">volgende ›</button>
+              </div>
+              {/* Honest membership perk: members can book further ahead than non-members. */}
+              {!isMember && weekOffset >= maxWeek && (
+                <div className="mb-3 rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand/70">
+                  Leden boeken tot 8 weken vooruit (jij 2). <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Word lid →</Link>
+                </div>
+              )}
+
+              {/* Mobiel: dagkiezer + tijdslots in 1 kolom — geen horizontale scroll */}
+              <div className="md:hidden">
+                <div className="grid grid-cols-7 gap-1">
+                  {days.map((d) => {
+                    const act = activeDay === d.dateStr;
+                    return (
+                      <button key={d.dateStr} onClick={() => setMobileDay(d.dateStr)} className={"rounded-xl border-2 py-1.5 text-center transition " + (act ? "border-accent bg-accent/15" : "border-borderc")}>
+                        <span className="block text-[9px] font-bold uppercase text-brand/40">{d.weekday}</span>
+                        <span className="block text-xs font-black text-brand">{d.dayMonth.split(" ")[0]}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  {hours.map((h) => {
+                    const t = slotInstant(activeDay, h).getTime();
+                    const taken = takenSet.has(t);
+                    const past = t < Date.now();
+                    const closed = !coachOpen(activeDay, h);
+                    const inRange = selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
+                    const isSel = selected && selected.dateStr === activeDay && selected.hour === h;
+                    const label = fmtHour(h);
+                    if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/25">{label}</div>;
+                    if (taken) return <WaitlistSlot key={h} date={activeDay} hour={h} label={label} isLoggedIn={isLoggedIn} />;
+                    if (!inRange && !canBook(activeDay, h, fitDur)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/20">{label}</div>;
+                    return (
+                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
+                        {label}{isSel ? " ✓" : ""}
+                      </button>
+                    );
+                  })}
+                </div>
+                {hours.length === 0 && <p className="mt-2 text-xs text-brand/40">Geen vrije uren op deze dag.</p>}
+              </div>
+
+              {/* Desktop: volledige weekrooster */}
+              <div className="hidden overflow-x-auto md:block">
+                <div className="min-w-[620px]">
+                  {/* header */}
+                  <div className="grid grid-cols-[44px_repeat(7,1fr)] gap-1">
+                    <div />
+                    {days.map((d) => (
+                      <div key={d.dateStr} className="pb-1 text-center">
+                        <p className="text-[10px] font-bold uppercase text-brand/40">{d.weekday}</p>
+                        <p className="text-xs font-black text-brand">{d.dayMonth}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* rows */}
+                  <div>
+                    {hours.map((h) => (
+                      <div key={h} className="grid grid-cols-[44px_repeat(7,1fr)] gap-1 py-0.5">
+                        <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-brand/30">{fmtHour(h)}</div>
+                        {days.map((d) => {
+                          const t = slotInstant(d.dateStr, h).getTime();
+                          const taken = takenSet.has(t);
+                          const past = t < Date.now();
+                          const closed = !coachOpen(d.dateStr, h);
+                          const inRange = selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
+                          const isSel = selected && selected.dateStr === d.dateStr && selected.hour === h;
+                          if (past || closed) return <div key={d.dateStr} className="h-7 rounded-md bg-paper" />;
+                          if (taken) return <WaitlistSlot key={d.dateStr} date={d.dateStr} hour={h} compact isLoggedIn={isLoggedIn} />;
+                          if (!inRange && !canBook(d.dateStr, h, fitDur)) return <div key={d.dateStr} className="h-7 rounded-md bg-paper/60" />;
+                          return (
+                            <button
+                              key={d.dateStr}
+                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); track("booking_slot_chosen"); }}
+                              className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
+                            >
+                              {isSel ? "✓" : inRange ? "•" : ""}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                {/* De legende moet de wáárheid zeggen: sinds het rooster op de gekozen duur toetst,
+                    kan grijs óók "past niet in deze duur" betekenen. Dat verzwijgen zou lezen als
+                    "alles is volgeboekt" terwijl het uur gewoon te kort is vóór sluitingstijd. */}
+                <p className="text-xs text-brand/40">
+                  Groen = vrij voor {fitDur % 1 ? `${Math.floor(fitDur)}u30` : `${fitDur} uur`} · grijs = geboekt of te kort · de zaal is exclusief van jou tijdens je sessie.
+                </p>
+                {fringeCount > 0 && (
+                  <button onClick={() => setShowNight((s) => !s)} className={"inline-flex items-center gap-1.5 rounded-full border-2 px-4 py-2 text-xs font-black transition " + (showNight ? "border-brand bg-brand text-white" : "border-accent bg-accent/15 text-accentdark hover:bg-accent/30")}>
+                    🕕 {showNight
+                      ? "Verberg vroege & late uren"
+                      : `Toon vroeger & later (${fmtHour(gym.open_hour)}–${fmtHour(CORE_FROM)} · ${fmtHour(CORE_TO)}–${fmtHour(gym.close_hour)})`}
+                  </button>
+                )}
+              </div>
+            </Card>
+
+            {/* PT formule (1-op-1 / 1-op-2 / 1-op-3) met het tarief van de gekozen coach */}
+            {isPT && (
+              <Card step="•" title="Kies je formule">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { n: 1, label: "1-op-1", price: ptCoach?.coach_pt_price_cents, per: "" },
+                    { n: 2, label: "1-op-2", price: ptCoach?.coach_pt2_price_cents, per: "p.p." },
+                    { n: 3, label: "1-op-3", price: ptCoach?.coach_pt3_price_cents, per: "p.p." },
+                  ].map((f) => {
+                    const offered = !ptCoach || f.n === 1 || f.price != null;
+                    return (
+                      <button key={f.n} type="button" disabled={!offered} onClick={() => offered && setPersons(f.n)}
+                        className={"rounded-2xl border-2 p-4 text-left transition disabled:opacity-40 " + (persons === f.n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                        <span className="block text-sm font-black text-brand">{f.label}</span>
+                        <span className="mt-0.5 block text-xs text-brand/55">{f.price != null ? `${euro(f.price)}${f.per ? " " + f.per : ""}` : (ptCoach ? "op aanvraag" : "—")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {ptCoach && (
+                  <p className="mt-3 text-xs text-brand/50">
+                    1-op-2 en 1-op-3 zijn prijs per persoon. Totaal: <span className="font-bold text-brand">{euro(priceCents)}</span> voor {persons} {persons === 1 ? "persoon" : "personen"}.
+                  </p>
+                )}
+              </Card>
+            )}
+
           </div>
 
           {/* Summary */}
