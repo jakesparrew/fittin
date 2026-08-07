@@ -16,6 +16,8 @@ import { createClient } from "@supabase/supabase-js";
 const db = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
+import { isTestAccount } from "../lib/test-accounts.js";
+
 const eur = (c) => "€ " + ((c || 0) / 100).toFixed(2);
 const d = (iso) => (iso ? String(iso).slice(0, 10) : "—");
 
@@ -31,7 +33,7 @@ const eis = ({ data, error }, wat) => {
 // Iedereen die ooit als coach op een boeking stond OF een tegoedbeweging heeft — niet filteren op
 // de huidige rol, want een oud-coach die nog schuld heeft mag niet uit beeld vallen.
 const [rBk, rLed, rPay, rProf] = await Promise.all([
-  db.from("bookings").select("id, coach_id, user_id, starts_at, status, persons, coach_billing, coach_charge_cents, coach_invoiced_at, price_cents, paid, payment_source").not("coach_id", "is", null).order("starts_at").limit(5000),
+  db.from("bookings").select("id, coach_id, user_id, created_at, starts_at, status, persons, coach_billing, coach_charge_cents, coach_invoiced_at, price_cents, paid, payment_source").not("coach_id", "is", null).order("starts_at").limit(5000),
   db.from("coach_ledger").select("coach_id, delta, reason, created_at, ref_id, stripe_ref").order("created_at").limit(5000),
   db.from("payments").select("user_id, amount_cents, kind, status, description, created_at").order("created_at").limit(5000),
   db.from("profiles").select("id, full_name, email, role, coach_billing_mode").limit(5000),
@@ -47,9 +49,12 @@ const ids = new Set([...(bkAll || []).map((b) => b.coach_id), ...(ledAll || []).
 
 let totOpen = 0, totOnverklaard = 0;
 const bevindingen = [];
+const overgeslagen = [];
 
 for (const id of ids) {
   const p = prof.get(id) || { full_name: "(onbekend profiel)", email: id, coach_billing_mode: "?" };
+  // Testaccounts overslaan: toegekend tegoed zonder betaling is daar geen echt geldgat.
+  if (isTestAccount(p)) { overgeslagen.push(p.full_name); continue; }
   const bk = (bkAll || []).filter((b) => b.coach_id === id);
   const led = (ledAll || []).filter((l) => l.coach_id === id);
   const pay = (payAll || []).filter((x) => x.user_id === id);
@@ -117,11 +122,24 @@ for (const id of ids) {
   }
 
   // 2. Geboekt zonder enige aanrekening.
-  if (perModus.GEEN) {
-    const t = `${perModus.GEEN.n} bevestigde sessie(s) met coach_billing = NULL → nergens aangerekend`;
+  //
+  // De onboarding van 2026-06-22 is hierop een bekende, door de eigenaar goedgekeurde uitzondering:
+  // toen is het bestaande rooster van de coaches in één keer ingevoerd, zonder tegoed af te boeken
+  // (7 sessies, € 84). Die zijn bewust weggegeven en hoeven niet elke keer opnieuw als probleem te
+  // verschijnen. Alles wat NA die dag geboekt is zonder aanrekening, is dat wél — dan lekt er geld
+  // weg via een pad dat we niet kennen. Vandaar de scheiding in plaats van de check te schrappen.
+  const ONBOARDING = Date.parse("2026-06-23T00:00:00Z");
+  const nietAangerekend = bevestigd.filter((b) => !b.coach_billing);
+  // Op AANMAAKdatum beoordelen, niet op de sessiedatum: de onboarding-batch is op 22 juni ingevoerd
+  // maar bevat sessies tot begin juli. Op starts_at filteren zou die alsnog als nieuw lek markeren.
+  const oud = nietAangerekend.filter((b) => Date.parse(b.created_at) < ONBOARDING);
+  const nieuw = nietAangerekend.filter((b) => !oud.includes(b));
+  if (oud.length) console.log(`  · ${oud.length} sessie(s) zonder aanrekening uit de onboarding van 22 juni — goedgekeurd, geen actie`);
+  if (nieuw.length) {
+    const t = `${nieuw.length} sessie(s) NA de onboarding zonder enige aanrekening → hier lekt geld weg (${nieuw.map((b) => d(b.starts_at)).join(", ")})`;
     console.log(`  ⚠ ${t}`);
     bevindingen.push([p.full_name, t]);
-    totOnverklaard += perModus.GEEN.n * 1200;
+    totOnverklaard += nieuw.length * 1200;
   }
 
   // 3. Tegoed toegekend zonder dat er geld tegenover staat.
@@ -175,4 +193,5 @@ console.log(`TE INNEN (factuur + open posten + negatief saldo): ${eur(totOpen)}`
 console.log(`ZONDER FINANCIEEL SPOOR (weggegeven of niet aangerekend): ${eur(totOnverklaard)}`);
 console.log(`\nAANSLUITINGSPROBLEMEN: ${bevindingen.length}`);
 for (const [naam, t] of bevindingen) console.log(`  • ${naam}: ${t}`);
+if (overgeslagen.length) console.log(`\nOvergeslagen testaccount(s): ${overgeslagen.join(", ")}`);
 console.log(`\nBlinde vlek: cash of overschrijving die nooit is ingeboekt, staat in geen van deze drie bronnen.`);
