@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSettled } from "@/lib/booking-status";
 import { classifyClientError } from "@/lib/error-triage";
+import { TrendLine } from "@/components/admin/Charts";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,8 @@ export default async function BeheerDashboard() {
     { data: prevWeekPay },
     { count: openReports },
     { data: coachLedger },
+    { data: bk12w },
+    { data: pay12w },
   ] = await Promise.all([
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid"),
     supabase.from("payments").select("amount_cents, created_at").eq("gym_id", gym.id).gte("created_at", monthStart.toISOString()),
@@ -85,11 +88,33 @@ export default async function BeheerDashboard() {
     supabase.from("problem_reports").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "open"),
     // Coach-sessietegoed: een negatief saldo = de coach boekte meer sessies dan hij vooraf kocht.
     supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
+    // 12 weken boekingen + betalingen voor de trendgrafieken. "Deze week vs vorige week" is één
+    // vergelijking en dus gevoelig voor toeval (één ziekteweek leest als een neergang); de vorm
+    // over een kwartaal laat zien of het echt de goede kant op gaat.
+    supabase.from("bookings").select("starts_at").eq("gym_id", gym.id).eq("status", "bevestigd")
+      .gte("starts_at", new Date(weekStart.getTime() - 11 * 7 * 86400000).toISOString()).lt("starts_at", new Date(weekStart.getTime() + 7 * 86400000).toISOString()),
+    supabase.from("payments").select("amount_cents, created_at, status").eq("gym_id", gym.id)
+      .gte("created_at", new Date(weekStart.getTime() - 11 * 7 * 86400000).toISOString()),
   ]);
 
   // Alleen échte app-fouten laten het systeemlampje kleuren. Een lid dat in de lift zijn
   // verbinding verliest is geen storing, en dat elke dag als "fout" tonen maakt het lampje stom.
   const recentErrors = (errRows || []).filter((e) => classifyClientError(e.message, e.stack) === "app").length;
+
+  // Twaalf weken trend. Elke bucket loopt van maandag tot maandag, net als de rest van de app.
+  const weekLabel = (d) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short" }).format(d);
+  const reeks = (rows, veld, fn) => {
+    const out = [];
+    for (let i = 11; i >= 0; i--) {
+      const van = new Date(weekStart.getTime() - i * 7 * 86400000);
+      const tot = new Date(van.getTime() + 7 * 86400000);
+      const hits = (rows || []).filter((r) => { const t = new Date(r[veld]).getTime(); return t >= van.getTime() && t < tot.getTime(); });
+      out.push({ label: weekLabel(van), value: fn(hits) });
+    }
+    return out;
+  };
+  const bookingTrend = reeks(bk12w, "starts_at", (h) => h.length);
+  const revenueTrend = reeks(pay12w, "created_at", (h) => h.filter((p) => (p.status || "betaald") === "betaald" || p.status === "paid").reduce((a, p) => a + (p.amount_cents || 0), 0));
 
   const nameOf = new Map((lidRows || []).map((m) => [m.id, m.full_name || "Lid"]));
   const ledenOnly = (lidRows || []).filter((m) => m.role === "lid");
@@ -307,6 +332,26 @@ export default async function BeheerDashboard() {
           </div>
         </section>
       </div>
+
+      {/* ============ TREND ============
+          "Deze week vs vorige week" is één vergelijking en dus gevoelig voor toeval: een ziekteweek
+          of een feestdag leest dan als een neergang. De vorm over een kwartaal beantwoordt de vraag
+          die er echt toe doet — gaat het de goede kant op? */}
+      <section className="mt-8">
+        <h2 className="text-xs font-black uppercase tracking-widest text-lav">Trend · laatste 12 weken</h2>
+        <div className="mt-3 grid gap-4 lg:grid-cols-2">
+          <div className="rounded-2xl border border-borderc bg-white p-5">
+            <p className="text-sm font-black text-brand">Sessies per week</p>
+            <p className="mt-0.5 text-xs text-brand/45">Bevestigde boekingen, maandag tot zondag.</p>
+            <div className="mt-3"><TrendLine data={bookingTrend} label="deze week" /></div>
+          </div>
+          <div className="rounded-2xl border border-borderc bg-white p-5">
+            <p className="text-sm font-black text-brand">Ontvangen per week</p>
+            <p className="mt-0.5 text-xs text-brand/45">Enkel effectief betaalde bedragen — open posten tellen niet mee.</p>
+            <div className="mt-3"><TrendLine data={revenueTrend} label="deze week" format={euro} /></div>
+          </div>
+        </div>
+      </section>
 
       {/* ============ SYSTEEM ============ */}
       <section className="mt-8 rounded-2xl border border-borderc bg-white p-5">

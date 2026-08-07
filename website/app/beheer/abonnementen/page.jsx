@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { TrendLine } from "@/components/admin/Charts";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,30 @@ export default async function Abonnementen() {
   const slapend = actief.filter((r) => r.dagenStil == null || r.dagenStil > 30);
   const opzeggend = actief.filter((r) => r.cancel_at_period_end);
 
+  // Verloop van het aantal abonnees, week per week sinds het eerste abonnement. Toont de RICHTING:
+  // groeit de vaste basis, of komt er net zoveel bij als eraf gaat? Een abonnement telt mee vanaf
+  // de startdatum tot het effectief eindigt (bij een opzegging is dat het einde van de betaalde
+  // periode, niet het moment van opzeggen — tot dan is het lid gewoon lid).
+  const eersteStart = (mems || []).reduce((a, m) => (m.started_at && (!a || m.started_at < a) ? m.started_at : a), null);
+  const verloop = [];
+  if (eersteStart) {
+    const start = new Date(eersteStart).getTime();
+    for (let t = start; t <= nu + 6 * 86400000; t += 7 * 86400000) {
+      const punt = Math.min(t, nu);
+      const aantal = (mems || []).filter((m) => {
+        if (!m.started_at || new Date(m.started_at).getTime() > punt) return false;
+        const gestoptStatus = m.status !== "actief" && m.status !== "past_due";
+        const eind = m.current_period_end ? new Date(m.current_period_end).getTime() : null;
+        if (gestoptStatus && eind && eind < punt) return false;
+        return true;
+      }).length;
+      verloop.push({
+        label: new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short" }).format(new Date(punt)),
+        value: aantal,
+      });
+    }
+  }
+
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -103,6 +128,19 @@ export default async function Abonnementen() {
             en meteen het makkelijkst om te keren met één persoonlijk bericht. {slapend.map((r) => r.member?.full_name).filter(Boolean).join(", ")}.
           </p>
         </div>
+      )}
+
+      {verloop.length >= 2 && (
+        <section className="mt-8 rounded-2xl border border-borderc bg-white p-5">
+          <h2 className="text-xs font-black uppercase tracking-widest text-lav">Abonnees door de tijd</h2>
+          <p className="mt-1 text-xs text-brand/45">
+            Week per week sinds het eerste abonnement. Stijgt de lijn, dan groeit je vaste inkomen; blijft ze vlak
+            terwijl er wel nieuwe bijkomen, dan vertrekt er evenveel als er binnenkomt.
+          </p>
+          <div className="mt-3">
+            <TrendLine data={verloop} label="abonnees vandaag" />
+          </div>
+        </section>
       )}
 
       <Tabel titel={`Actief (${actief.length})`} rijen={actief} />

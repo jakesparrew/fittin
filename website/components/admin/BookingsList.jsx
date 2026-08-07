@@ -55,9 +55,15 @@ function SourceChip({ b }) {
       )}
       {/* Het saldo hieronder is het HUIDIGE tegoed van het lid, niet de status van deze sessie —
           "nog 0 over" naast een betaalde sessie las als "onbetaald". Enkel tonen als er actie is. */}
+      {/* "kaart is op" naast een sessie las als "deze sessie is niet betaald" (de owner vroeg er
+          letterlijk naar). Daarom staat er nu eerst dat de sessie betaald is, en pas dan het saldo:
+          de beurt wordt bij het BOEKEN afgetrokken, dus een geboekte kaartsessie is altijd voldaan. */}
       {credits != null && credits <= 2 && (
-        <span className="mt-0.5 block text-[10px] font-bold text-amber-600">
-          {credits === 0 ? "kaart is op → nieuwe verkopen" : `nog ${String(credits).replace(".", ",")} ${credits === 1 ? "beurt" : "beurten"} op de kaart`}
+        <span className="mt-0.5 block text-[10px] font-bold text-brand/50">
+          <span className="text-accentdark">betaald met de kaart</span>
+          {credits === 0
+            ? " · kaart nu leeg"
+            : ` · nog ${String(credits).replace(".", ",")} ${credits === 1 ? "beurt" : "beurten"} over`}
         </span>
       )}
       {/* Coach-tegoed enkel tonen wanneer er actie nodig is (op of onder nul). Een gezond saldo op
