@@ -8,6 +8,7 @@ const groups = [
   { title: "Gym", items: [
     { href: "/beheer/boekingen", label: "Boekingen", icon: "▤" },
     { href: "/beheer/leden", label: "Leden", icon: "◍" },
+    { href: "/beheer/abonnementen", label: "Abonnementen", icon: "★" },
     { href: "/beheer/coaches", label: "Coaches", icon: "♦" },
     { href: "/beheer/betalingen", label: "Betalingen", icon: "◈" },
     { href: "/beheer/financien", label: "Financiën", icon: "€" },

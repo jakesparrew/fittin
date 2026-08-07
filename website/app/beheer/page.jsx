@@ -249,7 +249,7 @@ export default async function BeheerDashboard() {
             value={activeMems.length}
             hint={`≈ ${euro(mrr)}/mnd${pastDue.length ? ` · ⚠ ${pastDue.length} betaling mislukt` : ""}${ending.length ? ` · ${ending.length} loopt af` : ""}`}
             warn={pastDue.length > 0}
-            href="/beheer/leden"
+            href="/beheer/abonnementen"
           />
           <BigStat label="Boekingen deze week" value={weekBk || 0} hint={`vorige week ${prevWeekBk || 0}`} good={(weekBk || 0) >= (prevWeekBk || 0)} href="/beheer/boekingen" />
           <BigStat label="Ontvangen deze week" value={euro(weekRevenue)} hint={`vorige week ${euro(prevWeekRevenue)}`} good={weekRevenue >= prevWeekRevenue} href="/beheer/betalingen" />
