@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createProgram } from "../coaching-actions";
+import ListSearch from "@/components/admin/ListSearch";
 
 export const dynamic = "force-dynamic";
 
-export default async function Programmas() {
+export default async function Programmas({ searchParams }) {
+  const zoek = String((await searchParams)?.q || "").trim().toLowerCase();
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym } = ctx;
@@ -17,6 +19,10 @@ export default async function Programmas() {
       .order("created_at", { ascending: false }),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).order("full_name"),
   ]);
+
+  // Zoeken op programmanaam of op het lid waaraan het toegewezen is (“welk schema heeft Jeroen?”).
+  const zichtbaar = !zoek ? (programs || []) : (programs || []).filter((p) =>
+    [p.name, p.member?.full_name, p.is_template ? "template" : ""].some((v) => String(v || "").toLowerCase().includes(zoek)));
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -41,8 +47,12 @@ export default async function Programmas() {
         <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Nieuw programma</button>
       </form>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(programs || []).map((p) => (
+      <div className="mt-6">
+        <ListSearch placeholder="Zoek op programmanaam of lid…" className="w-full max-w-md" />
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {zichtbaar.map((p) => (
           <Link key={p.id} href={`/beheer/programmas/${p.id}`} className="rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
             <p className="font-black text-brand">{p.name}</p>
             <p className="mt-1 text-xs font-semibold text-accentdark">
@@ -50,7 +60,9 @@ export default async function Programmas() {
             </p>
           </Link>
         ))}
-        {(!programs || programs.length === 0) && <p className="text-sm text-brand/50">Nog geen programma's.</p>}
+        {zichtbaar.length === 0 && (
+          <p className="text-sm text-brand/50">{zoek ? `Geen programma gevonden voor “${zoek}”.` : "Nog geen programma's."}</p>
+        )}
       </div>
     </div>
   );

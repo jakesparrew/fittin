@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveProblemReport, resolveClientError } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
 import { classifyClientError, explainClass } from "@/lib/error-triage";
+import ListSearch from "@/components/admin/ListSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,8 @@ const fmt = (iso) =>
 
 // Two feedback streams in one place: deliberate member reports ("de deur ging niet open")
 // and automatic client-side JS errors (window.onerror → /api/log-error → client_errors).
-export default async function Meldingen() {
+export default async function Meldingen({ searchParams }) {
+  const zoek = String((await searchParams)?.q || "").trim().toLowerCase();
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym } = ctx;
@@ -33,6 +35,10 @@ export default async function Meldingen() {
       .limit(200),
   ]);
 
+  // Eén zoekveld dat beide stromen filtert: je zoekt hier op de naam van een lid ("wat had
+  // Laura gemeld?") of op een stuk foutmelding.
+  const raakt = (velden) => !zoek || velden.some((v) => String(v || "").toLowerCase().includes(zoek));
+
   // Groepeer identieke fouten (zelfde message + pagina): "×6 · 3 gebruikers" zegt meer dan zes
   // losse rijen — herhaling is hét signaal waar de owner op moet letten.
   const groups = [];
@@ -49,11 +55,13 @@ export default async function Meldingen() {
   // Splits wat je kán oplossen van wat buiten de app ligt. Een lijst waarin een echte bug
   // tussen tien "verbinding weggevallen"-regels staat, wordt in z'n geheel genegeerd.
   for (const g of groups) g.kind = classifyClientError(g.message, g.stack);
-  const bugs = groups.filter((g) => g.kind === "app");
-  const ruis = groups.filter((g) => g.kind !== "app");
+  const zichtbaar = groups.filter((g) => raakt([g.message, g.path, g.stack]));
+  const bugs = zichtbaar.filter((g) => g.kind === "app");
+  const ruis = zichtbaar.filter((g) => g.kind !== "app");
 
-  const open = (reports || []).filter((r) => r.status === "open");
-  const done = (reports || []).filter((r) => r.status !== "open");
+  const alleReports = (reports || []).filter((r) => raakt([r.member?.full_name, r.member?.email, r.message, r.page]));
+  const open = alleReports.filter((r) => r.status === "open");
+  const done = alleReports.filter((r) => r.status !== "open");
   // Resolve names for automatic errors that carried a logged-in user.
   const errUserIds = [...new Set((errors || []).map((e) => e.user_id).filter(Boolean))];
   const nameById = {};
@@ -77,11 +85,19 @@ export default async function Meldingen() {
         {ruis.length > 0 && <span className="rounded-full border border-borderc bg-white px-3.5 py-1.5 text-brand/40">Omgevingsruis: {ruis.length}</span>}
       </div>
 
+      <div className="mt-4">
+        <ListSearch placeholder="Zoek op naam van het lid of op foutmelding…" className="w-full max-w-md" />
+      </div>
+
       {/* ---- Member reports ---- */}
       <section className="mt-6">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Van leden{open.length ? ` · ${open.length} open` : ""}</h2>
-        {(reports || []).length === 0 && (
-          <p className="mt-3 text-sm text-brand/40">Nog geen meldingen van leden — zij vinden de meldknop onderaan hun account-pagina.</p>
+        {alleReports.length === 0 && (
+          <p className="mt-3 text-sm text-brand/40">
+            {zoek
+              ? `Geen melding van een lid gevonden voor “${zoek}”.`
+              : "Nog geen meldingen van leden — zij vinden de meldknop onderaan hun account-pagina."}
+          </p>
         )}
         <div className="mt-3 space-y-2">
           {open.map((r) => (

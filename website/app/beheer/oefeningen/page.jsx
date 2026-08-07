@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ListSearch from "@/components/admin/ListSearch";
 import { getAdminContext } from "@/lib/admin";
 import { upsertExercise, deleteExercise } from "../coaching-actions";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
@@ -22,9 +23,15 @@ export default async function Oefeningen({ searchParams }) {
   const { supabase, gym } = ctx;
   const sp = (await searchParams) || {};
   const onlyIncomplete = sp.filter === "onvolledig";
+  const zoek = String(sp.q || "").trim().toLowerCase();
   const { data: allExercises } = await supabase.from("exercises").select("*").eq("gym_id", gym.id).order("name");
   const incompleteCount = (allExercises || []).filter(isIncomplete).length;
-  const exercises = onlyIncomplete ? (allExercises || []).filter(isIncomplete) : allExercises;
+  // Zoeken op naam, categorie, materiaal of spiergroep. Met honderden oefeningen in de
+  // bibliotheek is scrollen naar “incline dumbbell press” geen optie.
+  let exercises = onlyIncomplete ? (allExercises || []).filter(isIncomplete) : allExercises || [];
+  if (zoek) exercises = exercises.filter((e) =>
+    [e.name, e.category, e.equipment, e.difficulty, ...(e.primary_muscles || []), ...(e.secondary_muscles || [])]
+      .some((v) => String(v || "").toLowerCase().includes(zoek)));
   // Edit mode: ?edit=<id> pre-fills the form so the owner can complete/correct an exercise in place.
   const editing = sp.edit ? (allExercises || []).find((e) => e.id === sp.edit) : null;
   const arr = (v) => (Array.isArray(v) ? v.join(", ") : "");
@@ -36,9 +43,12 @@ export default async function Oefeningen({ searchParams }) {
 
       {/* Completeness filter — helps the owner find + fix library gaps. */}
       <div className="mt-4 flex flex-wrap items-center gap-3">
-        <span className="text-sm text-brand/60">{(allExercises || []).length} oefeningen</span>
+        <ListSearch placeholder="Zoek op naam, categorie, materiaal of spier…" className="w-full max-w-sm" />
+        <span className="text-sm text-brand/60">
+          {zoek ? `${exercises.length} van ${(allExercises || []).length} oefeningen` : `${(allExercises || []).length} oefeningen`}
+        </span>
         {incompleteCount > 0 && (
-          <Link href={onlyIncomplete ? "/beheer/oefeningen" : "/beheer/oefeningen?filter=onvolledig"}
+          <Link href={"/beheer/oefeningen?" + new URLSearchParams({ ...(onlyIncomplete ? {} : { filter: "onvolledig" }), ...(zoek ? { q: zoek } : {}) }).toString()}
             className={"rounded-full px-3 py-1 text-xs font-bold transition " + (onlyIncomplete ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-700 hover:bg-amber-200")}>
             {onlyIncomplete ? "✕ toon alle" : `⚠ ${incompleteCount} onvolledig`}
           </Link>
@@ -72,7 +82,10 @@ export default async function Oefeningen({ searchParams }) {
       </ActionForm>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(exercises || []).map((ex) => (
+        {zoek && exercises.length === 0 && (
+          <p className="text-sm text-brand/50 sm:col-span-2 lg:col-span-3">Geen oefening gevonden voor “{zoek}”.</p>
+        )}
+        {exercises.map((ex) => (
           <div key={ex.id} className="overflow-hidden rounded-2xl border border-borderc bg-white">
             <ExerciseMedia exercise={ex} thumb className="aspect-video w-full" rounded="rounded-none" />
             <div className="p-4">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getGymSecrets } from "@/lib/gym-secrets";
+import ListSearch from "@/components/admin/ListSearch";
 import { saveInvoiceSettings } from "./actions";
 import { markPaymentPaid } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
@@ -27,6 +28,7 @@ const TABS = [
 export default async function Betalingen({ searchParams }) {
   const sp = await searchParams;
   const filter = sp?.kind || "";
+  const zoek = String(sp?.q || "").trim();
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym } = ctx;
@@ -44,17 +46,29 @@ export default async function Betalingen({ searchParams }) {
     .order("created_at", { ascending: false })
     .limit(200);
   if (filter) q = q.eq("kind", filter);
+  // Zoeken op omschrijving of bedrag kan de database zelf; op naam/e-mail van het lid niet in
+  // dezelfde query (dat is een relatie), dus dat filteren we hieronder op het resultaat. Daarom
+  // wordt de limiet bij een zoekopdracht opgetrokken: anders zou je binnen 200 rijen zoeken.
+  if (zoek) q = q.limit(2000);
   const [{ data: rows }, { data: monthRows }] = await Promise.all([
     q,
     supabase.from("payments").select("amount_cents, created_at").eq("gym_id", gym.id).gte("created_at", monthStart.toISOString()),
   ]);
+  const bedragCent = (() => { const n = parseFloat(zoek.replace(",", ".")); return Number.isFinite(n) ? Math.round(n * 100) : null; })();
+  const alleRijen = rows || [];
+  const gefilterd = !zoek ? alleRijen : alleRijen.filter((p) => {
+    const t = zoek.toLowerCase();
+    return [p.member?.full_name, p.member?.email, p.description, KIND[p.kind], p.status]
+        .some((v) => String(v || "").toLowerCase().includes(t))
+      || (bedragCent != null && Math.abs((p.amount_cents || 0) - bedragCent) < 1);
+  });
   const monthTotal = (monthRows || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
   const todayTotal = (monthRows || []).filter((p) => new Date(p.created_at) >= dayStart).reduce((a, p) => a + (p.amount_cents || 0), 0);
-  const shownTotal = (rows || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
+  const shownTotal = gefilterd.reduce((a, p) => a + (p.amount_cents || 0), 0);
 
   // Enrich booking payments with their session (payments.stripe_id == bookings.stripe_session_id).
   // Two legitimate bookings paid seconds apart otherwise look like a duplicate — the session date tells them apart.
-  const bookingStripeIds = [...new Set((rows || []).filter((p) => p.kind === "booking" && p.stripe_id).map((p) => p.stripe_id))];
+  const bookingStripeIds = [...new Set(gefilterd.filter((p) => p.kind === "booking" && p.stripe_id).map((p) => p.stripe_id))];
   const sessionByStripe = {};
   if (bookingStripeIds.length) {
     const { data: bk } = await supabase
@@ -101,19 +115,30 @@ export default async function Betalingen({ searchParams }) {
       <div className="mt-6 grid gap-4 sm:grid-cols-3">
         <Stat label="Vandaag" value={euro(todayTotal)} />
         <Stat label="Deze maand" value={euro(monthTotal)} />
-        <Stat label={filter ? `Getoond (${KIND[filter] || filter})` : "Getoond (laatste 200)"} value={euro(shownTotal)} />
+        <Stat label={zoek ? `Gevonden (${gefilterd.length})` : filter ? `Getoond (${KIND[filter] || filter})` : "Getoond (laatste 200)"} value={euro(shownTotal)} />
       </div>
 
       <div className="mt-6 flex flex-wrap gap-2">
         {TABS.map((t) => (
           <Link
             key={t.v}
-            href={t.v ? `/beheer/betalingen?kind=${t.v}` : "/beheer/betalingen"}
+            // De zoekopdracht meenemen bij het wisselen van tab: anders verlies je ze zodra je
+            // van "Alles" naar "Boekingen" gaat, precies op het moment dat je aan het zoeken bent.
+            href={"/beheer/betalingen?" + new URLSearchParams({ ...(t.v ? { kind: t.v } : {}), ...(zoek ? { q: zoek } : {}) }).toString()}
             className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (filter === t.v ? "bg-brand text-white" : "bg-paper text-brand/60 hover:bg-accent/15")}
           >
             {t.l}
           </Link>
         ))}
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <ListSearch placeholder="Zoek op naam, e-mail, omschrijving of bedrag…" className="w-full max-w-md" />
+        {zoek && (
+          <p className="text-sm font-bold text-brand/50">
+            {gefilterd.length} {gefilterd.length === 1 ? "resultaat" : "resultaten"} · {euro(shownTotal)}
+          </p>
+        )}
       </div>
 
       <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-white">
@@ -130,7 +155,7 @@ export default async function Betalingen({ searchParams }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-borderc">
-            {(rows || []).map((p, i) => (
+            {gefilterd.map((p, i) => (
               <tr key={i}>
                 <td className="px-5 py-3">
                   {p.member ? (
@@ -184,8 +209,10 @@ export default async function Betalingen({ searchParams }) {
                 <td className="px-5 py-3 text-right"><Link href={`/beheer/factuur?payment=${p.id}`} className="text-xs font-bold text-accentdark hover:underline">Factuur →</Link></td>
               </tr>
             ))}
-            {(!rows || rows.length === 0) && (
-              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-brand/40">Nog geen betalingen. Ze verschijnen hier automatisch zodra Stripe ze bevestigt.</td></tr>
+            {gefilterd.length === 0 && (
+              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-brand/40">
+                {zoek ? `Geen betaling gevonden voor “${zoek}”.` : "Nog geen betalingen. Ze verschijnen hier automatisch zodra Stripe ze bevestigt."}
+              </td></tr>
             )}
           </tbody>
         </table>

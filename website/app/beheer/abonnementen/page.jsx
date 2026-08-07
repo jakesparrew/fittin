@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TrendLine } from "@/components/admin/Charts";
+import ListSearch from "@/components/admin/ListSearch";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,8 @@ const dag = (iso) =>
   iso ? new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", year: "numeric" }).format(new Date(iso)) : "—";
 const maandenSinds = (iso) => (iso ? Math.max(0, (Date.now() - new Date(iso).getTime()) / (30.44 * 86400000)) : 0);
 
-export default async function Abonnementen() {
+export default async function Abonnementen({ searchParams }) {
+  const zoek = String((await searchParams)?.q || "").trim().toLowerCase();
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { gym } = ctx;
@@ -68,16 +70,21 @@ export default async function Abonnementen() {
     return { ...m, maanden, sessies, perMaand, dagenStil, betaald, voordeel };
   });
 
-  const actief = rijen.filter((r) => r.status === "actief");
-  const pastDue = rijen.filter((r) => r.status === "past_due");
-  const gestopt = rijen.filter((r) => r.status !== "actief" && r.status !== "past_due");
-  const mrr = actief.length * 1200;
-  const gemMaanden = actief.length ? actief.reduce((a, r) => a + r.maanden, 0) / actief.length : 0;
+  // Zoeken op naam of e-mail. De cijfers bovenaan blijven op de VOLLEDIGE set staan: een
+  // zoekopdracht mag je MRR of het aantal slapers niet stiekem doen dalen.
+  const zichtbaar = !zoek ? rijen : rijen.filter((r) =>
+    [r.member?.full_name, r.member?.email].some((v) => String(v || "").toLowerCase().includes(zoek)));
+  const actief = zichtbaar.filter((r) => r.status === "actief");
+  const pastDue = zichtbaar.filter((r) => r.status === "past_due");
+  const gestopt = zichtbaar.filter((r) => r.status !== "actief" && r.status !== "past_due");
+  const alleActief = rijen.filter((r) => r.status === "actief");
+  const mrr = alleActief.length * 1200;
+  const gemMaanden = alleActief.length ? alleActief.reduce((a, r) => a + r.maanden, 0) / alleActief.length : 0;
 
   // Slapend = betaalt wel, boekt niet. Het enige geval waarin het abo geld kost in plaats van
   // bespaart, en dus de beste voorspeller van een opzegging.
-  const slapend = actief.filter((r) => r.dagenStil == null || r.dagenStil > 30);
-  const opzeggend = actief.filter((r) => r.cancel_at_period_end);
+  const slapend = alleActief.filter((r) => r.dagenStil == null || r.dagenStil > 30);
+  const opzeggend = alleActief.filter((r) => r.cancel_at_period_end);
 
   // Verloop van het aantal abonnees, week per week sinds het eerste abonnement. Toont de RICHTING:
   // groeit de vaste basis, of komt er net zoveel bij als eraf gaat? Een abonnement telt mee vanaf
@@ -114,7 +121,7 @@ export default async function Abonnementen() {
       </div>
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Actieve abonnementen" value={actief.length} hint={`${euro(mrr)} per maand vast`} />
+        <Stat label="Actieve abonnementen" value={alleActief.length} hint={`${euro(mrr)} per maand vast`} />
         <Stat label="Gemiddeld lid sinds" value={`${gemMaanden.toFixed(1)} mnd`} hint="hoe langer, hoe waardevoller" />
         <Stat label="Slapend" value={slapend.length} hint="betaalt maar boekt niet" danger={slapend.length > 0} />
         <Stat label="Loopt af / mislukt" value={opzeggend.length + pastDue.length} hint={pastDue.length ? `${pastDue.length} betaling mislukt` : "opgezegd maar nog lopend"} danger={opzeggend.length + pastDue.length > 0} />

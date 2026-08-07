@@ -4,6 +4,7 @@ import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
 import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic, adminSaveCoachProfile, adminUploadCoachPhoto, startViewAsCoach } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import ListSearch from "@/components/admin/ListSearch";
 import ActionForm from "@/components/ui/ActionForm";
 import { fmtHour } from "@/lib/time";
 
@@ -15,7 +16,8 @@ const MODE = { free: "Gratis", credit: "Sessietegoed", invoice: "Maandfactuur" }
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
-export default async function Coaches() {
+export default async function Coaches({ searchParams }) {
+  const zoek = String((await searchParams)?.q || "").trim().toLowerCase();
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym } = ctx;
@@ -42,7 +44,10 @@ export default async function Coaches() {
   for (const c of commRows || []) commByCoach[c.coach_id] = (commByCoach[c.coach_id] || 0) + c.amount_cents;
 
   const all = people || [];
-  const coaches = all.filter((p) => p.role === "coach" || p.role === "beheerder");
+  const alleCoaches = all.filter((p) => p.role === "coach" || p.role === "beheerder");
+  // Zoeken op naam of e-mail. De tellers rechtsboven blijven op de volledige lijst staan.
+  const coaches = !zoek ? alleCoaches : alleCoaches.filter((p) =>
+    [p.full_name, p.email, p.coach_specialty].some((v) => String(v || "").toLowerCase().includes(zoek)));
   const members = all.filter((p) => p.role !== "beheerder"); // assignable as clients
   const name = (id) => all.find((p) => p.id === id)?.full_name || all.find((p) => p.id === id)?.email || "—";
 
@@ -73,7 +78,7 @@ export default async function Coaches() {
           <p className="mt-1 text-sm text-brand/50">Toewijzingen, sessies, facturatie en beschikbaarheid per coach.</p>
         </div>
         <div className="flex gap-2 text-xs font-bold">
-          <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{coaches.length} coaches</span>
+          <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{alleCoaches.length} coaches</span>
           <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{totalLinks} toewijzingen</span>
           <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{sessThisMonth} sessies deze maand</span>
         </div>
@@ -140,7 +145,14 @@ export default async function Coaches() {
         </ActionForm>
       </div>
 
-      <div className="mt-6 space-y-5">
+      <div className="mt-6">
+        <ListSearch placeholder="Zoek een coach op naam, e-mail of specialiteit…" className="w-full max-w-md" />
+      </div>
+
+      <div className="mt-4 space-y-5">
+        {zoek && coaches.length === 0 && (
+          <p className="rounded-2xl border border-borderc bg-white p-6 text-sm text-brand/50">Geen coach gevonden voor “{zoek}”.</p>
+        )}
         {coaches.map((c) => {
           const cls = clientsOf[c.id] || [];
           const assignedIds = new Set(cls.map((l) => l.client_id));
