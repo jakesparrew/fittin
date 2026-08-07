@@ -76,6 +76,24 @@ export async function coachCreateClient(formData) {
   return { ok: true, clientId: uid };
 }
 
+// Openstaand bedrag bij de gym. Bewust hier én in de database: de rem van 0124 zit in de
+// factuur-tak van coach_book_session, en sinds alle coaches op vooraf betaald tegoed staan loopt
+// de code door de tegoed-tak — die keek enkel naar het saldo, niet naar oude schuld. Een coach die
+// tegoed bijkoopt terwijl er nog iets openstaat, zou zo alsnog kunnen boeken. Migratie 0128 sluit
+// dit op databaseniveau; tot die toegepast is, is dit de afsluiting.
+async function openstaandBedrag(supabase, coachId) {
+  const [{ data: bk }, { data: pay }] = await Promise.all([
+    supabase.from("bookings").select("coach_charge_cents")
+      .eq("coach_id", coachId).eq("coach_billing", "invoice").eq("status", "bevestigd").is("coach_invoiced_at", null),
+    supabase.from("payments").select("amount_cents")
+      .eq("user_id", coachId).eq("status", "onbetaald").eq("kind", "coach_credits"),
+  ]);
+  return (bk || []).reduce((a, r) => a + (r.coach_charge_cents || 0), 0)
+       + (pay || []).reduce((a, r) => a + (r.amount_cents || 0), 0);
+}
+const openstaandFout = (cents) =>
+  `Je hebt nog € ${(cents / 100).toFixed(2).replace(".", ",")} openstaan bij de gym. Zuiver dat eerst aan — daarna kan je weer boeken.`;
+
 export async function coachBookSession(formData) {
   const { supabase, userId, profile, error } = await requireCoach();
   if (error) return { error };
@@ -83,6 +101,8 @@ export async function coachBookSession(formData) {
   const clientName = String(formData.get("clientName") || "").trim().slice(0, 60); // externe client (niet op platform)
   // Duur in halve uren (0117): 1 · 1,5 · 2 — kost naar rato sessietegoed (1u30 = 1,5 tegoed).
   const hours = Math.min(4, Math.max(1, Math.round((parseFloat(formData.get("hours")) || 1) * 2) / 2));
+  const openstaand = await openstaandBedrag(supabase, userId);
+  if (openstaand > 0) return { error: openstaandFout(openstaand) };
   const { data: bookingId, error: e } = await supabase.rpc("coach_book_session", {
     p_client: clientId,
     p_service: formData.get("serviceId"),
@@ -173,6 +193,9 @@ export async function coachBulkBook(formData) {
   const start = new Date(); start.setHours(0, 0, 0, 0);
   const diff = (weekday - start.getDay() + 7) % 7;
   start.setDate(start.getDate() + diff);
+
+  const openstaandBulk = await openstaandBedrag(supabase, userId);
+  if (openstaandBulk > 0) return { error: openstaandFout(openstaandBulk) };
 
   let booked = 0; let firstErr = null; const bookedIds = [];
   for (let i = 0; i < weeks; i++) {

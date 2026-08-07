@@ -82,7 +82,10 @@ export default async function CoachDashboard({ searchParams }) {
   const owedSessions = (openSessionRows || []).reduce((a, r) => a + (r.coach_charge_cents || 0), 0);
   const owedInvoices = (openInvoiceRows || []).reduce((a, r) => a + (r.amount_cents || 0), 0);
   const owedCents = owedSessions + owedInvoices;
-  const invoiceBlocked = profile.coach_billing_mode === "invoice" && owedCents > 0;
+  // Niet meer aan de factuurmodus hangen: die bestaat niet meer (alle coaches betalen vooraf).
+  // Openstaande schuld uit het verleden blokkeert nog steeds, ongeacht hoe je nu afrekent — anders
+  // zou tegoed bijkopen een oude rekening onzichtbaar maken.
+  const invoiceBlocked = owedCents > 0;
   const all = bookings || [];
   const upcoming = all.filter((b) => b.status === "bevestigd" && new Date(b.starts_at).getTime() >= Date.now());
   // Which upcoming sessions belong to a recurring series (drives the "cancel series" button). Kept a
@@ -236,8 +239,8 @@ export default async function CoachDashboard({ searchParams }) {
         <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
           <p className="font-black text-red-600">⛔ Boeken staat op pauze — er staat {euro(owedCents)} open</p>
           <p className="mt-0.5 text-sm text-brand/70">
-            Je sessies worden op factuur afgerekend aan {euro(profile.coach_session_price_cents || 1200)} per sessie.
-            Zolang er nog iets openstaat kan je geen nieuwe sessies boeken — je bestaande sessies blijven gewoon staan.
+            Dit is een openstaand bedrag van vroeger, toen sessies achteraf gefactureerd werden.
+            Sessies worden nu vooraf betaald met sessietegoed. Zolang dit openstaat kan je niets boeken; je bestaande sessies blijven gewoon staan.
             {owedInvoices > 0 && owedSessions > 0
               ? ` Daarvan is ${euro(owedInvoices)} al gefactureerd en ${euro(owedSessions)} nog niet.`
               : owedInvoices > 0
@@ -278,7 +281,7 @@ export default async function CoachDashboard({ searchParams }) {
         <p className="mt-1 text-sm text-brand/60">
           Kies je client en moment.{" "}
           {mode === "invoice"
-            ? <>Elke boeking wordt <strong>gefactureerd ({euro(profile.coach_session_price_cents || 1200)}/sessie)</strong>, ongeacht het aantal personen. Zolang er nog iets openstaat, kan je geen nieuwe sessies boeken.</>
+            ? <>Elke boeking kost jou <strong>1 sessietegoed ({euro(profile.coach_session_price_cents || 1200)} aan de gym)</strong>, vooraf te kopen, ongeacht het aantal personen.</>
             : mode === "free"
               ? <>Jouw boekingen zijn <strong>gratis</strong> (afspraak met de gym), ongeacht het aantal personen.</>
               : <>Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen.</>}{" "}
