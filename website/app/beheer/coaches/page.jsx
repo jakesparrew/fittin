@@ -5,6 +5,7 @@ import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actio
 import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic, adminSaveCoachProfile, adminUploadCoachPhoto, startViewAsCoach } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ListSearch from "@/components/admin/ListSearch";
+import { coachDebts, debtReasons } from "@/lib/coach-debt";
 import ActionForm from "@/components/ui/ActionForm";
 import { fmtHour } from "@/lib/time";
 
@@ -31,6 +32,7 @@ export default async function Coaches({ searchParams }) {
     supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id).eq("status", "accepted"),
     supabase.from("bookings").select("id, coach_id, user_id, starts_at, status, coach_billing, coach_charge_cents, services(name)").eq("gym_id", gym.id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(400),
   ]);
+  const schuld = await coachDebts(supabase, gym.id);
   const { data: reqs } = await supabase.from("coach_session_requests").select("*").eq("gym_id", gym.id).eq("status", "pending").order("created_at");
   const reqByCoach = {};
   for (const r of reqs || []) (reqByCoach[r.coach_id] ||= []).push(r);
@@ -55,8 +57,7 @@ export default async function Coaches({ searchParams }) {
   for (const a of avail || []) (byCoachAvail[a.coach_id] ||= []).push(a);
   const balance = {};
   for (const r of ledger || []) balance[r.coach_id] = (balance[r.coach_id] || 0) + r.delta;
-  const invoice = {};
-  for (const s of sessions || []) if (s.coach_billing === "invoice" && s.status === "bevestigd" && new Date(s.starts_at) >= monthStart) invoice[s.coach_id] = (invoice[s.coach_id] || 0) + (s.coach_charge_cents || 0);
+
 
   const clientsOf = {};
   for (const l of links || []) (clientsOf[l.coach_id] ||= []).push(l);
@@ -176,10 +177,16 @@ export default async function Coaches({ searchParams }) {
                   <span className="rounded-full bg-brand/5 px-3 py-1 text-brand/70">{MODE[c.coach_billing_mode] || "—"}</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{cls.length} clients</span>
                   <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{upcoming} gepland</span>
-                  {c.coach_billing_mode === "credit" && ((balance[c.id] || 0) < 0
-                    ? <span className="rounded-full bg-amber-100 px-3 py-1 font-bold text-amber-700">Openstaand: {String(Math.abs(balance[c.id])).replace(".", ",")} (€ {Math.ceil(Math.abs(balance[c.id]) * 12)})</span>
-                    : <span className="rounded-full bg-paper px-3 py-1 text-brand/60">Saldo: {String(balance[c.id] || 0).replace(".", ",")}</span>)}
-                  {c.coach_billing_mode === "invoice" && <span className="rounded-full bg-accent/15 px-3 py-1 text-accentdark">Te factureren: {euro(invoice[c.id] || 0)}</span>}
+                  {/* Saldo én schuld staan hier bewust LOS van coach_billing_mode. Toen alle coaches
+                      naar 'credit' werden omgezet, verdween de schuld van de factuur-coaches uit
+                      beeld en toonden ze "Saldo: 0" alsof alles vereffend was. Schuld hangt aan de
+                      boekingen en de open posten, niet aan een instelling op het profiel. */}
+                  <span className="rounded-full bg-paper px-3 py-1 text-brand/60">Saldo: {String(balance[c.id] || 0).replace(".", ",")}</span>
+                  {schuld.get(c.id)?.totaalCents > 0 && (
+                    <span className="rounded-full bg-amber-100 px-3 py-1 font-bold text-amber-700" title={debtReasons(schuld.get(c.id)).join(" · ")}>
+                      Openstaand: {euro(schuld.get(c.id).totaalCents)} — {debtReasons(schuld.get(c.id)).join(" · ")}
+                    </span>
+                  )}
                   {commByCoach[c.id] > 0 && <span className="rounded-full bg-paper px-3 py-1 text-brand/70">Commissie: {euro(commByCoach[c.id])}</span>}
                 </div>
               </div>
@@ -246,19 +253,23 @@ export default async function Coaches({ searchParams }) {
                 </div>
               )}
 
-              {/* Invoice line items (this month) */}
-              {c.coach_billing_mode === "invoice" && invoice[c.id] > 0 && (
-                <details className="mt-3 rounded-xl bg-paper/60 p-3 text-sm">
-                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Te factureren deze maand: {euro(invoice[c.id])} — bekijk lijnen</summary>
+              {/* Nog te factureren sessies — ALLE, niet enkel die van deze maand. Het oude blok
+                  toonde "deze maand" en negeerde of er al gefactureerd was, waardoor oudere
+                  onbetaalde sessies onzichtbaar bleven terwijl ze wel te innen waren. */}
+              {schuld.get(c.id)?.factuurSessies > 0 && (
+                <details className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
+                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-amber-700">
+                    Nog te factureren: {euro(schuld.get(c.id).factuurCents)} over {schuld.get(c.id).factuurSessies} sessie{schuld.get(c.id).factuurSessies === 1 ? "" : "s"} — bekijk lijnen
+                  </summary>
                   <div className="mt-2 space-y-1">
-                    {(sessOf[c.id] || []).filter((s) => s.coach_billing === "invoice" && s.status === "bevestigd" && new Date(s.starts_at) >= monthStart).map((s) => (
+                    {schuld.get(c.id).sessies.map((s) => (
                       <div key={s.id} className="flex justify-between text-xs">
-                        <span className="text-brand/70">{fmt(s.starts_at)} · {name(s.user_id)} · {s.services?.name}</span>
-                        <span className="font-bold text-brand">{euro(s.coach_charge_cents)}</span>
+                        <span className="text-brand/70">{fmt(s.starts_at)}</span>
+                        <span className="font-bold text-brand">{euro(s.cents)}</span>
                       </div>
                     ))}
                   </div>
-                  <Link href={`/beheer/factuur?coach=${c.id}&month=${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, "0")}`} className="mt-3 inline-block rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90">Maak factuur (6% btw) →</Link>
+                  <Link href="/beheer/financien" className="mt-3 inline-block rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90">Factureer via Financiën →</Link>
                 </details>
               )}
 

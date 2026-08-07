@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import { invoiceCoachSessions, markPaymentPaid, createManualInvoice } from "../actions";
+import { coachDebts, debtReasons } from "@/lib/coach-debt";
 import ActionForm from "@/components/ui/ActionForm";
 import PrintButton from "@/components/admin/PrintButton";
 import SearchSelect from "@/components/admin/SearchSelect";
@@ -32,7 +33,7 @@ export default async function Financien({ searchParams }) {
   const periodFrom = jaar ? new Date(from.getFullYear(), 0, 1) : from;
   const periodTo = jaar ? new Date(from.getFullYear() + 1, 0, 1) : to;
 
-  const [{ data: pays }, { data: invoiceRows }, { data: coachLedger }, secrets, { data: people }] = await Promise.all([
+  const [{ data: pays }, { data: openAlle }, secrets, { data: people }] = await Promise.all([
     supabase
       .from("payments")
       .select("id, amount_cents, kind, description, status, created_at, invoice_no, member:profiles!payments_user_id_fkey(id, full_name, email)")
@@ -41,24 +42,24 @@ export default async function Financien({ searchParams }) {
       .lt("created_at", periodTo.toISOString())
       .order("created_at", { ascending: false })
       .limit(2000),
-    // Nog te factureren coach-sessies ("op factuur"-modus) — reeds gebeurd, nog niet gefactureerd.
+
+    // Open posten staan bewust BUITEN de periodekiezer: een onbetaalde factuur uit juli is in
+    // augustus nog altijd geld dat je moet innen. Voordien viel ze weg uit "Nog te ontvangen"
+    // zodra de maand omsloeg, en leek alles vereffend.
     supabase
-      .from("bookings")
-      .select("id, coach_id, starts_at, coach_charge_cents, coach:profiles!bookings_coach_id_fkey(full_name, email)")
+      .from("payments")
+      .select("id, amount_cents, kind, description, status, created_at, invoice_no, member:profiles!payments_user_id_fkey(id, full_name, email)")
       .eq("gym_id", gym.id)
-      .eq("coach_billing", "invoice")
-      .eq("status", "bevestigd")
-      .is("coach_invoiced_at", null)
-      .lte("starts_at", now.toISOString())
-      .order("starts_at"),
-    supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
+      .eq("status", "onbetaald")
+      .order("created_at", { ascending: false })
+      .limit(2000),
     getGymSecrets(admin, gym.id),
     supabase.from("profiles").select("id, full_name, email, role").eq("gym_id", gym.id).order("full_name"),
   ]);
 
   const rows = pays || [];
   const betaald = rows.filter((p) => (p.status || "betaald") === "betaald" || p.status === "paid");
-  const open = rows.filter((p) => p.status === "onbetaald");
+  const open = openAlle || [];
   const totaal = betaald.reduce((a, p) => a + (p.amount_cents || 0), 0);
   const openTotaal = open.reduce((a, p) => a + (p.amount_cents || 0), 0);
 
@@ -70,21 +71,22 @@ export default async function Financien({ searchParams }) {
   const perKind = {};
   for (const p of betaald) perKind[p.kind] = (perKind[p.kind] || 0) + (p.amount_cents || 0);
 
-  // Te factureren coach-sessies, gegroepeerd per coach.
-  const perCoach = {};
-  for (const b of invoiceRows || []) {
-    const k = b.coach_id;
-    (perCoach[k] ||= { naam: b.coach?.full_name || "Coach", email: b.coach?.email, n: 0, cents: 0, eerste: b.starts_at, laatste: b.starts_at });
-    perCoach[k].n++;
-    perCoach[k].cents += b.coach_charge_cents || 0;
-    perCoach[k].laatste = b.starts_at;
-  }
-  const teFactureren = Object.entries(perCoach);
-  const teFactureenTotaal = teFactureren.reduce((a, [, v]) => a + v.cents, 0);
 
-  // Coaches met een negatief sessietegoed = nog te innen (ze boekten meer dan ze kochten).
-  const coachBal = {};
-  for (const r of coachLedger || []) coachBal[r.coach_id] = (coachBal[r.coach_id] || 0) + Number(r.delta || 0);
+  // VOLLEDIGE coachschuld via de gedeelde bron. Los van de periodekiezer hierboven: een openstaand
+  // bedrag is een lopend saldo, geen maandcijfer. Voordien werden open posten mee gefilterd op de
+  // gekozen maand, waardoor een onbetaalde factuur van vorige maand simpelweg verdween uit
+  // "Nog te ontvangen" — het scherm zei dan € 0 terwijl er wel degelijk geld openstond.
+  const schuld = await coachDebts(supabase, gym.id);
+  const coachSchuldTotaal = [...schuld.values()].reduce((a, r) => a + r.totaalCents, 0);
+  // Nog te ontvangen = alle open posten (leden én coaches, alle periodes)
+  //                  + coach-sessies die nog niet eens gefactureerd zijn
+  //                  + tegoeden die onder nul staan.
+  // De onbetaalde coach-posten zitten al in openTotaal, dus die tellen we hier niet nog eens mee.
+  const nogTeFactureren = [...schuld.values()].reduce((a, r) => a + r.factuurCents + r.negatiefCents, 0);
+  const nogTeOntvangen = openTotaal + nogTeFactureren;
+  const schuldigen = [...schuld.values()].filter((r) => r.totaalCents > 0)
+    .map((r) => ({ ...r, naam: (people || []).find((p) => p.id === r.coachId)?.full_name || "Coach", email: (people || []).find((p) => p.id === r.coachId)?.email }))
+    .sort((a, b) => b.totaalCents - a.totaalCents);
 
   const label = jaar ? String(from.getFullYear()) : `${MAAND[from.getMonth()]} ${from.getFullYear()}`;
 
@@ -126,7 +128,7 @@ export default async function Financien({ searchParams }) {
         <Kpi label="Ontvangen" value={euro(totaal)} sub={`${betaald.length} betalingen`} accent />
         <Kpi label={`Excl. btw (${btwPct}%)`} value={euro(exclusief)} sub="maatstaf van heffing" />
         <Kpi label="Btw-bedrag" value={euro(btw)} sub={`${btwPct}% · vzw sport`} />
-        <Kpi label="Nog te ontvangen" value={euro(openTotaal + teFactureenTotaal)} sub={`${open.length} open post(en) + ${teFactureren.length} coach(es)`} warn={openTotaal + teFactureenTotaal > 0} />
+        <Kpi label="Nog te ontvangen" value={euro(nogTeOntvangen)} sub={`${open.length} open post(en) + ${euro(nogTeFactureren)} te factureren · alle periodes`} warn={nogTeOntvangen > 0} />
       </div>
 
       {/* Zelf een factuur opmaken — vrije post voor alles wat niet via Stripe loopt
@@ -179,35 +181,50 @@ export default async function Financien({ searchParams }) {
         </table>
       </section>
 
-      {/* Nog te factureren coach-sessies ("op factuur"-coaches) */}
+      {/* Openstaand bij coaches — ALLE drie de mechanismen samen, over alle periodes.
+          Dit blok stond vroeger enkel op "nog te factureren sessies van deze maand". Schuld die via
+          een van de andere twee wegen ontstond (onbetaalde factuur, negatief tegoedsaldo) stond
+          nergens, en na de omzetting van factuur- naar tegoed-coaches verdween ook de eerste soort
+          uit het coach-overzicht. Vandaar één lijst met per coach de reden erbij. */}
       <section className="mt-6 rounded-2xl border-2 border-amber-300 bg-amber-50/60 p-6 print:border-borderc print:bg-white">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-black text-brand">Nog te factureren coach-sessies</h2>
-            <p className="mt-0.5 text-sm text-brand/60">Sessies van coaches op <b>maandfactuur</b> die al plaatsvonden en nog niet gefactureerd zijn.</p>
+            <h2 className="font-black text-brand">Openstaand bij coaches</h2>
+            <p className="mt-0.5 text-sm text-brand/60">
+              Alles wat een coach nog verschuldigd is, ongeacht de periode: nog te factureren sessies,
+              verstuurde facturen die niet betaald zijn, en tegoeden die onder nul staan.
+            </p>
           </div>
-          <span className="text-2xl font-black text-brand">{euro(teFactureenTotaal)}</span>
+          <span className="text-2xl font-black text-brand">{euro(coachSchuldTotaal)}</span>
         </div>
-        {teFactureren.length === 0 ? (
-          <p className="mt-3 text-sm text-brand/50">Niets openstaand — alle coach-sessies zijn gefactureerd. ✓</p>
+        {schuldigen.length === 0 ? (
+          <p className="mt-3 text-sm text-brand/50">Niets openstaand bij de coaches. ✓</p>
         ) : (
           <div className="mt-4 space-y-2">
-            {teFactureren.map(([cid, v]) => (
-              <div key={cid} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4">
-                <div>
-                  <p className="font-black text-brand">{v.naam}</p>
-                  <p className="text-xs text-brand/50">{v.n} sessies · {fmtDay(v.eerste)} → {fmtDay(v.laatste)} · {euro(1200)}/sessie</p>
+            {schuldigen.map((r) => (
+              <div key={r.coachId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4">
+                <div className="min-w-0">
+                  <p className="font-black text-brand">{r.naam}</p>
+                  <p className="text-xs text-brand/50">{debtReasons(r).join(" · ")}</p>
+                  {r.factuurSessies > 0 && (
+                    <p className="text-xs text-brand/40">{fmtDay(r.sessies[0].starts_at)} → {fmtDay(r.sessies[r.sessies.length - 1].starts_at)} · {euro(1200)}/sessie</p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-lg font-black text-brand">{euro(v.cents)}</span>
-                  <ActionForm action={invoiceCoachSessions} success="Factuur opgemaakt ✓" className="print:hidden">
-                    <input type="hidden" name="coachId" value={cid} />
-                    <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white transition hover:opacity-90">Maak factuur op →</button>
-                  </ActionForm>
+                  <span className="text-lg font-black text-brand">{euro(r.totaalCents)}</span>
+                  {r.factuurCents > 0 && (
+                    <ActionForm action={invoiceCoachSessions} success="Factuur opgemaakt ✓" className="print:hidden">
+                      <input type="hidden" name="coachId" value={r.coachId} />
+                      <button className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white transition hover:opacity-90">Factureer {euro(r.factuurCents)} →</button>
+                    </ActionForm>
+                  )}
                 </div>
               </div>
             ))}
-            <p className="text-xs text-brand/45 print:hidden">"Maak factuur op" zet het bedrag als open post bij Betalingen (waar je de factuur-PDF genereert) en markeert de sessies als gefactureerd.</p>
+            <p className="text-xs text-brand/45 print:hidden">
+              "Factureer" zet het bedrag als open post bij Betalingen (waar je de factuur-PDF maakt) en markeert de sessies als gefactureerd.
+              Een open post verdwijnt hier pas wanneer je hem op <b>betaald</b> zet — niet bij het versturen van de factuur.
+            </p>
           </div>
         )}
       </section>
@@ -215,7 +232,7 @@ export default async function Financien({ searchParams }) {
       {/* Open posten */}
       <section className="mt-6 rounded-2xl border border-borderc bg-white p-6">
         <h2 className="font-black text-brand">Open posten <span className="text-sm font-bold text-brand/40">({open.length})</span></h2>
-        <p className="mt-0.5 text-sm text-brand/50">Gefactureerd maar nog niet ontvangen (overschrijving/cash).</p>
+        <p className="mt-0.5 text-sm text-brand/50">Gefactureerd maar nog niet ontvangen (overschrijving/cash). <b>Alle periodes</b>, niet enkel de gekozen maand.</p>
         {open.length === 0 ? (
           <p className="mt-3 text-sm text-brand/50">Alles is geïnd. ✓</p>
         ) : (
