@@ -169,7 +169,9 @@ export default async function Betalingen({ searchParams }) {
                   {(() => {
                     const s = p.status || "betaald";
                     const ok = s === "betaald" || s === "paid";
-                    const refund = s === "refunded" || s === "terugbetaald";
+                    // "kwijtgescholden" = bewust weggegeven, geen geld te innen. Zonder deze regel
+                    // viel die status in de rode "onbetaald"-tak en las een cadeau als een schuld.
+                    const refund = s === "refunded" || s === "terugbetaald" || s === "kwijtgescholden";
                     const cls = ok ? "bg-accent/15 text-accentdark" : refund ? "bg-paper text-brand/50" : "bg-red-100 text-red-600";
                     return (
                       <span className="flex items-center gap-2">

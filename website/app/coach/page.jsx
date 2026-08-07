@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
-import { coachBookSession, coachBulkBook, buyCoachCredits, requestCoachSessions, coachInviteByEmail } from "./actions";
+import { coachBookSession, coachBulkBook, buyCoachCredits, coachInviteByEmail } from "./actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import CoachScheduler from "@/components/coach/CoachScheduler";
 import AddClientInline from "@/components/coach/AddClientInline";
@@ -45,7 +45,6 @@ export default async function CoachDashboard({ searchParams }) {
     { data: services },
     { data: bookings },
     { data: ledger },
-    { data: requests },
     { data: notifs },
     { data: activity },
     { data: meRef },
@@ -60,7 +59,6 @@ export default async function CoachDashboard({ searchParams }) {
     // Enkel op coach_id filteren liet een zelf geboekte sessie van het dashboard verdwijnen.
     supabase.from("bookings").select("id, user_id, coach_id, starts_at, ends_at, persons, status, coach_billing, coach_charge_cents, notes, member:profiles!bookings_user_id_fkey(full_name), services(name)").or(`coach_id.eq.${userId},user_id.eq.${userId}`).order("starts_at", { ascending: true }),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
-    supabase.from("coach_session_requests").select("qty, status, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(5),
     supabase.from("notifications").select("id, type, title, body, link, read, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(6),
     supabase.from("coach_activity").select("type, summary, created_at").eq("coach_id", userId).order("created_at", { ascending: false }).limit(8),
     supabase.from("profiles").select("referral_code").eq("id", userId).single(),
@@ -418,23 +416,19 @@ export default async function CoachDashboard({ searchParams }) {
               <SubmitButton className="rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand">Naar de kassa →</SubmitButton>
             </ActionForm>
           </div>
+          {/* Waar vroeger "vraag sessies aan — de beheerder factureert je later" stond.
+              Die weg is bewust geschrapt (2026-08-07): ze schreef tegoed bij vóór er betaald was,
+              waardoor een coach kon trainen op sessies die nooit betaald raakten. Nu geldt één
+              regel — je koopt vooraf, of je betaalt ter plekke en de gym schrijft het bij. */}
           <div className="rounded-2xl border border-borderc bg-white p-5">
-            <p className="font-bold text-brand">Of vraag sessies aan</p>
-            <p className="mt-0.5 text-xs text-brand/50">De beheerder keurt goed en factureert je later.</p>
-            <ActionForm action={requestCoachSessions} success="Aanvraag verstuurd ✓" className="mt-3 flex flex-wrap items-end gap-2">
-              <label className="text-xs font-bold text-lav">Aantal
-                <input name="qty" type="number" defaultValue="10" min="1" max="100" className="ml-2 w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-              </label>
-              <input name="note" placeholder="notitie (optioneel)" className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-              <SubmitButton className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white">Aanvragen</SubmitButton>
-            </ActionForm>
-            {(requests || []).length > 0 && (
-              <div className="mt-3 space-y-1 text-xs">
-                {requests.map((r, i) => (
-                  <p key={i} className="text-brand/50">{r.qty} sessies · <span className={r.status === "approved" ? "font-bold text-accentdark" : r.status === "declined" ? "text-red-500" : "text-brand/60"}>{r.status === "pending" ? "in behandeling" : r.status === "approved" ? "goedgekeurd ✓" : "afgewezen"}</span></p>
-                ))}
-              </div>
-            )}
+            <p className="font-bold text-brand">Liever ter plekke betalen?</p>
+            <p className="mt-1 text-sm text-brand/60">
+              Kan ook: betaal cash of via overschrijving aan de gym, dan schrijft de beheerder je
+              sessies meteen bij. Zodra ze op je saldo staan, kan je boeken.
+            </p>
+            <a href="mailto:info@fittin.be?subject=Sessietegoed%20aankopen" className="mt-3 inline-block rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-brand transition hover:border-accent">
+              Contacteer de gym →
+            </a>
           </div>
         </div>
       )}

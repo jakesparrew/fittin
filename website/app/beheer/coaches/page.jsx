@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { getAdminContext } from "@/lib/admin";
 import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
-import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, resolveCoachRequest, setCoachPublic, adminSaveCoachProfile, adminUploadCoachPhoto, startViewAsCoach } from "../actions";
+import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, setCoachPublic, adminSaveCoachProfile, adminUploadCoachPhoto, startViewAsCoach } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ListSearch from "@/components/admin/ListSearch";
 import { coachDebts, debtReasons } from "@/lib/coach-debt";
@@ -13,7 +13,9 @@ export const dynamic = "force-dynamic";
 const WD_FULL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 const eur = (c) => (c / 100).toFixed(2).replace(".", ",");
-const MODE = { free: "Gratis", credit: "Sessietegoed", invoice: "Maandfactuur" };
+// "invoice" (maandfactuur) is afgeschaft op 2026-08-07: coaches kopen vooraf of betalen ter
+// plekke. De label blijft bestaan voor de geschiedenis, maar is nergens meer te kiezen.
+const MODE = { free: "Gratis", credit: "Sessietegoed", invoice: "Maandfactuur (afgeschaft)" };
 const fmt = (iso) =>
   new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 
@@ -33,9 +35,6 @@ export default async function Coaches({ searchParams }) {
     supabase.from("bookings").select("id, coach_id, user_id, starts_at, status, coach_billing, coach_charge_cents, services(name)").eq("gym_id", gym.id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(400),
   ]);
   const schuld = await coachDebts(supabase, gym.id);
-  const { data: reqs } = await supabase.from("coach_session_requests").select("*").eq("gym_id", gym.id).eq("status", "pending").order("created_at");
-  const reqByCoach = {};
-  for (const r of reqs || []) (reqByCoach[r.coach_id] ||= []).push(r);
 
   const { data: activityRows } = await supabase.from("coach_activity").select("coach_id, summary, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }).limit(200);
   const activityOf = {};
@@ -84,46 +83,6 @@ export default async function Coaches({ searchParams }) {
           <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{sessThisMonth} sessies deze maand</span>
         </div>
       </div>
-
-      {/* Pending session requests — ALL of them, in one prominent block at the top. The dashboard's
-          "Coach-aanvragen" card deep-links here (#aanvragen); before, requests were buried per coach. */}
-      {(reqs || []).length > 0 && (
-        <section id="aanvragen" className="mt-5 scroll-mt-6 rounded-3xl border-2 border-amber-300 bg-amber-50 p-6">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-amber-500" />
-            </span>
-            <h2 className="text-lg font-black text-brand">Sessie-aanvragen · {(reqs || []).length}</h2>
-          </div>
-          <p className="mt-1 text-sm text-brand/60">
-            Deze coaches willen sessietegoed op factuur. Bij <b>goedkeuren</b> wordt het tegoed meteen bijgeschreven
-            én verschijnt een open post bij <Link href="/beheer/betalingen" className="font-bold text-accentdark hover:underline">Betalingen</Link> — daar maak je de factuur (B2B).
-          </p>
-          <div className="mt-4 space-y-2">
-            {(reqs || []).map((r) => (
-              <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
-                <div>
-                  <p className="font-black text-brand">{name(r.coach_id)} · {r.qty} sessies <span className="font-bold text-brand/50">(€ {(r.qty * 12).toFixed(2).replace(".", ",")})</span></p>
-                  <p className="text-xs text-brand/45">{fmt(r.created_at)}{r.note ? ` — “${r.note}”` : ""}</p>
-                </div>
-                <div className="flex gap-2">
-                  <ActionForm action={resolveCoachRequest}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <input type="hidden" name="decision" value="approved" />
-                    <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand transition hover:opacity-90">Goedkeuren (+{r.qty})</button>
-                  </ActionForm>
-                  <ActionForm action={resolveCoachRequest}>
-                    <input type="hidden" name="id" value={r.id} />
-                    <input type="hidden" name="decision" value="declined" />
-                    <button className="rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm font-bold text-brand/60 transition hover:border-red-300 hover:text-red-600">Afwijzen</button>
-                  </ActionForm>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* Add coach — promote a member OR create a brand-new coach account */}
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
@@ -237,22 +196,6 @@ export default async function Coaches({ searchParams }) {
                 </div>
               </details>
 
-              {/* Pending session requests */}
-              {(reqByCoach[c.id] || []).length > 0 && (
-                <div className="mt-4 rounded-xl border border-accent/40 bg-accent/5 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-accentdark">Sessie-aanvragen</p>
-                  {reqByCoach[c.id].map((r) => (
-                    <div key={r.id} className="mt-2 flex flex-wrap items-center justify-between gap-2 text-sm">
-                      <span className="font-semibold text-brand">{r.qty} sessies{r.note ? ` — ${r.note}` : ""}</span>
-                      <div className="flex gap-2">
-                        <ActionForm action={resolveCoachRequest} success="Aanvraag verwerkt ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="approved" /><button className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-brand">Goedkeuren (+{r.qty})</button></ActionForm>
-                        <ActionForm action={resolveCoachRequest} success="Aanvraag verwerkt ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="declined" /><button className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">Afwijzen</button></ActionForm>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
               {/* Nog te factureren sessies — ALLE, niet enkel die van deze maand. Het oude blok
                   toonde "deze maand" en negeerde of er al gefactureerd was, waardoor oudere
                   onbetaalde sessies onzichtbaar bleven terwijl ze wel te innen waren. */}
@@ -339,10 +282,25 @@ export default async function Coaches({ searchParams }) {
                       <button className="mt-2 rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand">Standaard toepassen (€ 12 / sessietegoed)</button>
                     )}
                   </ActionForm>
-                  <ActionForm action={grantCoachCredits} success="Sessietegoed bijgeschreven ✓" className="flex flex-wrap items-end gap-2 rounded-xl bg-white p-4">
+                  {/* Tegoed bijschrijven vraagt nu expliciet of er betaald is. Voordien maakte elke
+                      toekenning een ONBETAALDE post: de coach kon meteen trainen op sessies die
+                      nooit betaald raakten (zo ontstond de € 120 van Thomas). Er is geen tussenweg
+                      meer — het is betaald, of het is een cadeau. */}
+                  <ActionForm action={grantCoachCredits} success="Sessietegoed bijgeschreven ✓" className="rounded-xl bg-white p-4">
                     <input type="hidden" name="coachId" value={c.id} />
-                    <Lbl t="Sessietegoed ±"><input name="delta" type="number" placeholder="bv. 10" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Toekennen</button>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <Lbl t="Sessietegoed ±"><input name="delta" type="number" step="0.5" placeholder="bv. 10" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+                      <Lbl t="Afrekening">
+                        <select name="betaling" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
+                          <option value="betaald">Betaald (cash/overschrijving ontvangen)</option>
+                          <option value="gratis">Gratis gegeven (niets aanrekenen)</option>
+                        </select>
+                      </Lbl>
+                      <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Toekennen</button>
+                    </div>
+                    <p className="mt-2 text-[11px] text-brand/45">
+                      Kiest de coach zelf online af te rekenen, dan hoef je hier niets te doen — het tegoed verschijnt automatisch na betaling.
+                    </p>
                   </ActionForm>
                 </div>
                 <p className="mt-4 text-xs font-bold uppercase tracking-wide text-lav">Beschikbaarheid</p>

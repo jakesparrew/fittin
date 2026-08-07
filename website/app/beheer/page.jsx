@@ -38,7 +38,6 @@ export default async function BeheerDashboard() {
     { data: prevPay },
     todayList,
     { data: unpaidRows },
-    { count: pendingReq },
     { count: unreadInbox },
     { count: newMembers },
     { data: cronRows },
@@ -63,7 +62,6 @@ export default async function BeheerDashboard() {
     supabase.from("bookings").select("starts_at, persons, status, paid, price_cents, payment_source, member:profiles!bookings_user_id_fkey(full_name), coach:profiles!bookings_coach_id_fkey(full_name), services(name)").eq("gym_id", gym.id).gte("starts_at", dayStart.toISOString()).lt("starts_at", dayEnd.toISOString()).order("starts_at"),
     // Unpaid but confirmed upcoming bookings (real money owed) — the money queue.
     supabase.from("bookings").select("price_cents, payment_source, paid").eq("gym_id", gym.id).eq("status", "bevestigd").eq("paid", false).gte("starts_at", nowIso),
-    supabase.from("coach_session_requests").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "pending"),
     // "Ongelezen" must count unread — not everything that isn't archived (that number never dropped).
     supabase.from("inbound_emails").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("archived", false).eq("read", false),
     supabase.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid").gte("created_at", monthStart.toISOString()),
@@ -257,7 +255,6 @@ export default async function BeheerDashboard() {
         {/* Kleinere werklijst-tellers (waren vroeger grote kaarten) */}
         <div className="mt-3 flex flex-wrap gap-2">
           <Chip href="/beheer/boekingen?filter=onbetaald" warn={unpaid.length > 0} label={`Onbetaald: ${unpaid.length}${unpaid.length ? ` (${euro(unpaidTotal)})` : ""}`} />
-          <Chip href="/beheer/coaches#aanvragen" warn={!!pendingReq} label={`Coach-aanvragen: ${pendingReq || 0}`} />
           <Chip href="/beheer/betalingen" warn={!!openPayments} label={`Open facturen: ${openPayments || 0}`} />
           <Chip href="/beheer/inbox" warn={!!unreadInbox} label={`Inbox: ${unreadInbox || 0}`} />
           <Chip href="/beheer/meldingen" warn={!!openReports} label={`Probleemmeldingen: ${openReports || 0}`} />
