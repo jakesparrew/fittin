@@ -52,6 +52,23 @@ export default async function Boekingen({ searchParams }) {
 
   const creditsByUser = {};
   for (const r of creditRows || []) creditsByUser[r.user_id] = Number(r.balance || 0);
+
+  // Hoeveel beurten heeft ÉLKE boeking apart gekost? Voorheen stond op elke rij het huidige saldo
+  // van het lid. Wie vier sessies in één keer boekte, zag dus vier keer "kaart nu leeg" — alsof die
+  // vier sessies samen met één beurt betaald waren en er iets misgelopen was. De waarheid staat in
+  // credits_ledger: één afboeking per boeking, gekoppeld via ref_id.
+  const usedByBooking = {};
+  {
+    const ids = (allBookings || []).map((b) => b.id);
+    for (let i = 0; i < ids.length; i += 300) {
+      const { data: led } = await supabase
+        .from("credits_ledger")
+        .select("delta, ref_id")
+        .in("ref_id", ids.slice(i, i + 300))
+        .lt("delta", 0);
+      for (const r of led || []) usedByBooking[r.ref_id] = (usedByBooking[r.ref_id] || 0) + Math.abs(Number(r.delta || 0));
+    }
+  }
   const coachCredits = {};
   for (const r of coachLedger || []) coachCredits[r.coach_id] = (coachCredits[r.coach_id] || 0) + Number(r.delta || 0);
 
@@ -63,6 +80,7 @@ export default async function Boekingen({ searchParams }) {
     // A coach reserving gym time for their own (external / not-yet-linked) client books onto themself.
     reserved: !!b.coach_id && b.user_id === b.coach_id,
     credits_left: b.payment_source === "credit" ? (creditsByUser[b.user_id] ?? null) : null,
+    credits_used: usedByBooking[b.id] ?? null,
     coach_credits_left: b.coach_billing === "credit" && b.coach_id ? (coachCredits[b.coach_id] ?? null) : null,
   }));
 

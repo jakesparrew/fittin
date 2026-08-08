@@ -33,11 +33,12 @@ const SRC_STYLE = {
   "Online": { icon: "💳", cls: "bg-paper text-brand/55" },
 };
 
-function SourceChip({ b }) {
+function SourceChip({ b, toonSaldo, toonCoachSaldo }) {
   const label = sourceLabel(b);
   const st = SRC_STYLE[label] || SRC_STYLE["Online"];
   const short = label === "Ingepland door beheer" ? "Door beheer" : label;
   const credits = b.credits_left;      // HUIDIG lidtegoed — niet de betaalstatus van déze sessie
+  const used = b.credits_used;         // wat DEZE boeking van de kaart nam
   const cc = b.coach_credits_left;     // resterend coach-tegoed
   return (
     <span className="block">
@@ -53,22 +54,30 @@ function SourceChip({ b }) {
           {b.comp_reason}{b.comp_value_cents ? ` · € ${(b.comp_value_cents / 100).toFixed(2).replace(".", ",")} weggegeven` : ""}
         </span>
       )}
-      {/* Het saldo hieronder is het HUIDIGE tegoed van het lid, niet de status van deze sessie —
-          "nog 0 over" naast een betaalde sessie las als "onbetaald". Enkel tonen als er actie is. */}
-      {/* "kaart is op" naast een sessie las als "deze sessie is niet betaald" (de owner vroeg er
-          letterlijk naar). Daarom staat er nu eerst dat de sessie betaald is, en pas dan het saldo:
-          de beurt wordt bij het BOEKEN afgetrokken, dus een geboekte kaartsessie is altijd voldaan. */}
-      {credits != null && credits <= 2 && (
-        <span className="mt-0.5 block text-[10px] font-bold text-brand/50">
-          <span className="text-accentdark">betaald met de kaart</span>
-          {credits === 0
-            ? " · kaart nu leeg"
-            : ` · nog ${String(credits).replace(".", ",")} ${credits === 1 ? "beurt" : "beurten"} over`}
+      {/* WAT DEZE SESSIE KOSTTE — per rij, uit credits_ledger. Voorheen stond hier het huidige
+          saldo van het lid, op élke rij hetzelfde. Wie vier sessies in één keer boekte zag dus vier
+          keer "kaart nu leeg", wat leest alsof die vier samen met één beurt betaald waren en de
+          boeking misgelopen was. Nu zie je per sessie de beurt die ervoor is afgetrokken. */}
+      {/* Enkel bij een échte beurtenkaart. Een abonnementssessie boekt ook een beurt af (de
+          inbegrepen maandsessie), maar "van de kaart" zou daar de verkeerde uitleg zijn. */}
+      {label === "Beurtenkaart" && used != null && used > 0 && (
+        <span className="mt-0.5 block text-[10px] font-bold text-accentdark">
+          −{String(used).replace(".", ",")} {used === 1 ? "beurt" : "beurten"} van de kaart
         </span>
       )}
-      {/* Coach-tegoed enkel tonen wanneer er actie nodig is (op of onder nul). Een gezond saldo op
-          élke rij herhalen was ruis — en negatief betekent: de coach boekte meer dan hij kocht. */}
-      {cc != null && cc <= 1 && (
+      {/* Het saldo staat er nog maar ÉÉN keer per lid bij (de eerste rij in de lijst), want het is
+          een eigenschap van het lid en niet van de boeking. Enkel tonen wanneer er actie nodig is:
+          een volle kaart hoeft niet op elke rij herhaald te worden. */}
+      {toonSaldo && credits != null && credits <= 2 && (
+        <span className="mt-0.5 block text-[10px] font-bold text-amber-600">
+          {credits === 0
+            ? "kaart is op — nieuwe kaart nodig"
+            : `nog ${String(credits).replace(".", ",")} ${credits === 1 ? "beurt" : "beurten"} op de kaart`}
+        </span>
+      )}
+      {/* Coach-tegoed: enkel bij actie (op of onder nul) én maar één keer per coach, om dezelfde
+          reden als het lidsaldo hierboven — een saldo hoort bij de persoon, niet bij de boeking. */}
+      {toonCoachSaldo && cc != null && cc <= 1 && (
         <span className={"mt-0.5 block text-[10px] font-bold " + (cc < 0 ? "text-red-600" : "text-amber-600")}>
           {cc < 0 ? `coach ${String(cc).replace(".", ",")} → € ${Math.ceil(Math.abs(cc) * 12)} te innen` : `coach: nog ${String(cc).replace(".", ",")} sessie${cc === 1 ? "" : "s"}`}
         </span>
@@ -99,6 +108,10 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
   if (needle) rows = rows.filter((b) => [b.member_name, b.service_name, b.coach_name].some((x) => (x || "").toLowerCase().includes(needle)));
   rows = [...rows].sort((a, b) => (tab === "past" ? new Date(b.starts_at) - new Date(a.starts_at) : new Date(a.starts_at) - new Date(b.starts_at)));
 
+  // Wordt tijdens het renderen gevuld: elk lid krijgt zijn kaartsaldo maar één keer te zien.
+  const saldoGetoond = new Set();
+  const coachSaldoGetoond = new Set();
+
   return (
     <div className="mt-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -117,6 +130,7 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
         )}
       </div>
 
+      {/* Per render bijhouden van welke leden het kaartsaldo al getoond is (zie hieronder). */}
       <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-white">
         <table className="w-full min-w-[880px] text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
@@ -132,6 +146,13 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
           <tbody className="divide-y divide-borderc">
             {rows.map((b) => {
               const upcoming = new Date(b.starts_at).getTime() >= now;
+              // Het kaartsaldo hoort bij het LID, niet bij de boeking: toon het enkel op de eerste
+              // rij van dat lid in de huidige lijst. Herhaald op elke rij las het als een probleem
+              // per sessie in plaats van als één waarschuwing over zijn kaart.
+              const eersteVanLid = !saldoGetoond.has(b.member_name);
+              if (eersteVanLid) saldoGetoond.add(b.member_name);
+              const eersteVanCoach = b.coach_name != null && !coachSaldoGetoond.has(b.coach_name);
+              if (eersteVanCoach) coachSaldoGetoond.add(b.coach_name);
               const paid = isSettled(b);
               return (
                 <tr key={b.id} className={b.status !== "bevestigd" ? "opacity-50" : ""}>
@@ -157,7 +178,7 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                   <td className="whitespace-nowrap px-4 py-3 text-brand/70">
                     {b.service_name || "Sessie"}{b.persons > 1 && <span className="ml-1 text-xs font-bold text-brand/40">· {b.persons}p</span>}
                   </td>
-                  <td className="px-4 py-3"><SourceChip b={b} /></td>
+                  <td className="px-4 py-3"><SourceChip b={b} toonSaldo={eersteVanLid} toonCoachSaldo={eersteVanCoach} /></td>
                   <td className="px-4 py-3">
                     {upcoming && b.status === "bevestigd" ? (
                       <ActionForm action={adminAssignCoach} success="Coach bijgewerkt ✓" className="flex items-center gap-1">
