@@ -77,6 +77,9 @@ for (const id of ids) {
   const verbruikt = -led.filter((r) => Number(r.delta) < 0).reduce((a, r) => a + Number(r.delta), 0);
   const betaaldGeld = pay.filter((x) => x.kind === "coach_credits" && (x.status === "betaald" || x.status === "paid")).reduce((a, x) => a + x.amount_cents, 0);
   const openGeld = pay.filter((x) => x.kind === "coach_credits" && x.status === "onbetaald").reduce((a, x) => a + x.amount_cents, 0);
+  // Bewust kwijtgescholden = een cadeau met een papieren spoor. Dat is géén gat in de boekhouding,
+  // maar het mag ook niet als omzet meetellen — daarom een eigen bucket.
+  const kwijtGeld = pay.filter((x) => x.kind === "coach_credits" && x.status === "kwijtgescholden").reduce((a, x) => a + x.amount_cents, 0);
 
   console.log(`\n${"=".repeat(78)}`);
   console.log(`${p.full_name}  <${p.email}>   rol: ${p.role} · modus nu: ${p.coach_billing_mode}`);
@@ -85,7 +88,7 @@ for (const id of ids) {
     console.log(`     ${m.padEnd(8)} ${String(v.n).padStart(3)} sessies · aangerekend ${eur(v.cents)}${m === "invoice" ? ` · nog te factureren ${eur(v.ongefactureerd)}` : ""}`);
   }
   console.log(`  TEGOED: saldo ${saldo}  (gekocht/toegekend ${gekocht}, verbruikt ${verbruikt})`);
-  console.log(`  GELD:   betaald ${eur(betaaldGeld)} · open post ${eur(openGeld)} · ${pay.length} betaalrij(en) totaal`);
+  console.log(`  GELD:   betaald ${eur(betaaldGeld)} · open post ${eur(openGeld)}${kwijtGeld ? ` · kwijtgescholden ${eur(kwijtGeld)}` : ""} · ${pay.length} betaalrij(en) totaal`);
 
   // ---- Aansluitingscontroles ----
   // Koppelen via ref_id, niet via aantallen. Een 'sessie'-regel en de 'annulatie' die ze terugdraait
@@ -113,8 +116,10 @@ for (const id of ids) {
   }
 
   // 1c. Afboeking die naar geen enkele boeking verwijst (of naar een verwijderde).
+  // De omzetting van 2026-08-07 (factuurschuld → negatief tegoed) hoort hier NIET bij: die regels
+  // hebben met opzet geen boeking, ze vervangen een reeks boekingen door één saldo.
   const bkIds = new Set(bk.map((b) => b.id));
-  const wees = led.filter((r) => Number(r.delta) < 0 && (!r.ref_id || !bkIds.has(r.ref_id)));
+  const wees = led.filter((r) => Number(r.delta) < 0 && !String(r.reason || "").startsWith("omzetting:") && (!r.ref_id || !bkIds.has(r.ref_id)));
   if (wees.length) {
     const t = `${wees.length} afboeking(en) zonder bijhorende boeking (${wees.map((r) => d(r.created_at)).join(", ")})`;
     console.log(`  ⚠ ${t}`);
@@ -146,7 +151,9 @@ for (const id of ids) {
   //    Een 'aankoop' hoort een betaalde post te hebben, een 'grant' minstens een open post.
   const toegekend = led.filter((r) => Number(r.delta) > 0 && r.reason !== "annulatie");
   const toegekendAantal = toegekend.reduce((a, r) => a + Number(r.delta), 0);
-  const gedektDoorGeld = Math.round((betaaldGeld + openGeld) / 1200);
+  // Kwijtgescholden telt als gedekt: er is een bewuste beslissing genomen en vastgelegd. Zonder
+  // dat zou elk cadeau eeuwig als "geld zonder spoor" blijven terugkomen in deze audit.
+  const gedektDoorGeld = Math.round((betaaldGeld + openGeld + kwijtGeld) / 1200);
   if (toegekendAantal > gedektDoorGeld) {
     const gat = (toegekendAantal - gedektDoorGeld) * 1200;
     const t = `${toegekendAantal} sessies toegekend maar slechts ${gedektDoorGeld} gedekt door een betaalpost → ${eur(gat)} zonder financieel spoor`;

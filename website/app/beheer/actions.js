@@ -514,6 +514,31 @@ export async function adminUpdateMember(formData) {
   return { ok: true, message: "Profiel bijgewerkt ✓" };
 }
 
+// Een account als TEST markeren (0129). Testdata die gewoon meetelt verschuift je ledenaantal,
+// je sessies-per-maand en je klassementen met net genoeg om cijfers onbetrouwbaar te maken zonder
+// dat het opvalt. Bewust een schakelaar in plaats van een lijst in de code: wie een testaccount
+// aanmaakt moet het meteen kunnen markeren, zonder deploy.
+//
+// Dit verwijdert NIETS. Het account blijft gewoon werken en houdt al zijn boekingen — het telt
+// alleen niet meer mee in overzichten.
+export async function adminSetTestAccount(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const memberId = formData.get("memberId");
+  if (!memberId) return { error: "Geen lid." };
+  const isTest = formData.get("is_test") === "on" || formData.get("is_test") === "true";
+  const admin = createAdminClient();
+  const { error: e } = await admin
+    .from("profiles")
+    .update({ is_test: isTest })
+    .eq("id", memberId).eq("gym_id", profile.gym_id);
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/leden");
+  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer");
+  return { ok: true, message: isTest ? "Gemarkeerd als testaccount — telt niet meer mee in cijfers ✓" : "Telt weer mee in de cijfers ✓" };
+}
+
 // Re-send the account setup / login link to a member (e.g. they never finished onboarding).
 export async function resendInviteMail(formData) {
   const { profile, error } = await requireStaff(true);

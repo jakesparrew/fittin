@@ -9,9 +9,14 @@
 -- combinatie van instellingen meer waarmee je een sessie krijgt zonder betaald te hebben.
 --
 -- WAT DIT NIET DOET: bestaande boekingen behouden hun coach_billing = 'invoice' en hun
--- coach_charge_cents. Dat moet ook — die € 156 is nog te innen, en het wegpoetsen van dat label zou
--- de boekhouding vervalsen. Factureren blijft dus gewoon werken (invoiceCoachSessions filtert op de
--- BOEKING, niet op de modus van het profiel).
+-- coach_charge_cents. Het wegpoetsen van dat label zou de boekhouding vervalsen.
+--
+-- STAND BIJ HET TOEPASSEN (2026-08-07, ná de omzetting van die avond): de openstaande
+-- factuursessies zijn omgezet naar NEGATIEF SESSIETEGOED (Jan Matthys −8, TDW −5) en afgevinkt met
+-- coach_invoiced_at; de onbetaalde post van Thomas is kwijtgescholden. De v_owed-controle hieronder
+-- vindt dus overal 0 en blokkeert niemand onterecht. Ze blijft staan als tweede slot, mocht er ooit
+-- nog een onbetaalde coach_credits-post ontstaan — schuld hoort nooit onzichtbaar te kunnen worden.
+-- Wie in de min staat, wordt hoe dan ook tegengehouden door de saldocontrole verderop.
 --
 -- AUDIT (2026-08-06) — er is precies één pad dat coach_billing zet, en dat is deze functie:
 --   • create_booking (publieke /boeken): zet géén coach_billing; een coach betaalt daar het

@@ -6,6 +6,18 @@ describe("isTestAccount", () => {
     expect(isTestAccount({ email: "coach@fittin.be" })).toBe(true);
   });
 
+  // Sinds 0129 is de kolom de waarheid: zo kan de eigenaar zelf een account markeren.
+  it("volgt de is_test-kolom, ongeacht het e-mailadres", () => {
+    expect(isTestAccount({ email: "iemand@anders.be", is_test: true })).toBe(true);
+  });
+
+  // Een query die is_test niet meeselecteert geeft undefined. Dat mag niet als "geen testaccount"
+  // gelezen worden — anders zou één vergeten kolom in een select de hele uitsluiting uitschakelen.
+  it("valt terug op het adres als de kolom niet meegeselecteerd is", () => {
+    expect(isTestAccount({ email: "coach@fittin.be" })).toBe(true);
+    expect(isTestAccount({ email: "coach@fittin.be", is_test: undefined })).toBe(true);
+  });
+
   it("is hoofdletterongevoelig — e-mail komt uit auth en kan anders geschreven staan", () => {
     expect(isTestAccount({ email: "Coach@Fittin.BE" })).toBe(true);
   });

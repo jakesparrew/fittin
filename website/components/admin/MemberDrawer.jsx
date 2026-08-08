@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { adminUpdateMember, resendInviteMail, adminSetRole, adminAdjustCredits, assignCoachClient, unassignCoachClient, deleteUser } from "@/app/beheer/actions";
+import { adminUpdateMember, resendInviteMail, adminSetRole, adminSetTestAccount, adminAdjustCredits, assignCoachClient, unassignCoachClient, deleteUser } from "@/app/beheer/actions";
 
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 const fmt = (iso) => (iso ? new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) : "—");
@@ -103,6 +103,19 @@ export default function MemberDrawer() {
                 <form onSubmit={submit(resendInviteMail)}>
                   <input type="hidden" name="memberId" value={id} />
                   <button disabled={busy} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">✉ Uitnodiging (her)sturen</button>
+                </form>
+                {/* Testaccount: telt niet meer mee in ledenaantallen, sessies, klassementen of
+                    rapporten. Verwijdert niets — het account blijft gewoon werken. */}
+                <form onSubmit={submit(adminSetTestAccount)}>
+                  <input type="hidden" name="memberId" value={id} />
+                  <input type="hidden" name="is_test" value={p.is_test ? "false" : "true"} />
+                  <button
+                    disabled={busy}
+                    title={p.is_test ? "Laat dit account weer meetellen in alle cijfers" : "Sluit dit account uit van alle tellingen en rapporten"}
+                    className={"rounded-full px-3 py-1.5 text-xs font-bold " + (p.is_test ? "bg-amber-100 text-amber-700" : "bg-paper text-brand")}
+                  >
+                    {p.is_test ? "🧪 Testaccount — klik om te laten meetellen" : "Markeer als testaccount"}
+                  </button>
                 </form>
               </div>
 

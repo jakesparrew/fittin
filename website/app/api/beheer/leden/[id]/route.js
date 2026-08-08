@@ -15,7 +15,7 @@ export async function GET(_req, { params }) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, full_name, email, phone, role, created_at, welcome_status, welcome_code_used, referral_code, coach_public, height_cm, goal_weight_kg")
+    .select("id, full_name, email, phone, role, created_at, welcome_status, welcome_code_used, referral_code, coach_public, height_cm, goal_weight_kg, is_test")
     .eq("id", id).eq("gym_id", gym.id).maybeSingle();
   if (!profile) return NextResponse.json({ error: "Lid niet gevonden." }, { status: 404 });
   const { data: lastWeight } = await admin.from("body_metrics").select("weight_kg, logged_on").eq("user_id", id).order("logged_on", { ascending: false }).limit(1).maybeSingle();
