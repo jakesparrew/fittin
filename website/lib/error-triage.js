@@ -32,9 +32,24 @@ const EXTERN = [
   "script error",
 ];
 
+// Een stuk JavaScript dat niet binnenkomt. Twee oorzaken, allebei niets mis met de code:
+// de bezoeker had de site nog open van vóór een nieuwe versie (het bestand heeft dan een nieuwe
+// naam), of zijn verbinding haalde het bestand niet binnen. De app herlaadt zichzelf nu automatisch
+// (components/ChunkErrorRecovery.jsx), dus dit hoort niet meer als bug te alarmeren. Een plotse
+// gólf blijft wél zichtbaar in de netwerk-groep — dat zou op een echte storing wijzen.
+const CHUNK = [
+  "chunkloaderror",
+  "loading chunk",
+  "loading css chunk",
+  "failed to fetch dynamically imported module",
+  "error loading dynamically imported module",
+  "importing a module script failed",
+];
+
 export function classifyClientError(message, stack = "") {
   const m = String(message || "").toLowerCase();
   const s = String(stack || "").toLowerCase();
+  if (CHUNK.some((n) => m.includes(n))) return "chunk";
   if (NETWERK.some((n) => m.includes(n))) return "netwerk";
   if (EXTERN.some((n) => m.includes(n))) return "extern";
   // removeChild-fouten dragen de aanwijzing soms alleen in de stack.
@@ -44,6 +59,7 @@ export function classifyClientError(message, stack = "") {
 
 // Korte uitleg bij een groep, zodat de owner niet hoeft te raden wat hij ziet.
 export function explainClass(kind) {
+  if (kind === "chunk") return "De bezoeker had de site nog open van vóór een nieuwe versie, of kreeg een bestand niet binnen. De app herlaadt zichzelf nu automatisch; je hoeft niets te doen. Blijft dit aanhouden ná een deploy, dan is er wél iets mis met de uitrol.";
   if (kind === "netwerk") return "Verbinding weggevallen bij de bezoeker — niets aan te fixen in de code. Alleen een plotse golf wijst op een storing.";
   if (kind === "extern") return "Veroorzaakt door iets buiten de app (vertaalfunctie van de browser, een extensie, leesweergave). Niet vanuit onze code op te lossen.";
   return null;

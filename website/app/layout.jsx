@@ -5,6 +5,7 @@ import PWAInstallPrompt from "../components/PWAInstallPrompt";
 import IosReloginNudge from "../components/IosReloginNudge";
 import PageView from "../components/analytics/PageView";
 import ErrorLogger from "../components/ErrorLogger";
+import ChunkErrorRecovery from "../components/ChunkErrorRecovery";
 
 const lato = Lato({
   subsets: ["latin"],
@@ -61,6 +62,7 @@ export default function RootLayout({ children }) {
     <html lang="nl" className={`${lato.variable} ${display.variable}`}>
       <body className="bg-white font-sans text-brand antialiased">
         <PWARegister />
+        <ChunkErrorRecovery />
         {children}
         <PWAInstallPrompt />
         <IosReloginNudge />

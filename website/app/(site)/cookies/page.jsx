@@ -83,6 +83,11 @@ export default function Cookies() {
                   doel="Enkel voor beheerders: onthoudt welke menu's in het beheerpaneel open of dicht staan."
                   duur="Tot je je browsergegevens wist"
                 />
+                <Item
+                  naam="fittin_chunk_herstel"
+                  doel="Onthoudt heel even dat de pagina zichzelf al eens ververst heeft nadat er een stuk van de site niet binnenkwam. Zonder dat zou de pagina in een herlaadlus kunnen belanden."
+                  duur="Tot je dit tabblad sluit"
+                />
               </tbody>
             </table>
           </div>
