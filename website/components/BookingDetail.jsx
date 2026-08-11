@@ -9,7 +9,11 @@ const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 const bron = (b) => sourceLabel(b);
 
 // Click a booking name/card anywhere → slide-in side panel with the full details. Read-only.
-export default function BookingDetail({ bookingId, children, className = "" }) {
+// `coaches` + `assignAction` worden enkel door het beheerscherm meegegeven. De boekingslijst had
+// vroeger een eigen kolom met een keuzelijst op élke rij; die stond bijna altijd op "geen" en was
+// dus vooral ruis. Toewijzen hoort bij één specifieke boeking, dus staat het hier — op de plek waar
+// je die boeking al open hebt. Zonder die props blijft dit paneel gewoon leesbaar-alleen (leden).
+export default function BookingDetail({ bookingId, children, className = "", coaches = null, assignAction = null }) {
   const [open, setOpen] = useState(false);
   const [res, setRes] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -46,7 +50,7 @@ export default function BookingDetail({ bookingId, children, className = "" }) {
             </div>
             {loading && <p className="mt-6 text-sm text-brand/50">Laden…</p>}
             {res?.error && <p className="mt-6 text-sm font-semibold text-red-600">{res.error}</p>}
-            {res?.booking && <Detail b={res.booking} />}
+            {res?.booking && <Detail b={res.booking} bookingId={bookingId} coaches={coaches} assignAction={assignAction} />}
           </div>
         </div>
       )}
@@ -54,8 +58,9 @@ export default function BookingDetail({ bookingId, children, className = "" }) {
   );
 }
 
-function Detail({ b }) {
+function Detail({ b, bookingId, coaches, assignAction }) {
   const paid = isSettled(b);
+  const magToewijzen = !!assignAction && !!coaches?.length && b.status === "bevestigd" && new Date(b.startsAt).getTime() >= Date.now();
   return (
     <div className="mt-5 space-y-3 text-sm">
       <div className="pb-1">
@@ -72,6 +77,20 @@ function Detail({ b }) {
       {b.priceCents > 0 && <Row label="Bedrag" value={euro(b.priceCents)} />}
       {b.coachBilling && <Row label="Coach-afrekening" value={b.coachBilling === "credit" ? "1 sessietegoed" : b.coachBilling === "invoice" ? euro(b.coachChargeCents) : b.coachBilling === "free" ? "gratis" : b.coachBilling} />}
       {b.createdAt && <Row label="Geboekt op" value={<span className="capitalize">{fmt(b.createdAt)}</span>} />}
+
+      {magToewijzen && (
+        <form action={assignAction} className="mt-5 rounded-xl bg-paper p-3">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-lav">Coach toewijzen</p>
+          <input type="hidden" name="bookingId" value={bookingId} />
+          <div className="mt-2 flex items-center gap-2">
+            <select name="coachId" defaultValue={b.coachId || ""} className="flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
+              <option value="">— geen coach —</option>
+              {coaches.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+            <button className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white">Opslaan</button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

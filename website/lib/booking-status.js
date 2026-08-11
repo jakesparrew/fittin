@@ -25,7 +25,10 @@ export function sourceLabel(b, { coachName } = {}) {
   // so this MUST be checked before the admin-comp rule below or every coach session reads as
   // "Ingepland door beheer". coach_billing tells us how the coach settles it.
   const cb = b.coach_billing ?? b.coachBilling;
-  if (cb === "credit") return "Coach-tegoed";
+  // "Coach-tegoed" las alsof de coach een aparte gunst kreeg. Het is gewoon een vooraf betaalde
+  // beurtenkaart: de coach koopt sessies aan € 12 en die worden er per boeking afgetrokken. De
+  // eigenaar vroeg letterlijk "waarom betaalt Jelle niet gewoon?" — dat deed hij wél, vooraf.
+  if (cb === "credit") return "Coach · vooraf betaald";
   if (cb === "invoice") return "Coach-factuur";
   if (cb === "free") return "Coach · gratis";
   // Bewust weggegeven sessie (0119): draagt een reden, dus benoem dat expliciet — "Ingepland door

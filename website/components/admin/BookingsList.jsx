@@ -24,7 +24,7 @@ const SRC_STYLE = {
   "Beurtenkaart": { icon: "🎟", cls: "bg-lav/30 text-brand" },
   "Gratis code": { icon: "🎁", cls: "bg-paper text-brand/55" },
   "Uitgenodigd": { icon: "👥", cls: "bg-paper text-brand/55" },
-  "Coach-tegoed": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
+  "Coach · vooraf betaald": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
   "Coach-factuur": { icon: "🧾", cls: "bg-brand/10 text-brand" },
   "Coach · gratis": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
   "Ingepland door beheer": { icon: "🏠", cls: "bg-paper text-brand/55" },
@@ -33,13 +33,11 @@ const SRC_STYLE = {
   "Online": { icon: "💳", cls: "bg-paper text-brand/55" },
 };
 
-function SourceChip({ b, toonSaldo, toonCoachSaldo }) {
+function SourceChip({ b }) {
   const label = sourceLabel(b);
   const st = SRC_STYLE[label] || SRC_STYLE["Online"];
   const short = label === "Ingepland door beheer" ? "Door beheer" : label;
-  const credits = b.credits_left;      // HUIDIG lidtegoed — niet de betaalstatus van déze sessie
   const used = b.credits_used;         // wat DEZE boeking van de kaart nam
-  const cc = b.coach_credits_left;     // resterend coach-tegoed
   return (
     <span className="block">
       <span
@@ -63,23 +61,6 @@ function SourceChip({ b, toonSaldo, toonCoachSaldo }) {
       {label === "Beurtenkaart" && used != null && used > 0 && (
         <span className="mt-0.5 block text-[10px] font-bold text-accentdark">
           −{String(used).replace(".", ",")} {used === 1 ? "beurt" : "beurten"} van de kaart
-        </span>
-      )}
-      {/* Het saldo staat er nog maar ÉÉN keer per lid bij (de eerste rij in de lijst), want het is
-          een eigenschap van het lid en niet van de boeking. Enkel tonen wanneer er actie nodig is:
-          een volle kaart hoeft niet op elke rij herhaald te worden. */}
-      {toonSaldo && credits != null && credits <= 2 && (
-        <span className="mt-0.5 block text-[10px] font-bold text-amber-600">
-          {credits === 0
-            ? "kaart is op — nieuwe kaart nodig"
-            : `nog ${String(credits).replace(".", ",")} ${credits === 1 ? "beurt" : "beurten"} op de kaart`}
-        </span>
-      )}
-      {/* Coach-tegoed: enkel bij actie (op of onder nul) én maar één keer per coach, om dezelfde
-          reden als het lidsaldo hierboven — een saldo hoort bij de persoon, niet bij de boeking. */}
-      {toonCoachSaldo && cc != null && cc <= 1 && (
-        <span className={"mt-0.5 block text-[10px] font-bold " + (cc < 0 ? "text-red-600" : "text-amber-600")}>
-          {cc < 0 ? `coach ${String(cc).replace(".", ",")} → € ${Math.ceil(Math.abs(cc) * 12)} te innen` : `coach: nog ${String(cc).replace(".", ",")} sessie${cc === 1 ? "" : "s"}`}
         </span>
       )}
     </span>
@@ -108,10 +89,6 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
   if (needle) rows = rows.filter((b) => [b.member_name, b.service_name, b.coach_name].some((x) => (x || "").toLowerCase().includes(needle)));
   rows = [...rows].sort((a, b) => (tab === "past" ? new Date(b.starts_at) - new Date(a.starts_at) : new Date(a.starts_at) - new Date(b.starts_at)));
 
-  // Wordt tijdens het renderen gevuld: elk lid krijgt zijn kaartsaldo maar één keer te zien.
-  const saldoGetoond = new Set();
-  const coachSaldoGetoond = new Set();
-
   return (
     <div className="mt-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -132,27 +109,19 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
 
       {/* Per render bijhouden van welke leden het kaartsaldo al getoond is (zie hieronder). */}
       <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-white">
-        <table className="w-full min-w-[880px] text-sm">
+        <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
               <th className="px-4 py-3">Wanneer</th>
               <th className="px-4 py-3">Lid</th>
               <th className="px-4 py-3">Sessie</th>
               <th className="px-4 py-3" title="Hoe deze sessie betaald is">Betaalwijze</th>
-              <th className="px-4 py-3">Coach</th>
               <th className="px-4 py-3 text-right">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-borderc">
             {rows.map((b) => {
               const upcoming = new Date(b.starts_at).getTime() >= now;
-              // Het kaartsaldo hoort bij het LID, niet bij de boeking: toon het enkel op de eerste
-              // rij van dat lid in de huidige lijst. Herhaald op elke rij las het als een probleem
-              // per sessie in plaats van als één waarschuwing over zijn kaart.
-              const eersteVanLid = !saldoGetoond.has(b.member_name);
-              if (eersteVanLid) saldoGetoond.add(b.member_name);
-              const eersteVanCoach = b.coach_name != null && !coachSaldoGetoond.has(b.coach_name);
-              if (eersteVanCoach) coachSaldoGetoond.add(b.coach_name);
               const paid = isSettled(b);
               return (
                 <tr key={b.id} className={b.status !== "bevestigd" ? "opacity-50" : ""}>
@@ -166,33 +135,48 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                       // dan de coach zelf, dus dat expliciet tonen i.p.v. het als gewoon lid te laten lezen.
                       <span className="block">
                         <span className="flex items-center gap-1.5 whitespace-nowrap">
-                          <BookingDetail bookingId={b.id} className="font-semibold text-brand">{b.coach_name || "Coach"}</BookingDetail>
+                          <BookingDetail bookingId={b.id} coaches={coaches} assignAction={adminAssignCoach} className="font-semibold text-brand">{b.coach_name || "Coach"}</BookingDetail>
                           <span className="rounded bg-brand px-1.5 py-0.5 text-[9px] font-black text-white">COACH</span>
                         </span>
                         <span className="block text-[11px] font-normal text-brand/45">{b.notes ? `PT · ${b.notes}` : "PT · nog geen client"}</span>
+                        {/* Ook bij een coach hoort het saldo bij de persoon. Zonder dit getal leest
+                            "Coach · vooraf betaald" als een gunst, terwijl het gewoon zijn vooraf
+                            gekochte sessies zijn die per boeking afgaan — net als een beurtenkaart. */}
+                        {b.coach_credits_left != null && (
+                          <span className={"mt-0.5 block text-[11px] font-bold " + (b.coach_credits_left <= 0 ? "text-red-600" : "text-brand/45")}>
+                            {b.coach_credits_left <= 0
+                              ? `🎟 tegoed op — € ${Math.ceil(Math.abs(b.coach_credits_left) * 12)} te innen`
+                              : `🎟 nog ${String(b.coach_credits_left).replace(".", ",")} vooraf betaalde ${b.coach_credits_left === 1 ? "sessie" : "sessies"}`}
+                          </span>
+                        )}
                       </span>
                     ) : (
-                      <BookingDetail bookingId={b.id} className="whitespace-nowrap font-semibold text-brand">{b.member_name || "—"}</BookingDetail>
+                      <span className="block">
+                        <BookingDetail bookingId={b.id} coaches={coaches} assignAction={adminAssignCoach} className="whitespace-nowrap font-semibold text-brand">{b.member_name || "—"}</BookingDetail>
+                        {/* Kaartsaldo hoort bij de PERSOON, dus staat het bij de naam en niet in de
+                            betaalwijze-kolom. Daar had het al eens voor verwarring gezorgd: vier
+                            rijen die alle vier het eindsaldo toonden lazen alsof één beurt vier
+                            sessies betaalde. Hier is het ondubbelzinnig "dit lid heeft nog X". */}
+                        {b.credits_left != null && (
+                          <span className={"mt-0.5 block text-[11px] font-bold " + (b.credits_left <= 0 ? "text-amber-600" : "text-brand/45")}>
+                            {b.credits_left <= 0
+                              ? "🎟 kaart is op"
+                              : `🎟 nog ${String(b.credits_left).replace(".", ",")} ${b.credits_left === 1 ? "beurt" : "beurten"}`}
+                          </span>
+                        )}
+                        {/* Coach kreeg een eigen kolom met een keuzelijst op élke rij. Dat was bijna
+                            altijd "— geen —" en dus vooral ruis; nu enkel tonen als er echt een
+                            coach aan hangt. Toewijzen kan nog steeds via het boekingsdetail. */}
+                        {b.coach_name && (
+                          <span className="mt-0.5 block text-[11px] font-normal text-brand/45">🧑‍🏫 {b.coach_name}</span>
+                        )}
+                      </span>
                     )}
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-brand/70">
                     {b.service_name || "Sessie"}{b.persons > 1 && <span className="ml-1 text-xs font-bold text-brand/40">· {b.persons}p</span>}
                   </td>
-                  <td className="px-4 py-3"><SourceChip b={b} toonSaldo={eersteVanLid} toonCoachSaldo={eersteVanCoach} /></td>
-                  <td className="px-4 py-3">
-                    {upcoming && b.status === "bevestigd" ? (
-                      <ActionForm action={adminAssignCoach} success="Coach bijgewerkt ✓" className="flex items-center gap-1">
-                        <input type="hidden" name="bookingId" value={b.id} />
-                        <select name="coachId" defaultValue={b.coach_id || ""} className="max-w-[9rem] rounded-lg border-2 border-borderc px-2 py-1 text-xs">
-                          <option value="">— geen —</option>
-                          {coaches.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                        </select>
-                        <button className="rounded-lg bg-brand px-2 py-1 text-[10px] font-bold text-white">OK</button>
-                      </ActionForm>
-                    ) : (
-                      <span className="text-xs text-brand/50">{b.coach_name || "—"}</span>
-                    )}
-                  </td>
+                  <td className="px-4 py-3"><SourceChip b={b} /></td>
                   {/* Betaald + status + annuleren samengevoegd tot één compacte icoon-cel. */}
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <span className="inline-flex items-center justify-end gap-1.5">

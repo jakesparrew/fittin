@@ -39,6 +39,7 @@ export async function getBookingDetail(bookingId) {
       memberName: reserved ? null : (b.member?.full_name || b.member?.email || "Lid"),
       memberEmail: reserved ? null : (b.member?.email || null),
       coachName: b.coach?.full_name || null,
+      coachId: b.coach_id || null, // nodig om de juiste coach voor te selecteren bij toewijzen
       serviceName: b.services?.name || "Sessie",
       paymentSource: b.payment_source,
       paid: b.paid,

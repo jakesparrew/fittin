@@ -54,7 +54,7 @@ describe("sourceLabel", () => {
 describe("sourceLabel · coach & credit zichtbaarheid", () => {
   it("coach-sessie via tegoed is GEEN beheer-boeking", () => {
     // coach_book_session schrijft los + €0 + paid, net als een admin-comp — coach_billing beslist.
-    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true, coach_billing: "credit" })).toBe("Coach-tegoed");
+    expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true, coach_billing: "credit" })).toBe("Coach · vooraf betaald");
   });
   it("coach-factuur en gratis coach-sessie", () => {
     expect(sourceLabel({ payment_source: "los", price_cents: 0, paid: true, coach_billing: "invoice" })).toBe("Coach-factuur");
