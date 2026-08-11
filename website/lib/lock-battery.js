@@ -15,7 +15,12 @@ const TIER_MAX = Math.max(...TIERS);
 
 // Ontvangers: bewust twee adressen (één bedrijfsadres + één persoonlijk) en elk apart verstuurd,
 // zodat een suppressie of spamfilter op het ene adres het andere niet meesleept.
-const RECIPIENTS = (process.env.LOCK_ALERT_EMAILS || "info@fittin.be,ran.knockaert@gmail.com")
+//
+// Dit gaat naar de GYM, niet naar de ontwikkelaar: een lege batterij is werk voor wie ter plekke
+// komt. Technische foutmails gaan bewust naar een andere lijst (ERROR_ALERT_EMAILS in
+// lib/error-alert.js) — ze hebben niets met elkaar te maken en mogen nooit opnieuw dezelfde
+// variabele delen, anders krijgt de uitbater weer stacktraces die hij niet kan plaatsen.
+export const RECIPIENTS = (process.env.LOCK_ALERT_EMAILS || "info@fittin.be,ran.knockaert@gmail.com")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 // Welke drempel hoort bij dit percentage? 0 = kritiek, null = alles in orde.

@@ -11,7 +11,12 @@ import { sendErrorAlert } from "@/lib/email";
 // Dedupe op fout-groep (melding + pagina): tien voorvallen van dezelfde fout = één mail, met de
 // teller erin. Alles wat meegenomen is krijgt alerted_at, ook de ruis — die willen we niet elke
 // vijf minuten opnieuw doorlopen.
-const RECIPIENTS = (process.env.LOCK_ALERT_EMAILS || "info@fittin.be,ran.knockaert@gmail.com")
+//
+// ONTVANGERS: enkel de ontwikkelaar (owner-beslissing 2026-08-11). Dit gebruikte eerst
+// LOCK_ALERT_EMAILS — de lijst van de deurslot-batterij — waardoor een JS-stacktrace bij de
+// gym-uitbater belandde. Die kan er niets mee, en een alarm dat je niet kan behandelen leer je
+// negeren; dan mis je óók de batterijmail die wél voor hem is. Twee soorten alarm, twee lijsten.
+export const RECIPIENTS = (process.env.ERROR_ALERT_EMAILS || "gaetanjansseune@gmail.com")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 export async function alertNewClientErrors(admin) {
