@@ -735,7 +735,7 @@ export default async function AccountPage({ searchParams }) {
 
         {/* Rechten van betrokkenen (AVG): downloaden, gezondheidsgegevens wissen, verwijdering aanvragen. */}
         <div>
-          <PrivacyControls healthConsent={healthConsent} deletionRequestedAt={delRow?.deletion_requested_at} newsletterOptIn={newsletterOptIn} />
+          <PrivacyControls healthConsent={healthConsent} deletionRequestedAt={delRow?.deletion_requested_at} newsletterOptIn={newsletterOptIn} trainingVisible={!!profile?.training_visible_to_buddies} />
         </div>
 
         {/* History */}

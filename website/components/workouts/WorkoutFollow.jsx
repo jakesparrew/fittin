@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
 import { logWorkoutSet, toggleWorkoutDone, saveWorkoutToPlans } from "@/app/(site)/workouts/actions";
+import DuoStrip from "@/components/workouts/DuoStrip";
 
 const toast = (type, msg) => { try { window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type, msg } })); } catch {} };
 const SECTIONS = ["Warming-up", "Hoofdoefening", "Accessoire", "Finisher"];
@@ -37,6 +38,10 @@ export default function WorkoutFollow({ workout, lastByPe = {}, doneToday = {}, 
           <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }} />
         </div>
       </div>
+
+      {/* Samen trainen: wie van je buddies is hier vandaag ook mee bezig? Verschijnt alleen als
+          er iemand is én die persoon zijn voortgang deelt — anders helemaal niets. */}
+      {isLoggedIn && <DuoStrip peIds={workout.exercises.map((e) => e.id)} />}
 
       {groups.map((g) => (
         <section key={g.section} className="mb-7">

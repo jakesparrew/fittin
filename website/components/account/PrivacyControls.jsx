@@ -3,6 +3,7 @@ import ActionForm from "@/components/ui/ActionForm";
 import SubmitButton from "@/components/ui/SubmitButton";
 import { requestAccountDeletion, cancelAccountDeletion, withdrawHealthConsent } from "@/app/(site)/account/actions";
 import { setNewsletterOptIn } from "@/app/(site)/account/mail-actions";
+import { setTrainingVisibility } from "@/app/(site)/oefeningen/loop-actions";
 
 // Rechten van betrokkenen, uitvoerbaar door het lid zelf (art. 15, 17, 20 en 7.3 AVG).
 // Het privacybeleid beloofde dit al; zonder knoppen was dat een loze belofte.
@@ -10,7 +11,7 @@ import { setNewsletterOptIn } from "@/app/(site)/account/mail-actions";
 // Verwijderen is bewust een AANVRAAG en geen directe knop: facturen moeten wettelijk 7 jaar bewaard
 // blijven en aan boekingen hangen andere leden vast. Eén klik die dat allemaal onomkeerbaar zou
 // wegvegen is geen zorgvuldigheid maar roekeloosheid — de beheerder voert het uit binnen de maand.
-export default function PrivacyControls({ healthConsent, deletionRequestedAt, newsletterOptIn = true }) {
+export default function PrivacyControls({ healthConsent, deletionRequestedAt, newsletterOptIn = true, trainingVisible = false }) {
   return (
     <section className="mt-12 rounded-3xl border border-borderc bg-white p-6">
       <h2 className="text-xl font-black text-brand">Je gegevens</h2>
@@ -38,6 +39,26 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
             <input type="hidden" name="aan" value={newsletterOptIn ? "0" : "1"} />
             <button className={"rounded-full px-4 py-2 text-sm font-bold transition " + (newsletterOptIn ? "border-2 border-borderc text-brand hover:border-lav" : "bg-accent text-brand hover:opacity-90")}>
               {newsletterOptIn ? "Uitschrijven" : "Weer inschrijven"}
+            </button>
+          </ActionForm>
+        </div>
+
+        {/* Duo-zicht. Standaard UIT: dat je traint is persoonlijke data, en je buddy mag dat pas
+            zien als jij het aanzet. Zelfde lijn als het leaderboard-vinkje. */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper p-4">
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-brand">Laat buddies zien dat je meetraint</p>
+            <p className="mt-0.5 text-xs text-brand/55">
+              {trainingVisible
+                ? "Je buddies zien tijdens een workout dat jij vandaag dezelfde oefeningen doet, en hoeveel sets."
+                : "Nu ziet niemand wanneer of wat je traint."}
+              {" "}Enkel geaccepteerde buddies, enkel van vandaag, nooit je gewichten.
+            </p>
+          </div>
+          <ActionForm action={setTrainingVisibility}>
+            <input type="hidden" name="aan" value={trainingVisible ? "0" : "1"} />
+            <button className={"rounded-full px-4 py-2 text-sm font-bold transition " + (trainingVisible ? "border-2 border-borderc text-brand hover:border-lav" : "bg-accent text-brand hover:opacity-90")}>
+              {trainingVisible ? "Zet uit" : "Zet aan"}
             </button>
           </ActionForm>
         </div>

@@ -38,6 +38,8 @@ export default async function CoachClienten() {
   const weekAgoMs = now - 7 * 86400000;
   let bookings = [], creditRows = [];
   const lastLogin = {};
+  const favByClient = {};
+  const losByClient = {};
   if (ids.length) {
     const admin = createAdminClient();
     const [bRes, cRes] = await Promise.all([
@@ -45,6 +47,46 @@ export default async function CoachClienten() {
       supabase.from("coach_credit_ledger").select("client_id, delta").eq("coach_id", userId).in("client_id", ids),
     ]);
     bookings = bRes.data || []; creditRows = cRes.data || [];
+
+    // Wat doet deze client graag, en wat doet hij ZONDER schema? Twee signalen die een
+    // voorschrift concreter maken dan "hij traint 2× per week".
+    try {
+      const [{ data: favRows }, { data: losRows }] = await Promise.all([
+        admin.from("exercise_favorites").select("user_id, exercise:exercises(name)").in("user_id", ids).limit(300),
+        // Losse logs landen in het verborgen schema "Losse oefeningen": 3+ keer dezelfde oefening
+        // los doen is een warme aanleiding voor een gesprek of een voorschrift.
+        admin.from("programs").select("id, member_id, program_days(program_exercises(id, exercise:exercises(name)))")
+          .in("member_id", ids).eq("name", "Losse oefeningen"),
+      ]);
+      for (const f of favRows || []) {
+        if (!f.exercise?.name) continue;
+        (favByClient[f.user_id] ||= []).push(f.exercise.name);
+      }
+      const peNaam = new Map();
+      const peEigenaar = new Map();
+      for (const p of losRows || []) {
+        for (const d of p.program_days || []) {
+          for (const pe of d.program_exercises || []) {
+            if (pe.exercise?.name) { peNaam.set(pe.id, pe.exercise.name); peEigenaar.set(pe.id, p.member_id); }
+          }
+        }
+      }
+      if (peNaam.size) {
+        const { data: logs } = await admin.from("workout_logs")
+          .select("user_id, program_exercise_id").in("program_exercise_id", [...peNaam.keys()])
+          .gte("logged_on", new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10));
+        const tel = new Map();
+        for (const l of logs || []) {
+          const sleutel = `${l.user_id}|${peNaam.get(l.program_exercise_id)}`;
+          tel.set(sleutel, (tel.get(sleutel) || 0) + 1);
+        }
+        for (const [sleutel, n] of tel) {
+          if (n < 3) continue;
+          const [uid, naam] = sleutel.split("|");
+          (losByClient[uid] ||= []).push({ naam, n });
+        }
+      }
+    } catch (e) { console.error("coach favorieten/losse logs:", e?.message); }
     // Laatste login per verbonden client (Supabase Auth) → onderdeel van "laatst actief".
     // Eén gepagineerde listUsers i.p.v. een Auth-API-call per client (N+1 + rate-limit-risico).
     try {
@@ -173,6 +215,20 @@ export default async function CoachClienten() {
                 </div>
 
                 {next && <p className="mt-3 text-xs capitalize text-brand/50">Volgende sessie: {fmt(next.starts_at)} · {next.services?.name}</p>}
+
+                {/* Favorieten: waar bouw je een schema rond dat hij ook echt gaat doen? */}
+                {(favByClient[c.id] || []).length > 0 && (
+                  <p className="mt-3 text-xs text-brand/60">
+                    <span className="font-bold text-brand/45">Doet graag:</span>{" "}
+                    {(favByClient[c.id] || []).slice(0, 4).join(" · ")}
+                  </p>
+                )}
+                {/* Los getraind zonder schema = warme aanleiding voor een voorschrift of gesprek. */}
+                {(losByClient[c.id] || []).length > 0 && (
+                  <p className="mt-1.5 rounded-xl bg-accent/10 px-3 py-2 text-xs font-bold text-accentdark">
+                    Traint los: {(losByClient[c.id] || []).slice(0, 3).map((x) => `${x.naam} (${x.n}×)`).join(", ")} — kandidaat voor een schema.
+                  </p>
+                )}
 
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link href={`/coach/clienten/${c.id}`} className="rounded-full bg-brand px-4 py-2 text-xs font-bold text-white transition hover:opacity-90">Bekijk client →</Link>

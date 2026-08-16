@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ShareProgramCard from "@/components/workouts/ShareProgramCard";
 import { notFound, redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -19,7 +20,7 @@ export default async function PlanBuilder({ params }) {
   const supabase = await createClient();
   const { data: plan } = await supabase
     .from("programs")
-    .select("id, name, is_active, member_id, program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, exercises(id, name, slug, muscle, primary_muscles, equipment, image_url, frames)))")
+    .select("id, name, is_active, member_id, share_token, program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, exercises(id, name, slug, muscle, primary_muscles, equipment, image_url, frames)))")
     .eq("id", id)
     .maybeSingle();
   if (!plan || plan.member_id !== user.id) notFound();
@@ -93,6 +94,14 @@ export default async function PlanBuilder({ params }) {
           <input type="hidden" name="programId" value={plan.id} />
           <SubmitButton className="w-full rounded-2xl border-2 border-dashed border-borderc py-3 text-sm font-bold text-brand/60 hover:border-accent hover:text-brand">+ Dag toevoegen</SubmitButton>
         </form>
+
+        {/* Delen staat onderaan, ná het bouwen: je deelt een schema pas als het af is. */}
+        <ShareProgramCard
+          programId={plan.id}
+          programName={plan.name}
+          initialToken={plan.share_token}
+          site={process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}
+        />
       </div>
     </main>
   );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AdoptButton from "@/components/workouts/AdoptButton";
 import { notFound } from "next/navigation";
 import { getGymCached, getPublicWorkoutBySlug } from "@/lib/cache";
 import { getSessionProfile } from "@/lib/auth";
@@ -63,6 +64,12 @@ export default async function WorkoutDetail({ params }) {
               label="Deel"
               className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white transition hover:bg-white/20"
             />
+          </div>
+          {/* De gecureerde workout als STARTPUNT: overnemen maakt er een eigen, bewerkbaar schema
+              van. Zonder deze knop is de bibliotheek een eindpunt — je kan hem volgen, maar er
+              nooit iets van maken dat van jou is. */}
+          <div className="mt-5">
+            <AdoptButton programId={workout.id} donker label="Bewaar als mijn schema" />
           </div>
         </div>
       </section>

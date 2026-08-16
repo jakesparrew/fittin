@@ -4,6 +4,7 @@ import { getGymCached, getExerciseBySlug, getAlternativesByCategory } from "@/li
 import { catLabel } from "@/lib/exercise-categories";
 import { breadcrumbLd, exerciseHowToLd, jsonLdScript } from "@/lib/seo";
 import ExerciseDetail from "@/components/exercises/ExerciseDetail";
+import ExerciseActions from "@/components/exercises/ExerciseActions";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
 
 export const revalidate = 300;
@@ -53,6 +54,8 @@ export default async function ExercisePage({ params }) {
         </nav>
         <div className="mt-5 rounded-3xl border border-borderc bg-white p-5 md:p-7">
           <ExerciseDetail exercise={ex} />
+          {/* Van artikel naar handeling: bewaren, in je schema zetten, of nu doen en loggen. */}
+          <ExerciseActions exerciseId={ex.id} exerciseName={ex.name} />
         </div>
 
         {alternatives.length > 0 && (
