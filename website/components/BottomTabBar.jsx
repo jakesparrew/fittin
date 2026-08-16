@@ -50,11 +50,15 @@ export default function BottomTabBar() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-borderc bg-white/95 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+      {/* min-w-0 op elk tabblad is hier geen detail: een flex-item krimpt standaard niet onder de
+          breedte van zijn langste woord, en "Oefeningen" past met vijf tabs niet op een smal
+          scherm — op 320px liep de balk 23px over en werd de laatste tab afgeknipt. Zelfde valkuil
+          als bij de sets-grid. Het label mag nu afbreken met puntjes; het icoon blijft heel. */}
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
         {tabs.map(([href, label, icon]) => {
           const act = isActive(href);
           return (
-            <li key={href} className="flex-1">
+            <li key={href} className="min-w-0 flex-1">
               <Link href={href} className={"relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition " + (act ? "text-accentdark" : "text-brand/55 hover:text-brand")}>
                 <span className="relative">
                   <Icon d={ICONS[icon]} />
@@ -62,7 +66,7 @@ export default function BottomTabBar() {
                     <span className="absolute -right-2 -top-1 min-w-[15px] rounded-full bg-red-500 px-1 text-center text-[9px] font-black leading-[15px] text-white">{unread > 9 ? "9+" : unread}</span>
                   )}
                 </span>
-                <span>{label}</span>
+                <span className="w-full truncate px-0.5 text-center">{label}</span>
               </Link>
             </li>
           );

@@ -31,6 +31,14 @@ html {
    Bewust op body en niet op html — overflow-x op html breekt position:sticky. */
 body {
   overflow-x: clip;
+  /* Lange woorden mogen afbreken in plaats van het scherm uit te duwen.
+     Dit was de ECHTE oorzaak van "de inhoud komt uit het scherm": één onbreekbaar woord
+     ("Oefeningenbibliotheek", 21 letters) in een grote kop past niet op een smal scherm, dus werd
+     het hele document breder dan de viewport. Alles kon dan zijwaarts schuiven en oogde scheef —
+     terwijl elke marge op zich correct 20px was.
+     `break-word` breekt alleen wanneer het écht niet past, dus normale tekst blijft normaal breken.
+     De eigenschap erft door, dus één regel op body dekt de hele app. */
+  overflow-wrap: break-word;
 }
 
 /* Visible keyboard-focus indicator (WCAG 2.4.7). Only shows for keyboard/AT users, not mouse clicks. */
