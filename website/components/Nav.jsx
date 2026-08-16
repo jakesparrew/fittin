@@ -129,6 +129,10 @@ export default function Nav() {
                 Notificaties{account.unread > 0 ? ` (${account.unread > 9 ? "9+" : account.unread})` : ""}
               </Link>
             )}
+            {/* Hulp staat bewust in dit onderste blok, naast Notificaties en Mijn account: wie
+                vastloopt zoekt daar. Bereikbaar zónder login — juist wie niet binnen raakt,
+                heeft de hulppagina nodig. */}
+            <Link href="/hulp" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">🛟 Hulp &amp; contact</Link>
             {isStaff && <Link href={home} onClick={() => setOpen(false)} className="block py-2 font-bold text-accentdark">{staffLabel} →</Link>}
             {account && isStaff ? (
               <form action="/auth/signout" method="post"><button className="block py-2 font-bold text-brand">Uitloggen</button></form>

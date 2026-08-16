@@ -52,6 +52,8 @@ export default function Footer() {
       <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-white/10 py-5 text-center text-xs text-lav/70">
         <span>© 2026 Fittin&rsquo;</span>
         <span aria-hidden>·</span>
+        <Link href="/hulp" className="font-bold transition hover:text-white">Hulp &amp; contact</Link>
+        <span aria-hidden>·</span>
         <Link href="/privacy" className="transition hover:text-white">Privacybeleid</Link>
         <span aria-hidden>·</span>
         <Link href="/voorwaarden" className="transition hover:text-white">Algemene voorwaarden</Link>
