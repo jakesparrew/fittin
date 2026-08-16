@@ -3,6 +3,7 @@ import { useState } from "react";
 import { adminAdjustCredits, adminSetRole } from "@/app/beheer/actions";
 import OpenMemberButton from "@/components/admin/OpenMemberButton";
 import ActionForm from "@/components/ui/ActionForm";
+import InsightActions from "@/components/admin/InsightActions";
 
 const ROLES = ["lid", "coach", "beheerder"];
 
@@ -57,7 +58,7 @@ function SortTh({ k, sort, onSort, children, title }) {
   );
 }
 
-export default function MembersTable({ members = [], credits = {}, coachOf = {}, lastLogin = {}, lastVisit = {}, subOf = {}, isBeheerder }) {
+export default function MembersTable({ members = [], credits = {}, coachOf = {}, lastLogin = {}, lastVisit = {}, subOf = {}, isBeheerder, winback = false }) {
   const [q, setQ] = useState("");
   // Default: nieuwste account eerst (zoals voorheen — de server levert al op created_at desc).
   const [sort, setSort] = useState({ key: null, dir: "asc" });
@@ -133,6 +134,17 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                 <td className="px-5 py-4">
                   <OpenMemberButton id={m.id} name={m.full_name} email={m.email} />
                   <p className="text-xs text-brand/50">{m.email}</p>
+                  {/* At-risk-modus: het inzicht ("komt niet meer") krijgt meteen zijn handeling.
+                      Enkel voor leden — een coach die niet traint is geen churn-risico. */}
+                  {winback && m.role === "lid" && (
+                    <InsightActions
+                      memberId={m.id}
+                      acties={[
+                        { type: "preset", preset: "winback", label: "✉ Comeback-mail", busy: "Versturen…" },
+                        { type: "reeks", reeks: "comeback_reeks", label: "📬 Comeback-reeks (2 mails)", busy: "Inschrijven…" },
+                      ]}
+                    />
+                  )}
                 </td>
                 <td className="px-5 py-4">
                   {isBeheerder ? (

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InsightActions from "@/components/admin/InsightActions";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSettled } from "@/lib/booking-status";
@@ -164,6 +165,15 @@ export default async function BeheerDashboard() {
     .filter((m) => m.deletion_requested_at)
     .sort((a, b) => new Date(a.deletion_requested_at) - new Date(b.deletion_requested_at));
 
+  // Verborgen inzichten ("doe ik bewust niets mee") wegfilteren. Enkel voor de overtuig-kaarten;
+  // AVG-verzoeken en coachschuld blijven altijd staan — wettelijke termijn resp. echt geld.
+  let gesnoozed = new Set();
+  try {
+    const { data: sn } = await admin.from("insight_snoozes")
+      .select("kind, user_id").eq("gym_id", gym.id).gt("until", now.toISOString());
+    gesnoozed = new Set((sn || []).map((s) => `${s.kind}:${s.user_id}`));
+  } catch {}
+
   const personActions = [
     ...deletionRequests.map((m) => {
       const dagen = Math.floor((Date.now() - new Date(m.deletion_requested_at).getTime()) / 86400000);
@@ -180,23 +190,40 @@ export default async function BeheerDashboard() {
       sub: `Nieuwe boekingen zijn voor deze coach geblokkeerd tot het saldo is aangezuiverd. Op zijn dashboard staat een "Betaal achterstand"-knop — een aankoop vult eerst de put aan.`,
       href: "/beheer/coaches",
     })),
-    ...pastDue.map((m) => ({
+    ...pastDue.filter((m) => !gesnoozed.has(`pastdue:${m.user_id}`)).map((m) => ({
       icon: "💳", tone: "warn",
       title: `Spreek ${nameOf.get(m.user_id) || "lid"} aan — abo-betaling mislukt`,
-      sub: `Stripe probeert opnieuw; tot dan boekt ${nameOf.get(m.user_id) || "het lid"} weer aan € 15${bkCount[m.user_id] ? ` (${bkCount[m.user_id]} sessies in 60d)` : ""}. Help evt. de betaalmethode updaten.`,
+      sub: `Stripe probeert opnieuw; tot dan boekt ${nameOf.get(m.user_id) || "het lid"} weer aan € 15${bkCount[m.user_id] ? ` (${bkCount[m.user_id]} sessies in 60d)` : ""}.`,
       href: "/beheer/leden",
+      memberId: m.user_id,
+      acties: [
+        { type: "preset", preset: "pastdue", label: "✉ Stuur betaalhulp-mail", busy: "Versturen…" },
+        { type: "snooze", kind: "pastdue", dagen: 14, label: "Verberg 14 d" },
+      ],
     })),
-    ...ending.map((m) => ({
+    ...ending.filter((m) => !gesnoozed.has(`opzeg:${m.user_id}`)).map((m) => ({
       icon: "👋", tone: "warn",
       title: `${nameOf.get(m.user_id) || "Lid"} zegde het abo op`,
       sub: `Loopt af op ${m.current_period_end ? dag(m.current_period_end) : "einde periode"} — vraag waarom en probeer te behouden.`,
       href: "/beheer/leden",
+      memberId: m.user_id,
+      eindDatum: m.current_period_end ? dag(m.current_period_end) : null,
+      acties: [
+        { type: "preset", preset: "opzeg", label: "✉ Vraag waarom (behoud-mail)", busy: "Versturen…" },
+        { type: "snooze", kind: "opzeg", dagen: 60, label: "Verberg" },
+      ],
     })),
-    ...candidates.map(([uid, n]) => ({
+    ...candidates.filter(([uid]) => !gesnoozed.has(`abo_kandidaat:${uid}`)).map(([uid, n]) => ({
       icon: "⭐", tone: "tip",
       title: `Abo-kandidaat: ${nameOf.get(uid)}`,
-      sub: `${n} sessies (los/kaart) in 60 dagen zonder abo. De app toont dit lid automatisch een abo-voorstel met zijn besparing op /account — een persoonlijk woordje in de gym werkt er bovenop het best.`,
+      sub: `${n} sessies (los/kaart) in 60 dagen zonder abo. De mail hieronder rekent het vóór met zijn eigen cijfers; de reeks stuurt 3 mails over 8 dagen. Max. 1× per 30 dagen per lid.`,
       href: "/beheer/leden",
+      memberId: uid,
+      acties: [
+        { type: "preset", preset: "abo_voorstel", label: "✉ Stuur zijn rekensom", busy: "Versturen…" },
+        { type: "reeks", reeks: "abo_reeks", label: "📬 Start abo-reeks (3 mails)", busy: "Inschrijven…" },
+        { type: "snooze", kind: "abo_kandidaat", dagen: 60, label: "Verberg 60 d" },
+      ],
     })),
   ];
 
@@ -377,15 +404,20 @@ export default async function BeheerDashboard() {
 }
 
 function ActionRow({ a }) {
+  // Met actieknoppen op de kaart kan de kaart zelf geen Link meer zijn — die zou elke klik op een
+  // knop opslokken. De pijl rechts blijft de weg naar de detailpagina.
   return (
-    <Link href={a.href} className={"flex items-start gap-3 rounded-2xl border p-4 transition hover:-translate-y-0.5 hover:shadow-sm " + (a.tone === "warn" ? "border-amber-300 bg-amber-50" : "border-accent/40 bg-accent/5")}>
+    <div className={"flex items-start gap-3 rounded-2xl border p-4 " + (a.tone === "warn" ? "border-amber-300 bg-amber-50" : "border-accent/40 bg-accent/5")}>
       <span className="text-xl leading-none">{a.icon}</span>
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className="block font-black text-brand">{a.title}</span>
         <span className="mt-0.5 block text-sm text-brand/60">{a.sub}</span>
+        {a.memberId && a.acties?.length > 0 && (
+          <InsightActions memberId={a.memberId} acties={a.acties} eindDatum={a.eindDatum || null} />
+        )}
       </span>
-      <span className="ml-auto self-center font-black text-brand/30">→</span>
-    </Link>
+      <Link href={a.href} aria-label="Open de lijst" className="ml-auto self-center font-black text-brand/30 transition hover:text-brand">→</Link>
+    </div>
   );
 }
 

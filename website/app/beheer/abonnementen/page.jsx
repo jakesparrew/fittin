@@ -3,6 +3,7 @@ import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { TrendLine } from "@/components/admin/Charts";
 import ListSearch from "@/components/admin/ListSearch";
+import InsightActions from "@/components/admin/InsightActions";
 
 export const dynamic = "force-dynamic";
 
@@ -198,6 +199,18 @@ function Tabel({ titel, rijen, gestopt = false }) {
                 <tr key={r.user_id} className={stil ? "bg-amber-50/60" : ""}>
                   <td className="px-4 py-3">
                     <p className="font-bold text-brand">{r.member?.full_name || "Lid"}</p>
+                    {/* Een slapende abonnee betaalt zonder te trainen — de beste opzeg-voorspeller.
+                        Het inzicht en de handeling horen op dezelfde rij: hier terughalen, niet
+                        eerst doorklikken naar een andere lijst. */}
+                    {stil && (
+                      <InsightActions
+                        memberId={r.user_id}
+                        acties={[
+                          { type: "preset", preset: "winback", label: "✉ Comeback-mail", busy: "Versturen…" },
+                          { type: "reeks", reeks: "comeback_reeks", label: "📬 Comeback-reeks", busy: "Inschrijven…" },
+                        ]}
+                      />
+                    )}
                     <p className="text-xs text-brand/40">{r.member?.email}</p>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3 text-brand/70">

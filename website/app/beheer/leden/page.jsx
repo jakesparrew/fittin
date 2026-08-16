@@ -4,6 +4,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { AddMemberForm } from "@/components/admin/MemberControls";
 import MemberDrawer from "@/components/admin/MemberDrawer";
 import MembersTable from "@/components/admin/MembersTable";
+import ActionForm from "@/components/ui/ActionForm";
+import { enrollAllAtRiskInComeback } from "../insight-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +74,20 @@ export default async function Leden({ searchParams }) {
 
       {isBeheerder && !atRiskOnly && <div className="mt-6"><AddMemberForm /></div>}
 
-      <MembersTable members={shown} credits={credits} coachOf={coachOf} lastLogin={lastLogin} lastVisit={lastVisit} subOf={subOf} isBeheerder={isBeheerder} />
+      {/* Eén knop voor de hele lijst: wie individueel mailen te veel werk vindt, doet het in bulk.
+          De reeks is idempotent (wie er al in zit of zich uitschreef, wordt overgeslagen) — de knop
+          twee keer indrukken kan dus geen tweede mailgolf veroorzaken. */}
+      {isBeheerder && atRiskOnly && shown.length > 0 && (
+        <div className="mt-4 rounded-2xl border-2 border-accent/50 bg-accent/5 p-4">
+          <p className="text-sm font-bold text-brand">Alle {shown.length} in één keer terughalen?</p>
+          <p className="mt-0.5 text-xs text-brand/55">Start de comeback-reeks (2 mails over 5 dagen) voor iedereen hieronder. Wie er al in zit of zich uitschreef, wordt automatisch overgeslagen.</p>
+          <ActionForm action={enrollAllAtRiskInComeback} className="mt-2">
+            <button className="rounded-full bg-accent px-5 py-2 text-sm font-black text-brand transition hover:opacity-90">📬 Start comeback-reeks voor iedereen</button>
+          </ActionForm>
+        </div>
+      )}
+
+      <MembersTable members={shown} credits={credits} coachOf={coachOf} lastLogin={lastLogin} lastVisit={lastVisit} subOf={subOf} isBeheerder={isBeheerder} winback={atRiskOnly} />
     </div>
   );
 }

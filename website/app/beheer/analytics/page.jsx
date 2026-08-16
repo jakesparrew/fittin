@@ -152,9 +152,11 @@ export default async function Analytics() {
           <Donut value={activeRate} label="van de leden kwam de laatste 30 dagen" sub={`gem. ${avgVisits} sessies/maand per actief lid`} />
           <div className="mt-5 grid grid-cols-2 gap-3">
             <Mini label="No-show ratio" value={noShowRate + "%"} sub="laatste 60 dagen" warn={noShowRate > 10} />
-            <Link href="/beheer/activatie" className="rounded-xl bg-accent/10 p-4 transition hover:bg-accent/20">
+            {/* Wijst naar de at-risk-lijst: dáár staan de comeback-mail per lid en de knop
+                "start comeback-reeks voor iedereen" — het cijfer is meteen de handeling. */}
+            <Link href="/beheer/leden?filter=atrisk" className="rounded-xl bg-accent/10 p-4 transition hover:bg-accent/20">
               <p className="text-2xl font-black text-accentdark">{atRisk}</p>
-              <p className="text-xs font-bold text-brand/60">leden at-risk (30d stil) →</p>
+              <p className="text-xs font-bold text-brand/60">leden at-risk — mail ze terug →</p>
             </Link>
           </div>
         </Card>

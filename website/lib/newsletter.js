@@ -195,7 +195,44 @@ export async function processSendQueue(max = 40) {
   return { processed: batch.length, sent, campaignId, remaining: remaining ?? 0, done, error: lastError };
 }
 
+// Schedule every step of one drip for one subscriber via Resend (shared by the generic
+// onboarding-enrollment below and the targeted enrolments from the insight actions).
+async function scheduleDripSteps(admin, gymId, dripId, subscriber) {
+  const { data: steps } = await admin.from("campaign_steps").select("*").eq("campaign_id", dripId).order("step_no");
+  for (const step of steps || []) {
+    const when = step.delay_hours > 0 ? new Date(Date.now() + step.delay_hours * 3600 * 1000).toISOString() : null;
+    let id = null;
+    try {
+      const res = await resend.emails.send({
+        from: FROM_NEWS,
+        to: subscriber.email,
+        replyTo: REPLY_TO,
+        subject: step.subject,
+        html: newsletterHtml({ subject: step.subject, body: step.body_html, unsubUrl: unsubFor(subscriber.unsub_token) }),
+        headers: listHeaders(subscriber.unsub_token),
+        ...(when ? { scheduledAt: when } : {}),
+      });
+      id = res?.data?.id || null;
+    } catch (e) {
+      console.error("drip step send failed:", e?.message);
+    }
+    await admin.from("campaign_sends").insert({
+      gym_id: gymId,
+      campaign_id: dripId,
+      step_id: step.id,
+      subscriber_id: subscriber.id,
+      email: subscriber.email,
+      resend_id: id,
+      status: id ? (when ? "scheduled" : "sent") : "failed",
+      scheduled_at: when,
+      sent_at: when ? null : new Date().toISOString(),
+    });
+  }
+}
+
 // Enroll one subscriber into every active drip and schedule each step via Resend.
+// Bewust enkel kind 'drip' (de onboarding): gerichte reeksen hebben kind 'drip_target' en
+// vertrekken alleen wanneer de beheerder iemand er expliciet in zet.
 export async function enrollSubscriberInDrips(gymId, subscriber) {
   if (!resend) return;
   const admin = createAdminClient();
@@ -203,39 +240,62 @@ export async function enrollSubscriberInDrips(gymId, subscriber) {
   for (const d of drips || []) {
     const { error: enrErr } = await admin.from("drip_enrollments").insert({ gym_id: gymId, campaign_id: d.id, subscriber_id: subscriber.id });
     if (enrErr) continue; // already enrolled
-    const { data: steps } = await admin.from("campaign_steps").select("*").eq("campaign_id", d.id).order("step_no");
-    let total = 0;
-    for (const step of steps || []) {
-      const when = step.delay_hours > 0 ? new Date(Date.now() + step.delay_hours * 3600 * 1000).toISOString() : null;
-      let id = null;
-      try {
-        const res = await resend.emails.send({
-          from: FROM_NEWS,
-          to: subscriber.email,
-          replyTo: REPLY_TO,
-          subject: step.subject,
-          html: newsletterHtml({ subject: step.subject, body: step.body_html, unsubUrl: unsubFor(subscriber.unsub_token) }),
-          headers: listHeaders(subscriber.unsub_token),
-          ...(when ? { scheduledAt: when } : {}),
-        });
-        id = res?.data?.id || null;
-      } catch (e) {
-        console.error("drip step send failed:", e?.message);
-      }
-      await admin.from("campaign_sends").insert({
-        gym_id: gymId,
-        campaign_id: d.id,
-        step_id: step.id,
-        subscriber_id: subscriber.id,
-        email: subscriber.email,
-        resend_id: id,
-        status: id ? (when ? "scheduled" : "sent") : "failed",
-        scheduled_at: when,
-        sent_at: when ? null : new Date().toISOString(),
-      });
-      total += 1;
-    }
+    await scheduleDripSteps(admin, gymId, d.id, subscriber);
   }
+}
+
+// Zorg dat een gerichte reeks (abo-pitch, comeback) bestaat voor deze gym; maak ze bij eerste
+// gebruik aan vanuit de vaste inhoud. Idempotent: bestaat de campagne al (eventueel met door de
+// beheerder aangepaste teksten), dan blijft die versie staan — de inhoud in code is enkel het zaad.
+export async function ensureTargetDrip(gymId, key) {
+  const { TARGET_DRIPS } = await import("@/lib/insight-mails");
+  const def = TARGET_DRIPS[key];
+  if (!def) return { error: "Onbekende reeks." };
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("campaigns").select("id").eq("gym_id", gymId).eq("kind", "drip_target").eq("name", def.naam).maybeSingle();
+  if (existing) return { id: existing.id };
+  const { data: created, error } = await admin
+    .from("campaigns")
+    .insert({ gym_id: gymId, kind: "drip_target", name: def.naam, subject: def.naam, status: "active" })
+    .select("id").single();
+  if (error || !created) return { error: error?.message || "Reeks aanmaken mislukt." };
+  for (let i = 0; i < def.steps.length; i++) {
+    await admin.from("campaign_steps").insert({
+      campaign_id: created.id, step_no: i + 1,
+      delay_hours: def.steps[i].delay_hours, subject: def.steps[i].subject, body_html: def.steps[i].body_html,
+    });
+  }
+  return { id: created.id };
+}
+
+// Zet één lid in een gerichte reeks. Respecteert uitschrijvingen/bounces en is idempotent
+// (dubbel inschrijven = nette melding, geen tweede reeks).
+export async function enrollMemberInTargetDrip(gymId, memberId, key) {
+  if (!resend) return { error: "E-mail niet geconfigureerd." };
+  const admin = createAdminClient();
+  const { data: prof } = await admin.from("profiles").select("email, full_name").eq("id", memberId).eq("gym_id", gymId).single();
+  if (!prof?.email) return { error: "Lid heeft geen e-mailadres." };
+  // Subscriber-rij hoort te bestaan (profieltrigger), maar een oud account kan erbuiten vallen.
+  let { data: sub } = await admin
+    .from("subscribers").select("id, email, name, unsub_token, status")
+    .eq("gym_id", gymId).eq("email", prof.email.toLowerCase()).maybeSingle();
+  if (!sub) {
+    const { data: made } = await admin
+      .from("subscribers")
+      .upsert({ gym_id: gymId, email: prof.email.toLowerCase(), name: prof.full_name, source: "insight", status: "active" }, { onConflict: "gym_id,email" })
+      .select("id, email, name, unsub_token, status").single();
+    sub = made;
+  }
+  if (!sub) return { error: "Kon geen abonnee-rij maken." };
+  if (sub.status !== "active") return { error: "Dit lid schreef zich uit voor mails — reeks niet gestart." };
+
+  const drip = await ensureTargetDrip(gymId, key);
+  if (drip.error) return drip;
+  const { error: enrErr } = await admin.from("drip_enrollments").insert({ gym_id: gymId, campaign_id: drip.id, subscriber_id: sub.id });
+  if (enrErr) return { error: "Zit al in deze reeks — geen tweede keer gestart." };
+  await scheduleDripSteps(admin, gymId, drip.id, sub);
+  return { ok: true };
 }
 
 // Convenience: enroll a freshly-created user (the profile trigger already made the subscriber row).
