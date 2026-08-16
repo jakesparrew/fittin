@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 // De klok start pas NA mount (now=null tijdens SSR + eerste client-render): met Date.now() als
 // initial state verschilden de servercijfers per definitie van de clientcijfers → React #418
 // (hydration text mismatch) bij elke accountbezoeker met een geplande sessie.
-export default function NextSessionTimer({ startsAt, name }) {
+export default function NextSessionTimer({ startsAt, name, bookingId }) {
   const [now, setNow] = useState(null);
   useEffect(() => {
     setNow(Date.now());
@@ -25,12 +25,20 @@ export default function NextSessionTimer({ startsAt, name }) {
     timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit",
   }).format(new Date(startsAt));
 
+  // De kaart was tot nu toe niet aanklikbaar: je zag je volgende sessie staan maar kon nergens
+  // heen om details, deurcode of annuleren te vinden. Nu leidt ze naar de sessie zelf.
+  const Wrapper = bookingId ? "a" : "div";
+  const wrapperProps = bookingId
+    ? { href: `#sessie-${bookingId}`, className: "mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand p-6 text-white transition hover:opacity-95" }
+    : { className: "mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand p-6 text-white" };
+
   return (
-    <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand p-6 text-white">
-      <div>
+    <Wrapper {...wrapperProps}>
+      <div className="min-w-0">
         <p className="text-xs font-bold uppercase tracking-widest text-lav">Je volgende sessie</p>
-        <p className="mt-1 text-lg font-black">{name || "Sessie"}</p>
+        <p className="mt-1 break-words text-lg font-black">{name || "Sessie"}</p>
         <p className="mt-0.5 text-sm capitalize text-lav">{when}</p>
+        {bookingId && <p className="mt-2 text-xs font-bold text-accent">Bekijk details &amp; deurcode →</p>}
       </div>
       <div className="flex items-center gap-2 tabular-nums">
         {d > 0 && <Unit n={d} label="d" />}
@@ -38,7 +46,7 @@ export default function NextSessionTimer({ startsAt, name }) {
         <Unit n={m} label="m" />
         <Unit n={s} label="s" soon={soon} />
       </div>
-    </div>
+    </Wrapper>
   );
 }
 

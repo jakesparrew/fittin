@@ -153,15 +153,26 @@ function ExerciseCard({ pe, last, done, isLoggedIn, onToggleDone, onRest }) {
 
           {/* set logging */}
           <div className="mt-4 rounded-2xl border border-borderc p-3">
-            <div className="mb-2 grid grid-cols-[2rem_1fr_1fr_2rem] items-center gap-2 text-xs font-bold uppercase tracking-wide text-brand/40">
+            {/* minmax(0,1fr) i.p.v. 1fr — dat is hier geen detail maar DE bug. Een `1fr`-kolom
+                krimpt niet onder de intrinsieke breedte van haar inhoud, en een <input> claimt van
+                zichzelf ~180px. Twee van die kolommen pasten dus niet op een telefoon: het raster
+                liep rechts uit beeld en duwde de laatste kolom — de verwijderknop — buiten het
+                scherm. Sets toevoegen lukte wel, wissen "niet", terwijl de knop er gewoon stond. */}
+            <div className="mb-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 text-xs font-bold uppercase tracking-wide text-brand/40">
               <span>Set</span><span>Reps</span><span>Kg</span><span />
             </div>
             {rows.map((row, i) => (
-              <div key={i} className="mb-2 grid grid-cols-[2rem_1fr_1fr_2rem] items-center gap-2">
+              <div key={i} className="mb-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2">
                 <span className="text-center font-black text-brand/50">{i + 1}</span>
-                <input inputMode="numeric" value={row.reps} onChange={(e) => setRow(i, "reps", e.target.value)} className="rounded-xl border border-borderc px-3 py-2 text-center text-brand" />
-                <input inputMode="decimal" placeholder="–" value={row.weight_kg} onChange={(e) => setRow(i, "weight_kg", e.target.value)} className="rounded-xl border border-borderc px-3 py-2 text-center text-brand" />
-                <button onClick={() => delRow(i)} className="text-brand/30 hover:text-red-500" aria-label="Verwijder set">✕</button>
+                {/* w-full + min-w-0: zonder deze twee blijft het invoerveld zijn eigen breedte
+                    opeisen en helpt minmax() op de kolom nog niets. */}
+                <input inputMode="numeric" value={row.reps} onChange={(e) => setRow(i, "reps", e.target.value)} className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-brand" />
+                <input inputMode="decimal" placeholder="–" value={row.weight_kg} onChange={(e) => setRow(i, "weight_kg", e.target.value)} className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-brand" />
+                {/* Grotere raakzone dan een kaal kruisje: dit is een knop op een telefoon.
+                    Bij één set verbergen — je laatste set wissen laat een lege tabel achter. */}
+                {rows.length > 1 ? (
+                  <button onClick={() => delRow(i)} className="rounded-lg py-2 text-lg leading-none text-brand/30 transition hover:text-red-500" aria-label={`Verwijder set ${i + 1}`}>✕</button>
+                ) : <span />}
               </div>
             ))}
             <button onClick={addRow} className="mt-1 text-sm font-bold text-accentdark hover:underline">＋ set</button>

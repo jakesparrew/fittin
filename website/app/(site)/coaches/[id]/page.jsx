@@ -61,7 +61,7 @@ export default async function CoachProfile({ params }) {
       <div className="mx-auto max-w-4xl px-5 py-16">
         <Link href="/coaches" className="text-sm font-semibold text-brand/50 hover:text-brand">← Alle coaches</Link>
 
-        <div className="mt-6 grid gap-8 md:grid-cols-[300px_1fr]">
+        <div className="mt-6 grid gap-8 md:grid-cols-[300px_minmax(0,1fr)]">
           <div>
             <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-borderc bg-white">
               {c.coach_photo_url ? (

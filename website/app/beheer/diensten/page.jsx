@@ -28,7 +28,7 @@ export default async function Diensten() {
           <form
             key={s.id}
             action={upsertService}
-            className="grid items-end gap-3 rounded-2xl border border-borderc bg-white p-5 md:grid-cols-[1.4fr_1fr_.7fr_.7fr_.7fr_auto]"
+            className="grid items-end gap-3 rounded-2xl border border-borderc bg-white p-5 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_minmax(0,.7fr)_minmax(0,.7fr)_minmax(0,.7fr)_auto]"
           >
             <input type="hidden" name="id" value={s.id} />
             <input type="hidden" name="type" value={s.type} />

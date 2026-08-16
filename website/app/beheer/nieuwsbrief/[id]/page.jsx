@@ -162,7 +162,7 @@ export default async function CampaignDetail({ params }) {
           <ActionForm action={addDripStep} success="Stap toegevoegd ✓" className="mt-4 rounded-2xl border border-dashed border-borderc bg-white p-5">
             <input type="hidden" name="campaignId" value={c.id} />
             <p className="font-black text-brand">Stap toevoegen</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-[140px_1fr]">
+            <div className="mt-3 grid gap-3 sm:grid-cols-[140px_minmax(0,1fr)]">
               <label className="block">
                 <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Vertraging (uren)</span>
                 <input name="delay_hours" type="number" min="0" defaultValue={0} className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />

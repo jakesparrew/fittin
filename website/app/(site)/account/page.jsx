@@ -336,8 +336,9 @@ export default async function AccountPage({ searchParams }) {
           </div>
         </section>
 
-        {/* Stat row */}
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Stat row — op mobiel drie smalle tegels naast elkaar i.p.v. drie brede blokken onder
+            elkaar. Ze dragen elk één getal; die verdienen samen geen halve schermhoogte. */}
+        <div className="mt-8 grid grid-cols-3 gap-2 sm:gap-4 lg:grid-cols-4">
           <Stat label="Aankomende sessies" value={upcomingPaid.length} />
           <Stat
             label="Sessies (saldo)"
@@ -352,7 +353,7 @@ export default async function AccountPage({ searchParams }) {
           )}
         </div>
 
-        {nextSession && <NextSessionTimer startsAt={nextSession.starts_at} name={nextSession.services?.name} />}
+        {nextSession && <NextSessionTimer startsAt={nextSession.starts_at} name={nextSession.services?.name} bookingId={nextSession.id} />}
 
         {(incomingJoins || []).length > 0 && (
           <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
@@ -673,7 +674,8 @@ export default async function AccountPage({ searchParams }) {
               {upcomingPaid.map((b) => (
                 <div
                   key={b.id}
-                  className="rounded-2xl border border-borderc bg-white p-5"
+                  id={`sessie-${b.id}`}
+                  className="scroll-mt-24 rounded-2xl border border-borderc bg-white p-5"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
@@ -784,11 +786,13 @@ export default async function AccountPage({ searchParams }) {
 }
 
 function Stat({ label, value, accent, hint }) {
+  // min-w-0 + break-words: in een driekoloms raster op een smal scherm moet een lang label als
+  // "Aankomende sessies" kunnen afbreken in plaats van de kaart open te duwen.
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
-      <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-2xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
-      {hint && <p className="mt-1 text-xs font-semibold text-amber-600">{hint}</p>}
+    <div className="min-w-0 rounded-2xl border border-borderc bg-white p-3 sm:p-5">
+      <p className="break-words text-[10px] font-bold uppercase text-lav sm:text-xs sm:tracking-widest">{label}</p>
+      <p className={"mt-1 text-xl font-black sm:mt-2 sm:text-2xl " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+      {hint && <p className="mt-1 break-words text-[10px] font-semibold text-amber-600 sm:text-xs">{hint}</p>}
     </div>
   );
 }

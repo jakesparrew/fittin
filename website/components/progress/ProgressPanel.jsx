@@ -24,7 +24,7 @@ export default async function ProgressPanel({ userId }) {
       {/* Stat tiles */}
       <div className="mt-4 grid grid-cols-3 gap-3">
         <Tile label="Sessies" value={p.totals.sessions} hint="laatste 6 maanden" />
-        <Tile label="Persoonlijke records" value={p.totals.prs} hint="🔥 PR's" accent />
+        <Tile label="Records" value={p.totals.prs} hint="🔥 PR's" accent />
         <Tile label="Reeks" value={`${p.streak} wk`} hint="weken op rij actief" />
       </div>
 
@@ -88,11 +88,15 @@ export default async function ProgressPanel({ userId }) {
 }
 
 function Tile({ label, value, hint, accent }) {
+  // min-w-0 op de tegel + break-words op de tekst: een gridkolom krimpt niet vanzelf onder de
+  // breedte van haar langste woord. "PERSOONLIJKE" in hoofdletters mét letterspatiëring paste
+  // niet in een derde van een telefoonscherm en liep dus buiten de kaart. Label ingekort én
+  // de spatiëring weg op mobiel — de hint eronder zegt toch al waarover het gaat.
   return (
-    <div className="rounded-2xl border border-borderc bg-paper/40 p-4 text-center">
+    <div className="min-w-0 rounded-2xl border border-borderc bg-paper/40 p-3 text-center sm:p-4">
       <p className={"text-2xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
-      <p className="mt-0.5 text-[11px] font-bold uppercase tracking-wide text-lav">{label}</p>
-      {hint && <p className="text-[10px] text-brand/40">{hint}</p>}
+      <p className="mt-0.5 break-words text-[11px] font-bold uppercase text-lav sm:tracking-wide">{label}</p>
+      {hint && <p className="break-words text-[10px] text-brand/40">{hint}</p>}
     </div>
   );
 }

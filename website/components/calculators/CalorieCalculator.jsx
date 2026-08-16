@@ -48,7 +48,7 @@ export default function CalorieCalculator() {
 
   return (
     <div className="rounded-3xl border border-borderc bg-white p-6 md:p-8">
-      <div className="grid gap-8 lg:grid-cols-[340px_1fr]">
+      <div className="grid gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Inputs */}
         <div className="space-y-5">
           <div>

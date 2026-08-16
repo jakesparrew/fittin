@@ -21,6 +21,18 @@ html {
   scroll-behavior: smooth;
 }
 
+/* Vangnet tegen horizontaal scrollen op mobiel.
+   Aanleiding (2026-08-16): meerdere schermen liepen rechts uit beeld en duwden daarbij knoppen
+   buiten het scherm — in de workout-logger raakte zo de verwijderknop onbereikbaar, terwijl hij
+   er wél stond. De echte oorzaken zijn per geval opgelost (grid-kolommen krijgen minmax(0,1fr)
+   in plaats van 1fr, want een 1fr-kolom krimpt niet onder de eigen breedte van een invoerveld).
+   Dit is dus géén doekje tegen het bloeden maar een grendel: gaat er ooit ergens opnieuw iets
+   over de rand, dan verschuift de pagina niet meer zijwaarts en blijft alles bedienbaar.
+   Bewust op body en niet op html — overflow-x op html breekt position:sticky. */
+body {
+  overflow-x: clip;
+}
+
 /* Visible keyboard-focus indicator (WCAG 2.4.7). Only shows for keyboard/AT users, not mouse clicks. */
 :focus-visible {
   outline: 2px solid var(--color-brand);
