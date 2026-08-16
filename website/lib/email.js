@@ -232,7 +232,10 @@ export async function sendPaymentRefunded({ to, name, description, amountCents }
 }
 
 // ---- Member/coach: purchase receipt (punch card, coach credits) ----
-export async function sendPurchaseReceipt({ to, name, description, amountCents, balanceLine }) {
+// `invoiceUrl` maakt dit een volwaardige SaaS-bon (owner-vraag 2026-08-16, naar het voorbeeld van
+// Stripe's "Invoice paid"-mail): de factuur is één klik vanuit de mail, niet iets dat je in je
+// account moet gaan zoeken. Het factuurnummer wordt bij die eerste open automatisch toegekend.
+export async function sendPurchaseReceipt({ to, name, description, amountCents, balanceLine, invoiceUrl }) {
   return send(
     to,
     "Bedankt voor je aankoop bij Fittin' ✅",
@@ -244,9 +247,13 @@ export async function sendPurchaseReceipt({ to, name, description, amountCents, 
         ["Bedrag", eurTxt(amountCents)],
         ...(balanceLine ? [["Saldo", esc(balanceLine)]] : []),
       ],
-      body: `<p style="font-size:14px;color:#6b6685">Je betaalbewijs kan je altijd downloaden in je account onder Betalingen.</p>`,
-      cta: { href: `${SITE}/boeken`, label: "Sessie boeken" },
-    })
+      body: invoiceUrl
+        ? `<p style="font-size:14px;color:#6b6685">Je factuur (met btw-detail) staat voor je klaar — en blijft ook altijd beschikbaar in je account onder Betalingen.</p>`
+        : `<p style="font-size:14px;color:#6b6685">Je betaalbewijs kan je altijd downloaden in je account onder Betalingen.</p>`,
+      cta: invoiceUrl ? { href: invoiceUrl, label: "Bekijk je factuur →" } : { href: `${SITE}/boeken`, label: "Sessie boeken" },
+    }),
+    undefined, undefined,
+    "purchase_receipt"
   );
 }
 

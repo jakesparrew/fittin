@@ -51,18 +51,23 @@ async function profileFromCustomer(admin, customerId) {
   return data || null;
 }
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+
 async function recordPayment(admin, { gymId, userId, amountCents, kind, description, stripeId }) {
-  if (!amountCents || amountCents <= 0) return; // skip €0 (setup/welcome)
+  if (!amountCents || amountCents <= 0) return null; // skip €0 (setup/welcome)
   let gym = gymId;
   if (!gym && userId) {
     const { data: p } = await admin.from("profiles").select("gym_id").eq("id", userId).maybeSingle();
     gym = p?.gym_id;
   }
-  if (!gym) return;
-  await admin.from("payments").upsert(
+  if (!gym) return null;
+  // Geeft het payment-id terug zodat de bevestigingsmail rechtstreeks naar de factuurpagina kan
+  // linken (/account/factuur/<id>) — zoals elke SaaS-bon dat doet.
+  const { data: row } = await admin.from("payments").upsert(
     { gym_id: gym, user_id: userId || null, amount_cents: amountCents, kind, description, stripe_id: stripeId },
     { onConflict: "stripe_id" }
-  );
+  ).select("id").maybeSingle();
+  return row?.id || null;
 }
 
 async function grantCredits(admin, userId, credits, reason, withPunchcard = false, stripeRef = null, expiresAtOverride = null) {
@@ -312,14 +317,14 @@ async function handleEvent(event, admin) {
       if (obj.metadata?.kind === "punchcard") {
         const credits = parseInt(obj.metadata.credits, 10) || 0;
         await grantCredits(admin, obj.metadata.user_id, credits, "aankoop", true, obj.id);
-        await recordPayment(admin, { userId: obj.metadata.user_id, amountCents: obj.amount_total, kind: "beurtenkaart", description: `Beurtenkaart · ${credits} sessies`, stripeId: obj.id });
+        const kaartPayId = await recordPayment(admin, { userId: obj.metadata.user_id, amountCents: obj.amount_total, kind: "beurtenkaart", description: `Beurtenkaart · ${credits} sessies`, stripeId: obj.id });
         // Receipt e-mail — a €150 purchase deserves an acknowledgment beyond the Stripe screen.
         try {
           const [{ data: m }, { data: bal }] = await Promise.all([
             admin.from("profiles").select("email, full_name").eq("id", obj.metadata.user_id).single(),
             admin.rpc("credits_balance", { p_user: obj.metadata.user_id }),
           ]);
-          if (m?.email) await sendPurchaseReceipt({ to: m.email, name: m.full_name, description: `Beurtenkaart · ${credits} sessies`, amountCents: obj.amount_total, balanceLine: Number.isInteger(bal) ? `${bal} sessies beschikbaar` : null });
+          if (m?.email) await sendPurchaseReceipt({ to: m.email, name: m.full_name, description: `Beurtenkaart · ${credits} sessies`, amountCents: obj.amount_total, balanceLine: Number.isInteger(bal) ? `${bal} sessies beschikbaar` : null, invoiceUrl: kaartPayId ? `${SITE}/account/factuur/${kaartPayId}` : null });
         } catch (e) { console.error("punchcard receipt:", e?.message); }
         // Converted → stop the "word lid" onboarding drip (Batch 2.4).
         try { const { cancelDripsForUser } = await import("@/lib/newsletter"); await cancelDripsForUser(obj.metadata.user_id); } catch (e) { console.error("cancelDrips (punchcard):", e?.message); }
@@ -333,14 +338,14 @@ async function handleEvent(event, admin) {
             { onConflict: "stripe_ref", ignoreDuplicates: true }
           );
         }
-        await recordPayment(admin, { userId: coachId, amountCents: obj.amount_total, kind: "coach_credits", description: `Coach-sessies · ${credits}`, stripeId: obj.id });
+        const coachPayId = await recordPayment(admin, { userId: coachId, amountCents: obj.amount_total, kind: "coach_credits", description: `Coach-sessies · ${credits}`, stripeId: obj.id });
         try {
           const [{ data: c }, { data: led }] = await Promise.all([
             admin.from("profiles").select("email, full_name").eq("id", coachId).single(),
             admin.from("coach_ledger").select("delta").eq("coach_id", coachId),
           ]);
           const bal = (led || []).reduce((a, r) => a + r.delta, 0);
-          if (c?.email) await sendPurchaseReceipt({ to: c.email, name: c.full_name, description: `Coach-sessies · ${credits}`, amountCents: obj.amount_total, balanceLine: `${bal} sessietegoed` });
+          if (c?.email) await sendPurchaseReceipt({ to: c.email, name: c.full_name, description: `Coach-sessies · ${credits}`, amountCents: obj.amount_total, balanceLine: `${bal} sessietegoed`, invoiceUrl: coachPayId ? `${SITE}/coach/factuur/${coachPayId}` : null });
         } catch (e) { console.error("coach-credits receipt:", e?.message); }
       } else if (obj.metadata?.kind === "event") {
         const eventId = obj.metadata.event_id;
@@ -420,7 +425,7 @@ async function handleEvent(event, admin) {
       // use the paid invoice line's period end; grantCredits falls back to +1 month.
       const periodEndSec = obj.lines?.data?.[0]?.period?.end || null;
       await grantCredits(admin, prof.id, 1, "abo", false, obj.id, periodEndSec ? new Date(periodEndSec * 1000).toISOString() : null);
-      await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
+      const aboPayId = await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
       if (obj.hosted_invoice_url) await admin.from("payments").update({ receipt_url: obj.hosted_invoice_url }).eq("stripe_id", obj.id);
       await admin.rpc("reward_pending_referral", { p_user: prof.id });
       // Welcome the new member on their first invoice; thank them each renewal.
@@ -432,6 +437,15 @@ async function handleEvent(event, admin) {
           if (m?.email) { const { sendMembershipActive } = await import("@/lib/email"); await sendMembershipActive({ to: m.email, name: m.full_name }); }
           // Converted to member → stop the "word lid" onboarding drip (Batch 2.4).
           try { const { cancelDripsForUser } = await import("@/lib/newsletter"); await cancelDripsForUser(prof.id); } catch (e) { console.error("cancelDrips (abo):", e?.message); }
+        } else {
+          // Verlenging → maandelijkse betaalbevestiging mét factuurlink, zoals elke SaaS-dienst.
+          // (Owner-vraag 2026-08-16.) De eerste maand slaan we over: die kreeg net de welkomstmail.
+          const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", prof.id).single();
+          if (m?.email) await sendPurchaseReceipt({
+            to: m.email, name: m.full_name, description: "Maandabonnement · verlenging",
+            amountCents: obj.amount_paid, balanceLine: "+1 inbegrepen sessie bijgeschreven",
+            invoiceUrl: aboPayId ? `${SITE}/account/factuur/${aboPayId}` : null,
+          });
         }
       } catch {}
       return;

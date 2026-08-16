@@ -150,10 +150,16 @@ export default async function AccountPage({ searchParams }) {
 
   // AVG-status van dit lid: heeft hij toestemming gegeven voor gezondheidsgegevens, en loopt er
   // een verwijderingsaanvraag? Bepaalt of het toestemmingsvinkje nog getoond moet worden.
-  const [healthConsent, { data: delRow }] = await Promise.all([
+  const [healthConsent, { data: delRow }, { data: subRow }] = await Promise.all([
     hasConsent(admin, user.id, "gezondheidsdata"),
     admin.from("profiles").select("deletion_requested_at").eq("id", user.id).maybeSingle(),
+    // Nieuwsbriefstatus voor de aan/uit-knop. Geen rij = nooit iets aangeraakt; dan tonen we
+    // "ingeschreven", want dat is de toestand waarin een nieuw account start.
+    profile?.email
+      ? admin.from("subscribers").select("status").eq("gym_id", profile.gym_id).eq("email", profile.email.toLowerCase()).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+  const newsletterOptIn = (subRow?.status || "active") === "active";
   // Geeft { code, personal } terug. De reservecode is permanent en voor iedereen dezelfde, dus die
   // verschijnt ALLEEN als het minten van de persoonlijke code effectief mislukte (nuki_code leeg
   // terwijl de toegangsmail al vertrok) én we in het tijdslot zitten — precies dezelfde code die
@@ -727,7 +733,7 @@ export default async function AccountPage({ searchParams }) {
 
         {/* Rechten van betrokkenen (AVG): downloaden, gezondheidsgegevens wissen, verwijdering aanvragen. */}
         <div>
-          <PrivacyControls healthConsent={healthConsent} deletionRequestedAt={delRow?.deletion_requested_at} />
+          <PrivacyControls healthConsent={healthConsent} deletionRequestedAt={delRow?.deletion_requested_at} newsletterOptIn={newsletterOptIn} />
         </div>
 
         {/* History */}
