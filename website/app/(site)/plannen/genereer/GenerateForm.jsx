@@ -42,9 +42,14 @@ export default function GenerateForm() {
           <option value="lichaamsgewicht">Enkel lichaamsgewicht</option>
         </select>
       </label>
+      {/* De placeholder vroeg eerder letterlijk om "knieklachten". Dat is gezondheidsinformatie —
+          een bijzondere categorie onder de AVG — en dit veld gaat naar een externe AI-dienst die
+          niet als verwerker in ons privacybeleid staat. We vragen er dus niet meer naar, en zeggen
+          het er ook bij; wie toch iets medisch wil laten meewegen bespreekt dat met een coach. */}
       <label className="block">
-        <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Aandachtspunten (optioneel)</span>
-        <textarea name="notes" rows={3} placeholder="bv. knieklachten, focus op rug, weinig tijd…" className={field} />
+        <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Voorkeuren (optioneel)</span>
+        <textarea name="notes" rows={3} placeholder="bv. focus op rug, liever geen springoefeningen, korte sessies…" className={field} />
+        <span className="mt-1 block text-xs text-brand/45">Geen gezondheids- of blessuregegevens invullen — bespreek die met je coach.</span>
       </label>
 
       {state?.error && <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-semibold text-red-600">{state.error}</p>}

@@ -47,15 +47,32 @@ export async function alertNewClientErrors(admin) {
     if (r.user_id) g.users.add(r.user_id);
   }
 
+  // Plafond op het aantal mails per cronbeurt. Zonder dit kon één beurt 200 losse alarmen sturen:
+  // de groepering is (melding | pagina), dus een bug die de melding varieert — of iemand die de
+  // publieke /api/log-error volspamt met unieke teksten — maakt evenveel groepen als rijen.
+  // Die mails vertrekken uit dezelfde Resend-account als de DEURCODES. Een dichtgeslibde of
+  // geblokkeerde afzender betekent dan dat leden niet meer binnen raken; het alarm zou zo een
+  // grotere storing veroorzaken dan de fout die het meldt.
+  //
+  // De rest gaat niet verloren: die staat gewoon op /beheer/meldingen, en de laatste mail vertelt
+  // hoeveel er nog wachten.
+  const MAX_ALARMEN = 5;
+  const alle = [...groups.values()].sort((a, b) => b.count - a.count); // luidste fout eerst
+  const sturen = alle.slice(0, MAX_ALARMEN);
+  const rest = alle.length - sturen.length;
+
   let alerted = 0;
-  for (const g of groups.values()) {
+  for (const [i, g] of sturen.entries()) {
     const wie = [...g.users].map((id) => nameById[id]).filter(Boolean);
+    const staart = rest > 0 && i === sturen.length - 1
+      ? `\n\n(+ ${rest} andere nieuwe foutgroep${rest === 1 ? "" : "en"} deze ronde — zie /beheer/meldingen)`
+      : "";
     for (const to of RECIPIENTS) {
       await sendErrorAlert({
         to,
         message: g.message,
         path: g.path,
-        stack: g.stack,
+        stack: (g.stack || "") + staart,
         count: g.count,
         userNames: wie,
         firstSeen: g.first,
