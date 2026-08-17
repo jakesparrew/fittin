@@ -10,6 +10,10 @@
       "schedule": "*/5 * * * *"
     },
     {
+      "path": "/api/queue/process",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/weekreport",
       "schedule": "0 6 * * 1"
     }
