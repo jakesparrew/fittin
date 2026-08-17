@@ -14,6 +14,15 @@ dist/
 *.log
 npm-debug.log*
 
+# persoonsgegevens — nooit in de repo
+# .blast-sent.json houdt bij naar welke leden een mailronde al vertrok en bevat dus honderden
+# echte e-mailadressen. Het stond nooit in de geschiedenis, maar één `git add -A` volstond om het
+# alsnog naar GitHub te duwen. Verzendstatus hoort in de databank, niet naast de code.
+website/scripts/.blast-sent.json
+website/scripts/*-ids.json
+website/live-audit/
+website/scratch-shots/
+
 # os / editor
 .DS_Store
 Thumbs.db

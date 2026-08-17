@@ -36,10 +36,14 @@ export async function signupEvent(formData) {
   const { data: existing } = await supabase.from("event_signups").select("id, paid").eq("event_id", eventId).eq("user_id", user.id).maybeSingle();
   if (existing?.paid) return { error: "Je bent al ingeschreven." };
 
-  // Free event → instant signup.
+  // Free event → instant signup, via join_free_event. Die functie doet bestaan, capaciteit en
+  // inschrijving in één transactie: de losse controles hierboven konden elkaar kruisen waardoor
+  // twee mensen tegelijk de laatste plaats namen. Ze is ook de enige weg die nog overblijft —
+  // rechtstreeks in event_signups schrijven is ingetrokken (migratie 0132), want daarmee kon een
+  // lid zichzelf op een BETALEND event zetten met paid=true.
   if (!ev.price_cents) {
-    if (!existing) await supabase.from("event_signups").insert({ gym_id: profile.gym_id, event_id: eventId, user_id: user.id, paid: true });
-    else await supabase.from("event_signups").update({ paid: true }).eq("id", existing.id);
+    const { error: joinErr } = await supabase.rpc("join_free_event", { p_event: eventId });
+    if (joinErr) return { error: joinErr.message };
     if (profile.email) await sendEventSignup({ to: profile.email, name: profile.full_name, title: ev.title, startsAt: ev.starts_at });
     revalidatePath("/community");
     return { ok: true, free: true };
