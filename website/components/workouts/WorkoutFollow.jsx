@@ -10,10 +10,28 @@ const SECTIONS = ["Warming-up", "Hoofdoefening", "Accessoire", "Finisher"];
 const firstInt = (s, d = 10) => { const m = String(s || "").match(/\d+/); return m ? parseInt(m[0], 10) : d; };
 const mmss = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-export default function WorkoutFollow({ workout, lastByPe = {}, doneToday = {}, isLoggedIn }) {
+export default function WorkoutFollow({ workout, signupHref = "/login?mode=signup" }) {
   const exercises = workout.exercises || [];
-  const [done, setDone] = useState(() => ({ ...doneToday }));
+  // Persoonlijke context komt hier los binnen (zie /api/me/workout-context): de pagina zelf is
+  // statisch en voor iedereen identiek, anders zou ze per bezoeker gerenderd moeten worden.
+  // `ctx === null` = nog niet geladen — dan tonen we geen van beide uitersten, want "maak een
+  // account" laten flitsen bij wie al ingelogd is, is erger dan even niets tonen.
+  const [ctx, setCtx] = useState(null);
+  const [done, setDone] = useState({});
   const [rest, setRest] = useState(null); // {sec, total}
+
+  useEffect(() => {
+    let levend = true;
+    const peIds = (workout.exercises || []).map((e) => e.id).slice(0, 60);
+    fetch(`/api/me/workout-context?pe=${encodeURIComponent(peIds.join(","))}`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((d) => { if (!levend) return; setCtx(d); setDone({ ...(d.doneToday || {}) }); })
+      .catch(() => { if (levend) setCtx({ ingelogd: false }); });
+    return () => { levend = false; };
+  }, [workout.id]);
+
+  const isLoggedIn = ctx?.ingelogd === true;
+  const lastByPe = ctx?.lastByPe || {};
 
   const total = exercises.length;
   const doneCount = exercises.filter((e) => done[e.id]).length;
@@ -28,6 +46,14 @@ export default function WorkoutFollow({ workout, lastByPe = {}, doneToday = {}, 
 
   return (
     <div className="mx-auto max-w-2xl px-5 pb-28 pt-6">
+      {ctx && !isLoggedIn && (
+        <div className="mb-5 rounded-3xl border-2 border-accent/40 bg-accent/5 p-5">
+          <p className="font-bold text-brand">Log in om je sets bij te houden 💪</p>
+          <p className="mt-1 text-sm text-brand/60">Je kan de workout vrij bekijken. Maak een gratis account om je gewichten, PR&rsquo;s en voortgang te loggen.</p>
+          <Link href={signupHref} className="mt-3 inline-block rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Maak gratis account</Link>
+        </div>
+      )}
+
       {/* sticky progress */}
       <div className="sticky top-16 z-20 -mx-5 mb-5 border-y border-borderc bg-paper/90 px-5 py-3 backdrop-blur">
         <div className="flex items-center justify-between text-sm font-bold text-brand">
@@ -49,7 +75,10 @@ export default function WorkoutFollow({ workout, lastByPe = {}, doneToday = {}, 
           <div className="space-y-3">
             {g.items.map((e) => (
               <ExerciseCard
-                key={e.id}
+                /* De set-tabel wordt één keer opgebouwd uit `last`. Die komt pas ná de eerste
+                   render binnen, dus krijgt de kaart een andere sleutel zodra er een vorige
+                   sessie is — zo hermonteert precies die kaart mét zijn voorgevulde gewichten. */
+                key={e.id + (lastByPe[e.id] ? "-v" : "")}
                 pe={e}
                 last={lastByPe[e.id]}
                 done={!!done[e.id]}
@@ -69,7 +98,7 @@ export default function WorkoutFollow({ workout, lastByPe = {}, doneToday = {}, 
         ) : (
           <p className="text-sm text-brand/60">Vink elke oefening af terwijl je traint — bovenaan zie je je voortgang.</p>
         )}
-        {isLoggedIn ? (
+        {isLoggedIn && (
           <form
             action={async (fd) => { const r = await saveWorkoutToPlans(fd); toast(r?.error ? "error" : "success", r?.error || r?.message || "Opgeslagen ✓"); }}
             className="mt-4"
@@ -77,8 +106,9 @@ export default function WorkoutFollow({ workout, lastByPe = {}, doneToday = {}, 
             <input type="hidden" name="programId" value={workout.id} />
             <button className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-accent">＋ Bewaar in mijn plannen</button>
           </form>
-        ) : (
-          <Link href="/login?mode=signup" className="mt-4 inline-block rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Maak account om te loggen</Link>
+        )}
+        {ctx && !isLoggedIn && (
+          <Link href={signupHref} className="mt-4 inline-block rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Maak account om te loggen</Link>
         )}
       </div>
 

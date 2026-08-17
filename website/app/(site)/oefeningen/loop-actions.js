@@ -93,7 +93,7 @@ export async function addExerciseToPlan(formData) {
 // logs leeft. Een losse log hangt aan een verborgen "Losse oefeningen"-schema, zodat hij in
 // dezelfde tabel belandt en gewoon meetelt in volume, PR's en streak.
 export async function logLooseSets(formData) {
-  const { supabase, user, profile, error } = await ikBen();
+  const { user, profile, error } = await ikBen();
   if (error) return { error };
   const exerciseId = String(formData.get("exerciseId") || "");
   let sets;
@@ -203,8 +203,13 @@ export async function setTrainingVisibility(formData) {
   const { supabase, user, error } = await ikBen();
   if (error) return { error };
   const aan = String(formData.get("aan") || "") === "1";
-  const { error: e } = await supabase.from("profiles").update({ training_visible_to_buddies: aan }).eq("id", user.id);
+  // `.select()` erbij: een UPDATE waarvoor het kolomrecht of de policy ontbreekt geeft via
+  // PostgREST geen foutmelding maar nul rijen. Zonder deze controle meldde de schakelaar
+  // "aangezet ✓" terwijl er niets veranderde — en bleef /api/me/duo structureel leeg.
+  const { data: rijen, error: e } = await supabase
+    .from("profiles").update({ training_visible_to_buddies: aan }).eq("id", user.id).select("id");
   if (e) return { error: e.message };
+  if (!rijen?.length) return { error: "Instelling kon niet bewaard worden. Laat dit weten via Hulp." };
   revalidatePath("/account");
   return { ok: true, message: aan ? "Je buddies zien nu dat je meetraint ✓" : "Je traint weer onzichtbaar ✓" };
 }

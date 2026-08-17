@@ -17,6 +17,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "resend": "^6.12.4",
+    "sharp": "^0.34.5",
     "stripe": "^22.2.0"
   },
   "devDependencies": {
@@ -28,7 +29,6 @@
     "globals": "^17.9.0",
     "pg": "^8.21.0",
     "postcss": "^8",
-    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "vitest": "^2.1.9"
   }

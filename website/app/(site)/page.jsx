@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import Reveal from "@/components/anim/Reveal";
 import { getSessionProfile, roleHome } from "@/lib/auth";
+import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 import { healthClubLd, jsonLdScript } from "@/lib/seo";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
@@ -59,6 +60,11 @@ export default async function Home() {
   // Al ingelogd? Sla de marketing-homepage over en ga meteen naar je dashboard.
   const { user, profile } = await getSessionProfile();
   if (user) redirect(roleHome(profile?.role));
+  // Het meervoud "onze coaches" moet volgen wat er publiek staat — /coaches en /personal-training
+  // doen dat al. Beide queries zitten in de Data Cache, dus dit kost geen extra DB-tik per bezoek.
+  const gym = await getGymCached();
+  const coachCount = gym?.id ? (await getPublicCoachesCached(gym.id)).length : 0;
+  const eenCoach = coachCount === 1;
   return (
     <main className="overflow-hidden">
       <script {...jsonLdScript(jsonLd)} />
@@ -281,18 +287,21 @@ export default async function Home() {
             <h2 className="mt-3 text-4xl font-black leading-tight md:text-5xl">
               Een coach die jou écht vooruit helpt
             </h2>
+            {/* "Ervaren", niet "gecertificeerd": een diploma-claim is controleerbaar en we hebben geen
+                certificaten om te tonen. Alleen beloven wat we kunnen waarmaken. */}
             <p className="mt-5 max-w-lg leading-relaxed text-brand/70">
-              Haal het beste uit jezelf met een duwtje in de rug. Onze gecertificeerde coaches werken
-              datagedreven: een schema op maat, opvolging en consistente progressie — één-op-één, voor
-              koppels of met vrienden.
+              Haal het beste uit jezelf met een duwtje in de rug.{" "}
+              {eenCoach ? "Onze ervaren coach werkt" : "Onze ervaren coaches werken"} datagedreven: een
+              schema op maat, opvolging en consistente progressie — één-op-één, voor koppels of met
+              vrienden.
             </p>
             <Link href="/coaches" className="mt-8 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">
-              Ontmoet onze coaches
+              {eenCoach ? "Ontmoet je coach" : "Ontmoet onze coaches"}
             </Link>
           </Reveal>
           <div className="grid gap-4 sm:grid-cols-2">
             {[
-              ["Personal coaching", "Gecertificeerde coaches die doelgericht te werk gaan."],
+              ["Personal coaching", eenCoach ? "Een ervaren coach die doelgericht te werk gaat." : "Ervaren coaches die doelgericht te werk gaan."],
               ["Training op maat", "Schema's op maat met data-opname tijdens je sessie."],
               ["Voor koppels & vrienden", "Train samen — één-op-één, 1-op-2 of 1-op-3."],
               ["Gratis intake", "Je eerste sessie is een gratis intake + proeftraining."],

@@ -7,6 +7,7 @@ import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendBookingConfirmation } from "@/lib/email";
 import { sendBookingInvites } from "@/lib/booking-invites";
 import { validateDiscount, recordRedemption } from "@/lib/discounts";
+import { clearWaitlistEntry } from "@/lib/waitlist";
 
 // Search gym members to invite to a session (name + id only — no contact details exposed).
 // Uses an RLS-safe security-definer RPC (search_members) scoped to the caller's own gym,
@@ -100,6 +101,13 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     .eq("id", bookingId)
     .single();
 
+  // Wie op de wachtlijst stond voor dit uur en het nu zelf boekt, mag daarna geen "Er is een plek
+  // vrij 🎉" meer krijgen voor zijn eigen sessie. Zijn eigen wachtrij-rij is nu zinloos, dus weg.
+  // Best-effort: clearWaitlistEntry slikt zijn eigen fouten — een boeking mag hier nooit op stuklopen.
+  if (booking?.gym_id && booking?.starts_at) {
+    await clearWaitlistEntry(createAdminClient(), { gymId: booking.gym_id, userId: user.id, slotInstant: booking.starts_at });
+  }
+
   // Persist the invitees now, but DON'T e-mail them yet. Invites are sent only once the booking is
   // CONFIRMED — immediately below for free/credit bookings, or from the Stripe webhook after a paid
   // booking's payment succeeds. This way an abandoned (unpaid) checkout never e-mails the invitees.
@@ -154,7 +162,10 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
       try { await sendBookingInvites(admin, booking, user.user_metadata?.full_name); } catch {}
       // A punch-card booking's confirmation doubles as the balance receipt.
       if (booking.payment_source === "credit") {
-        try { const { data: bal } = await admin.rpc("credits_balance", { p_user: user.id }); if (Number.isInteger(bal)) creditBalance = bal; } catch {}
+        // isFinite, niet isInteger: een 90-minutensessie kost 1,5 tegoed, dus halve saldi bestaan.
+        // De integer-test liet die leden zonder saldoregel in hun bevestiging achter. De null-check
+        // blijft nodig omdat Number(null) 0 is — een mislukte RPC mag geen "0 sessies" beloven.
+        try { const { data: bal } = await admin.rpc("credits_balance", { p_user: user.id }); if (bal != null && Number.isFinite(Number(bal))) creditBalance = Number(bal); } catch {}
       }
     }
     await sendBookingConfirmation({
@@ -167,6 +178,7 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
       free: true,
       paymentSource: booking?.payment_source,
       creditBalance,
+      bookingId: booking?.id, // → agenda-item als bijlage
     });
     // bookingId gaat mee zodat het bevestigingsscherm meteen een agenda-item kan aanbieden.
     return { ok: true, free: true, bookingId: booking?.id || null };
@@ -197,6 +209,7 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
         endsAt: booking.ends_at,
         persons: booking.persons || 1,
         free: true,
+        bookingId: booking.id, // → agenda-item als bijlage
       });
     } catch {}
     try { await sendBookingInvites(admin, booking, user.user_metadata?.full_name); } catch {}

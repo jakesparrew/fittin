@@ -7,7 +7,9 @@ export const metadata = {
 };
 
 const entrySteps = [
-  ["Boek je sessie", "Reserveer een uur in de app. Je betaalt meteen — daarna staat de zaal volledig voor jou (en wie je meebrengt)."],
+  // "Je betaalt meteen" klopte niet voor het gratis eerste uur, voor wie met sessietegoed boekt en
+  // voor de sessie die in het abo zit: die drie bevestigen zonder betaalscherm.
+  ["Boek je sessie", "Reserveer een uur in de app. Heb je nog een gratis eerste uur, sessietegoed of je abo-sessie staan? Dan is je boeking meteen rond; anders reken je direct af. Daarna staat de zaal volledig voor jou (en wie je meebrengt)."],
   ["Ontvang je toegangscode", "± 5 minuten voor je sessie start krijg je een e-mail met je persoonlijke toegangscode, het adres en een knop ‘Navigeer naar de gym’."],
   ["Kom binnen", "Toets de code in op het paneel naast de voordeur, of open de deur met de knop in je account. De toegang werkt enkel tijdens jouw tijdslot."],
   ["Sluit goed af", "Trek de deur achter je dicht — zeker als je als laatste vertrekt. De zaal is privé, dus laat niemand binnen die niet bij jouw boeking hoort."],

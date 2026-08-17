@@ -49,8 +49,10 @@ export async function POST(req) {
     // Named funnel event (optional) — whitelisted so the beacon can't be abused as arbitrary storage.
     // Wie hier niet in staat wordt stil weggegooid: elk nieuw event moet dus in deze lijst bijkomen,
     // anders meet de trechter niets terwijl de knop wél afvuurt.
+    // home_cta_click stond hier jarenlang zonder dat één knop hem afvuurde: de lijst beloofde een
+    // trechtertop die niemand mat. Weg tot de homepage hem écht verstuurt — een whitelist hoort te
+    // beschrijven wat er binnenkomt, niet wat er ooit bedoeld was.
     const EVENTS = new Set([
-      "home_cta_click",       // klik op een hero-/CTA-knop op de homepage (top van de trechter)
       "booking_slot_chosen",  // moment gekozen in /boeken
       "checkout_started",     // poging tot betalen
       "booking_completed",    // boeking effectief bevestigd — de noemer onder checkout_started

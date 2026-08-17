@@ -4,8 +4,10 @@ import { subscribeAction } from "@/app/(site)/newsletter-actions";
 
 export default function NewsletterSignup() {
   const [state, action, pending] = useActionState(subscribeAction, null);
+  // Sinds de dubbele opt-in is "ok" niet meer hetzelfde als "ingeschreven": de bevestigingsmail is
+  // vertrokken. De actie levert de exacte zin, zodat hier niets beloofd wordt wat nog moet gebeuren.
   if (state?.ok) {
-    return <p className="text-sm font-semibold text-accent">Je bent ingeschreven — welkom bij Fittin&rsquo;! 🎉</p>;
+    return <p className="text-sm font-semibold text-accent">{state.message || "Check je mailbox en bevestig je inschrijving."}</p>;
   }
   return (
     <div>

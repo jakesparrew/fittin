@@ -103,14 +103,23 @@ export default async function Lidmaatschap() {
     <main className="bg-paper">
       <div className="mx-auto max-w-4xl px-5 py-16">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Sneller & voordeliger</p>
-        <h1 className="mt-2 text-3xl font-black md:text-4xl">Sessies & abonnement</h1>
+        {/* Nav, footer en deze titel noemden dezelfde pagina drie keer anders ("Prijzen",
+            "Lidmaatschap", "Sessies & abonnement"). Eén naam: Prijzen. */}
+        <h1 className="mt-2 text-3xl font-black md:text-4xl">Prijzen</h1>
         <p className="mt-3 text-brand/70">
           {user ? (
             <>Je saldo: <span className="font-black text-accentdark">{credits} sessies</span>.{isMember && " Je bent member — je boekt aan het voordeeltarief."}</>
           ) : (
             <>Koop sessies in bulk of word member voor het voordeeltarief. <Link href="/login?mode=signup&next=/lidmaatschap" className="font-bold text-accentdark hover:underline">Maak eerst een gratis account</Link>.</>
           )}
-          {welcomeFree && <> <span className="font-bold text-accentdark">Je eerste uur is sowieso gratis.</span></>}
+          {/* Uitgelogd weten we niet wie er kijkt: een bestaand lid dat zijn welkomstuur al opgebruikt
+              heeft, zag hier "sowieso gratis". Voeg dan dezelfde nuance toe als /boeken; enkel voor
+              wie ingelogd én effectief eligible is, mag het zonder voorbehoud. */}
+          {welcomeFree && (
+            <> <span className="font-bold text-accentdark">
+              {user ? "Je eerste uur is sowieso gratis." : "Je eerste uur is gratis — bij je eerste boeking."}
+            </span></>
+          )}
         </p>
 
         {isMember && (

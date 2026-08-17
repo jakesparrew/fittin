@@ -13,6 +13,11 @@ import next from "@next/eslint-plugin-next";
 // hier op "error" hoort een échte productiefout te kunnen zijn — stijlruis wordt genegeerd, en
 // een genegeerde linter beschermt niemand (zelfde les als bij de foutlogs-pagina).
 export default [
+  // scripts/archief/ = eenmalige diagnose-/herstelscripts die ooit één keer gedraaid hebben. Ze
+  // verwijzen naar kolommen en functies die intussen kunnen zijn hernoemd. Omdat `eslint .` de
+  // prebuild-poort is, zou zo'n verlopen script de deploy tegenhouden voor iets wat niemand nog
+  // draait. Bewaard (ze documenteren wat er ooit gebeurde), maar buiten de poort.
+  { ignores: ["scripts/archief/**"] },
   {
     files: ["app/**/*.{js,jsx}", "components/**/*.{js,jsx}", "lib/**/*.{js,jsx}", "scripts/**/*.mjs"],
     plugins: { react, "react-hooks": reactHooks, "@next/next": next },

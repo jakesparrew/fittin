@@ -1,7 +1,26 @@
 // Renders the best available exercise demo: looping MP4/WebM > GIF/image > still image > a clean
 // branded placeholder. Plain component (no client JS needed — autoplay loop is native HTML).
 "use client";
+import Image from "next/image";
 import FrameAnimator from "./FrameAnimator";
+
+// next/image weigert (met een runtime-fout) elke host die niet in next.config.mjs staat. De
+// oefeningstills komen uit onze eigen opslag en van jsDelivr, maar een coach kan in de editor
+// perfect een willekeurige URL plakken. Zo'n URL mag de pagina niet slopen: onbekende host →
+// gewone <img>. Kleiner voordeel, maar het blijft werken.
+const OPTIMISABLE = /(^|\.)supabase\.co$/i;
+function canOptimise(src) {
+  if (typeof src !== "string" || !src) return false;
+  // SVG staat bewust uit in next.config (dangerouslyAllowSVG): de optimizer geeft er een 400 op
+  // terug, wat een gebroken beeld oplevert waar de kale <img> het gewoon toont.
+  if (/\.svgz?(\?|#|$)/i.test(src)) return false;
+  if (src.startsWith("/")) return true; // eigen /public-bestanden
+  try {
+    const { hostname, protocol } = new URL(src);
+    if (protocol !== "https:") return false;
+    return hostname === "cdn.jsdelivr.net" || OPTIMISABLE.test(hostname);
+  } catch { return false; }
+}
 
 export default function ExerciseMedia({ exercise, className = "", rounded = "rounded-2xl", thumb = false }) {
   const { animation_url, image_url, frames, name } = exercise || {};
@@ -32,10 +51,18 @@ export default function ExerciseMedia({ exercise, className = "", rounded = "rou
   }
   const still = (isVideo ? null : animation_url) || image_url || (frames && frames[0]); // GIF/poster/first frame
   if (still) {
+    // Een rasterthumb is hooguit een paar honderd pixels breed; de bron is een origineel van tientallen
+    // KB's. Met `sizes` haalt de browser de variant die bij het vakje past in plaats van het origineel.
+    const sizes = thumb ? "(max-width: 640px) 33vw, 200px" : "(max-width: 768px) 100vw, 640px";
+    const hide = (e) => { e.currentTarget.style.visibility = "hidden"; }; // dode media verbergen i.p.v. een gebroken icoon
     return (
       <div className={base}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={still} alt={name || "Oefening"} loading="lazy" onError={(e) => { e.currentTarget.style.visibility = "hidden"; }} className="h-full w-full object-cover" />
+        {canOptimise(still) ? (
+          <Image src={still} alt={name || "Oefening"} fill sizes={sizes} loading="lazy" onError={hide} className="object-cover" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={still} alt={name || "Oefening"} loading="lazy" decoding="async" onError={hide} className="h-full w-full object-cover" />
+        )}
       </div>
     );
   }

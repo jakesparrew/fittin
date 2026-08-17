@@ -7,7 +7,9 @@ export default function Footer() {
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-3">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-white.png" alt="Fittin'" width={170} height={45} className="h-10 w-auto" />
+          {/* Onderaan de pagina: laat de browser dit logo pas ophalen als het in beeld komt, zodat
+              het niet meedingt met de bandbreedte van wat de bezoeker meteen ziet. */}
+          <img src="/logo-white.png" alt="Fittin'" width={170} height={45} loading="lazy" decoding="async" className="h-10 w-auto" />
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-lav">
             Privé fitness &amp; personal training in Gent. Train alleen, met vrienden of met je
             coach — de zaal is van jou.
@@ -25,7 +27,9 @@ export default function Footer() {
             <li><Link href="/degym" className="transition hover:text-white">De gym</Link></li>
             <li><Link href="/personal-training" className="transition hover:text-white">Personal training</Link></li>
             <li><Link href="/coaches" className="transition hover:text-white">Coaches</Link></li>
-            <li><Link href="/lidmaatschap" className="transition hover:text-white">Lidmaatschap</Link></li>
+            {/* Dezelfde pagina heette in de nav "Prijzen" en hier "Lidmaatschap" — dat laatste botst
+                bovendien met de hoofdboodschap "geen lidgeld". Eén naam, de URL blijft. */}
+            <li><Link href="/lidmaatschap" className="transition hover:text-white">Prijzen</Link></li>
             <li><Link href="/boeken" className="transition hover:text-white">Online boeken</Link></li>
             <li><Link href="/workouts" className="transition hover:text-white">Workouts</Link></li>
             <li><Link href="/huisregels" className="transition hover:text-white">Toegang &amp; huisregels</Link></li>

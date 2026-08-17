@@ -1,3 +1,7 @@
+// sharp staat bewust bij `dependencies` en niet bij `devDependencies`: hij wordt hier op
+// moduleniveau geïmporteerd en draait dus in productie, bij elke event-beelduplaod. Als
+// devDependency zou een build met `npm ci --omit=dev` slagen en pas bij de eerste upload
+// falen — stil, want het is een server-actie zonder eigen foutscherm.
 import sharp from "sharp";
 import { createAdminClient } from "@/lib/supabase/admin";
 

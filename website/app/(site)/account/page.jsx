@@ -5,7 +5,7 @@ import { isSettled } from "@/lib/booking-status";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { payCoachRequest, respondJoinRequest, logBodyMetrics, setLeaderboardOptIn, clientRequestCoach } from "./actions";
+import { payCoachRequest, respondJoinRequest, setLeaderboardOptIn } from "./actions";
 import { respondCoachLink } from "@/app/coach/actions";
 import WeightChart from "@/components/WeightChart";
 import ActionForm from "@/components/ui/ActionForm";
@@ -283,15 +283,16 @@ export default async function AccountPage({ searchParams }) {
           </div>
         )}
         {pendingPay.length > 0 && <PendingPaymentBanner items={pendingPay} />}
-        {/* Wie zijn Stripe-betaling afbreekt, landt hier (cancel_url). De aftelbanner hierboven doet
-            het werk; deze regel zegt alleen wát er net gebeurde — anders is de terugkeer stil.
-            Zonder afgebroken betaling: onzichtbaar. */}
+        {/* Wie zijn Stripe-betaling afbreekt, landt hier (cancel_url) — sinds kort niet alleen bij een
+            boeking, maar ook bij een beurtenkaart of abonnement, want /lidmaatschap leest geen
+            searchParams en zweeg dus volledig. De tekst mag daarom geen "je uur" veronderstellen
+            tenzij er écht een reservering wacht. Zonder afgebroken betaling: onzichtbaar. */}
         {sp.betaling === "afgebroken" && (
           <p className="mb-6 rounded-2xl border border-borderc bg-white p-4 text-sm text-brand/70">
             {pendingPay.length > 0 ? (
               <>Je betaling is afgebroken — er is niets aangerekend. Je uur blijft nog even gereserveerd; reken hierboven af om het vast te zetten.</>
             ) : (
-              <>Je betaling is afgebroken — er is niets aangerekend en je uur is weer vrijgegeven. <Link href="/boeken" className="font-bold text-accentdark hover:underline">Kies gerust opnieuw een moment →</Link></>
+              <>Je betaling is afgebroken — er is niets aangerekend. <Link href="/boeken" className="font-bold text-accentdark hover:underline">Boek een sessie →</Link> of <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">bekijk de prijzen →</Link></>
             )}
           </p>
         )}
@@ -342,7 +343,11 @@ export default async function AccountPage({ searchParams }) {
             {membership ? (
               <div className="rounded-2xl bg-accent/15 p-4">
                 <p className="text-sm font-black text-accent">Je bent member ✓</p>
-                <p className="mt-0.5 text-xs text-lav">Voordeeltarief + voorrang bij piekuren</p>
+                {/* "Voorrang bij piekuren" bestond nergens in de code: create_booking, de wachtlijst
+                    en het rooster kennen geen verschil tussen member en niet-member. De boekhorizon
+                    in components/booking/BookingClient.jsx is het enige abo-voordeel dat écht bestaat
+                    naast het tarief — zelfde bewoording als /lidmaatschap. */}
+                <p className="mt-0.5 text-xs text-lav">Voordeeltarief + boek tot 8 weken vooruit</p>
               </div>
             ) : (
               <Link href="/lidmaatschap" className="rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
@@ -498,7 +503,9 @@ export default async function AccountPage({ searchParams }) {
                 overal hetzelfde bedrag ziet. Vanaf 2 sessies al — dit moment (net betaald) is het meest ontvankelijk. */}
             {!membership && !aboPastDue && nudgeSessions >= 2 && (
               <p className="mt-2 text-sm text-brand/70">
-                Dat waren al {nudgeSessions} zelfbetaalde sessies in 60 dagen. Met het Member-abonnement (€ 12/sessie + elke maand 1 gratis) was dat ≈ € {nudgeSaving} voordeel.{" "}
+                {/* "gratis" is het verkeerde woord: die maandsessie is net wat je met de € 12 koopt.
+                    /lidmaatschap noemt ze "inbegrepen" — hou dat hier gelijk. */}
+                Dat waren al {nudgeSessions} zelfbetaalde sessies in 60 dagen. Met het Member-abonnement (€ 12/sessie + elke maand 1 sessie inbegrepen) was dat ≈ € {nudgeSaving} voordeel.{" "}
                 <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Bekijk het abonnement →</Link>
               </p>
             )}
@@ -543,7 +550,7 @@ export default async function AccountPage({ searchParams }) {
             <p className="font-black text-brand">💡 Jij traint vaak — het abonnement is voor jou voordeliger</p>
             <p className="mt-1 text-sm text-brand/70">
               Je trainde <b>{nudgeSessions}×</b> in de laatste 60 dagen. Met het Member-abonnement (€ 12/mnd) betaal je <b>€ 12 per sessie</b> én
-              krijg je <b>elke maand 1 sessie gratis</b> — voor jou was dat ≈ <b>€ {nudgeSaving} voordeel</b> geweest.
+              zit er <b>elke maand 1 sessie inbegrepen</b> — voor jou was dat ≈ <b>€ {nudgeSaving} voordeel</b> geweest.
             </p>
             <Link href="/lidmaatschap" className="mt-3 inline-block rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">Word member →</Link>
           </div>
@@ -827,13 +834,5 @@ function Stat({ label, value, accent, hint }) {
       <p className={"mt-1 text-xl font-black sm:mt-2 sm:text-2xl " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
       {hint && <p className="mt-1 break-words text-[10px] font-semibold text-amber-600 sm:text-xs">{hint}</p>}
     </div>
-  );
-}
-function Lbl({ t, children }) {
-  return (
-    <label className="block">
-      <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">{t}</span>
-      {children}
-    </label>
   );
 }

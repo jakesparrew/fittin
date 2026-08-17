@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingConfirmation, sendEventSignup, sendMembershipPaymentFailed, sendMembershipCancelled, sendPaymentRefunded, sendPurchaseReceipt } from "@/lib/email";
 import { sendBookingInvites } from "@/lib/booking-invites";
 import { recordRedemption } from "@/lib/discounts";
+import { sess } from "@/lib/format"; // halve beurten (1,5) in Vlaamse notatie op de bon
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -168,6 +169,19 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
   // Best-effort confirmation mail: never let an email hiccup roll back a successful payment.
   try {
     const { data: profile } = await admin.from("profiles").select("email, full_name").eq("id", booking.user_id).single();
+    // Dezelfde bevestigingsmail, dezelfde argumenten: /boeken geeft paymentSource én creditBalance
+    // mee, deze aanroeper deed dat niet. Daardoor kon de mail hier nooit "Betaald met je
+    // beurtenkaart (saldo: …)" tonen, ook niet als de boeking wél op tegoed liep. Vandaag maakt de
+    // create_booking-RPC tegoedboekingen meteen betaald (dus buiten Stripe om), maar de twee
+    // aanroepers hoorden hoe dan ook identiek te zijn — anders hangt de inhoud van de mail af van
+    // welk pad de betaling toevallig nam.
+    let creditBalance = null;
+    if (booking.payment_source === "credit" && booking.user_id) {
+      try {
+        const { data: bal } = await admin.rpc("credits_balance", { p_user: booking.user_id });
+        if (bal != null && Number.isFinite(Number(bal))) creditBalance = Number(bal);
+      } catch (e) { console.error("credits_balance for confirmation:", e?.message); }
+    }
     await sendBookingConfirmation({
       to: profile?.email,
       name: profile?.full_name,
@@ -176,7 +190,10 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
       endsAt: booking.ends_at,
       persons: booking.persons,
       free: false,
+      paymentSource: booking.payment_source,
+      creditBalance,
       nudgeCount,
+      bookingId: booking.id, // → agenda-item als bijlage
     });
   } catch (e) {
     console.error("booking confirmation mail failed (payment already recorded):", e?.message);
@@ -324,7 +341,12 @@ async function handleEvent(event, admin) {
             admin.from("profiles").select("email, full_name").eq("id", obj.metadata.user_id).single(),
             admin.rpc("credits_balance", { p_user: obj.metadata.user_id }),
           ]);
-          if (m?.email) await sendPurchaseReceipt({ to: m.email, name: m.full_name, description: `Beurtenkaart · ${credits} sessies`, amountCents: obj.amount_total, balanceLine: Number.isInteger(bal) ? `${bal} sessies beschikbaar` : null, invoiceUrl: kaartPayId ? `${SITE}/account/factuur/${kaartPayId}` : null });
+          // Zelfde toets als bij de bevestigingsmail hierboven: credits_balance is numeric en komt
+          // als string binnen, en een halve beurt (1,5 na een sessie van 90 min) is een geldig saldo.
+          // Number.isInteger op de ruwe waarde was dus altijd false → de bon van een kaart van € 150
+          // vermeldde zwijgend geen saldo. De null-check blijft nodig: Number(null) is 0.
+          const balLine = bal != null && Number.isFinite(Number(bal)) ? `${sess(Number(bal))} sessies beschikbaar` : null;
+          if (m?.email) await sendPurchaseReceipt({ to: m.email, name: m.full_name, description: `Beurtenkaart · ${credits} sessies`, amountCents: obj.amount_total, balanceLine: balLine, invoiceUrl: kaartPayId ? `${SITE}/account/factuur/${kaartPayId}` : null });
         } catch (e) { console.error("punchcard receipt:", e?.message); }
         // Converted → stop the "word lid" onboarding drip (Batch 2.4).
         try { const { cancelDripsForUser } = await import("@/lib/newsletter"); await cancelDripsForUser(obj.metadata.user_id); } catch (e) { console.error("cancelDrips (punchcard):", e?.message); }
@@ -424,14 +446,29 @@ async function handleEvent(event, admin) {
       // The included session stays valid until the NEXT renewal (owner decision 2026-07-29):
       // use the paid invoice line's period end; grantCredits falls back to +1 month.
       const periodEndSec = obj.lines?.data?.[0]?.period?.end || null;
-      await grantCredits(admin, prof.id, 1, "abo", false, obj.id, periodEndSec ? new Date(periodEndSec * 1000).toISOString() : null);
+      // Hoeveel sessies het abo bevat staat in het pakket, niet in deze code. /lidmaatschap toont
+      // "X sessie(s) inbegrepen" uit packages.credits; zet een beheerder dat op 2, dan beloofde de
+      // site 2 en schreef deze webhook er 1 bij. Eén bron van waarheid dus. Valt terug op 1 als het
+      // pakket ontbreekt — liever de historische waarde dan een lid zonder inbegrepen sessie.
+      let aboCredits = 1;
+      try {
+        const { data: pkg } = await admin.from("packages").select("credits")
+          .eq("gym_id", prof.gym_id).eq("kind", "abonnement").eq("active", true)
+          .order("sort").limit(1).maybeSingle();
+        const n = Number(pkg?.credits);
+        if (Number.isFinite(n) && n > 0) aboCredits = n;
+      } catch (e) { console.error("abo package credits lookup:", e?.message); }
+      await grantCredits(admin, prof.id, aboCredits, "abo", false, obj.id, periodEndSec ? new Date(periodEndSec * 1000).toISOString() : null);
       const aboPayId = await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
       if (obj.hosted_invoice_url) await admin.from("payments").update({ receipt_url: obj.hosted_invoice_url }).eq("stripe_id", obj.id);
       await admin.rpc("reward_pending_referral", { p_user: prof.id });
       // Welcome the new member on their first invoice; thank them each renewal.
       try {
         const first = reason === "subscription_create";
-        await admin.from("notifications").insert({ gym_id: prof.gym_id, user_id: prof.id, type: "system", title: first ? "Welkom als member! 🎉" : "Je maandelijkse gratis sessie staat klaar", body: first ? "1 sessie inbegrepen staat klaar + je boekt voortaan aan € 12." : "+1 sessie bijgeschreven.", link: "/account" });
+        // Ook de tekst volgt het pakket: een bericht dat "1 sessie" zegt terwijl er 2 bijgeschreven
+        // zijn, is dezelfde belofte-breuk als omgekeerd.
+        const sess = `${String(aboCredits).replace(".", ",")} sessie${aboCredits === 1 ? "" : "s"}`;
+        await admin.from("notifications").insert({ gym_id: prof.gym_id, user_id: prof.id, type: "system", title: first ? "Welkom als member! 🎉" : "Je maandelijkse gratis sessie staat klaar", body: first ? `${sess} inbegrepen staat klaar + je boekt voortaan aan € 12.` : `+${sess} bijgeschreven.`, link: "/account" });
         if (first) {
           const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", prof.id).single();
           if (m?.email) { const { sendMembershipActive } = await import("@/lib/email"); await sendMembershipActive({ to: m.email, name: m.full_name }); }
@@ -443,7 +480,7 @@ async function handleEvent(event, admin) {
           const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", prof.id).single();
           if (m?.email) await sendPurchaseReceipt({
             to: m.email, name: m.full_name, description: "Maandabonnement · verlenging",
-            amountCents: obj.amount_paid, balanceLine: "+1 inbegrepen sessie bijgeschreven",
+            amountCents: obj.amount_paid, balanceLine: `+${sess} inbegrepen bijgeschreven`,
             invoiceUrl: aboPayId ? `${SITE}/account/factuur/${aboPayId}` : null,
           });
         }

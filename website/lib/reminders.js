@@ -15,7 +15,7 @@ export async function sendDueReminders() {
   const to = new Date(Date.now() + 30 * 3600000).toISOString();
   const { data: rows } = await admin
     .from("bookings")
-    .select("id, starts_at, ends_at, paid, price_cents, payment_source, services(name), member:profiles!bookings_user_id_fkey(email, full_name), coach:profiles!bookings_coach_id_fkey(full_name)")
+    .select("id, starts_at, ends_at, paid, price_cents, payment_source, services(name), gym:gyms(address), member:profiles!bookings_user_id_fkey(email, full_name), coach:profiles!bookings_coach_id_fkey(full_name)")
     .eq("status", "bevestigd")
     .eq("reminder_sent", false)
     .gte("starts_at", from)
@@ -49,6 +49,8 @@ export async function sendDueReminders() {
           startsAt: b.starts_at,
           endsAt: b.ends_at,
           coachName: b.coach?.full_name,
+          bookingId: b.id, // → agenda-item als bijlage (zelfde UID als de bevestigingsmail)
+          address: b.gym?.address,
         });
         ok = r?.ok !== false; // only mark sent when the mail actually went out
         if (ok) sent++;

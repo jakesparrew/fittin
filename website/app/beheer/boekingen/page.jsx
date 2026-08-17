@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { slotInstant, brusselsDateStr, fmtHour } from "@/lib/time";
-import { adminCreateBooking, adminAssignCoach } from "../actions";
+import { adminCreateBooking } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import AdminWeekGrid from "@/components/admin/AdminWeekGrid";
 import BookingsList from "@/components/admin/BookingsList";

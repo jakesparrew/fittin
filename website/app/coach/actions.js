@@ -7,7 +7,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 import { sendCoachBooked, sendBookingCancelled, sendBookingRescheduled, sendPaymentRequest, sendBuddyInvite, sendWelcomeNewAccount } from "@/lib/email";
-import { notify, notifyAdmins } from "@/lib/notify";
+import { notify } from "@/lib/notify";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { logCoachActivity } from "@/lib/coachlog";
 import { notifyInviteesOfChange } from "@/lib/booking-invites";
@@ -210,15 +210,21 @@ export async function coachBulkBook(formData) {
     if (bid) bookedIds.push(bid);
   }
 
-  // Tag the created bookings with one series_id so the coach can cancel the whole series at once.
-  // Best-effort: if the series_id column isn't migrated yet, this no-ops and the sessions still stand.
+  // Eén series_id over alle gemaakte boekingen, zodat de coach de hele reeks in één keer kan
+  // afzeggen. Dit liep tot nu via de gebruikersclient, en die heeft sinds 0055 alléén UPDATE-recht
+  // op status/cancelled_at/stripe_session_id: de schrijfpoging raakte dus nooit een rij en de
+  // "annuleer hele reeks"-knop verscheen nooit — stil, want de fout werd in een lege catch
+  // geslikt. Nu via de admin-client (die twee regels verderop toch al gebruikt werd) en mét een
+  // console.error: een reeks van 26 sessies die niet in één keer af te zeggen is, is een echt
+  // probleem en hoort niet onzichtbaar te blijven.
   const seriesId = crypto.randomUUID();
   if (bookedIds.length) {
-    try { await supabase.from("bookings").update({ series_id: seriesId }).in("id", bookedIds).eq("coach_id", userId); } catch {}
     // Externe client (niet op platform): naam op elke boeking, zodat beheer ziet met wie de coach traint.
-    if (!clientId && bulkClientName) {
-      try { await createAdminClient().from("bookings").update({ notes: bulkClientName }).in("id", bookedIds).eq("coach_id", userId); } catch {}
-    }
+    const velden = { series_id: seriesId };
+    if (!clientId && bulkClientName) velden.notes = bulkClientName;
+    const { error: se } = await createAdminClient()
+      .from("bookings").update(velden).in("id", bookedIds).eq("coach_id", userId);
+    if (se) console.error("reeks labelen mislukt (series_id/notes):", se.message);
   }
 
   try {
@@ -363,7 +369,7 @@ export async function coachInviteByEmail(formData) {
 
 // Upload a real profile photo to Supabase Storage and save the public URL.
 export async function uploadCoachPhoto(formData) {
-  const { supabase, userId, error } = await requireCoach();
+  const { userId, error } = await requireCoach();
   if (error) return { error };
   const file = formData.get("photo");
   if (!file || typeof file === "string" || !file.size) return { error: "Kies een afbeelding." };
@@ -419,7 +425,7 @@ export async function saveCoachProfile(formData) {
 
 // Set a coach's price for a specific client (overrides the default rate).
 export async function setClientPrice(formData) {
-  const { supabase, userId, error } = await requireCoach();
+  const { supabase, error } = await requireCoach();
   if (error) return { error };
   const clientId = formData.get("clientId");
   const price = cents(formData.get("price_eur"));

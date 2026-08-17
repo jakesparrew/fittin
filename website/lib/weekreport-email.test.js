@@ -55,6 +55,17 @@ const fullReport = {
 
 const brokenHealth = { ...fullReport, health: { mailsSent: 40, mailsFailed: 3, accessCronBad: true, activationCronBad: false } };
 
+// Verkeerscijfers (G5-6). `traffic` kan null zijn — de meetlaag is best-effort en mag het rapport
+// niet meeslepen — dus beide gevallen horen getest.
+const metVerkeer = {
+  ...fullReport,
+  traffic: { visitors: 247, prevVisitors: 220, chose: 31, completed: 12, topSource: { host: "google.com", views: 58 } },
+};
+const eersteWeekVerkeer = {
+  ...fullReport,
+  traffic: { visitors: 40, prevVisitors: 0, chose: 0, completed: 0, topSource: null },
+};
+
 describe("weekReportHtml", () => {
   it("bouwt een lege week op zonder te crashen en zegt eerlijk dat er niets gebeurde", () => {
     const html = weekReportHtml({ name: "Ran", report: emptyReport });
@@ -81,6 +92,24 @@ describe("weekReportHtml", () => {
     expect(html).toContain("dinsdag, zaterdag, zondag"); // rustige dagen → promotieruimte
     expect(html).not.toContain("undefined");
     expect(html).not.toContain("NaN");
+  });
+
+  it("toont bezoekers, trechter en sterkste bron — en laat het blok weg zonder meting", () => {
+    const html = weekReportHtml({ name: "Ran", report: metVerkeer });
+    expect(html).toContain("247 bezoekers");
+    expect(html).toContain("+12%");            // 247 t.o.v. 220
+    expect(html).toContain("google.com");
+    expect(html).not.toContain("undefined");
+    expect(html).not.toContain("NaN");
+
+    // Eerste gemeten week: geen vergelijking verzinnen (delen door nul), wel de cijfers.
+    const eerste = weekReportHtml({ name: "Ran", report: eersteWeekVerkeer });
+    expect(eerste).toContain("40 bezoekers");
+    expect(eerste).not.toContain("t.o.v. vorige week</b>");
+    expect(eerste).not.toContain("NaN");
+
+    // Meetlaag stuk of nog niets gemeten → geen blok met nullen (leeg = onzichtbaar).
+    expect(weekReportHtml({ name: "Ran", report: fullReport })).not.toContain("Bezoekers deze week");
   });
 
   it("waarschuwt zichtbaar als mails of crons falen", () => {

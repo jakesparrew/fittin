@@ -122,14 +122,14 @@ export default function Privacy() {
           <div className="overflow-x-auto rounded-2xl border border-borderc bg-white p-4">
             <table className="w-full text-sm">
               <tbody>
-                <Row wat="Account en profiel" hoelang="Zolang je account bestaat, en tot 12 maanden na je laatste sessie als je niets meer van je laat horen. Daarna verwijderen of anonimiseren we." />
+                <Row wat="Account en profiel" hoelang="Zolang je account bestaat. Je kan het op elk moment zelf laten verwijderen via Mijn account → Gegevens en privacy. Accounts zonder sessie in 12 maanden nemen we periodiek na en verwijderen of anonimiseren we; we doen dat met de hand, zodat een lid dat gewoon een tijd wegbleef niet ongevraagd zijn account kwijtspeelt." />
                 <Row wat="Boekingen" hoelang="3 jaar — zodat we vragen of geschillen over een sessie kunnen beantwoorden." />
                 <Row wat="Betalingen en facturen" hoelang="7 jaar, wettelijke bewaartermijn voor de boekhouding. Deze gegevens verdwijnen dus niet bij het verwijderen van je account." />
-                <Row wat="Toegangscodes en deurlogs" hoelang="Codes worden na je sessie meteen ingetrokken. Logs bewaren we 12 maanden voor de veiligheid van een onbemande zaal." />
+                <Row wat="Toegangscodes en deurlogs" hoelang="Codes worden na je sessie meteen ingetrokken. Logs bewaren we 12 maanden voor de veiligheid van een onbemande zaal; daarna worden ze automatisch verwijderd." />
                 <Row wat="Lichaamsmetingen en trainingslogs" hoelang="Zolang je toestemming loopt. Trek je ze in, dan wissen we ze." />
                 <Row wat="Nieuwsbrief" hoelang="Tot je uitschrijft. Je uitschrijving zelf houden we bij zodat we je niet opnieuw aanschrijven." />
-                <Row wat="Bezoekstatistieken" hoelang="14 maanden, daarna enkel nog als totalen zonder enige herleidbaarheid." />
-                <Row wat="Foutmeldingen" hoelang="12 maanden." />
+                <Row wat="Bezoekstatistieken" hoelang="14 maanden, daarna automatisch verwijderd door een dagelijkse opruimtaak." />
+                <Row wat="Foutmeldingen" hoelang="12 maanden, daarna automatisch verwijderd." />
               </tbody>
             </table>
           </div>

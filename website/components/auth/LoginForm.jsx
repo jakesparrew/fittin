@@ -1,11 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useActionState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { authAction } from "@/app/(site)/login/actions";
+import { track } from "@/lib/track";
 
 export default function LoginForm() {
   const params = useSearchParams();
@@ -15,6 +16,21 @@ export default function LoginForm() {
   const [mode, setMode] = useState(params.get("mode") === "signup" || refCode ? "signup" : "login"); // 'login' | 'signup'
   const [state, formAction, pending] = useActionState(authAction, {});
   const [googleErr, setGoogleErr] = useState("");
+
+  // signup_completed stond wél op de whitelist van /api/pv maar werd nergens afgevuurd: de grootste
+  // uitvalstap van de trechter had dus geen enkel cijfer. Meten moet hier in de browser gebeuren
+  // (lib/track gebruikt sendBeacon), en authAction geeft bij succes niets terug — hij stuurt je
+  // meteen weg (redirect) of vraagt om e-mailbevestiging via state.info. Daarom kijken we naar het
+  // moment waarop de actie klaar is zonder foutmelding. sendBeacon overleeft de navigatie die volgt.
+  const wasPending = useRef(false);
+  const signupCounted = useRef(false);
+  useEffect(() => {
+    const finished = wasPending.current && !pending;
+    wasPending.current = pending;
+    if (!finished || mode !== "signup" || state?.error || signupCounted.current) return;
+    signupCounted.current = true; // één registratie = één telling, ook als de pagina blijft staan
+    track("signup_completed");
+  }, [pending, mode, state]);
 
   const siteUrl =
     process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");

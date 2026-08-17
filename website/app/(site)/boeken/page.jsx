@@ -12,7 +12,7 @@ export const metadata = {
   title: "Online boeken | Fittin'",
   description:
     "Reserveer de privégym in Gent — alleen of met vrienden. € 15 per sessie van 1 uur, en je eerste uur is gratis.",
-  // Deze pagina leest ?geannuleerd, ?personen en ?duur én deelt zelf links met ?d=&h=&p=&u=.
+  // Deze pagina leest ?personen en ?duur (en client-side ?d=&h=&p=&u= uit gedeelde links).
   // Zonder canonical indexeert elke variant als een aparte pagina.
   alternates: { canonical: `${SITE}/boeken` },
 };
@@ -89,7 +89,6 @@ export default async function BoekenPage({ searchParams }) {
       welcomeAvailable={!!(profile && profile.welcome_status === "eligible" && !profile.welcome_code_used)}
       creditBalance={credits}
       isMember={isMember}
-      paymentCanceled={sp.geannuleerd === "1"}
       buddies={buddies}
       referralCode={profile?.referral_code || ""}
       prefill={{ persons: sp.personen, duration: sp.duur }}

@@ -67,6 +67,35 @@ export async function buildWeekReport(gym, now = new Date()) {
       .eq("coach_billing", "invoice").eq("status", "bevestigd").is("coach_invoiced_at", null),
   ]);
 
+  // ---- Verkeer + trechter -----------------------------------------------------------------
+  // Het rapport vertelde tot nu alleen wat er ná de beslissing gebeurde (sessies, omzet). Zonder
+  // bezoekersaantal is een slappe week niet te duiden: kwam er minder volk, of haakte hetzelfde
+  // volk af? Deze drie getallen beantwoorden dat, en de sterkste bron zegt waar promoten loont.
+  // Best-effort: de meetlaag mag het rapport nooit tegenhouden (het rapport is het belangrijkste).
+  let traffic = null;
+  try {
+    const win = { p_from: sIso, p_to: eIso };
+    const [{ data: nu }, { data: vorige }, { data: events }, { data: bronnen }] = await Promise.all([
+      admin.rpc("pv_summary", win),
+      admin.rpc("pv_summary", { p_from: pIso, p_to: sIso }),
+      admin.rpc("pv_events", win),
+      admin.rpc("pv_top_referrers", { ...win, p_limit: 5 }),
+    ]);
+    const rij = (d) => (Array.isArray(d) ? d[0] : d) || {};
+    // Op unieke BEZOEKERS, niet op hits: booking_slot_chosen vuurt bij elke tik op een uur.
+    const perEvent = new Map((events || []).map((e) => [e.event, Number(e.visitors) || 0]));
+    const top = (bronnen || []).filter((b) => b.referrer_host && b.referrer_host !== "(direct)")[0] || null;
+    traffic = {
+      visitors: Number(rij(nu).visitors) || 0,
+      prevVisitors: Number(rij(vorige).visitors) || 0,
+      chose: perEvent.get("booking_slot_chosen") || 0,
+      completed: perEvent.get("booking_completed") || 0,
+      topSource: top ? { host: top.referrer_host, views: Number(top.views) || 0 } : null,
+    };
+  } catch (e) {
+    console.error("weekrapport verkeerscijfers overgeslagen:", e?.message);
+  }
+
   const nameOf = new Map((people || []).map((p) => [p.id, p.full_name || "Lid"]));
   const lidIds = new Set((people || []).filter((p) => p.role === "lid").map((p) => p.id));
   const held = (wkBookings || []).filter((b) => b.status === "bevestigd");
@@ -169,6 +198,7 @@ export async function buildWeekReport(gym, now = new Date()) {
     toInvoice,
     openInvoiceCents,
     openReports: openReports || 0,
+    traffic,
     health,
   };
 }

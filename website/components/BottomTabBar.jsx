@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useMe } from "@/components/useMe";
 
 // App-like mobile bottom tab bar (hidden on md+, where the top nav takes over). Role-aware: tabs
 // adapt to logged-out / lid / coach / beheerder. Role comes from /api/me (same source as Nav).
@@ -28,22 +28,11 @@ const TABS = {
 
 export default function BottomTabBar() {
   const pathname = usePathname() || "/";
-  const [role, setRole] = useState(undefined); // undefined=loading, null=guest, else role
-  const [unread, setUnread] = useState(0);
-  useEffect(() => {
-    let active = true;
-    const load = () => fetch("/api/me", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => { if (!active) return; setRole(d?.loggedIn ? (d.role || "lid") : null); setUnread(d?.unread || 0); })
-      .catch(() => { if (active) setRole(null); });
-    load();
-    // Refetch when the app regains focus (installed-PWA users keep it open) so a new door code /
-    // coach message surfaces the badge without a full navigation.
-    const onFocus = () => { if (document.visibilityState === "visible") load(); };
-    document.addEventListener("visibilitychange", onFocus);
-    window.addEventListener("focus", onFocus);
-    return () => { active = false; document.removeEventListener("visibilitychange", onFocus); window.removeEventListener("focus", onFocus); };
-  }, [pathname]);
+  // Dezelfde /api/me-oproep als Nav (zie useMe.js): één antwoord voor beide balken, en niet langer
+  // opnieuw ophalen bij elke paginawissel — rol en teller veranderen daar niet van.
+  const me = useMe();
+  const role = me ? (me.loggedIn ? me.role || "lid" : null) : undefined; // undefined=loading, null=gast
+  const unread = me?.unread || 0;
 
   const tabs = !role ? TABS.guest : TABS[role] || TABS.lid;
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));

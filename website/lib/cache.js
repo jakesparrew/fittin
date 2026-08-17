@@ -86,7 +86,9 @@ export const getExerciseBySlug = unstable_cache(
     const admin = createAdminClient();
     const { data } = await admin
       .from("exercises")
-      .select("id, name, slug, category, muscle, primary_muscles, secondary_muscles, equipment, difficulty, mechanic, force, instructions, tips, image_url, animation_url, video_url, frames")
+      // `source` hoort erbij omdat de detailpagina er haar robots-meta op baseert (isDutchExercise):
+      // zonder die kolom leest elke oefening als Nederlandstalig en blijft de noindex dode code.
+      .select("id, name, slug, source, category, muscle, primary_muscles, secondary_muscles, equipment, difficulty, mechanic, force, instructions, tips, image_url, animation_url, video_url, frames")
       .eq("gym_id", gymId)
       .eq("slug", slug)
       .maybeSingle();

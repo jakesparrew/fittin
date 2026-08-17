@@ -32,9 +32,12 @@ export const SEGMENTS = {
   },
   low_credits: {
     label: "Sessies bijna op",
-    desc: "Leden met een laag sessietegoed — zet aan tot bijkopen.",
+    // member_engagement.credits komt sinds 0139 uit credits_balance(): vervallen beurten tellen
+    // niet meer mee. Daarvóór stond een lid met een verlopen kaart nog op "6 beurten" en viel het
+    // dus buiten dit segment — net het lid dat een nieuwe kaart zou kopen.
+    desc: "Leden met een laag bruikbaar sessietegoed (vervallen beurten tellen niet mee) — zet aan tot bijkopen.",
     param: { key: "max", label: "Tegoed ≤", default: 1 },
-    match: (m, p) => (m.credits ?? 0) <= (p.max ?? 1) && m.visits_total > 0,
+    match: (m, p) => Number(m.credits ?? 0) <= (p.max ?? 1) && m.visits_total > 0,
   },
   lapsed_member: {
     label: "Abonnement gestopt",

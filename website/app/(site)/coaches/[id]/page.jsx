@@ -47,12 +47,21 @@ export async function generateMetadata({ params }) {
 export default async function CoachProfile({ params }) {
   const { id } = await params;
   const admin = createAdminClient();
-  const c = await resolveCoach(admin, id, "id, full_name, role, coach_public, coach_bio, coach_specialty, coach_photo_url, coach_pricelist");
+  const c = await resolveCoach(admin, id, "id, gym_id, full_name, role, coach_public, coach_bio, coach_specialty, coach_photo_url, coach_pricelist");
   if (!c) notFound();
-  const [{ data: avail }, { user }] = await Promise.all([
+  const [{ data: avail }, { data: gym }, { user }] = await Promise.all([
     admin.from("coach_availability").select("weekday, from_hour, to_hour").eq("coach_id", c.id).order("weekday"),
+    admin.from("gyms").select("open_hour, close_hour").eq("id", c.gym_id).maybeSingle(),
     getSessionProfile(),
   ]);
+  // Zes rijen "06:00–23:00" zijn geen beschikbaarheid, dat zijn letterlijk de openingsuren van de
+  // zaal: het blok belooft informatie die het niet geeft. Toon het dus enkel wanneer minstens één
+  // rij smaller is dan het openingsvenster — anders blijft alleen de verwijzing naar de intake over.
+  const availRows = avail || [];
+  const uurBekend = gym?.open_hour != null && gym?.close_hour != null;
+  const toontIets =
+    availRows.length > 0 &&
+    (!uurBekend || availRows.some((a) => a.from_hour > gym.open_hour || a.to_hour < gym.close_hour));
   let myLink = null;
   if (user && user.id !== c.id) {
     const { data: lk } = await admin.from("coach_clients").select("id, status, requested_by").eq("coach_id", c.id).eq("client_id", user.id).maybeSingle();
@@ -130,29 +139,33 @@ export default async function CoachProfile({ params }) {
               </div>
             )}
 
-            {(avail || []).length > 0 && (
+            {availRows.length > 0 && (
               <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-lav">Beschikbaarheid</p>
-                <div className="mt-3 space-y-2">
-                  {[1, 2, 3, 4, 5, 6, 0].map((wd) => {
-                    const slots = (avail || []).filter((a) => a.weekday === wd).sort((a, b) => a.from_hour - b.from_hour);
-                    if (!slots.length) return null;
-                    return (
-                      <div key={wd} className="flex flex-wrap items-center gap-2">
-                        <span className="w-24 shrink-0 font-bold capitalize text-brand">{WD[wd]}</span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {slots.map((a, i) => (
-                            <span key={i} className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accentdark">
-                              {dagdeelLabel(a.from_hour, a.to_hour)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <p className="mt-4 text-xs text-brand/50">
-                  Ander moment nodig?{" "}
+                {toontIets && (
+                  <>
+                    <p className="text-xs font-bold uppercase tracking-widest text-lav">Beschikbaarheid</p>
+                    <div className="mt-3 space-y-2">
+                      {[1, 2, 3, 4, 5, 6, 0].map((wd) => {
+                        const slots = availRows.filter((a) => a.weekday === wd).sort((a, b) => a.from_hour - b.from_hour);
+                        if (!slots.length) return null;
+                        return (
+                          <div key={wd} className="flex flex-wrap items-center gap-2">
+                            <span className="w-24 shrink-0 font-bold capitalize text-brand">{WD[wd]}</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {slots.map((a, i) => (
+                                <span key={i} className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accentdark">
+                                  {dagdeelLabel(a.from_hour, a.to_hour)}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+                <p className={(toontIets ? "mt-4 " : "") + "text-xs text-brand/50"}>
+                  {toontIets ? "Ander moment nodig? " : "Een moment afspreken? "}
                   <Link href={intakeUrl} className="font-bold text-accentdark hover:underline">Vraag het bij je gratis intake</Link>.
                 </p>
               </div>

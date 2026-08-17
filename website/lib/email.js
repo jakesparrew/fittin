@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { statGrid, barChart, sectionTitle, actionItem, calloutBox, delta, eur } from "@/lib/email-visuals";
+import { icsAttachment } from "@/lib/ics";
 
 // Transactional email via Resend. Degrades to a no-op until configured.
 const key = process.env.RESEND_API_KEY;
@@ -75,14 +76,17 @@ async function logEmail({ to, subject, kind, status, resendId, error }) {
   } catch (e) { console.error("email_log insert failed:", e?.message); }
 }
 
-async function send(to, subject, html, from = FROM, replyTo = REPLY_TO, kind = null) {
+async function send(to, subject, html, from = FROM, replyTo = REPLY_TO, kind = null, attachments = null) {
   if (!resend || !to) return { ok: false, skipped: true };
   let result, status, logErr = null, resendId = null;
   try {
     // Resend's SDK returns { data, error } and does NOT throw on API errors (unverified domain,
     // rate limit, suppression). Check res.error explicitly so a rejected send is never treated as
     // success — otherwise confirmations / reminders / door codes fail with zero trace.
-    const res = await resend.emails.send({ from, to, replyTo, subject, html });
+    const res = await resend.emails.send({
+      from, to, replyTo, subject, html,
+      ...(attachments?.length ? { attachments } : {}),
+    });
     if (res?.error) {
       console.error("email send error:", subject, res.error?.message || JSON.stringify(res.error));
       result = { ok: false, error: res.error };
@@ -102,7 +106,7 @@ async function send(to, subject, html, from = FROM, replyTo = REPLY_TO, kind = n
 }
 
 // ---- Member: booking confirmed ----
-export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address, paymentSource, creditBalance, nudgeCount, amountDueCents }) {
+export async function sendBookingConfirmation({ to, name, serviceName, startsAt, endsAt, persons, free, address, paymentSource, creditBalance, nudgeCount, amountDueCents, bookingId }) {
   const addr = address || "Aannemersstraat 186, 9040 Gent";
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(addr)}`;
   const rows = [
@@ -168,11 +172,37 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
             <li>Leg gewichten en materiaal terug op hun vaste plaats.</li>
             <li>Doe de lichten uit en controleer of de deur dicht is.</li>
           </ul>
-          <p style="font-size:13px;color:#6b6685;margin-top:14px">Verplaatsen kan tot 6u vooraf in je account. We sturen je dag op voorhand nog een herinnering.</p>
+          <p style="font-size:13px;color:#6b6685;margin-top:14px">Verplaatsen kan tot 6u vooraf in je account. We sturen je dag op voorhand nog een herinnering. Het agenda-item (met alarm 30 min vooraf) zit als bijlage bij deze mail.</p>
         </div>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
     }),
-    FROM_BOOKING
+    FROM_BOOKING,
+    REPLY_TO,
+    null,
+    // Agenda-item als bijlage: een sessie die in de agenda staat wordt veel minder vergeten dan
+    // een sessie die alleen in een mailbox staat. Ontbreekt de boeking-id (oudere oproeper), dan
+    // gaat de mail gewoon zonder bijlage buiten.
+    [icsAttachment({ id: bookingId, startsAt, endsAt, serviceName, address: addr })].filter(Boolean)
+  );
+}
+
+// ---- Nieuwsbrief: bevestig je inschrijving (dubbele opt-in) ----
+// Bestaat omdat iedereen elk willekeurig adres kon inschrijven: één formulierveld en de mails van
+// Fittin' vielen bij een vreemde in de bus. Pas wie op deze link klikt, wordt 'active'.
+export async function sendNewsletterConfirm({ to, name, confirmUrl }) {
+  return send(
+    to,
+    "Bevestig je inschrijving op de Fittin'-nieuwsbrief",
+    shell({
+      title: "Nog één klik 👇",
+      intro: `Hallo ${esc(name) || "daar"}, iemand schreef dit adres in op de nieuwsbrief van Fittin&rsquo;.`,
+      body: `<p style="font-size:14px;color:#6b6685;line-height:1.6">Was jij dat? Bevestig het even, dan zetten we je op de lijst. Wij sturen hoogstens een paar mails per maand: nieuws uit de zaal, trainingstips en acties.</p>
+             <p style="font-size:13px;color:#9b97ab;line-height:1.6;margin-top:14px">Was jij dat niet? Doe dan gewoon niets — zonder deze bevestiging sturen we je nooit iets.</p>`,
+      cta: { href: confirmUrl, label: "Ja, schrijf me in" },
+    }),
+    FROM_NEWS,
+    REPLY_TO,
+    "nieuwsbrief_bevestiging"
   );
 }
 
@@ -632,7 +662,7 @@ export async function sendEventSignup({ to, name, title, startsAt }) {
 }
 
 // ---- Member: day-before session reminder ----
-export async function sendSessionReminder({ to, name, serviceName, startsAt, endsAt, coachName }) {
+export async function sendSessionReminder({ to, name, serviceName, startsAt, endsAt, coachName, bookingId, address }) {
   return send(
     to,
     "Herinnering: je Fittin'-sessie is binnenkort",
@@ -644,10 +674,15 @@ export async function sendSessionReminder({ to, name, serviceName, startsAt, end
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
-      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">Je toegangscode komt automatisch ± 5 minuten voor de start binnen. Kan je toch niet? Je kan je sessie tot 6u vooraf verplaatsen in je account.</p>`,
+      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">Je toegangscode komt automatisch ± 5 minuten voor de start binnen. Kan je toch niet? Je kan je sessie tot 6u vooraf verplaatsen in je account. Nog niet in je agenda? Het item zit in bijlage.</p>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
     }),
-    FROM_BOOKING
+    FROM_BOOKING,
+    REPLY_TO,
+    null,
+    // Zelfde UID als in de bevestigingsmail: wie het bestand toen al toevoegde, krijgt hier geen
+    // tweede afspraak maar dezelfde — wie het toen niet deed, krijgt een laatste kans.
+    [icsAttachment({ id: bookingId, startsAt, endsAt, serviceName, address })].filter(Boolean)
   );
 }
 
@@ -794,7 +829,9 @@ export async function sendMembershipActive({ to, name }) {
       rows: [
         ["Elke maand", "1 sessie inbegrepen (binnen de maand)"],
         ["Boekingstarief", "€ 12 i.p.v. € 15"],
-        ["Extra", "member-acties + voorrang bij events"],
+        // "member-acties + voorrang bij events" beloofde iets wat nergens bestaat. De boekhorizon
+        // (components/booking/BookingClient.jsx) is het enige extra dat het abo écht geeft.
+        ["Extra", "Boek tot 8 weken vooruit (zonder abo: 2)"],
       ],
       body: `<p style="font-size:14px;color:#6b6685">Je kan je abonnement op elk moment beheren via je account.</p>`,
       cta: { href: `${SITE}/boeken`, label: "Boek je volgende sessie" },
@@ -924,6 +961,23 @@ export function weekReportHtml({ name, report }) {
     { label: "Nieuwe leden", value: String(r.members.now), delta: delta(r.members.now, r.members.prev) },
   ]);
 
+  // ---- Verkeer: kwam er volk, en deed dat volk iets? ----
+  // Twee regels, geen dashboard. Zonder deze cijfers is een slappe week niet te duiden: kwam er
+  // minder volk, of haakte hetzelfde volk af? Leeg = onzichtbaar — mat de site niets, dan staat
+  // er niets (een blok met nullen leest als "niemand kwam", en dat is niet hetzelfde).
+  const t = r.traffic;
+  const pct = t && t.prevVisitors > 0 ? Math.round(((t.visitors - t.prevVisitors) / t.prevVisitors) * 100) : null;
+  const verkeer = t && t.visitors > 0
+    ? sectionTitle("Bezoekers deze week", "")
+      + calloutBox(
+        `<b>${t.visitors} bezoekers</b> op de site`
+        + (pct === null ? "" : ` — <b style="color:${pct >= 0 ? "#1a7d34" : "#b91c1c"}">${pct >= 0 ? "+" : ""}${pct}%</b> t.o.v. vorige week`)
+        + `.<br><span style="font-size:13px;color:#6b6685">Daarvan kozen er <b style="color:#22194F">${t.chose}</b> een moment in de agenda en rondden er <b style="color:#22194F">${t.completed}</b> een boeking af.`
+        + (t.topSource ? ` Sterkste externe bron: <b style="color:#22194F">${esc(t.topSource.host)}</b> (${t.topSource.views} weergaves).` : "")
+        + `</span>`
+      )
+    : "";
+
   // ---- Bezetting: waar zit nog ruimte? ----
   const bezet = sectionTitle(
     "Bezetting per dag",
@@ -1022,7 +1076,7 @@ export function weekReportHtml({ name, report }) {
   return shell({
     title: `Je week in het kort`,
     intro: `${esc(name) ? `Hallo ${esc(name)}, ` : ""}dit is <b>${periode}</b>.<br>${kop}`,
-    body: stats + abo + bezet + uren + actiesHtml + machine,
+    body: stats + abo + verkeer + bezet + uren + actiesHtml + machine,
     cta: { href: `${SITE}/beheer`, label: "Open het dashboard" },
   });
 }

@@ -14,13 +14,18 @@ const memberCards = [
     items: [
       "Registreer je online — helemaal gratis",
       "Je eerste uur is automatisch gratis",
-      'Ga naar online boeken en kies "Privé sessie"',
+      // De dienstkeuze staat er niet meer: BookingClient toont de kaart "Kies je sessie" enkel bij
+      // meer dan één actieve dienst, en dat is er nu één. Verwijs dus naar wat de bezoeker wél ziet.
+      "Ga naar online boeken en kies je moment",
     ],
   },
   {
     title: "Als lid",
     items: [
-      "Reserveer de gym voor € 15,00",
+      // "Als lid" = een account, niet een abonnement: die € 15 is de losse prijs. Wie het
+      // maandabonnement neemt, boekt aan de ledenprijs (member_price_cents) — noem dat verschil,
+      // anders leest deze kaart als "leden betalen € 15" terwijl abonnees € 12 betalen.
+      "Reserveer de gym voor € 15,00 — met maandabonnement € 12,00",
       "Eén sessie = 1 uur",
       "1 tot 4 personen",
       "Geen extra kosten",

@@ -26,7 +26,6 @@ export default function BookingClient({
   welcomeAvailable,
   creditBalance = 0,
   isMember = false,
-  paymentCanceled = false,
   buddies = [],
   referralCode = "",
   prefill = {},
@@ -51,7 +50,6 @@ export default function BookingClient({
   const [discountCode, setDiscountCode] = useState("");
   const [discountInfo, setDiscountInfo] = useState(null); // {ok,cents,off,label} | {error}
   const [applyingCode, setApplyingCode] = useState(false);
-  const [buddySel, setBuddySel] = useState([]);
   const [invitees, setInvitees] = useState([]); // [{id,name}] members to bring along
   const [memberQuery, setMemberQuery] = useState("");
   const [memberResults, setMemberResults] = useState([]);
@@ -65,7 +63,9 @@ export default function BookingClient({
   const isFit60 = service?.type === "fit60";
   const isPT = service?.type === "pt";
   // Booking horizon (in weeks) is a membership perk: members plan up to 8 weeks out, others 2.
-  const maxWeek = isMember ? 8 : 1;
+  // Let op: dit is een week-OFFSET vanaf de huidige week, dus 7 = de 8e week. Met 8 kon een member
+  // door negen weken bladeren terwijl de hele site "8 weken" belooft.
+  const maxWeek = isMember ? 7 : 1;
   // Reset the person count when the service changes (gym-persons vs PT-formule mean different things).
   // Skip the very first run so a ?personen= prefill (quick-rebook) survives mount.
   const didMountService = useRef(false);
@@ -352,11 +352,6 @@ export default function BookingClient({
           </p>
         ) : (
           <p className="mt-3 max-w-xl text-brand/70">De hele zaal is van jou tijdens je boeking — open van {gym.open_hour}u tot {gym.close_hour}u, kies je moment.</p>
-        )}
-        {paymentCanceled && (
-          <p className="mt-4 rounded-2xl bg-accent/10 p-4 text-sm font-semibold text-accentdark">
-            Betaling geannuleerd. Kies gerust opnieuw een moment.
-          </p>
         )}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">

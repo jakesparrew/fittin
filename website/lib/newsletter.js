@@ -378,6 +378,27 @@ export async function recordResendEvent(type, emailId) {
   }
 }
 
+// Bevestig een inschrijving via de link uit de bevestigingsmail (dubbele opt-in, G8-8).
+// Pas hier wordt iemand 'active' en pas hier vertrekt de welkomstreeks — tot dan bestaat er enkel
+// een 'pending'-rij die nergens in een verzendlijst meedraait.
+export async function confirmSubscriptionByToken(token) {
+  if (!token) return { error: "Onbekende link." };
+  const admin = createAdminClient();
+  const { data: sub } = await admin
+    .from("subscribers").select("id, gym_id, email, name, unsub_token, status")
+    .eq("unsub_token", token).maybeSingle();
+  if (!sub) return { error: "Deze link is niet (meer) geldig." };
+  if (sub.status === "active") return { ok: true, email: sub.email, alReeds: true };
+  // Een gebounced adres bewust niet heropenen: die mails komen toch niet aan en het beschadigt de
+  // reputatie van het verzenddomein. (In de praktijk zeldzaam — een bounced adres kan deze mail
+  // ook niet ontvangen.)
+  if (sub.status === "bounced") return { error: "Dit adres is onbereikbaar. Mail ons op info@fittin.be." };
+
+  await admin.from("subscribers").update({ status: "active" }).eq("id", sub.id);
+  try { await enrollSubscriberInDrips(sub.gym_id, { ...sub, status: "active" }); } catch (e) { console.error("drips na bevestiging:", e?.message); }
+  return { ok: true, email: sub.email };
+}
+
 // On unsubscribe: flip the subscriber + cancel their pending drip sends in Resend.
 export async function unsubscribeByToken(token) {
   const admin = createAdminClient();

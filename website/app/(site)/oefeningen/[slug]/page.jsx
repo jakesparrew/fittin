@@ -1,13 +1,33 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getGymCached, getExerciseBySlug, getAlternativesByCategory } from "@/lib/cache";
+import { getGymCached, getExerciseBySlug, getAlternativesByCategory, getExercisesCached } from "@/lib/cache";
 import { catLabel } from "@/lib/exercise-categories";
-import { breadcrumbLd, exerciseHowToLd, jsonLdScript } from "@/lib/seo";
+import { breadcrumbLd, exerciseHowToLd, isDutchExercise, jsonLdScript } from "@/lib/seo";
 import ExerciseDetail from "@/components/exercises/ExerciseDetail";
 import ExerciseActions from "@/components/exercises/ExerciseActions";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
 
 export const revalidate = 300;
+
+// Alle oefeningpagina's bij de build renderen. `revalidate = 300` alléén maakte ze nog niet
+// statisch: zonder deze lijst kent Next de slugs niet en rendert hij elke pagina pas bij het
+// eerste bezoek. Live gemeten gaf dat X-Vercel-Cache MISS en 176–242 ms TTFB (tegenover ~100 ms
+// voor de wél geprerenderde lijstpagina), plus twee databankvragen per crawl — bij ~885 pagina's
+// die een crawler één na één afgaat is dat elke keer opnieuw de koude weg.
+//
+// Best-effort: valt de databank tijdens de build weg, dan is de lijst leeg en rendert Next de
+// pagina's gewoon op aanvraag (dynamicParams staat standaard aan). Een hapering mag nooit de
+// deploy tegenhouden — dezelfde afweging als in app/sitemap.js.
+export async function generateStaticParams() {
+  try {
+    const gym = await getGymCached();
+    if (!gym) return [];
+    const oefeningen = await getExercisesCached(gym.id);
+    return (oefeningen || []).filter((o) => o.slug).map((o) => ({ slug: o.slug }));
+  } catch {
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -19,6 +39,11 @@ export async function generateMetadata({ params }) {
     title: `${ex.name} — oefening | Fittin'`,
     description: desc,
     alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/oefeningen/${ex.slug}` },
+    // De nog niet vertaalde, overgenomen oefeningen staan al buiten de sitemap. Uit de sitemap
+    // halen vráágt enkel om niet te crawlen; het haalt niets uit de index en houdt niets tegen dat
+    // via een interne link binnenkomt. Deze meta doet dat wél. follow blijft aan, zodat de links
+    // naar de Nederlandstalige hubs en alternatieven hun waarde blijven doorgeven.
+    ...(isDutchExercise(ex) ? {} : { robots: { index: false, follow: true } }),
   };
 }
 

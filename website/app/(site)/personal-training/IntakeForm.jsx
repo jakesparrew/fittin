@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { requestIntake } from "./actions";
 import { FORMULES } from "./options";
+import { track } from "@/lib/track";
 
 // De enige conversieroute van personal training. Zelfde patroon als hulp/HelpForm.jsx: een eigen
 // client-formulier in plaats van ActionForm, want een toast van enkele seconden is te weinig
@@ -28,7 +29,13 @@ export default function IntakeForm({ coaches = [] }) {
     start(async () => {
       const r = await requestIntake(fd);
       if (r?.error) { setFout(r.error); setKlaar(null); }
-      else { setKlaar({ msg: r?.message || "Aanvraag verstuurd ✓", already: !!r?.already }); setFout(null); }
+      else {
+        // Het hoofddoel van de hele PT-tak, en tot nu ongemeten: intake_requested stond op de
+        // whitelist van /api/pv maar werd nergens afgevuurd. `already` (honeypot-bot of derde
+        // aanvraag binnen het venster) telt niet mee — daar vertrekt ook geen mail.
+        if (!r?.already) track("intake_requested");
+        setKlaar({ msg: r?.message || "Aanvraag verstuurd ✓", already: !!r?.already }); setFout(null);
+      }
     });
   };
 

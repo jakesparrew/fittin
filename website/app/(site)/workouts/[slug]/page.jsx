@@ -1,13 +1,28 @@
 import Link from "next/link";
 import AdoptButton from "@/components/workouts/AdoptButton";
 import { notFound } from "next/navigation";
-import { getGymCached, getPublicWorkoutBySlug } from "@/lib/cache";
-import { getSessionProfile } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getGymCached, getPublicWorkoutBySlug, getPublicWorkoutsCached } from "@/lib/cache";
 import WorkoutFollow from "@/components/workouts/WorkoutFollow";
 import ShareButton from "@/components/ShareButton";
 
-export const dynamic = "force-dynamic";
+// Was force-dynamic, puur om de sets van het ingelogde lid te kunnen voorinvullen. Elke bezoeker
+// betaalde daardoor een server-render mét auth-rondrit voor een pagina die voor iedereen identiek
+// is. De personalisatie zit nu in WorkoutFollow (via /api/me/workout-context), dus de pagina zelf
+// kan gewoon statisch — en blijft na een publicatie hoogstens 5 minuten oud.
+export const revalidate = 300;
+
+export async function generateStaticParams() {
+  try {
+    const gym = await getGymCached();
+    if (!gym) return [];
+    const workouts = await getPublicWorkoutsCached(gym.id);
+    return (workouts || []).filter((w) => w.slug).map((w) => ({ slug: w.slug }));
+  } catch {
+    // Databankhapering tijdens de build mag de deploy niet tegenhouden: zonder lijst rendert Next
+    // de pagina's gewoon op aanvraag.
+    return [];
+  }
+}
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -21,29 +36,6 @@ export default async function WorkoutDetail({ params }) {
   const gym = await getGymCached();
   const workout = gym ? await getPublicWorkoutBySlug(gym.id, slug) : null;
   if (!workout) notFound();
-
-  const { user } = await getSessionProfile();
-
-  // For logged-in members: prefill last sets + today's done-state per exercise.
-  const lastByPe = {};
-  const doneToday = {};
-  if (user) {
-    const peIds = workout.exercises.map((e) => e.id);
-    const supabase = await createClient();
-    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(new Date());
-    const { data: logs } = await supabase
-      .from("workout_logs")
-      .select("program_exercise_id, sets_json, logged_on")
-      .eq("user_id", user.id)
-      .in("program_exercise_id", peIds)
-      .order("logged_on", { ascending: false });
-    const seen = new Set();
-    for (const l of logs || []) {
-      const arr = Array.isArray(l.sets_json) ? l.sets_json : null;
-      if (l.logged_on === today && (arr || l.sets_json?.done)) doneToday[l.program_exercise_id] = true;
-      if (arr && !seen.has(l.program_exercise_id)) { seen.add(l.program_exercise_id); lastByPe[l.program_exercise_id] = arr; }
-    }
-  }
 
   return (
     <main className="min-h-screen bg-paper">
@@ -86,16 +78,11 @@ export default async function WorkoutDetail({ params }) {
             </ul>
           </div>
         )}
-        {!user && (
-          <div className="mt-5 rounded-3xl border-2 border-accent/40 bg-accent/5 p-5">
-            <p className="font-bold text-brand">Log in om je sets bij te houden 💪</p>
-            <p className="mt-1 text-sm text-brand/60">Je kan de workout vrij bekijken. Maak een gratis account om je gewichten, PR's en voortgang te loggen.</p>
-            <Link href={`/login?mode=signup&next=/workouts/${slug}`} className="mt-3 inline-block rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Maak gratis account</Link>
-          </div>
-        )}
       </div>
 
-      <WorkoutFollow workout={workout} lastByPe={lastByPe} doneToday={doneToday} isLoggedIn={!!user} />
+      {/* De uitnodiging voor uitgelogde bezoekers staat binnenin WorkoutFollow: die weet als enige
+          of er iemand ingelogd is — de pagina zelf is voor iedereen dezelfde statische HTML. */}
+      <WorkoutFollow workout={workout} signupHref={`/login?mode=signup&next=/workouts/${slug}`} />
     </main>
   );
 }

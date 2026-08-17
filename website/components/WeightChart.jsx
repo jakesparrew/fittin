@@ -5,7 +5,6 @@ export default function WeightChart({ points = [], goal = null }) {
     return <p className="text-sm text-brand/50">Log je gewicht op minstens twee dagen om je grafiek te zien.</p>;
   }
   const W = 640, H = 200, padL = 36, padR = 12, padT = 14, padB = 24;
-  const xs = points.map((_, i) => i);
   const ys = points.map((p) => Number(p.weight_kg));
   const allY = goal != null ? [...ys, goal] : ys;
   let min = Math.min(...allY), max = Math.max(...allY);

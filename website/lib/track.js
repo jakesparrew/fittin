@@ -29,7 +29,11 @@ function send(payload) {
 }
 
 // Fire a named funnel event. Only the whitelisted set in /api/pv is stored.
+// De UTM-spread staat hier om dezelfde reden als in PageView: zonder campagnelabel op het event
+// weet je wel dát een campagne verkeer bracht, maar niet of dat verkeer ook boekte. De intentie-
+// kolom van de campagnerapportage vult zich enkel als élk event zijn herkomst meedraagt.
+// `extra` staat achteraan zodat een expliciet meegegeven label het URL-label mag overschrijven.
 export function track(event, extra = {}) {
   if (typeof window === "undefined") return;
-  send({ event, path: window.location.pathname, ...extra });
+  send({ event, path: window.location.pathname, ...(readUtm() || {}), ...extra });
 }

@@ -4,7 +4,6 @@ import { fmtHour } from "@/lib/time";
 import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
-const WD = ["zo", "ma", "di", "wo", "do", "vr", "za"];
 const WD_FULL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
 
 export default async function Beschikbaarheid() {

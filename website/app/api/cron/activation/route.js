@@ -4,6 +4,7 @@ import { runAllActivations } from "@/lib/activation";
 import { sendDueReminders, sendCreditExpiryWarnings, sendFirstSessionFollowups, sendGuestFollowups, sendAboSuggestions, sendCreditsEmptyWarnings, startComebackSeries } from "@/lib/reminders";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkLockBatteries } from "@/lib/lock-battery";
+import { purgeExpiredData } from "@/lib/retention";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -42,13 +43,18 @@ export async function GET(req) {
   // en dit meelaten liften in de 5-minutencron zou 288 Nuki-calls per dag kosten voor niets.
   let battery = null;
   try { battery = await checkLockBatteries(createAdminClient()); } catch (e) { console.error("cron lock battery failed:", e?.message); }
+  // Bewaartermijnen uit het privacybeleid effectief afdwingen (logs opruimen). Dagelijks, omdat
+  // een dagelijkse veeg per keer bijna niets te doen heeft — een jaarlijkse zou in één keer een
+  // grote delete zijn.
+  let retentie = null;
+  try { retentie = await purgeExpiredData(); } catch (e) { console.error("cron bewaartermijnen failed:", e?.message); }
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Health heartbeat (Batch 6.5).
-  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, creditsEmpty, comebacks, battery } }); } catch {}
+  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, creditsEmpty, comebacks, battery, retentie } }); } catch {}
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.
   after(async () => {
     try { await fetch(`${SITE}/api/queue/process`, { cache: "no-store", headers: { Authorization: `Bearer ${secret}` } }); } catch {}
   });
-  return NextResponse.json({ ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, creditsEmpty, comebacks, results });
+  return NextResponse.json({ ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, creditsEmpty, comebacks, retentie, results });
 }

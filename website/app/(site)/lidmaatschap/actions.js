@@ -48,7 +48,9 @@ export async function buyPackage(formData) {
       ],
       metadata: { kind: "punchcard", package_id: pkg.id, credits: String(pkg.credits), user_id: user.id },
       success_url: `${siteUrl()}/account?credits=1`,
-      cancel_url: `${siteUrl()}/lidmaatschap?geannuleerd=1`,
+      // /lidmaatschap leest geen searchParams: wie een kaart van € 150 afbrak, kwam terug op een
+      // pagina die zwijgt. /account toont de "betaling afgebroken"-banner wél.
+      cancel_url: `${siteUrl()}/account?betaling=afgebroken`,
     });
     redirect(session.url);
   }
@@ -67,7 +69,8 @@ export async function buyPackage(formData) {
       metadata: { kind: "subscription", package_id: pkg.id, user_id: user.id },
       subscription_data: { metadata: { user_id: user.id, package_id: pkg.id, credits: String(pkg.credits) } },
       success_url: `${siteUrl()}/account?abo=1`,
-      cancel_url: `${siteUrl()}/lidmaatschap?geannuleerd=1`,
+      // Zie hierboven: enkel /account zegt iets terug bij een afgebroken betaling.
+      cancel_url: `${siteUrl()}/account?betaling=afgebroken`,
     });
     redirect(session.url);
   }

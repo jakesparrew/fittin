@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useMe } from "@/components/useMe";
 
 // Marketing nav — shown to logged-out visitors.
 const links = [
@@ -34,25 +35,19 @@ const staffLinks = [
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
-  const [account, setAccount] = useState(null);
-
+  // Gedeeld met BottomTabBar — samen nog één /api/me-oproep per pagina i.p.v. twee (zie useMe.js).
+  const me = useMe();
+  // Optimistic logged-in hint from a visible Supabase cookie so the nav doesn't flash "Inloggen".
+  // We ALWAYS confirm with /api/me — the auth-token cookie can be httpOnly/chunked and invisible
+  // to document.cookie, so a logged-in member must still reliably get the member nav.
+  const [sbCookie, setSbCookie] = useState(false);
   useEffect(() => {
-    let active = true;
-    // Optimistic logged-in hint from a visible Supabase cookie so the nav doesn't flash "Inloggen".
-    // We ALWAYS confirm with /api/me — the auth-token cookie can be httpOnly/chunked and invisible
-    // to document.cookie, so a logged-in member must still reliably get the member nav.
-    const hasSbCookie = document.cookie.split(";").some((c) => c.trim().startsWith("sb-"));
-    if (hasSbCookie) setAccount((a) => a || { name: "Account", role: "lid", home: "/account" });
-
-    fetch("/api/me", { cache: "no-store" })
-      .then((r) => r.json())
-      .then((d) => {
-        if (!active) return;
-        setAccount(d?.loggedIn ? { name: d.name, role: d.role, home: d.home, unread: d.unread || 0 } : null);
-      })
-      .catch(() => {});
-    return () => { active = false; };
+    setSbCookie(document.cookie.split(";").some((c) => c.trim().startsWith("sb-")));
   }, []);
+
+  const account = me
+    ? (me.loggedIn ? { name: me.name, role: me.role, home: me.home, unread: me.unread || 0 } : null)
+    : (sbCookie ? { name: "Account", role: "lid", home: "/account" } : null);
 
   const isStaff = account && ["coach", "beheerder"].includes(account.role);
   const staffLabel = account?.role === "beheerder" ? "Beheer" : "Coach";
