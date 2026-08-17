@@ -10,7 +10,7 @@ import { isNetworkError, waitForNetwork } from "@/lib/net";
 // wordt nooit geraakt door een uitgelogde test — vandaar dat build, tests én eigen klikwerk hem
 // misten tot een lid met een vers abonnement niet meer kon boeken.
 import { sess } from "@/lib/format";
-import EventsBooking from "@/components/booking/EventsBooking";
+import ShareReferral from "@/components/ShareReferral";
 import { track } from "@/lib/track";
 
 const euro = (cents) => "€ " + (cents / 100).toFixed(2).replace(".", ",");
@@ -28,11 +28,10 @@ export default function BookingClient({
   isMember = false,
   paymentCanceled = false,
   buddies = [],
-  events = [],
+  referralCode = "",
   prefill = {},
 }) {
   const router = useRouter();
-  const [mode, setMode] = useState("session"); // session | events
   const [serviceId, setServiceId] = useState(
     (services.find((s) => s.type === "fit60") || services[0])?.id
   );
@@ -46,7 +45,7 @@ export default function BookingClient({
   const [duration, setDuration] = useState(Math.min(4, Math.max(1, Math.round((Number(prefill.duration) || 1) * 2) / 2)));
   const [coachId, setCoachId] = useState(coaches[0]?.id || "");
   const [useWelcome, setUseWelcome] = useState(welcomeAvailable);
-  // Auto-apply the beurtenkaart/abo balance by default (opt-OUT) — a €150-card holder should never
+  // Auto-apply the sessietegoed/abo balance by default (opt-OUT) — a €150-card holder should never
   // silently pay €15 cash again. Free welcome session still wins when available.
   const [useCredit, setUseCredit] = useState(!welcomeAvailable && creditBalance >= 1);
   const [discountCode, setDiscountCode] = useState("");
@@ -112,12 +111,22 @@ export default function BookingClient({
     const sp = new URLSearchParams(window.location.search);
     const d = sp.get("d");
     const h = parseFloat(sp.get("h"));
-    if (!d || Number.isNaN(h)) return;
+    if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(h)) return;
     // parseInt kapte 1.5 af naar 1 → een 90-minutensuggestie (en de gast-signup-terugkeer met
     // ?u=1.5) werd stil 1 uur. Ontbreekt ?u=, hou dan de duur die al uit ?duur= kwam.
     const uRaw = sp.get("u") != null ? parseFloat(sp.get("u")) : duration;
     const u = Math.min(4, Math.max(1, Math.round((Number.isFinite(uRaw) ? uRaw : 1) * 2) / 2));
-    if (!days.some((x) => x.dateStr === d) || !canBook(d, h, u)) return;
+    // Een gast mag tot twee weken vooruit bladeren, maar het herstel keek enkel in de huidige week:
+    // wie een moment uit week 2 koos en dan een account maakte, kwam terug op een lege week 1 en
+    // zag zijn keuze zonder één woord verdwijnen. Leid de week dus af uit de datum zelf.
+    const dayIdx = Math.round((Date.parse(`${d}T12:00:00Z`) - Date.parse(`${brusselsDateStr(new Date())}T12:00:00Z`)) / 86400000);
+    const wk = Math.floor(dayIdx / 7);
+    if (dayIdx < 0 || wk > maxWeek) return;
+    if (!canBook(d, h, u)) {
+      setError("Dat moment is net weg — kies gerust een ander.");
+      return;
+    }
+    setWeekOffset(wk);
     setSelected({ dateStr: d, hour: h });
     if (h < 7 || h >= 21) setShowNight(true); // randuur uit een deeplink: rooster meteen openvouwen
     setMobileDay(d);
@@ -152,6 +161,15 @@ export default function BookingClient({
   const fitDur = isFit60 ? duration : 1;
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
+  const durLabel = (n) => (n % 1 ? `${Math.floor(n)}u30` : `${n} uur`);
+  // Een uitgelogde bezoeker heeft nog geen profiel, dus welcomeAvailable is voor hem altijd false —
+  // en las daardoor "Totaal € 15,00" onder een knop die "je eerste uur gratis" belooft. Het gratis
+  // uur geldt bij de eerste boeking, dus de belofte klopt ook voor een uitgelogd bestaand lid.
+  const guestWelcome = !isLoggedIn && isFit60 && duration === 1;
+  // De stapnummers moeten volgen wat er écht staat: valt de dienstkeuze weg, dan begint het
+  // formulier bij 1.
+  const showServicePicker = services.length > 1;
+  const stepNr = (n) => String(showServicePicker ? n : n - 1);
   const durFactor = 1; // geen korting op langere sessies — je betaalt (en gebruikt) 1 credit per uur
   // Members book Fit60 at the member price; PT uses the chosen coach's per-formule rate (matches the
   // server): 1-op-1 = coach_pt_price_cents, 1-op-2/1-op-3 = prijs per persoon → totaal = tarief × personen.
@@ -163,6 +181,26 @@ export default function BookingClient({
   const priceCents = welcomeApplies || creditApplies ? 0
     : isPT ? Math.round(ptUnit * persons * duration)
     : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
+
+  // Het bedrag onder "Totaal" en in de mobiele balk komt uit één berekening — die twee mogen nooit
+  // iets anders zeggen.
+  const totalValue = (compact) =>
+    welcomeApplies ? "Gratis"
+    : creditApplies ? `${sess(duration)} sessie${duration === 1 ? "" : "s"}`
+    : guestWelcome ? (
+      <>
+        <span className={"mr-1.5 line-through " + (compact ? "text-xs text-brand/40" : "text-xl text-lav")}>{euro(priceCents)}</span>
+        Gratis
+      </>
+    )
+    : discountInfo?.ok ? euro(discountInfo.cents)
+    : euro(priceCents);
+  // Volgt er straks een Stripe-pagina? Dan moet de bezoeker het venster van 15 minuten kennen.
+  const willPay = isLoggedIn && !welcomeApplies && !creditApplies && (discountInfo?.ok ? discountInfo.cents : priceCents) > 0;
+
+  // Een kortingsweergave hoort bij één bedrag: verandert de duur of het aantal personen, dan bleef
+  // het oude bedrag staan tot de bezoeker op de Stripe-pagina een ander cijfer zag.
+  useEffect(() => { setDiscountInfo(null); }, [priceCents]);
 
   // Invite slots = the booking's free spots (persons − you). Members + e-mail invites share them.
   const inviteSlots = isFit60 ? Math.max(0, persons - 1) : 0;
@@ -233,6 +271,9 @@ export default function BookingClient({
     if (res?.error) {
       setBusy(false);
       setError(res.error);
+      // Op de telefoon zweeft de bevestigknop onderaan terwijl de foutzone in het overzichtspaneel
+      // ver daarboven staat: zonder toast leek er letterlijk niets te gebeuren bij een weigering.
+      toast("error", res.error);
       router.refresh();
       return;
     }
@@ -241,8 +282,10 @@ export default function BookingClient({
       return;
     }
     setBusy(false);
+    track("booking_completed"); // funnel: geeft checkout_started zijn noemer
     const day = days.find((d) => d.dateStr === selected.dateStr);
     setConfirmed({
+      id: res?.bookingId || null,
       service: service.name,
       day: day ? `${day.weekday} ${day.dayMonth}` : selected.dateStr,
       range: slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60),
@@ -261,12 +304,31 @@ export default function BookingClient({
           <p className="mt-3 leading-relaxed text-brand/70">
             {confirmed.service} · {confirmed.day} · {confirmed.range} · {confirmed.persons}{" "}
             {confirmed.persons === 1 ? "persoon" : "personen"}
-            {confirmed.free && " · gratis (FittinWelcome)"}
+            {confirmed.free && " · gratis (je eerste uur)"}
+          </p>
+          {/* Voor een nieuw lid is dit het allereerste scherm na zijn allereerste boeking. Zonder
+              deze regel eindigt de flow bij "bevestigd" en blijft de belangrijkste vraag open:
+              hoe raak ik straks binnen? */}
+          <p className="mt-3 text-sm leading-relaxed text-brand/55">
+            Je bevestiging staat in je mailbox. Je deurcode komt automatisch ± 5 min vóór je sessie —
+            verplaatsen kan tot 6u vooraf.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
+            {confirmed.id && (
+              <a href={`/api/ics/${confirmed.id}`} className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-white px-6 py-3.5 font-bold text-brand transition hover:border-accent" title="Voeg deze sessie toe aan je agenda">📅 Agenda</a>
+            )}
             <Link href="/account" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90">Naar mijn account</Link>
             <button onClick={() => { setConfirmed(null); setSelected(null); }} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-lav">Nieuwe boeking</button>
           </div>
+          {/* De deelknop hing tot nu aan een betaald=1-conditie op /account, waardoor gratis-,
+              tegoed- en kaartboekers hem nooit zagen. Hier staat hij op het enige moment waarop
+              iemand net zelf overtuigd is. */}
+          {referralCode && (
+            <div className="mt-8 border-t border-borderc pt-6">
+              <p className="text-sm font-bold text-brand">Breng een vriend mee — zijn eerste uur is ook gratis.</p>
+              <div className="mt-3 flex justify-center"><ShareReferral code={referralCode} compact /></div>
+            </div>
+          )}
         </div>
       </main>
     );
@@ -280,10 +342,13 @@ export default function BookingClient({
         <Link href={isLoggedIn ? "/account" : "/"} className="inline-flex items-center gap-1.5 text-sm font-bold text-brand/60 transition hover:text-brand">← {isLoggedIn ? "Terug naar account" : "Terug naar home"}</Link>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.25em] text-lav">Online boeken</p>
         <h1 className="mt-3 text-3xl font-black md:text-4xl">Reserveer je sessie</h1>
-        {welcomeAvailable ? (
+        {/* De code-framing is weg: de kortingsvalidatie weigert "FittinWelcome" expliciet, dus wie
+            hem effectief intikte kreeg een foutmelding op de belofte van de homepage. Het gratis uur
+            hangt aan het profiel, niet aan een code. */}
+        {welcomeAvailable || !isLoggedIn ? (
           <p className="mt-3 max-w-xl text-brand/70">
-            Welkom! Je eerste Fit60-sessie is <span className="font-bold text-accentdark">gratis</span> met{" "}
-            <span className="rounded-full bg-brand px-3 py-0.5 font-bold text-accent">FittinWelcome</span>.
+            Je eerste privé sessie van 1 uur is <span className="font-bold text-accentdark">gratis</span>
+            {isLoggedIn ? "." : " — dat geldt voor je eerste boeking bij Fittin'."}
           </p>
         ) : (
           <p className="mt-3 max-w-xl text-brand/70">De hele zaal is van jou tijdens je boeking — open van {gym.open_hour}u tot {gym.close_hour}u, kies je moment.</p>
@@ -294,33 +359,31 @@ export default function BookingClient({
           </p>
         )}
 
-        {/* Events feature is "coming soon" — only session booking is active. */}
-        {mode === "events" ? (
-          <EventsBooking events={events} isLoggedIn={isLoggedIn} />
-        ) : (
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            {/* Service */}
-            <Card step="1" title="Kies je sessie">
-              {/* Kolommen volgen het aantal diensten. Vast op 3 kolommen liet twee derde van de kaart
-                  leeg zodra er maar één sessietype aanstond — precies de situatie vandaag. */}
-              <div className={"grid gap-4 " + (services.length === 1 ? "sm:max-w-sm" : services.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
-                {services.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => { setServiceId(s.id); setSelected(null); }}
-                    className={"rounded-2xl border-2 p-5 text-left transition " + (serviceId === s.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}
-                  >
-                    <p className="font-black">{s.name}</p>
-                    {s.type === "fit60" && isMember && s.member_price_cents != null ? (
-                      <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · <span className="font-bold text-accentdark">{euro(s.member_price_cents)}</span> <span className="text-brand/40 line-through">{euro(s.price_cents)}</span> <span className="font-bold text-accentdark">ledenprijs</span></p>
-                    ) : (
-                      <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "op aanvraag"}</p>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </Card>
+            {/* Service — één dienst is geen keuze: die kaart duwde op de telefoon het hele rooster
+                een scherm naar beneden om een knop te tonen die al aan stond. serviceId wordt bij
+                mount gezet, dus zonder kaart blijft alles werken. */}
+            {showServicePicker && (
+              <Card step="1" title="Kies je sessie">
+                <div className={"grid gap-4 " + (services.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-3")}>
+                  {services.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => { setServiceId(s.id); setSelected(null); }}
+                      className={"rounded-2xl border-2 p-5 text-left transition " + (serviceId === s.id ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}
+                    >
+                      <p className="font-black">{s.name}</p>
+                      {s.type === "fit60" && isMember && s.member_price_cents != null ? (
+                        <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · <span className="font-bold text-accentdark">{euro(s.member_price_cents)}</span> <span className="text-brand/40 line-through">{euro(s.price_cents)}</span> <span className="font-bold text-accentdark">ledenprijs</span></p>
+                      ) : (
+                        <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "op aanvraag"}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {/* Coach (PT) */}
             {isPT && (
@@ -341,7 +404,7 @@ export default function BookingClient({
 
             {/* Persons */}
             {isFit60 && (
-              <Card step="2" title="Met hoeveel &amp; hoe lang?">
+              <Card step={stepNr(2)} title="Met hoeveel &amp; hoe lang?">
                 {/* Personen en duur naast elkaar op desktop: twee korte keuzerijen onder elkaar lieten
                     de halve kaartbreedte leeg en maakten de pagina onnodig lang. */}
                 <div className="grid gap-6 sm:grid-cols-2">
@@ -375,9 +438,9 @@ export default function BookingClient({
                       ))}
                     </div>
                     <p className="mt-2 text-xs text-brand/40">Hieronder zie je meteen welke momenten vrij zijn voor deze duur.</p>
-                    {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {duration % 1 ? `${Math.floor(duration)}u30` : `${duration} uur`} kost {String(duration).replace(".", ",")} sessie{duration === 1 ? "" : "s"}.</p>}
+                    {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {durLabel(duration)} kost {sess(duration)} sessie{duration === 1 ? "" : "s"}.</p>}
                     {welcomeAvailable && useWelcome && duration > 1 && (
-                      <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {duration} uur betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
+                      <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {durLabel(duration)} betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
                     )}
                   </div>
                 </div>
@@ -446,7 +509,7 @@ export default function BookingClient({
             )}
 
             {/* Schedule grid */}
-            <Card step="3" title="Kies je moment">
+            <Card step={stepNr(3)} title="Kies je moment">
               <div className="mb-3 flex items-center justify-between">
                 <button onClick={() => setWeekOffset((w) => Math.max(0, w - 1))} disabled={weekOffset === 0} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">‹ vorige</button>
                 <span className="text-sm font-bold text-brand/60">{weekLabel}</span>
@@ -591,20 +654,29 @@ export default function BookingClient({
               {isPT && <Row label="Coach" value={coaches.find((c) => c.id === coachId)?.full_name || "—"} />}
               <Row label="Moment" value={selected ? `${days.find((d) => d.dateStr === selected.dateStr)?.weekday || ""} ${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}` : "—"} />
               {isFit60 && <Row label="Personen" value={persons} />}
-              {isFit60 && <Row label="Duur" value={duration % 1 ? `${Math.floor(duration)}u30` : `${duration} uur`} />}
+              {isFit60 && <Row label="Duur" value={durLabel(duration)} />}
             </dl>
 
             {isFit60 && welcomeAvailable && (
               <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
                 <input type="checkbox" checked={useWelcome} onChange={(e) => setUseWelcome(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
-                <span className="text-lav">Gebruik <span className="font-bold text-accent">FittinWelcome</span> — je eerste <b className="text-white">uur</b> is gratis{duration > 1 ? " · extra uren reken je gewoon af" : ""}</span>
+                {/* Het label moet de werkelijkheid volgen: bij een langere sessie bleef hier
+                    "je eerste uur is gratis" staan terwijl het totaal € 30 toonde. */}
+                <span className="text-lav">
+                  {duration > 1
+                    ? <>Je gratis uur geldt enkel voor een sessie van <b className="text-white">1 uur</b> — bij {durLabel(duration)} betaal je de volledige prijs</>
+                    : <>Gebruik je <b className="text-white">gratis eerste uur</b> — deze sessie kost je niets</>}
+                </span>
               </label>
             )}
 
             {isFit60 && !welcomeApplies && creditBalance >= 1 && (
               <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
                 <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
-                <span className="text-lav">Betaal met je <span className="font-bold text-accent">beurtenkaart</span> — saldo: {String(creditBalance).replace(".", ",")}{creditApplies ? ` · je gebruikt ${String(duration).replace(".", ",")}, daarna ${String(creditBalance - duration).replace(".", ",")}` : useCredit ? "" : " · vink uit om cash/kaart te betalen"}</span>
+                {/* "Sessietegoed" i.p.v. "beurtenkaart": een abo-sessie komt in hetzelfde grootboek
+                    terecht en is geen kaart. En een ontoereikend saldo moet je hier lezen, niet pas
+                    op de Stripe-pagina. */}
+                <span className="text-lav">Betaal met je <span className="font-bold text-accent">sessietegoed</span> — saldo: {sess(creditBalance)}{creditApplies ? ` · je gebruikt ${sess(duration)}, daarna ${sess(creditBalance - duration)}` : useCredit ? ` · je saldo volstaat niet voor ${durLabel(duration)} — je betaalt deze sessie` : " · vink uit om cash/kaart te betalen"}</span>
               </label>
             )}
 
@@ -634,10 +706,9 @@ export default function BookingClient({
 
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">
               <span className="text-lav">Totaal</span>
-              <span className="text-3xl font-black text-accent">
-                {welcomeApplies ? "Gratis" : creditApplies ? `${sess(duration)} sessie${duration === 1 ? "" : "s"}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}
-              </span>
+              <span className="text-3xl font-black text-accent">{totalValue(false)}</span>
             </div>
+            {guestWelcome && <p className="mt-1 text-right text-xs text-lav">Je eerste uur is gratis — bij je eerste boeking.</p>}
 
             {error && <p className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm font-semibold text-red-100">{error}</p>}
 
@@ -657,20 +728,29 @@ export default function BookingClient({
                 </p>
               </div>
             )}
-            <p className="mt-3 text-center text-xs text-lav">Verplaatsen kan tot 6u voor je sessie. Sessies worden altijd betaald.</p>
+            {/* Eén regel die zegt wat er nú telt: de accountdrempel voor gasten, het betaalvenster
+                van 15 minuten voor wie zo naar Stripe gaat, anders de verplaatsingsregel. */}
+            <p className="mt-3 text-center text-xs text-lav">
+              {!isLoggedIn
+                ? "Een account is nodig om je deurcode te sturen — 30 seconden, geen betaalgegevens. Verplaatsen kan tot 6u voor je sessie."
+                : willPay
+                  ? "Rond je betaling binnen 15 minuten af, anders komt je uur weer vrij. Verplaatsen kan tot 6u voor je sessie."
+                  : "Verplaatsen kan tot 6u voor je sessie. Sessies worden altijd betaald."}
+            </p>
           </div>
         </div>
-        )}
       </div>
 
       {/* Mobile sticky confirm bar — the summary panel is lg:sticky only, so on phones the price +
           confirm sit far below the pickers. This keeps them one tap away. Sits above the tab bar. */}
-      {mode === "session" && selected && (
-        <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-borderc bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(34,25,79,0.08)] backdrop-blur lg:hidden">
+      {selected && (
+        // bottom-[4.75rem] houdt de tabbalk vrij, maar die verdwijnt al vanaf md — daarboven bleef
+        // er een lege strook onder deze balk staan.
+        <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-borderc bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(34,25,79,0.08)] backdrop-blur md:bottom-0 lg:hidden">
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-brand">{days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · {slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}</p>
-              <p className="text-sm font-black text-accentdark">{welcomeApplies ? "Gratis" : creditApplies ? `${sess(duration)} sessie${duration === 1 ? "" : "s"}` : discountInfo?.ok ? euro(discountInfo.cents) : euro(priceCents)}</p>
+              <p className="text-sm font-black text-accentdark">{totalValue(true)}</p>
             </div>
             {isLoggedIn ? (
               <button onClick={submit} disabled={busy} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30 transition enabled:hover:-translate-y-0.5 disabled:opacity-50">
@@ -690,7 +770,9 @@ export default function BookingClient({
 
 function Card({ step, title, children }) {
   return (
-    <div className="rounded-3xl border border-borderc bg-white p-7">
+    // p-5 op de telefoon: p-7 aan beide kanten kostte 24px inhoudsbreedte, en net daar staat het
+    // rooster van zeven dagen naast elkaar.
+    <div className="rounded-3xl border border-borderc bg-white p-5 sm:p-7">
       <h2 className="font-black"><span className="text-accentdark">{step} · </span>{title}</h2>
       <div className="mt-4">{children}</div>
     </div>
@@ -715,10 +797,20 @@ function WaitlistSlot({ date, hour, label, compact = false, isLoggedIn }) {
     setState("busy");
     try {
       const res = await toggleWaitlistAction({ date, hour: String(hour) });
+      // De knop slikte zowel succes als fout: een tik gaf hoogstens een ander icoontje, en een
+      // weigering gaf helemaal niets. De action geeft haar eigen Nederlandse tekst mee.
+      if (res?.error) {
+        setState("idle");
+        toast("error", res.error);
+        return;
+      }
       setState(res?.on ? "on" : "idle");
       if (res?.on) track("waitlist_joined");
-      if (res?.error) { setState("idle"); }
-    } catch { setState("idle"); }
+      if (res?.message) toast(res.on ? "success" : "info", res.message);
+    } catch {
+      setState("idle");
+      toast("error", "Dat lukte niet — probeer het zo nog eens.");
+    }
   };
   if (!isLoggedIn) {
     return compact

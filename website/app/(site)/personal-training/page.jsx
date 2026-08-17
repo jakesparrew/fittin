@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 import { coachSlug } from "@/lib/slug";
-import ActionForm from "@/components/ui/ActionForm";
-import { requestIntake } from "./actions";
+import { healthClubLd, faqLd, jsonLdScript } from "@/lib/seo";
+import IntakeForm from "./IntakeForm";
 
 export const metadata = {
   title: "Personal training in Gent | Fittin'",
@@ -51,7 +51,7 @@ const coaching = [
 const steps = [
   {
     title: "1. Gratis intake & proeftraining",
-    text: "We starten met een kennismaking en een echte proeftraining. Samen leggen we je doel vast en kijken we welke coach en aanpak bij jou passen. Volledig gratis en vrijblijvend.",
+    text: "Reken op ongeveer 60 minuten: kennismaking, je doel vastleggen en meteen echt trainen. Sportkleren, propere binnenschoenen en een handdoek volstaan — je moet niets kunnen, want je coach past alles aan jouw niveau aan.",
   },
   {
     title: "2. Jouw plan op maat",
@@ -75,9 +75,9 @@ const appPoints = [
 ];
 
 const formules = [
-  { name: "1-op-1", desc: "Volledig privé. Alle aandacht en begeleiding gaat naar jou." },
-  { name: "1-op-2 (duo)", desc: "Samen met een partner of vriend(in). Motiverend en gezellig." },
-  { name: "1-op-3 (small group)", desc: "Met je kleine vaste groepje. Begeleiding op maat, samen sterker." },
+  { name: "1-op-1", people: 1, desc: "Alleen jij en je coach. Alle aandacht en begeleiding gaat naar jou." },
+  { name: "1-op-2 (duo)", people: 2, desc: "Jij + 1 die je zelf meebrengt: je partner, een vriend(in) of een collega." },
+  { name: "1-op-3 (kleine groep)", people: 3, desc: "Jij + 2 die je zelf meebrengt. Jullie vaste groepje, begeleiding op maat." },
 ];
 
 const faq = [
@@ -87,7 +87,11 @@ const faq = [
   },
   {
     q: "Is de proeftraining echt gratis?",
-    a: "Ja. Je eerste sessie — een intakegesprek én een echte proeftraining — is volledig gratis en vrijblijvend. Zo weet je meteen of de aanpak en de coach bij je passen.",
+    a: "Ja. Je eerste sessie — een intakegesprek én een echte proeftraining — is volledig gratis en vrijblijvend. Je hebt geen bankkaart nodig en er komt geen abonnement bij kijken. Zo weet je meteen of de aanpak en de coach bij je passen.",
+  },
+  {
+    q: "Wat breng ik mee?",
+    a: "Sportkleren, propere binnenschoenen en een handdoek. Meer heb je niet nodig — de toestellen staan klaar.",
   },
   {
     q: "Moet ik lid worden of een abonnement nemen?",
@@ -125,38 +129,52 @@ export default async function PersonalTraining() {
   const coaches = gym ? await getPublicCoachesCached(gym.id) : [];
   return (
     <main>
+      <script {...jsonLdScript(healthClubLd())} />
+      <script {...jsonLdScript(faqLd(faq))} />
+
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute -left-32 -top-32 h-72 w-72 rounded-full bg-accent" />
-        <div className="relative mx-auto max-w-6xl px-5 py-24">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Personal coaching</p>
-          <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight md:text-5xl">
-            Een coach die je begeleidt — <span className="text-accentdark">in de zaal én in de app</span>
-          </h1>
-          <div className="mt-6 max-w-2xl space-y-4 text-lg leading-relaxed text-brand/70">
-            <p>
-              Bij Fittin&rsquo; train je nooit op een eilandje. Je coach leert jou en je doel kennen,
-              bouwt je programma op maat in onze app en volgt je voortgang van dichtbij op. Jij hoeft
-              alleen maar op te dagen en te trainen.
-            </p>
-            <p>
-              We starten altijd met een <strong className="text-brand">gratis intake en proeftraining</strong>.
-              Zo voel je meteen of de aanpak bij je past — zonder enige verplichting.
-            </p>
-          </div>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <a
-              href="#intake"
-              className="inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90"
-            >
-              Vraag je gratis proeftraining aan
-            </a>
-            <a
-              href="#coaches"
-              className="inline-block rounded-full border border-borderc px-7 py-3.5 font-bold text-brand transition hover:bg-paper"
-            >
-              Maak kennis met de coaches
-            </a>
+        {/* Mobiel compacter (zelfde maten als de homepage-hero) zodat de aanvraagknop boven de vouw
+            blijft; het zaalbeeld is het privacy-argument en verschijnt pas vanaf md. */}
+        <div className="relative mx-auto max-w-6xl px-5 py-14 sm:py-24">
+          <div className="grid items-center gap-10 md:grid-cols-[minmax(0,1fr)_340px]">
+            <div>
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Personal coaching</p>
+              <h1 className="mt-4 max-w-3xl text-3xl font-black leading-tight sm:text-4xl md:text-5xl">
+                Personal training in Gent — <span className="text-accentdark">je coach volgt je in de zaal én in de app</span>
+              </h1>
+              <p className="mt-5 max-w-2xl text-base leading-relaxed text-brand/70 sm:mt-6 sm:text-lg">
+                Bij Fittin&rsquo; train je nooit op een eilandje. Je coach leert jou en je doel kennen,
+                bouwt je programma op maat in onze app en volgt je voortgang van dichtbij op.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
+                <a
+                  href="#intake"
+                  className="inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90"
+                >
+                  Vraag je gratis proeftraining aan
+                </a>
+                <a
+                  href="#coaches"
+                  className="inline-block rounded-full border border-borderc px-7 py-3.5 font-bold text-brand transition hover:bg-paper"
+                >
+                  {coaches.length === 1 ? "Maak kennis met je coach" : "Maak kennis met de coaches"}
+                </a>
+              </div>
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-brand/60">
+                We starten altijd met een <strong className="text-brand">gratis intake en proeftraining</strong> —
+                zonder verplichting.
+              </p>
+            </div>
+            <Image
+              src="/video-poster.jpg"
+              alt="De trainingszaal van Fittin' in Gent — tijdens jouw sessie helemaal leeg"
+              width={1280}
+              height={720}
+              sizes="340px"
+              className="hidden aspect-[4/3] w-full rounded-3xl border border-borderc object-cover md:block"
+            />
           </div>
         </div>
       </section>
@@ -253,28 +271,32 @@ export default async function PersonalTraining() {
       {/* Coaches */}
       <section id="coaches" className="bg-paper scroll-mt-24">
         <div className="mx-auto max-w-6xl px-5 py-20">
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Onze coaches</p>
+          <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">{coaches.length === 1 ? "Je coach" : "Onze coaches"}</p>
           <h2 className="mt-3 text-3xl font-black md:text-4xl">
-            Misschien binnenkort jouw sportbuddy
+            {coaches.length === 1 ? "Maak kennis met je coach" : "Misschien binnenkort jouw sportbuddy"}
           </h2>
           <p className="mt-4 max-w-2xl leading-relaxed text-brand/70">
-            Onze ervaren coaches, elk met hun eigen specialiteit. Tijdens je gratis intake ontdek je
-            wie het best bij jou en je doel past.
+            {coaches.length === 1
+              ? "Tijdens je gratis intake leer je je coach kennen en ontdek je of de aanpak bij jou en je doel past."
+              : "Onze ervaren coaches, elk met hun eigen specialiteit. Tijdens je gratis intake ontdek je wie het best bij jou en je doel past."}
           </p>
           {coaches.length > 0 ? (
-            <div className="mt-10 grid gap-5 md:grid-cols-3">
+            // Het kolomaantal volgt het aantal publieke coaches — anders staan er gaten naast één kaart.
+            <div className={`mt-10 grid gap-5 ${coaches.length === 1 ? "max-w-sm" : coaches.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
               {coaches.map((coach) => (
-                <Link key={coach.id} href={`/coaches/${coachSlug(coach)}`} className="flex flex-col rounded-2xl border border-borderc bg-white p-7 transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
-                  {coach.coach_photo_url ? (
-                    <Image src={coach.coach_photo_url} alt={coach.full_name || "Coach"} width={64} height={64} sizes="64px" className="h-16 w-16 rounded-full object-cover" />
-                  ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-brand text-lg font-black text-accent">
-                      {(coach.full_name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2)}
-                    </div>
-                  )}
-                  <h3 className="mt-4 text-xl font-black">{coach.full_name || "Coach"}</h3>
-                  {coach.coach_specialty && <p className="mt-1 text-sm font-semibold text-accentdark">{coach.coach_specialty}</p>}
-                  <span className="mt-auto pt-5 text-sm font-bold text-brand">Bekijk profiel →</span>
+                <Link key={coach.id} href={`/coaches/${coachSlug(coach)}`} className="group flex flex-col overflow-hidden rounded-2xl border border-borderc bg-white transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
+                  <div className="relative aspect-[4/3] bg-paper">
+                    {coach.coach_photo_url ? (
+                      <Image src={coach.coach_photo_url} alt={coach.full_name || "Coach"} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-5xl font-black text-brand/15">{(coach.full_name || "C").slice(0, 1)}</div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col p-6">
+                    <h3 className="text-xl font-black">{coach.full_name || "Coach"}</h3>
+                    {coach.coach_specialty && <p className="mt-1 text-sm font-semibold text-accentdark">{coach.coach_specialty}</p>}
+                    <span className="mt-auto pt-4 text-sm font-bold text-brand/60 transition group-hover:text-brand">Bekijk profiel →</span>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -298,7 +320,12 @@ export default async function PersonalTraining() {
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {formules.map((f) => (
               <div key={f.name} className="rounded-2xl border border-borderc p-7">
-                <div className="h-2.5 w-10 rounded-full bg-accent" />
+                {/* Eén bolletje per persoon die meetraint — zo verschillen de drie kaarten in één oogopslag. */}
+                <div className="flex gap-1.5" aria-hidden="true">
+                  {Array.from({ length: f.people }).map((_, i) => (
+                    <span key={i} className="h-3 w-3 rounded-full bg-accent" />
+                  ))}
+                </div>
                 <h3 className="mt-4 text-xl font-black">{f.name}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-brand/60">{f.desc}</p>
               </div>
@@ -307,7 +334,9 @@ export default async function PersonalTraining() {
           <div className="mt-8 rounded-2xl bg-paper p-6 text-sm leading-relaxed text-brand/70">
             <strong className="text-brand">Prijs op aanvraag.</strong> Personal training is altijd op maat,
             dus de prijs ook. Je krijgt een helder voorstel tijdens je gratis intake — zonder verplichting.
-Je sessie verplaatsen kan tot 6u op voorhand, in overleg met je coach.
+            Train je in duo of met je drieën, dan deel je de kost van de sessie met wie je meebrengt;
+            de sessie zelf kost dan wel meer dan een 1-op-1.
+            Je sessie verplaatsen kan tot 6u op voorhand, in overleg met je coach.
           </div>
         </div>
       </section>
@@ -367,35 +396,10 @@ Je sessie verplaatsen kan tot 6u op voorhand, in overleg met je coach.
         <div className="mx-auto max-w-3xl px-5 py-20">
           <h2 className="text-center text-3xl font-black text-brand md:text-4xl">Vraag je gratis intake & proeftraining aan</h2>
           <p className="mx-auto mt-4 max-w-xl text-center text-brand/70">
-            Laat je gegevens achter en we contacteren je snel (meestal binnen 1 werkdag) om een moment
-            te prikken. Volledig gratis en vrijblijvend.
+            Laat je gegevens achter, dan mailen we je binnen 1 werkdag om een moment te prikken —
+            of bellen we je als je je nummer invult. Volledig gratis en vrijblijvend.
           </p>
-          <ActionForm action={requestIntake} success="Aanvraag verstuurd ✓" className="mt-10 rounded-3xl border border-borderc bg-white p-6 md:p-8">
-            {/* Honeypot — verborgen voor mensen, ingevuld door bots. */}
-            <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-bold text-brand">
-                Naam
-                <input name="name" required maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
-              </label>
-              <label className="block text-sm font-bold text-brand">
-                E-mail
-                <input name="email" type="email" required maxLength={200} autoComplete="email" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
-              </label>
-              <label className="block text-sm font-bold text-brand sm:col-span-2">
-                Telefoon <span className="font-normal text-brand/40">(optioneel)</span>
-                <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
-              </label>
-              <label className="block text-sm font-bold text-brand sm:col-span-2">
-                Wat is je doel? <span className="font-normal text-brand/40">(optioneel)</span>
-                <textarea name="goal" rows={4} maxLength={2000} placeholder="Bv. sterker worden, afvallen, terug opbouwen na blessure…" className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
-              </label>
-            </div>
-            <button className="mt-6 w-full rounded-full bg-accent py-4 text-lg font-black text-brand transition hover:opacity-90 sm:w-auto sm:px-10">
-              Vraag gratis intake aan
-            </button>
-            <p className="mt-3 text-xs text-brand/40">We gebruiken je gegevens enkel om je intake in te plannen.</p>
-          </ActionForm>
+          <IntakeForm coaches={coaches.map((c) => ({ id: c.id, name: c.full_name || "Coach", slug: coachSlug(c) }))} />
         </div>
       </section>
     </main>

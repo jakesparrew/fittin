@@ -1,15 +1,18 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import Reveal from "@/components/anim/Reveal";
-import Counter from "@/components/anim/Counter";
 import { getSessionProfile, roleHome } from "@/lib/auth";
 import { healthClubLd, jsonLdScript } from "@/lib/seo";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
+// Elke registratielink op deze pagina eindigt in de boekflow: wie hier een account maakt, doet dat
+// om te boeken — zonder ?next landt hij op /account en moet hij de weg terug zelf vinden.
+const SIGNUP_HREF = "/login?mode=signup&next=/boeken";
+
 export const metadata = {
   title: "Fittin' — privégym & personal training in Gent",
-  description: "Reserveer de hele zaal voor jezelf, je vrienden of met een coach. Elke dag van 6u tot 23u in Gent, geen lidgeld — je betaalt enkel voor je tijd.",
+  description: "Reserveer de hele zaal voor jezelf, je vrienden of met een coach — je eerste uur is gratis. Elke dag van 6u tot 23u in Gent, geen lidgeld: je betaalt enkel voor je tijd.",
   alternates: { canonical: SITE },
 };
 
@@ -26,7 +29,18 @@ const usps = [
 const steps = [
   ["Maak je gratis account", "In 30 seconden geregeld — met e-mail of met Google. Geen lidgeld, geen verplichtingen.", "01"],
   ["Boek je eerste uur — gratis", "Reserveer een moment dat jou past — je eerste sessie is automatisch gratis.", "02"],
-  ["Open de deur & train", "Je boeking opent de deur via de app. De hele zaal voor jou — alleen, met vrienden of met coach.", "03"],
+  ["Open de deur & train", "Je toegangscode komt automatisch ± 5 minuten voor je sessie, of je opent de deur via de app. De hele zaal voor jou — alleen, met vrienden of met coach.", "03"],
+];
+
+// De prijs- en locatiefeiten die een koude bezoeker boven de vouw moet zien. De zaal-framing
+// (€ 15 voor de hele zaal) vervangt bewust "1 tot 4 personen": dat las als een limiet, niet als
+// het argument dat samen trainen niets extra kost.
+const heroChips = [
+  { t: "€ 15 voor de hele zaal — ook met z'n vieren" },
+  { t: "sessies van 1 uur" },
+  { t: "elke dag 6–23u" },
+  { t: "geen lidgeld" },
+  { t: "Sint-Amandsberg, Gent · gratis parking", href: "/degym#locatie" },
 ];
 
 // Homepage "alles in één app" feature showcase.
@@ -51,8 +65,18 @@ export default async function Home() {
 
       {/* ============ HERO ============ */}
       <section className="relative isolate overflow-hidden bg-brand text-white">
+        {/* Mobiel krijgt enkel de poster: de video weegt 1,19 MB en is daar 81% van het paginagewicht,
+            terwijl ze puur decoratief is. display:none + preload="none" houdt de bestanden van de lijn
+            (autoplay start pas als het element echt getoond wordt). */}
+        <img
+          src="/video-poster.jpg"
+          alt=""
+          aria-hidden="true"
+          fetchPriority="high"
+          className="absolute inset-0 h-full w-full object-cover md:hidden"
+        />
         <video
-          className="absolute inset-0 h-full w-full object-cover"
+          className="absolute inset-0 hidden h-full w-full object-cover md:block"
           autoPlay
           muted
           loop
@@ -84,7 +108,8 @@ export default async function Home() {
                 <svg className="absolute -bottom-2 left-0 w-full" height="12" viewBox="0 0 300 12" fill="none" preserveAspectRatio="none">
                   <path d="M2 9C60 3 240 3 298 9" stroke="#5FDA6B" strokeWidth="4" strokeLinecap="round" />
                 </svg>
-              </span>
+              </span>{" "}
+              in Gent
             </h1>
           </Reveal>
           <Reveal eager delay={160}>
@@ -94,24 +119,30 @@ export default async function Home() {
             </p>
           </Reveal>
           <Reveal eager delay={240}>
+            {/* Het rooster is de primaire knop: daar ziet de bezoeker beschikbaarheid vóór de
+                accountdrempel. Het registratieformulier vraagt vertrouwen vóór er waarde is. */}
             <div className="mt-6 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-4">
-              <Link href="/login?mode=signup" className="shine w-full rounded-full bg-accent px-8 py-3.5 text-center text-base font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40 sm:w-auto sm:py-4 sm:text-lg">
-                Maak gratis account
-              </Link>
-              <Link href="/boeken" className="w-full rounded-full border-2 border-white/30 px-8 py-3.5 text-center text-base font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10 sm:w-auto sm:py-4 sm:text-lg">
+              <Link href="/boeken" className="shine w-full rounded-full bg-accent px-8 py-3.5 text-center text-base font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40 sm:w-auto sm:py-4 sm:text-lg">
                 Reserveer de gym
               </Link>
+              <Link href={SIGNUP_HREF} className="w-full rounded-full border-2 border-white/30 px-8 py-3.5 text-center text-base font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10 sm:w-auto sm:py-4 sm:text-lg">
+                Maak gratis account
+              </Link>
             </div>
-            <p className="mt-3 text-sm font-semibold text-white/60 sm:mt-4">
+            <p className="mt-3 text-sm font-semibold text-white/75 sm:mt-4">
               Je eerste uur is <span className="font-black text-accent">automatisch gratis</span> bij je eerste boeking · geen lidgeld, geen verplichtingen.
             </p>
           </Reveal>
-          <Reveal delay={320}>
-            <div className="mt-12 flex flex-wrap items-center gap-x-3 gap-y-3 text-sm font-bold text-white/60">
-              {["€ 15 per sessie", "1 uur per sessie", "1 tot 4 personen", "elke dag 6–23u", "geen lidgeld"].map((t, i) => (
-                <span key={t} className="flex items-center gap-3">
+          <Reveal eager delay={320}>
+            <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-3 text-sm font-bold text-white/85 sm:mt-12">
+              {heroChips.map((c, i) => (
+                <span key={c.t} className="flex items-center gap-3">
                   {i > 0 && <span className="h-1 w-1 rounded-full bg-accent" />}
-                  <span className="rounded-full bg-white/5 px-3 py-1.5 ring-1 ring-white/10">{t}</span>
+                  {c.href ? (
+                    <Link href={c.href} className="rounded-full bg-white/10 px-3 py-1.5 ring-1 ring-white/20 transition hover:bg-white/20 hover:ring-white/40">{c.t}</Link>
+                  ) : (
+                    <span className="rounded-full bg-white/10 px-3 py-1.5 ring-1 ring-white/20">{c.t}</span>
+                  )}
                 </span>
               ))}
             </div>
@@ -143,40 +174,8 @@ export default async function Home() {
         </div>
       </div>
 
-      {/* ============ STATS ============ */}
-      <section className="bg-white">
-        <div className="mx-auto max-w-6xl px-5 py-20">
-          <Reveal>
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Fittin&rsquo; in cijfers</p>
-            <h2 className="mt-2 max-w-xl text-2xl font-black text-brand md:text-3xl">Geen vaste uren. Geen lidgeld. Gewoon trainen.</h2>
-          </Reveal>
-          <Reveal delay={120}>
-            <div className="mt-8 overflow-hidden rounded-[2rem] border border-borderc">
-              <div className="h-1.5 w-full bg-accent" />
-              <div className="grid grid-cols-2 gap-px bg-borderc lg:grid-cols-4">
-                {[
-                  { v: 7, s: "/7", l: "Open 6–23u, elke dag" },
-                  { v: 15, p: "€ ", l: "Per sessie van 1 uur" },
-                  { v: 4, p: "1–", l: "Personen per boeking" },
-                  { v: 0, p: "€ ", l: "Lidgeld" },
-                ].map((stat, i) => (
-                  <div key={i} className="group bg-white p-8 transition-colors hover:bg-paper lg:p-10">
-                    <p className="font-display text-5xl font-black leading-none text-brand md:text-6xl">
-                      {stat.p && <span className="text-accentdark">{stat.p}</span>}
-                      <Counter to={stat.v} />
-                      {stat.s && <span className="text-accentdark">{stat.s}</span>}
-                    </p>
-                    <p className="mt-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-brand/45">
-                      <span className="inline-block h-1.5 w-1.5 rotate-45 bg-accent transition group-hover:scale-150" />
-                      {stat.l}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Reveal>
-        </div>
-      </section>
+      {/* De band "Fittin' in cijfers" stond hier: die herhaalde letterlijk de chip-rij uit de hero
+          (7/7, € 15, 1-4 personen, € 0 lidgeld) onder een kop die tractiecijfers beloofde. */}
 
       {/* ============ USPs ============ */}
       <section className="bg-paper">
@@ -226,7 +225,7 @@ export default async function Home() {
           </div>
           <Reveal delay={120}>
             <div className="mt-12 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center">
-              <Link href="/login?mode=signup" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-8 py-4 text-lg font-black text-brand transition hover:-translate-y-0.5 hover:opacity-90 sm:w-auto">
+              <Link href={SIGNUP_HREF} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-8 py-4 text-lg font-black text-brand transition hover:-translate-y-0.5 hover:opacity-90 sm:w-auto">
                 Maak gratis account <span aria-hidden>→</span>
               </Link>
               <Link href="/personal-training" className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-white/30 px-7 py-4 text-center font-bold text-white transition hover:border-white hover:bg-white/10 sm:w-auto">
@@ -234,6 +233,43 @@ export default async function Home() {
               </Link>
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* ============ PRICING TEASER ============ */}
+      {/* Staat bewust meteen na "Zo begin je": wat het kost is de eerste vraag na "hoe werkt het",
+          en verderop stond deze sectie pas als achtste blok. */}
+      <section className="bg-paper">
+        <div className="mx-auto max-w-6xl px-5 py-24">
+          <Reveal>
+            <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Eerlijk &amp; simpel</p>
+            <h2 className="mt-3 text-4xl font-black md:text-5xl">Betaal enkel voor je tijd</h2>
+          </Reveal>
+          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { name: "Losse sessie", price: "€ 15", per: "/ sessie", items: ["Vanaf 1 uur — 1u30 tot 4u kan ook, aan € 15 per uur", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
+              { name: "10-beurtenkaart", price: "€ 150", per: "/ 11 sessies", items: ["10 + 1 gratis sessie", "6 maanden geldig", "Tot 3 vrienden mee"], cta: "Koop kaart", href: "/lidmaatschap", hot: false },
+              { name: "Member-abonnement", price: "€ 12", per: "/ maand", items: ["1 sessie / maand inbegrepen", "Alle sessies aan € 12", "Maandelijks opzegbaar"], cta: "Word member", href: "/lidmaatschap", hot: true },
+              { name: "Personal training", price: "Op aanvraag", per: "", items: ["1-op-1, duo of trio", "Schema & opvolging op maat", "Gratis intake + proeftraining"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
+            ].map((p, i) => (
+              <Reveal key={p.name} delay={i * 90} className="h-full">
+                <div className={"relative flex h-full flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 " + (p.hot ? "border-accent bg-brand text-white shadow-xl shadow-brand/20" : "border-borderc bg-white hover:shadow-xl hover:shadow-brand/5")}>
+                  {p.hot && <span className="absolute -top-3 left-8 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">Beste prijs / sessie</span>}
+                  <p className={"text-xs font-black uppercase tracking-widest " + (p.hot ? "text-accent" : "text-lav")}>{p.name}</p>
+                  <p className="mt-3 text-4xl font-black">{p.price}<span className={"text-base font-bold " + (p.hot ? "text-white/50" : "text-brand/40")}> {p.per}</span></p>
+                  <ul className="mt-6 flex-1 space-y-3 text-sm">
+                    {p.items.map((it) => (
+                      <li key={it} className="flex items-center gap-3">
+                        <span className="text-accent">✓</span>
+                        <span className={p.hot ? "text-white/80" : "text-brand/70"}>{it}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href={p.href} className={"mt-7 rounded-full py-3 text-center font-bold transition hover:opacity-90 " + (p.hot ? "bg-accent text-brand" : "bg-brand text-white")}>{p.cta}</Link>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -250,7 +286,7 @@ export default async function Home() {
               datagedreven: een schema op maat, opvolging en consistente progressie — één-op-één, voor
               koppels of met vrienden.
             </p>
-            <Link href="/personal-training" className="mt-8 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">
+            <Link href="/coaches" className="mt-8 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">
               Ontmoet onze coaches
             </Link>
           </Reveal>
@@ -289,7 +325,7 @@ export default async function Home() {
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <Link href="/workouts" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">Ontdek de workouts →</Link>
-                <Link href="/login?mode=signup" className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-accent">Maak gratis account</Link>
+                <Link href={SIGNUP_HREF} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-accent">Maak gratis account</Link>
               </div>
               <p className="mt-4 text-sm font-semibold text-brand/50">Eén login, alles erin — van je gratis eerste sessie tot je honderdste PR.</p>
             </Reveal>
@@ -306,41 +342,6 @@ export default async function Home() {
                   </div>
                   <h3 className="mt-5 font-black text-brand">{f.title}</h3>
                   <p className="mt-1.5 text-sm leading-relaxed text-brand/60">{f.desc}</p>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ============ PRICING TEASER ============ */}
-      <section className="bg-paper">
-        <div className="mx-auto max-w-6xl px-5 py-24">
-          <Reveal>
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Eerlijk & simpel</p>
-            <h2 className="mt-3 text-4xl font-black md:text-5xl">Betaal enkel voor je tijd</h2>
-          </Reveal>
-          <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { name: "Losse sessie", price: "€ 15", per: "/ sessie", items: ["1 uur in de zaal", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
-              { name: "10-beurtenkaart", price: "€ 150", per: "/ 11 sessies", items: ["10 + 1 gratis sessie", "6 maanden geldig", "Tot 3 vrienden mee"], cta: "Koop kaart", href: "/lidmaatschap", hot: false },
-              { name: "Member-abonnement", price: "€ 12", per: "/ maand", items: ["1 sessie / maand inbegrepen", "Alle sessies aan € 12", "Maandelijks opzegbaar"], cta: "Word member", href: "/lidmaatschap", hot: true },
-              { name: "Personal training", price: "Op aanvraag", per: "", items: ["1-op-1, duo of trio", "Schema & opvolging op maat", "Gratis intake + proeftraining"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
-            ].map((p, i) => (
-              <Reveal key={p.name} delay={i * 90} className="h-full">
-                <div className={"relative flex h-full flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 " + (p.hot ? "border-accent bg-brand text-white shadow-xl shadow-brand/20" : "border-borderc bg-white hover:shadow-xl hover:shadow-brand/5")}>
-                  {p.hot && <span className="absolute -top-3 left-8 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">Beste prijs / sessie</span>}
-                  <p className={"text-xs font-black uppercase tracking-widest " + (p.hot ? "text-accent" : "text-lav")}>{p.name}</p>
-                  <p className="mt-3 text-4xl font-black">{p.price}<span className={"text-base font-bold " + (p.hot ? "text-white/50" : "text-brand/40")}> {p.per}</span></p>
-                  <ul className="mt-6 flex-1 space-y-3 text-sm">
-                    {p.items.map((it) => (
-                      <li key={it} className="flex items-center gap-3">
-                        <span className="text-accent">✓</span>
-                        <span className={p.hot ? "text-white/80" : "text-brand/70"}>{it}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  <Link href={p.href} className={"mt-7 rounded-full py-3 text-center font-bold transition hover:opacity-90 " + (p.hot ? "bg-accent text-brand" : "bg-brand text-white")}>{p.cta}</Link>
                 </div>
               </Reveal>
             ))}

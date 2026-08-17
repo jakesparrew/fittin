@@ -168,31 +168,23 @@ export default function DeGym() {
       </section>
 
       {/* Locatie & bereikbaarheid */}
-      <section className="pb-20">
+      {/* Hier stond een ingebedde Google-kaart. Die laadde Google-scripts en -cookies zodra de pagina
+          openging, terwijl /cookies letterlijk belooft dat er geen Google-diensten meelezen en er
+          daarom géén cookiebanner is. De kaart is vervangen door links naar dezelfde Maps-URL:
+          de knop "Routebeschrijving" was toch al het echte pad naar de deur. */}
+      <section id="locatie" className="pb-20">
         <div className="mx-auto max-w-6xl px-5">
-          <div className="overflow-hidden rounded-3xl border border-borderc bg-white md:grid md:grid-cols-[1fr_1.3fr]">
+          <div className="overflow-hidden rounded-3xl border border-borderc bg-white">
             <div className="p-8 md:p-10">
               <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Vind ons</p>
               <h2 className="mt-2 text-3xl font-black text-brand">Fitness in Sint-Amandsberg, Gent</h2>
-              <p className="mt-4 leading-relaxed text-brand/70">Onze privégym ligt in Sint-Amandsberg (Gent), vlot bereikbaar met gratis parking aan de deur.</p>
-              <dl className="mt-6 space-y-3 text-sm">
-                <div><dt className="font-bold text-brand">Adres</dt><dd className="text-brand/70">Aannemersstraat 186, 9040 Gent</dd></div>
+              <p className="mt-4 max-w-2xl leading-relaxed text-brand/70">Onze privégym ligt in Sint-Amandsberg (Gent), vlot bereikbaar met gratis parking aan de deur.</p>
+              <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-3 sm:gap-6">
+                <div><dt className="font-bold text-brand">Adres</dt><dd><a href="https://www.google.com/maps/search/?api=1&query=Aannemersstraat+186,+9040+Gent" target="_blank" rel="noreferrer" className="text-brand/70 hover:text-accentdark hover:underline">Aannemersstraat 186, 9040 Gent</a></dd></div>
                 <div><dt className="font-bold text-brand">Parking</dt><dd className="text-brand/70">Gratis parking aan de deur</dd></div>
                 <div><dt className="font-bold text-brand">Contact</dt><dd><a href="mailto:info@fittin.be" className="text-accentdark hover:underline">info@fittin.be</a></dd></div>
               </dl>
               <a href="https://www.google.com/maps/dir/?api=1&destination=Aannemersstraat+186,+9040+Gent" target="_blank" rel="noreferrer" className="mt-6 inline-block rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Routebeschrijving →</a>
-            </div>
-            <div className="min-h-[320px]">
-              <iframe
-                title="Fittin' op de kaart"
-                src="https://www.google.com/maps?q=Aannemersstraat%20186%2C%209040%20Gent&output=embed"
-                width="100%"
-                height="100%"
-                style={{ border: 0, minHeight: "320px" }}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-                allowFullScreen
-              />
             </div>
           </div>
         </div>

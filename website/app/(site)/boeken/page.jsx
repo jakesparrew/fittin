@@ -5,12 +5,16 @@ import { getSessionProfile } from "@/lib/auth";
 import { getGymCached, getServicesCached, getPublicCoachesCached, getCoachAvailabilityCached } from "@/lib/cache";
 import BookingClient from "@/components/booking/BookingClient";
 import BookingUnavailable from "@/components/booking/BookingUnavailable";
-import LeaderboardCard from "@/components/LeaderboardCard";
+
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
 export const metadata = {
   title: "Online boeken | Fittin'",
   description:
-    "Reserveer de privégym in Gent — alleen of met vrienden. € 15 per sessie van 1 uur. Eerste sessie gratis met FittinWelcome.",
+    "Reserveer de privégym in Gent — alleen of met vrienden. € 15 per sessie van 1 uur, en je eerste uur is gratis.",
+  // Deze pagina leest ?geannuleerd, ?personen en ?duur én deelt zelf links met ?d=&h=&p=&u=.
+  // Zonder canonical indexeert elke variant als een aparte pagina.
+  alternates: { canonical: `${SITE}/boeken` },
 };
 
 export const dynamic = "force-dynamic";
@@ -29,58 +33,37 @@ export default async function BoekenPage({ searchParams }) {
   const from = new Date(); from.setHours(0, 0, 0, 0);
   // Cover the full member booking horizon (8 weeks) so availability stays accurate that far out.
   const to = new Date(from.getTime() + 63 * 86400000);
-  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const nowIso = new Date().toISOString();
 
-  // Free abandoned unpaid slots first (so availability is correct), then fetch in one batch.
-  // services/coaches/availability come from the Data Cache → no DB hit on most renders.
-  await supabase.rpc("expire_unpaid_bookings", { p_gym: gym.id });
-  const [
-    services,
-    { data: taken },
-    coaches,
-    availability,
-    { data: boardRows },
-    { data: refPts },
-    { data: eventRows },
-  ] = await Promise.all([
+  // Verlaten, onbetaalde reserveringen eerst vrijgeven, anders staan net vervallen uren nog als
+  // "vol" in het rooster. De RPC is enkel aan authenticated/service_role toegekend: met de
+  // ingelogde client faalde hij voor uitgelogde bezoekers stil, en die zien de gym dus voller
+  // dan ze is. Vandaar de admin-client én een expliciete foutafhandeling.
+  const expiring = admin.rpc("expire_unpaid_bookings", { p_gym: gym.id });
+  const [services, coaches, availability, { data: taken }] = await Promise.all([
     getServicesCached(gym.id),
-    supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from.toISOString(), p_to: to.toISOString() }),
     getPublicCoachesCached(gym.id),
     getCoachAvailabilityCached(gym.id),
-    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", nowIso),
-    admin.rpc("referral_points", { p_gym: gym.id, p_since: monthStart.toISOString() }),
-    admin.from("events").select("id, title, description, image_url, faq, starts_at, ends_at, capacity, price_cents, event_signups(user_id, paid)").eq("gym_id", gym.id).eq("status", "approved").gte("starts_at", nowIso).order("starts_at").limit(50),
+    // Enkel deze query moet wachten op het vrijgeven; de rest is er onafhankelijk van.
+    (async () => {
+      // Een falend vrijgeven mag de boekingspagina nooit neerhalen: het rooster is dan hoogstens
+      // te vol, en dat is oneindig veel beter dan geen rooster.
+      try {
+        const { error: expireError } = await expiring;
+        if (expireError) console.error("[boeken] expire_unpaid_bookings:", expireError.message);
+      } catch (e) {
+        console.error("[boeken] expire_unpaid_bookings:", e?.message || e);
+      }
+      return supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from.toISOString(), p_to: to.toISOString() });
+    })(),
   ]);
-
-  // Monthly leaderboard (sessions + referral bonus points). Names are shown as "Voornaam A." — the
-  // board is visible on a semi-public page, so we never expose full surnames (GDPR-friendly default).
-  const lbName = (n) => { const p = String(n || "Lid").trim().split(/\s+/); return (p.length > 1 && p[p.length - 1][0]) ? `${p[0]} ${p[p.length - 1][0].toUpperCase()}.` : (p[0] || "Lid"); };
-  const lbCounts = {};
-  for (const b of boardRows || []) { if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; const k = b.user_id; (lbCounts[k] ||= { name: lbName(b.member?.full_name), n: 0, pts: 0 }).n++; }
-  for (const r of refPts || []) { if (r.referrer_id) { (lbCounts[r.referrer_id] ||= { name: "Lid", n: 0, pts: 0 }).pts = r.points; } }
-  const missing = Object.keys(lbCounts).filter((id) => lbCounts[id].name === "Lid");
-  if (missing.length) {
-    const { data: names } = await admin.from("profiles").select("id, full_name").in("id", missing);
-    for (const p of names || []) if (lbCounts[p.id]) lbCounts[p.id].name = lbName(p.full_name);
-  }
-  const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v, score: v.n + (v.pts || 0) })).sort((a, b) => b.score - a.score);
-
-  const events = (eventRows || []).map((e) => {
-    const paidCount = (e.event_signups || []).filter((s) => s.paid).length;
-    const mine = user ? (e.event_signups || []).some((s) => s.user_id === user.id && s.paid) : false;
-    return { id: e.id, title: e.title, description: e.description, image_url: e.image_url, faq: e.faq || [], starts_at: e.starts_at, ends_at: e.ends_at, capacity: e.capacity, price_cents: e.price_cents, taken: paidCount, mine };
-  });
 
   let credits = 0;
   let buddies = [];
-  let myBooked;
   let isMember = false;
   if (user) {
     // User-specific reads in parallel.
-    const [{ data: activeMember }, { count }, { data: ledger }, { data: links }] = await Promise.all([
+    const [{ data: activeMember }, { data: ledger }, { data: links }] = await Promise.all([
       supabase.rpc("has_active_membership", { p_uid: user.id }),
-      admin.from("bookings").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("status", "bevestigd"),
       supabase.rpc("credits_balance", { p_user: user.id }),
       supabase.from("buddies").select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)").eq("status", "accepted"),
     ]);
@@ -88,7 +71,6 @@ export default async function BoekenPage({ searchParams }) {
     // Staff-tarief (0114): coaches/beheerders krijgen op de publieke boekingspagina hetzelfde
     // € 12-tarief als members — de UI moet tonen wat create_booking effectief aanrekent.
     if (profile?.role === "coach" || profile?.role === "beheerder") isMember = true;
-    myBooked = count || 0;
     credits = Number(ledger) || 0; // numeric (0117) kan als string binnenkomen
     buddies = (links || []).map((l) => {
       const other = l.requester_id === user.id ? l.addressee : l.requester;
@@ -97,27 +79,20 @@ export default async function BoekenPage({ searchParams }) {
   }
 
   return (
-    <>
-      <BookingClient
-        gym={gym}
-        services={(services || []).filter((s) => s.type !== "event" && s.type !== "pt")}
-        takenSlots={(taken || []).map((t) => t.starts_at)}
-        coaches={coaches || []}
-        availability={availability || []}
-        isLoggedIn={!!user}
-        welcomeAvailable={!!(profile && profile.welcome_status === "eligible" && !profile.welcome_code_used)}
-        creditBalance={credits}
-        isMember={isMember}
-        paymentCanceled={sp.geannuleerd === "1"}
-        buddies={buddies}
-        events={events}
-        prefill={{ persons: sp.personen, duration: sp.duur }}
-      />
-      <div className="bg-paper">
-        <div className="mx-auto max-w-6xl px-5 pb-16">
-          <LeaderboardCard rows={leaderboard} meId={user?.id} myBooked={myBooked} />
-        </div>
-      </div>
-    </>
+    <BookingClient
+      gym={gym}
+      services={(services || []).filter((s) => s.type !== "event" && s.type !== "pt")}
+      takenSlots={(taken || []).map((t) => t.starts_at)}
+      coaches={coaches || []}
+      availability={availability || []}
+      isLoggedIn={!!user}
+      welcomeAvailable={!!(profile && profile.welcome_status === "eligible" && !profile.welcome_code_used)}
+      creditBalance={credits}
+      isMember={isMember}
+      paymentCanceled={sp.geannuleerd === "1"}
+      buddies={buddies}
+      referralCode={profile?.referral_code || ""}
+      prefill={{ persons: sp.personen, duration: sp.duur }}
+    />
   );
 }

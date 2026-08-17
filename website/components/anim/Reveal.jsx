@@ -1,23 +1,27 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 
-// Fade-up on scroll. Reveals immediately if already in view (so above-the-fold content
-// never stays hidden), uses IntersectionObserver for below-the-fold. Respects reduced-motion via CSS.
-// `eager` renders visible on the SERVER (no opacity:0 until hydration) — use it for above-the-fold
-// content like the homepage hero, whose text is the LCP element and must not wait for React (or,
-// without JS, forever).
+// Fade-up on scroll — met ZICHTBAAR als standaardtoestand, ook in de server-HTML.
+// Waarom omgekeerd: eerder startte elk blok op opacity:0 en maakte JavaScript het pas zichtbaar.
+// Laadde de chunk niet (deze site kent aantoonbaar ChunkLoadErrors), dan bleef alles onder de hero
+// leeg — prijzen en boekknoppen incluis. Nu verbergt JS pas ná mount wat op dat moment nog ónder de
+// vouw staat: de bezoeker ziet die stap dus nooit, en zonder werkende JS blijft de pagina volledig.
+// `eager` slaat het verbergen helemaal over (hero-content: nooit aan JS overlaten).
 export default function Reveal({ children, className = "", delay = 0, eager = false }) {
   const ref = useRef(null);
-  const [shown, setShown] = useState(eager);
+  const [shown, setShown] = useState(true);
+  // Het verbergen zelf mag niet animeren, anders zou een bezoeker die meteen scrollt een blok
+  // zien wegfaden dat hij net gelezen heeft.
+  const [noAnim, setNoAnim] = useState(false);
   useEffect(() => {
     if (eager) return;
     const el = ref.current;
-    if (!el) return;
+    if (!el || typeof IntersectionObserver === "undefined") return;
     const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) {
-      setShown(true);
-      return;
-    }
+    if (rect.top < window.innerHeight * 0.92 && rect.bottom > 0) return; // al in beeld: laten staan
+    setShown(false);
+    setNoAnim(true);
+    const raf = requestAnimationFrame(() => requestAnimationFrame(() => setNoAnim(false)));
     const io = new IntersectionObserver(
       ([e]) => {
         if (e.isIntersecting) {
@@ -30,10 +34,12 @@ export default function Reveal({ children, className = "", delay = 0, eager = fa
     io.observe(el);
     // Safety net: never leave content hidden.
     const t = setTimeout(() => setShown(true), 2500);
-    return () => { io.disconnect(); clearTimeout(t); };
+    return () => { io.disconnect(); clearTimeout(t); cancelAnimationFrame(raf); };
   }, []);
+  const style = { transitionDelay: `${delay}ms` };
+  if (noAnim) style.transition = "none";
   return (
-    <div ref={ref} style={{ transitionDelay: `${delay}ms` }} className={`reveal ${shown ? "in" : ""} ${className}`}>
+    <div ref={ref} style={style} className={`reveal ${shown ? "in" : ""} ${className}`}>
       {children}
     </div>
   );

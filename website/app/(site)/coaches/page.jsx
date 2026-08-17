@@ -3,12 +3,14 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coachSlug } from "@/lib/slug";
+import { healthClubLd, breadcrumbLd, jsonLdScript } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 export const metadata = {
+  // Rechtstreeks boeken bij een coach staat bewust uit: beloof hier de route die wél bestaat.
   title: "Onze coaches | Fittin'",
-  description: "Maak kennis met de personal trainers van Fittin' in Gent — bekijk hun specialiteit, aanpak en beschikbaarheid en boek rechtstreeks.",
+  description: "Maak kennis met de personal trainers van Fittin' in Gent — bekijk hun specialiteit en aanpak, en vraag een gratis intake met proeftraining aan.",
   alternates: { canonical: `${SITE}/coaches` },
 };
 
@@ -20,18 +22,25 @@ export default async function CoachesPage() {
     ? await admin.from("profiles").select("id, full_name, coach_specialty, coach_photo_url, coach_bio").eq("gym_id", gym.id).eq("role", "coach").eq("coach_public", true).order("full_name")
     : { data: [] };
 
+  const list = coaches || [];
+  const alleen = list.length === 1;
+
   return (
     <main className="bg-paper">
+      <script {...jsonLdScript(healthClubLd())} />
+      <script {...jsonLdScript(breadcrumbLd([{ name: "Home", url: "/" }, { name: "Coaches", url: "/coaches" }]))} />
       <div className="mx-auto max-w-5xl px-5 py-16">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Personal training</p>
-        <h1 className="mt-2 text-4xl font-black md:text-5xl">Onze coaches</h1>
+        <h1 className="mt-2 text-4xl font-black md:text-5xl">{alleen ? "Onze coach" : "Onze coaches"}</h1>
         <p className="mt-4 max-w-2xl text-lg leading-relaxed text-brand/70">
-          Train onder begeleiding van een ervaren personal trainer in onze privégym. Kies een coach
-          die bij jou past en boek je sessie.
+          {alleen
+            ? "Train onder begeleiding van een ervaren personal trainer in onze privégym. Vraag een gratis intake met proeftraining aan — daarna beslis je zelf."
+            : "Train onder begeleiding van een ervaren personal trainer in onze privégym. Vraag een gratis intake met proeftraining aan; samen kiezen jullie de coach die bij je past."}
         </p>
 
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {(coaches || []).map((c) => (
+        {/* Het kolomaantal volgt het aantal publieke coaches — anders staan er gaten naast één kaart. */}
+        <div className={`mt-10 grid gap-6 ${alleen ? "max-w-sm" : list.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
+          {list.map((c) => (
             <Link key={c.id} href={`/coaches/${coachSlug(c)}`} className="group overflow-hidden rounded-3xl border border-borderc bg-white transition hover:-translate-y-1 hover:shadow-lg hover:shadow-brand/5">
               <div className="relative aspect-[4/3] bg-paper">
                 {c.coach_photo_url ? (
@@ -48,12 +57,19 @@ export default async function CoachesPage() {
               </div>
             </Link>
           ))}
-          {(!coaches || coaches.length === 0) && (
+          {list.length === 0 && (
             <div className="rounded-3xl border border-dashed border-borderc bg-white p-10 text-center sm:col-span-2 lg:col-span-3">
               <p className="font-semibold text-brand/70">Binnenkort stellen onze coaches zich hier voor.</p>
-              <Link href="/personal-training" className="mt-4 inline-block rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand">Meer over personal training</Link>
             </div>
           )}
+        </div>
+
+        {/* De enige conversieroute van deze pagina — ook zichtbaar als er nog geen profiel klaarstaat. */}
+        <div className="mt-10 text-center">
+          <Link href="/personal-training#intake" className="inline-block rounded-full bg-accent px-8 py-4 font-black text-brand transition hover:opacity-90">
+            Vraag je gratis proeftraining aan
+          </Link>
+          <p className="mt-3 text-sm text-brand/50">Gratis en vrijblijvend · we mailen je binnen 1 werkdag</p>
         </div>
       </div>
     </main>

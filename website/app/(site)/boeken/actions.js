@@ -52,12 +52,24 @@ function checkoutParams(booking, email, chargeCents, codeId) {
       },
     ],
     metadata: { booking_id: booking.id, ...(codeId ? { discount_code_id: codeId } : {}) },
-    // Cap the payment window (~32 min) so it can't outlive the 35-min unpaid-slot hold (migration 0089).
-    // Prevents a slow SCA/Bancontact payment from landing after the slot was freed/re-booked.
+    // De reservering zelf valt na 15 minuten vrij (0121). Stripe eist minstens 30 minuten voor
+    // expires_at, dus dit venster kan niet gelijklopen — het is enkel een bovengrens die voorkomt
+    // dat een trage SCA/Bancontact-betaling nog uren later binnenkomt. De webhook vangt een late
+    // betaling op een intussen vrijgegeven uur af en stort automatisch terug.
     expires_at: Math.floor(Date.now() / 1000) + 32 * 60,
     success_url: `${siteUrl()}/account?betaald=1`,
-    cancel_url: `${siteUrl()}/boeken?geannuleerd=1`,
+    // Een afgebroken checkout eindigde op /boeken, terwijl de reservering (met aftelling én
+    // "Betaal nu") op /account staat. Wie afhaakte, zag dus nergens dat hij nog 15 minuten had.
+    cancel_url: `${siteUrl()}/account?betaling=afgebroken`,
   };
+}
+
+// De boek-RPC's schrijven hun weigeringen zelf in het Nederlands en markeren die met P0001.
+// Elke andere databankfout is een technische code ("duplicate key value violates…") die een lid
+// niets zegt en enkel doet twijfelen of er nu geboekt is of niet.
+function bookingErrorText(error) {
+  if (error?.code === "P0001" && error.message) return error.message;
+  return "Dit moment kon niet geboekt worden. Ververs de pagina en probeer het opnieuw.";
 }
 
 // Creates the booking (slot held immediately). Free → confirm + email. Paid → Stripe Checkout URL.
@@ -80,7 +92,7 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     // ongeldige duur naar de RPC gaat (die valideert zelf ook).
     p_hours: Math.min(4, Math.max(1, Math.round((parseFloat(hours) || 1) * 2) / 2)),
   });
-  if (error) return { error: error.message };
+  if (error) return { error: bookingErrorText(error) };
 
   const { data: booking } = await supabase
     .from("bookings")
@@ -156,7 +168,8 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
       paymentSource: booking?.payment_source,
       creditBalance,
     });
-    return { ok: true, free: true };
+    // bookingId gaat mee zodat het bevestigingsscherm meteen een agenda-item kan aanbieden.
+    return { ok: true, free: true, bookingId: booking?.id || null };
   }
 
   // Optional discount code (e.g. an activation win-back) → reduce the amount charged.
@@ -189,7 +202,7 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     try { await sendBookingInvites(admin, booking, user.user_metadata?.full_name); } catch {}
     revalidatePath("/account");
     revalidatePath("/boeken");
-    return { ok: true, free: true };
+    return { ok: true, free: true, bookingId: booking.id };
   }
 
   // Paid: hand off to Stripe Checkout. In production a missing Stripe key must NOT silently confirm a

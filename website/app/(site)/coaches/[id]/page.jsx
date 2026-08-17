@@ -14,6 +14,13 @@ export const dynamic = "force-dynamic";
 const WD = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
 const dagdeel = (h) => (h < 12 ? "Voormiddag" : h < 17 ? "Namiddag" : "Avond");
 
+// Een blok van 06:00 tot 23:00 is geen "voormiddag": label alleen wanneer het binnen één dagdeel valt,
+// anders liegt het label over de dekking. (to_hour is exclusief, dus 12:00 hoort nog bij de voormiddag.)
+const dagdeelLabel = (from, to) => {
+  const bereik = `${fmtHour(from)}–${fmtHour(to)}`;
+  return dagdeel(from) === dagdeel(Math.max(from, to - 0.5)) ? `${dagdeel(from)} · ${bereik}` : bereik;
+};
+
 // Resolve a coach by clean name-slug or by uuid (old links keep working). All role=coach are public.
 async function resolveCoach(admin, idOrSlug, cols) {
   if (isUuid(idOrSlug)) {
@@ -31,8 +38,8 @@ export async function generateMetadata({ params }) {
   if (!c) return { title: "Coach | Fittin'" };
   // Canonical always points at the clean name-slug — uuid + slug both resolve, so this de-dupes them.
   return {
-    title: `${c.full_name} — coach bij Fittin'`,
-    description: `${c.full_name}${c.coach_specialty ? ` · ${c.coach_specialty}` : ""} — personal trainer bij Fittin' in Gent.`,
+    title: `${c.full_name} — personal trainer in Gent | Fittin'`,
+    description: `${c.full_name}${c.coach_specialty ? ` · ${c.coach_specialty}` : ""} — personal trainer bij Fittin' in Gent (Sint-Amandsberg). Vraag een gratis intake met proeftraining aan.`,
     alternates: { canonical: `${SITE}/coaches/${coachSlug(c)}` },
   };
 }
@@ -53,6 +60,9 @@ export default async function CoachProfile({ params }) {
   }
 
   const coachUrl = `/coaches/${coachSlug(c)}`;
+  const voornaam = (c.full_name || "").trim().split(/\s+/)[0] || "je coach";
+  // Querystring vóór het fragment, anders bereikt ?coach= de intakepagina nooit.
+  const intakeUrl = `/personal-training?coach=${coachSlug(c)}#intake`;
 
   return (
     <main className="bg-paper">
@@ -70,8 +80,9 @@ export default async function CoachProfile({ params }) {
                 <div className="flex h-full items-center justify-center text-7xl font-black text-brand/15">{(c.full_name || "C").slice(0, 1)}</div>
               )}
             </div>
-            <Link href={user ? "/boeken" : "/login?next=/boeken"} className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center text-sm font-black text-brand transition hover:opacity-90">
-              {user ? "Boek een sessie →" : "Maak een account om te boeken →"}
+            {/* Rechtstreeks boeken bij een coach staat bewust uit — de intake is de enige echte route. */}
+            <Link href={intakeUrl} className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center text-sm font-black text-brand transition hover:opacity-90">
+              Gratis proeftraining met {voornaam} →
             </Link>
 
             {/* Connect with this coach */}
@@ -79,7 +90,15 @@ export default async function CoachProfile({ params }) {
               myLink?.status === "accepted" ? (
                 <p className="mt-3 rounded-full bg-accent/10 px-4 py-2.5 text-center text-sm font-bold text-accentdark">Verbonden met deze coach ✓</p>
               ) : myLink?.status === "pending" && myLink.requested_by === "client" ? (
-                <p className="mt-3 rounded-full bg-paper px-4 py-2.5 text-center text-sm font-bold text-brand/60">Aanvraag verstuurd — wacht op bevestiging</p>
+                <div className="mt-3 rounded-2xl bg-paper px-4 py-3 text-center">
+                  <p className="text-sm font-bold text-brand/60">Aanvraag verstuurd — wacht op bevestiging</p>
+                  {/* Eerlijk over de wachttijd: de aanvraag geeft vandaag alleen een melding in de app,
+                      dus een coach die niet inlogt, ziet ze niet meteen. */}
+                  <p className="mt-1 text-xs text-brand/50">
+                    Hoor je binnen 2 dagen niets? Mail{" "}
+                    <a href="mailto:info@fittin.be" className="font-bold text-accentdark hover:underline">info@fittin.be</a>.
+                  </p>
+                </div>
               ) : myLink?.status === "pending" && myLink.requested_by === "coach" ? (
                 <ActionForm action={respondCoachLink} success="Verbonden ✓" className="mt-3">
                   <input type="hidden" name="linkId" value={myLink.id} />
@@ -105,7 +124,8 @@ export default async function CoachProfile({ params }) {
 
             {c.coach_pricelist && (
               <div className="mt-6 rounded-2xl border border-borderc bg-white p-5">
-                <p className="text-xs font-bold uppercase tracking-widest text-lav">Prijzen</p>
+                {/* PT-prijzen staan bewust op aanvraag; dit vrije veld is dus geen prijslijst. */}
+                <p className="text-xs font-bold uppercase tracking-widest text-lav">Goed om te weten</p>
                 <p className="mt-2 whitespace-pre-line text-sm text-brand/80">{c.coach_pricelist}</p>
               </div>
             )}
@@ -123,7 +143,7 @@ export default async function CoachProfile({ params }) {
                         <div className="flex flex-wrap gap-1.5">
                           {slots.map((a, i) => (
                             <span key={i} className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accentdark">
-                              {dagdeel(a.from_hour)} · {fmtHour(a.from_hour)}–{fmtHour(a.to_hour)}
+                              {dagdeelLabel(a.from_hour, a.to_hour)}
                             </span>
                           ))}
                         </div>
@@ -131,6 +151,10 @@ export default async function CoachProfile({ params }) {
                     );
                   })}
                 </div>
+                <p className="mt-4 text-xs text-brand/50">
+                  Ander moment nodig?{" "}
+                  <Link href={intakeUrl} className="font-bold text-accentdark hover:underline">Vraag het bij je gratis intake</Link>.
+                </p>
               </div>
             )}
           </div>
