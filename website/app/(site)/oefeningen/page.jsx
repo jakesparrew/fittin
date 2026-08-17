@@ -29,19 +29,6 @@ export default async function OefeningenPage() {
           Bekijk hoe je elke oefening correct uitvoert — met demo, doelspieren en duidelijke uitleg.
           Je coach stelt hiermee jouw persoonlijke schema samen.
         </p>
-        {/* Crawlable category hubs — real links so the ~900 exercise pages form a linked topical cluster. */}
-        {hubCats.length > 0 && (
-          <div className="mt-6">
-            <p className="text-xs font-bold uppercase tracking-wide text-lav">Blader per spiergroep</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {hubCats.map((c) => (
-                <Link key={c} href={`/oefeningen/categorie/${c}`} className="rounded-full border border-borderc bg-white px-4 py-2 text-sm font-bold capitalize text-brand transition hover:border-accent hover:text-accentdark">
-                  {catLabel(c)}
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="mt-8">
           {all.length > 0 ? (
             <ExerciseLibrary initial={initial} total={all.length} categories={categories} onSearch={searchLibrary} onFavorites={myFavorites} />
@@ -51,6 +38,24 @@ export default async function OefeningenPage() {
             </div>
           )}
         </div>
+
+        {/* Deze links blijven bestaan voor Google: ze verbinden de ~900 oefeningpagina's tot één
+            samenhangend geheel (topical cluster). Ze stonden eerst BOVEN de zoekbalk, waar ze de
+            filterknoppen eronder woordelijk herhaalden — twee rijen spiergroepen die verschillend
+            werken is verwarrend. Onderaan doen ze hun SEO-werk zonder de bediening te dubbelen,
+            en dienen ze meteen als "verder bladeren" wanneer je onderaan de lijst bent. */}
+        {hubCats.length > 0 && (
+          <nav aria-label="Bladeren per spiergroep" className="mt-12 border-t border-borderc pt-6">
+            <p className="text-xs font-bold uppercase tracking-wide text-lav">Alle spiergroepen</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {hubCats.map((c) => (
+                <Link key={c} href={`/oefeningen/categorie/${c}`} className="rounded-full border border-borderc bg-white px-4 py-2 text-sm font-bold capitalize text-brand transition hover:border-accent hover:text-accentdark">
+                  {catLabel(c)}
+                </Link>
+              ))}
+            </div>
+          </nav>
+        )}
       </div>
     </main>
   );
