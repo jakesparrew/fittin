@@ -44,7 +44,7 @@ export default async function BeheerDashboard() {
     { data: cronRows },
     { data: errRows },
     { data: lidRows },
-    { data: recent30 },
+    { data: alleSessies },
     { count: openPayments },
     { data: memRows },
     { data: bk60 },
@@ -70,10 +70,11 @@ export default async function BeheerDashboard() {
     // Enkel nog-open fouten; afgevinkte tellen niet meer mee (anders blijft het lampje eeuwig
     // rood na een fix). De berichten komen mee zodat omgevingsruis er hieronder uit valt.
     admin.from("client_errors").select("message, stack").is("resolved_at", null).gte("created_at", new Date(Date.now() - 24 * 3600000).toISOString()).limit(200),
-    // At-risk: lid-accounts without a confirmed session in the last 30 days (booking-based estimate).
     // Alle profielen (niet enkel leden) — de namen zijn ook nodig voor coach-actiepunten.
     supabase.from("profiles").select("id, full_name, role, deletion_requested_at").eq("gym_id", gym.id),
-    supabase.from("bookings").select("user_id").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 30 * 86400000).toISOString()).lt("starts_at", nowIso),
+    // Alle bevestigde sessies (niet enkel de laatste 30 dagen): om te weten of iemand at-risk is
+    // moeten we ook weten of hij ÓÓIT getraind heeft en of er nog iets in zijn agenda staat.
+    supabase.from("bookings").select("user_id, starts_at").eq("gym_id", gym.id).eq("status", "bevestigd"),
     // Open invoice posts (coach-credit grants etc.) — money the gym is still owed.
     supabase.from("payments").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "onbetaald"),
     // Subscriptions — the recurring backbone; drives the person-level action list below.
@@ -130,9 +131,20 @@ export default async function BeheerDashboard() {
   // Only 'los'/'abo' bookings actually owe money; credit/free/invite are settled at creation.
   const unpaid = (unpaidRows || []).filter((b) => (b.payment_source === "los" || b.payment_source === "abo") && (b.price_cents || 0) > 0);
   const unpaidTotal = unpaid.reduce((a, b) => a + (b.price_cents || 0), 0);
-  // At-risk = lid without a confirmed session in the last 30 days.
-  const active30 = new Set((recent30 || []).map((b) => b.user_id));
-  const atRiskCount = ledenOnly.filter((m) => !active30.has(m.id)).length;
+  // At-risk = lid dat al getraind heeft, >30 dagen niet meer kwam en niets meer geboekt heeft.
+  // Exact dezelfde definitie als /beheer/leden?filter=atrisk (waar deze chip naartoe linkt) en als
+  // de bulk-comebackknop daar: een chip die 40 zegt en een lijst die er 12 toont, vertrouw je niet.
+  const nuMs = Date.now(), d30Ms = nuMs - 30 * 86400000;
+  const laatsteSessie = new Map(), komtNog = new Set();
+  for (const b of alleSessies || []) {
+    if (!b.user_id) continue;
+    const t = new Date(b.starts_at).getTime();
+    if (t > nuMs) komtNog.add(b.user_id);
+    else if (t > (laatsteSessie.get(b.user_id) || 0)) laatsteSessie.set(b.user_id, t);
+  }
+  const atRiskCount = ledenOnly.filter(
+    (m) => laatsteSessie.has(m.id) && !komtNog.has(m.id) && laatsteSessie.get(m.id) < d30Ms
+  ).length;
 
   // ---- Subscriptions ----
   const mems = memRows || [];

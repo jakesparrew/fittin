@@ -13,8 +13,13 @@ const securityHeaders = [
 
 const nextConfig = {
   // Allow next/image to optimise Supabase-hosted media (coach photos, event/feed images).
+  // jsdelivr staat erbij zolang de oefeningstills daar staan: zo kan ExerciseMedia nú al via
+  // next/image (72 KB-origineel → ~64 px-variant) in plaats van te wachten op de spiegeling.
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "*.supabase.co" }],
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "cdn.jsdelivr.net" },
+    ],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

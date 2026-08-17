@@ -14,6 +14,7 @@ import ProgramExerciseEditor from "@/components/workouts/ProgramExerciseEditor";
 import SearchSelect from "@/components/admin/SearchSelect";
 import PublishWorkoutPanel from "@/components/workouts/PublishWorkoutPanel";
 import ActionForm from "@/components/ui/ActionForm";
+import ConfirmSubmit from "@/components/ui/ConfirmSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -69,7 +70,14 @@ export default async function ProgramBuilder({ params }) {
         <h1 className="text-3xl font-black text-brand">{program.name}</h1>
         <form action={deleteProgram}>
           <input type="hidden" name="id" value={program.id} />
-          <button className="text-xs font-bold text-red-500 hover:underline">Programma verwijderen</button>
+          {/* Zelfde bevestiging als in de coach-versie: een toegewezen programma weghalen laat de
+              client met een lege 'Training'-tab achter, en dat is niet ongedaan te maken. */}
+          <ConfirmSubmit
+            message={program.member_id ? "Dit programma verwijderen? De client verliest dit schema onder 'Training'." : "Dit sjabloon verwijderen?"}
+            className="text-xs font-bold text-red-500 hover:underline"
+          >
+            Programma verwijderen
+          </ConfirmSubmit>
         </form>
       </div>
 

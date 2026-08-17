@@ -93,6 +93,20 @@ export function personLd(coach, url) {
   };
 }
 
+// ── Taal van de oefeningbibliotheek ──────────────────────────────────────────────────
+// Het overgrote deel van de bibliotheek is overgenomen uit free-exercise-db en staat nog in het
+// Engels. Zulke pagina's horen niet in een Nederlandstalige index: ze trekken geen zoekverkeer en
+// verdunnen de rest. De importer stempelt elke overgenomen rij met source='free-exercise-db';
+// eigen én vertaalde oefeningen dragen 'gym' (de kolomdefault). Vertalen = tekst herschrijven én
+// source op 'gym' zetten — de slug NOOIT wijzigen, die is de sleutel in sitemap, hubs en workouts.
+// Sitemap en de robots-meta van de detailpagina moeten deze ene regel delen: enkel uit de sitemap
+// halen de-indexeert niets, en enkel noindex zetten laat dode URL's in de sitemap staan.
+export const IMPORTED_EXERCISE_SOURCE = "free-exercise-db";
+
+export function isDutchExercise(ex) {
+  return (ex?.source || "gym") !== IMPORTED_EXERCISE_SOURCE;
+}
+
 // Convenience: the props object for a JSON-LD <script>.
 export function jsonLdScript(obj) {
   return { type: "application/ld+json", dangerouslySetInnerHTML: { __html: JSON.stringify(obj) } };

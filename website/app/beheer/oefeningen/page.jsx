@@ -4,6 +4,7 @@ import { getAdminContext } from "@/lib/admin";
 import { upsertExercise, deleteExercise } from "../coaching-actions";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
 import ActionForm from "@/components/ui/ActionForm";
+import ConfirmSubmit from "@/components/ui/ConfirmSubmit";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +100,9 @@ export default async function Oefeningen({ searchParams }) {
                 </div>
                 <ActionForm action={deleteExercise} success="Oefening verwijderd ✓">
                   <input type="hidden" name="id" value={ex.id} />
-                  <button className="text-xs font-bold text-red-500 hover:underline">verwijder</button>
+                  {/* Dezelfde bevestiging als de coach-versie: verwijderen is onomkeerbaar en de
+                      knop staat naast 'bewerken'. De vraag bestaat alleen op het klikmoment. */}
+                  <ConfirmSubmit message={`"${ex.name}" verwijderen?`} className="text-xs font-bold text-red-500 hover:underline">verwijder</ConfirmSubmit>
                 </ActionForm>
               </div>
               <div className="mt-2 flex items-center gap-3">

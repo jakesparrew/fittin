@@ -5,10 +5,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import ActionForm from "@/components/ui/ActionForm";
 import { saveBillingDetails } from "../actions";
 import PrintButton from "@/components/admin/PrintButton";
+import { euro, fmtDate } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
-const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", year: "numeric" }).format(new Date(iso));
 const KIND = { booking: "Sessie", beurtenkaart: "10-beurtenkaart", abonnement: "Abonnement", coach_credits: "Coach-sessietegoed", overig: "Aankoop" };
 
 // Member/client payment history: download a betaalbewijs (Stripe) or a Belgian invoice (ours, incl.
@@ -61,7 +60,7 @@ export default async function AccountBetalingen() {
           <tbody className="divide-y divide-borderc">
             {payments.map((p) => (
               <tr key={p.id}>
-                <td className="whitespace-nowrap px-5 py-3 text-brand/60">{fmt(p.created_at)}</td>
+                <td className="whitespace-nowrap px-5 py-3 text-brand/60">{fmtDate(p.created_at)}</td>
                 <td className="px-5 py-3 font-semibold text-brand">{p.description || KIND[p.kind] || "Betaling"}</td>
                 <td className="whitespace-nowrap px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
                 <td className="px-5 py-3 text-right"><a href={`/account/factuur/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-accentdark hover:underline">Factuur →</a></td>

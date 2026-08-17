@@ -6,10 +6,14 @@ import { readUtm } from "@/lib/track";
 // First-party page-view tracker: fires one beacon per route change to /api/pv. Skips staff areas
 // (those are filtered server-side too). Geen cookies, geen sessionStorage, geen PII — daardoor is
 // er geen toestemmingsbanner nodig; zie /cookies en de toelichting in lib/track.js.
+// Exacte segmenttest: /coaches en /coaches/<naam> zijn publieke verkooppagina's en moeten wél
+// geteld worden. Een kale startsWith("/coach") gooide ze mee uit de statistieken.
+const isStaffPath = (p) => p === "/beheer" || p.startsWith("/beheer/") || p === "/coach" || p.startsWith("/coach/");
+
 export default function PageView() {
   const pathname = usePathname();
   useEffect(() => {
-    if (!pathname || pathname.startsWith("/beheer") || pathname.startsWith("/coach")) return;
+    if (!pathname || isStaffPath(pathname)) return;
     const utm = readUtm() || {}; // campagnelabels uit de URL van dit bezoek, niets bewaard
     const payload = JSON.stringify({ path: pathname, ref: document.referrer || "", ...utm });
     try {

@@ -17,11 +17,14 @@ export default async function Leden({ searchParams }) {
   const atRiskOnly = sp.filter === "atrisk";
 
   const adminDb = createAdminClient();
-  const [{ data: members }, { data: ledger }, { data: links }, { data: doorRows }, { data: subs }] = await Promise.all([
+  const [{ data: members }, { data: ledger }, { data: links }, { data: sessies }, { data: subs }] = await Promise.all([
     supabase.from("profiles").select("id, full_name, email, role, welcome_code_used, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }),
     supabase.rpc("gym_credit_balances", { p_gym: gym.id }),
     supabase.from("coach_clients").select("client_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("status", "accepted"),
-    adminDb.from("door_log").select("user_id, opened_at").eq("gym_id", gym.id).eq("result", "ok").order("opened_at", { ascending: false }).limit(5000),
+    // "Laatste bezoek" komt uit de bevestigde boekingen, dezelfde bron als de rest van de app.
+    // Het door_log was hier de verkeerde meting: wie met zijn persoonlijke keypadcode binnengaat
+    // laat daar geen spoor na, en stond dus bovenaan de at-risk-lijst terwijl hij elke week traint.
+    supabase.from("bookings").select("user_id, starts_at").eq("gym_id", gym.id).eq("status", "bevestigd").order("starts_at", { ascending: false }),
     supabase.from("memberships").select("user_id, status, started_at, current_period_end, cancel_at_period_end").eq("gym_id", gym.id),
   ]);
 
@@ -33,9 +36,16 @@ export default async function Leden({ searchParams }) {
   const coachOf = {};
   for (const l of links || []) (coachOf[l.client_id] ||= []).push(l.coach?.full_name || l.coach?.email || "Coach");
 
-  // Last gym visit per member (door_log rows are desc → first seen per user is the latest).
+  // Laatste voorbije sessie per lid (rijen staan aflopend → de eerste die we zien is de recentste),
+  // plus of er nog iets in de agenda staat: wie volgende week komt trainen is niet at-risk.
+  const nu = Date.now();
   const lastVisit = {};
-  for (const r of doorRows || []) if (r.user_id && !lastVisit[r.user_id]) lastVisit[r.user_id] = r.opened_at;
+  const komtNog = new Set();
+  for (const r of sessies || []) {
+    if (!r.user_id) continue;
+    if (new Date(r.starts_at).getTime() > nu) komtNog.add(r.user_id);
+    else if (!lastVisit[r.user_id]) lastVisit[r.user_id] = r.starts_at;
+  }
 
   // Last login per member, from Supabase Auth (paged; gyms stay well under 10k accounts).
   const lastLogin = {};
@@ -50,13 +60,17 @@ export default async function Leden({ searchParams }) {
 
   const isBeheerder = profile.role === "beheerder";
 
-  // At-risk filter (Batch 6.4): members (lid) who never visited or whose last visit is > 30 days ago,
-  // sorted oldest-visit first — the owner's one-tap outreach list.
-  const d30 = Date.now() - 30 * 86400000;
+  // At-risk = een lid dat WEL al getraind heeft, al meer dan 30 dagen niet meer kwam en ook niets
+  // meer in de agenda heeft staan. Oudste eerst — de outreach-lijst van de eigenaar.
+  // Leden met nul sessies staan er bewust niet in: die zijn nooit begonnen en horen in de
+  // onboarding-reeks, niet in een comeback-mail die naar hun "vorige bezoek" verwijst.
+  const d30 = nu - 30 * 86400000;
+  const isAtRisk = (m) =>
+    m.role === "lid" && !!lastVisit[m.id] && !komtNog.has(m.id) && new Date(lastVisit[m.id]).getTime() < d30;
   let shown = members || [];
   if (atRiskOnly) {
     shown = shown
-      .filter((m) => m.role === "lid" && (!lastVisit[m.id] || new Date(lastVisit[m.id]).getTime() < d30))
+      .filter(isAtRisk)
       .sort((a, b) => (new Date(lastVisit[a.id] || 0).getTime()) - (new Date(lastVisit[b.id] || 0).getTime()));
   }
 
@@ -66,7 +80,7 @@ export default async function Leden({ searchParams }) {
       <h1 className="text-3xl font-black text-brand">Leden</h1>
       {atRiskOnly ? (
         <p className="mt-1 text-sm text-brand/50">
-          {shown.length} leden die al {">"}30 dagen niet kwamen — oudste eerst. <Link href="/beheer/leden" className="font-bold text-accentdark hover:underline">Toon alle leden</Link>
+          {shown.length} leden die al {">"}30 dagen niet trainden en niets meer geboekt hebben — oudste eerst. <Link href="/beheer/leden" className="font-bold text-accentdark hover:underline">Toon alle leden</Link>
         </p>
       ) : (
         <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · klik een naam voor het volledige overzicht.</p>

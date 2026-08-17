@@ -27,11 +27,11 @@ import AccountLinking from "@/components/account/AccountLinking";
 import BodyMetricsForm from "@/components/account/BodyMetricsForm";
 import PrivacyControls from "@/components/account/PrivacyControls";
 import { hasConsent } from "@/lib/legal";
+import { euro } from "@/lib/format";
+import TrackBookingCompleted from "./TrackBookingCompleted";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
-
-const euro = (c) => "€ " + (c / 100).toFixed(2).replace(".", ",");
 
 function fmtRange(startIso, endIso) {
   const date = new Intl.DateTimeFormat("nl-BE", {
@@ -199,7 +199,12 @@ export default async function AccountPage({ searchParams }) {
   const myRank = leaderboard.findIndex((r) => r.id === user.id);
 
   const now = Date.now();
-  const all = [...(bookings || []), ...invitedSessions];
+  // Eén keer chronologisch sorteren vóór het splitsen. Meegenodigde sessies kwamen als los blok
+  // achteraan de lijst, dus in de geschiedenis stonden ze als groep bovenaan en wees "Boek opnieuw"
+  // niet naar de laatste sessie maar naar de laatste uitnodiging.
+  const all = [...(bookings || []), ...invitedSessions].sort(
+    (a, b) => new Date(a.starts_at) - new Date(b.starts_at)
+  );
   // A booking is "settled" (door-eligible) only if paid, or settled at creation (credit/free/invited).
   // Unpaid 'los'/'abo' bookings must NOT open the door until Stripe confirms payment.
   // Shared definition (lib/booking-status) — same logic the admin list + detail panel now use.
@@ -238,7 +243,11 @@ export default async function AccountPage({ searchParams }) {
     }));
   const history = all
     .filter((b) => !(b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now))
-    .reverse();
+    .reverse(); // nieuwste eerst (all staat chronologisch)
+  // Laatste écht gevolgde sessie — voedt zowel de lege agenda als "Boek opnieuw".
+  const lastDone = history.find((b) => b.status === "bevestigd" && b.services?.type !== "pt") || null;
+  const welcomeReady = !profile?.welcome_code_used && profile?.welcome_status === "eligible";
+  const HISTORY_VISIBLE = 10; // de rest zit achter één klik; een lid met 40 sessies scrolt anders eindeloos
 
   // Who you've already invited to each of your own bookings (for the manage-buddies UI).
   const ownIds = (bookings || []).map((b) => b.id);
@@ -274,6 +283,18 @@ export default async function AccountPage({ searchParams }) {
           </div>
         )}
         {pendingPay.length > 0 && <PendingPaymentBanner items={pendingPay} />}
+        {/* Wie zijn Stripe-betaling afbreekt, landt hier (cancel_url). De aftelbanner hierboven doet
+            het werk; deze regel zegt alleen wát er net gebeurde — anders is de terugkeer stil.
+            Zonder afgebroken betaling: onzichtbaar. */}
+        {sp.betaling === "afgebroken" && (
+          <p className="mb-6 rounded-2xl border border-borderc bg-white p-4 text-sm text-brand/70">
+            {pendingPay.length > 0 ? (
+              <>Je betaling is afgebroken — er is niets aangerekend. Je uur blijft nog even gereserveerd; reken hierboven af om het vast te zetten.</>
+            ) : (
+              <>Je betaling is afgebroken — er is niets aangerekend en je uur is weer vrijgegeven. <Link href="/boeken" className="font-bold text-accentdark hover:underline">Kies gerust opnieuw een moment →</Link></>
+            )}
+          </p>
+        )}
 
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -467,6 +488,9 @@ export default async function AccountPage({ searchParams }) {
 
         {sp.betaald === "1" && (
           <div className="mt-6 rounded-2xl bg-accent/15 p-4">
+            {/* Betaalde boekingen keren via Stripe hier terug; zonder dit event telt de trechter
+                enkel gratis- en tegoedboekingen en lijkt elke betaalpoging te stranden. */}
+            <TrackBookingCompleted />
             <p className="text-sm font-semibold text-accentdark">
               Betaling gelukt — je boeking is bevestigd. Je ontvangt een bevestiging per e-mail.
             </p>
@@ -517,19 +541,6 @@ export default async function AccountPage({ searchParams }) {
         {!membership && !aboPastDue && nudgeSessions >= 3 && (
           <div className="mt-6 rounded-3xl border-2 border-accent bg-accent/10 p-6">
             <p className="font-black text-brand">💡 Jij traint vaak — het abonnement is voor jou voordeliger</p>
-            <p className="mt-1 text-sm text-brand/70">
-              Je trainde <b>{nudgeSessions}×</b> in de laatste 60 dagen. Met het Member-abonnement (€ 12/mnd) betaal je <b>€ 12 per sessie</b> én
-              krijg je <b>elke maand 1 sessie gratis</b> — voor jou was dat ≈ <b>€ {nudgeSaving} voordeel</b> geweest.
-            </p>
-            <Link href="/lidmaatschap" className="mt-3 inline-block rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">Word member →</Link>
-          </div>
-        )}
-
-        {/* Automatische abo-nudge: wie vaak op eigen kosten traint ziet zijn eigen cijfers + besparing.
-            Zelfde signaal als de "abo-kandidaat"-lijst op het beheer-dashboard — de app verkoopt mee. */}
-        {!membership && !aboPastDue && nudgeSessions >= 3 && (
-          <div className="mt-6 rounded-3xl border-2 border-accent bg-accent/10 p-6">
-            <p className="font-black text-brand">💡 Jij traint vaak — het abonnement is voor jou goedkoper</p>
             <p className="mt-1 text-sm text-brand/70">
               Je trainde <b>{nudgeSessions}×</b> in de laatste 60 dagen. Met het Member-abonnement (€ 12/mnd) betaal je <b>€ 12 per sessie</b> én
               krijg je <b>elke maand 1 sessie gratis</b> — voor jou was dat ≈ <b>€ {nudgeSaving} voordeel</b> geweest.
@@ -653,20 +664,30 @@ export default async function AccountPage({ searchParams }) {
 
           {upcomingPaid.length === 0 ? (
             <div className="mt-5 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
-              {!profile?.welcome_code_used && profile?.welcome_status === "eligible" ? (
+              {welcomeReady ? (
                 <>
                   <p className="text-2xl">🎁</p>
                   <p className="mt-2 font-black text-brand">Je gratis eerste sessie staat klaar</p>
                   <p className="mt-1 text-sm text-brand/60">Ze wordt automatisch verrekend — kies gewoon een moment dat past.</p>
                 </>
+              ) : lastDone ? (
+                // Een lid dat al trainde is geen nieuw lid: "je hebt nog geen sessies geboekt" is
+                // dan gewoon onwaar. Zijn eigen vorige moment is het makkelijkste volgende moment.
+                <>
+                  <p className="font-black text-brand">
+                    Je laatste sessie was {new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long" }).format(new Date(lastDone.starts_at))} om{" "}
+                    {new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit" }).format(new Date(lastDone.starts_at))}.
+                  </p>
+                  <p className="mt-1 text-sm text-brand/60">Zelfde moment volgende week?</p>
+                </>
               ) : (
                 <p className="font-semibold text-brand/70">Je hebt nog geen sessies geboekt.</p>
               )}
               <Link
-                href="/boeken"
+                href={!welcomeReady && lastDone ? rebookHref(lastDone) : "/boeken"}
                 className="mt-5 inline-block rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90"
               >
-                {!profile?.welcome_code_used && profile?.welcome_status === "eligible" ? "Boek je gratis sessie" : "Reserveer de gym"}
+                {welcomeReady ? "Boek je gratis sessie" : lastDone ? "Boek hetzelfde moment" : "Reserveer de gym"}
               </Link>
             </div>
           ) : (
@@ -743,37 +764,20 @@ export default async function AccountPage({ searchParams }) {
           <section className="mt-12">
             <h2 className="text-xl font-black">Geschiedenis</h2>
             <div className="mt-5 divide-y divide-borderc rounded-2xl border border-borderc bg-white">
-              {history.map((b) => (
-                <div key={b.id} className="flex items-center justify-between gap-4 px-5 py-4">
-                  <div>
-                    <p className="font-bold text-brand/80">{b.services?.name || "Sessie"}</p>
-                    <p className="mt-0.5 text-sm capitalize text-brand/50">
-                      {fmtRange(b.starts_at, b.ends_at)}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {b.status !== "geannuleerd" && b.services?.type !== "pt" && (
-                      <Link
-                        href={rebookHref(b)}
-                        className="rounded-full border-2 border-borderc bg-white px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent"
-                      >
-                        Boek opnieuw
-                      </Link>
-                    )}
-                    <span
-                      className={
-                        "rounded-full px-3 py-1 text-xs font-bold " +
-                        (b.status === "geannuleerd"
-                          ? "bg-paper text-brand/50"
-                          : "bg-accent/15 text-accentdark")
-                      }
-                    >
-                      {b.status === "geannuleerd" ? "Geannuleerd" : "Voltooid"}
-                    </span>
-                  </div>
-                </div>
-              ))}
+              {history.slice(0, HISTORY_VISIBLE).map((b) => <HistoryRow key={b.id} b={b} />)}
             </div>
+            {/* De rest zit achter één klik (details werkt zonder JavaScript) — de laatste tien
+                sessies zijn wat een lid nodig heeft; de rest is archief. */}
+            {history.length > HISTORY_VISIBLE && (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-sm font-bold text-brand/60 transition hover:text-brand">
+                  Toon {history.length - HISTORY_VISIBLE} oudere {history.length - HISTORY_VISIBLE === 1 ? "sessie" : "sessies"}
+                </summary>
+                <div className="mt-3 divide-y divide-borderc rounded-2xl border border-borderc bg-white">
+                  {history.slice(HISTORY_VISIBLE).map((b) => <HistoryRow key={b.id} b={b} />)}
+                </div>
+              </details>
+            )}
           </section>
         )}
 
@@ -782,6 +786,35 @@ export default async function AccountPage({ searchParams }) {
         <div className="mt-6"><ProblemReport /></div>
       </div>
     </main>
+  );
+}
+
+function HistoryRow({ b }) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-5 py-4">
+      <div>
+        <p className="font-bold text-brand/80">{b.services?.name || "Sessie"}</p>
+        <p className="mt-0.5 text-sm capitalize text-brand/50">{fmtRange(b.starts_at, b.ends_at)}</p>
+      </div>
+      <div className="flex items-center gap-3">
+        {b.status !== "geannuleerd" && b.services?.type !== "pt" && (
+          <Link
+            href={rebookHref(b)}
+            className="rounded-full border-2 border-borderc bg-white px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent"
+          >
+            Boek opnieuw
+          </Link>
+        )}
+        <span
+          className={
+            "rounded-full px-3 py-1 text-xs font-bold " +
+            (b.status === "geannuleerd" ? "bg-paper text-brand/50" : "bg-accent/15 text-accentdark")
+          }
+        >
+          {b.status === "geannuleerd" ? "Geannuleerd" : "Voltooid"}
+        </span>
+      </div>
+    </div>
   );
 }
 

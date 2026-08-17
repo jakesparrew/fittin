@@ -1,14 +1,28 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { track } from "@/lib/track";
 
 const DISMISS_KEY = "fittin-pwa-dismissed";
+const FIRST_SEEN_KEY = "fittin-eerste-bezoek";
 const DISMISS_DAYS = 14; // don't nag — re-ask only after two weeks
+const RETURN_AFTER_MS = 24 * 3600 * 1000; // pas een dag later terug = terugkerend bezoek
+
+// Ingelogde routes: daar heeft de app zich al bewezen, dus daar mag de installatievraag meteen.
+const APP_ROUTES = ["/account", "/training", "/plannen", "/coach", "/beheer", "/notificaties", "/community"];
+// Nooit tijdens boeken of aanmelden: daar staat onderaan de bevestigbalk, en elke onderbreking
+// in die flow kost een boeking.
+const BLOCKED_ROUTES = ["/boeken", "/login", "/auth", "/wachtwoord"];
 
 const isStandalone = () =>
   window.matchMedia?.("(display-mode: standalone)").matches || window.navigator.standalone === true;
 const isMobile = () => /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
 const isIos = () => /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream;
+// In-app browsers (Instagram, Facebook, TikTok …) matchten op de iOS-detectie terwijl daar geen
+// "Zet op beginscherm" bestaat en beforeinstallprompt nooit vuurt — de banner kon er dus alleen
+// maar in de weg staan.
+const isInAppBrowser = () =>
+  /FBAN|FBAV|FB_IAB|FBIOS|Instagram|LinkedInApp|Twitter|Snapchat|Pinterest|TikTok|MicroMessenger|Line\/|GSA\//i.test(navigator.userAgent);
 const recentlyDismissed = () => {
   try {
     const t = Number(localStorage.getItem(DISMISS_KEY) || 0);
@@ -17,22 +31,38 @@ const recentlyDismissed = () => {
     return false;
   }
 };
+// Registreert het eerste bezoek en zegt of dit een terugkerend bezoek is. Een koude bezoeker die
+// net op de site landt, krijgt niets te zien.
+const markVisitAndCheckReturning = () => {
+  try {
+    const first = Number(localStorage.getItem(FIRST_SEEN_KEY) || 0);
+    if (!first) {
+      localStorage.setItem(FIRST_SEEN_KEY, String(Date.now()));
+      return false;
+    }
+    return Date.now() - first > RETURN_AFTER_MS;
+  } catch {
+    return false;
+  }
+};
 
 // Mobile-only "install our app" banner. Android/Chrome → native install via beforeinstallprompt.
 // iOS Safari → manual "add to home screen" instructions (no install API there).
 export default function PWAInstallPrompt() {
+  const pathname = usePathname();
   const [deferred, setDeferred] = useState(null);
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
+  const [allowed, setAllowed] = useState(false); // toestel/instellingen laten de vraag toe
+  const [returning, setReturning] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (isStandalone() || !isMobile() || recentlyDismissed()) return;
+    if (isStandalone() || !isMobile() || isInAppBrowser() || recentlyDismissed()) return;
 
     const onBIP = (e) => {
       e.preventDefault(); // suppress the mini-infobar; we show our own UI
       setDeferred(e);
-      setShow(true);
     };
     const onInstalled = () => {
       try { localStorage.setItem(DISMISS_KEY, String(Date.now())); } catch {}
@@ -42,17 +72,31 @@ export default function PWAInstallPrompt() {
     window.addEventListener("beforeinstallprompt", onBIP);
     window.addEventListener("appinstalled", onInstalled);
 
-    let t;
-    if (isIos()) {
-      setIos(true);
-      t = setTimeout(() => setShow(true), 2500); // give the page a moment first
-    }
+    setIos(isIos());
+    setReturning(markVisitAndCheckReturning());
+    setAllowed(true);
     return () => {
       window.removeEventListener("beforeinstallprompt", onBIP);
       window.removeEventListener("appinstalled", onInstalled);
-      clearTimeout(t);
     };
   }, []);
+
+  // Wanneer tonen: enkel op een ingelogde route of bij een terugkerend bezoek, en nooit midden in
+  // de boekflow. Draait opnieuw bij navigatie, zodat de banner ook weer verdwijnt.
+  useEffect(() => {
+    if (!allowed) return;
+    const path = pathname || "/";
+    const welcome =
+      !BLOCKED_ROUTES.some((p) => path.startsWith(p)) &&
+      (returning || APP_ROUTES.some((p) => path.startsWith(p)));
+    if (!welcome) {
+      setShow(false);
+      return;
+    }
+    if (!ios && !deferred) return; // Android: pas zodra de browser installatie aanbiedt
+    const t = setTimeout(() => setShow(true), 2500); // give the page a moment first
+    return () => clearTimeout(t);
+  }, [allowed, returning, pathname, ios, deferred]);
 
   useEffect(() => { if (show) track("install_prompt_shown"); }, [show]);
 

@@ -148,19 +148,33 @@ export async function snoozeInsight(formData) {
   return { ok: true, message: `Verborgen tot over ${dagen} dagen ✓` };
 }
 
-// Bulk: alle at-risk leden (30+ dagen niet geweest, geen testaccounts) in de comeback-reeks.
+// Bulk: alle at-risk leden in de comeback-reeks.
 // Idempotent — wie er al in zit of uitgeschreven is, wordt overgeslagen met een telling.
+//
+// De doelgroep is EXACT dezelfde als wat /beheer/leden?filter=atrisk toont, anders mailt deze knop
+// mensen die de eigenaar nooit in de lijst zag staan: al minstens één keer getraind, meer dan 30
+// dagen stil, en niets meer in de agenda. Wie nog nooit boekte hoort in de onboarding-reeks — een
+// comeback-mail die naar zijn "vorige bezoek" verwijst klopt daar gewoon niet.
 export async function enrollAllAtRiskInComeback() {
   const { profile, error } = await requireBeheerder();
   if (error) return { error };
   const admin = createAdminClient();
-  const d30 = new Date(Date.now() - 30 * 86400000).toISOString();
-  const [{ data: leden }, { data: recent }] = await Promise.all([
+  const nu = Date.now();
+  const d30 = nu - 30 * 86400000;
+  const [{ data: leden }, { data: sessies }] = await Promise.all([
     admin.from("profiles").select("id, is_test").eq("gym_id", profile.gym_id).eq("role", "lid"),
-    admin.from("bookings").select("user_id").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", d30),
+    admin.from("bookings").select("user_id, starts_at").eq("gym_id", profile.gym_id).eq("status", "bevestigd"),
   ]);
-  const actief = new Set((recent || []).map((b) => b.user_id));
-  const doelwitten = (leden || []).filter((m) => !m.is_test && !actief.has(m.id));
+  const laatste = new Map(), komtNog = new Set();
+  for (const b of sessies || []) {
+    if (!b.user_id) continue;
+    const t = new Date(b.starts_at).getTime();
+    if (t > nu) komtNog.add(b.user_id);
+    else if (t > (laatste.get(b.user_id) || 0)) laatste.set(b.user_id, t);
+  }
+  const doelwitten = (leden || []).filter(
+    (m) => !m.is_test && laatste.has(m.id) && !komtNog.has(m.id) && laatste.get(m.id) < d30
+  );
 
   let gestart = 0, overgeslagen = 0;
   for (const m of doelwitten) {

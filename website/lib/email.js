@@ -112,9 +112,13 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
     ["Personen", persons],
     ["Adres", addr],
   ];
+  // Saldo als getal, niet als héél getal: sinds de halfuursessies (0117) kan een saldo 1,5 zijn en
+  // dan viel de hele saldoregel weg op Number.isInteger — precies bij het lid dat zijn beurten telt.
+  const bal = creditBalance === null || creditBalance === undefined || creditBalance === "" ? null : Number(creditBalance);
+  const hasBalance = bal !== null && Number.isFinite(bal);
   // Source-aware price row: a punch-card or abo session must not read "Gratis (FittinWelcome)".
   if (paymentSource === "credit") {
-    rows.push(["Prijs", `<span style="color:#33B24A">Betaald met je beurtenkaart${Number.isInteger(creditBalance) ? ` (saldo: ${creditBalance})` : ""}</span>`]);
+    rows.push(["Prijs", `<span style="color:#33B24A">Betaald met je beurtenkaart${hasBalance ? ` (saldo: ${String(bal).replace(".", ",")})` : ""}</span>`]);
   } else if (paymentSource === "gratis_code") {
     rows.push(["Prijs", `<span style="color:#33B24A">Gratis (FittinWelcome)</span>`]);
   } else if (amountDueCents > 0) {
@@ -133,6 +137,15 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
          <a href="${SITE}/lidmaatschap" style="display:inline-block;margin-top:8px;font-size:13px;font-weight:bold;color:#1a7d34;text-decoration:none">Bekijk de opties →</a>
        </div>`
     : "";
+  // Laatste beurt van de kaart: de saldoregel zegt dan "saldo: 0" en verder niets, terwijl dit
+  // exact het moment is waarop het lid moet weten hoe hij verder kan boeken. Eén blok, alleen bij 0.
+  const emptyHtml = paymentSource === "credit" && hasBalance && bal <= 0
+    ? `<div style="margin:14px 0 0;background:#f0effa;border-radius:14px;padding:14px 16px">
+         <p style="margin:0;font-size:14px;font-weight:bold;color:#22194F">Dit was de laatste sessie op je saldo.</p>
+         <p style="margin:6px 0 0;font-size:13px;color:#6b6685;line-height:1.5">Je volgende sessie boek je gewoon los aan € 15, of je vult je saldo weer aan met een 10-beurtenkaart (€ 150 · 11 sessies) of het abonnement (€ 12/mnd).</p>
+         <a href="${SITE}/lidmaatschap" style="display:inline-block;margin-top:8px;font-size:13px;font-weight:bold;color:#1a7d34;text-decoration:none">Bekijk de opties →</a>
+       </div>`
+    : "";
   await send(
     to,
     "Je Fittin'-boeking is bevestigd ✅",
@@ -140,7 +153,7 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
       title: "Je boeking is bevestigd ✅",
       intro: `Hallo ${esc(name) || "daar"}, je sessie staat vast. Hier is alvast alles wat je moet weten:`,
       rows,
-      body: `${nudgeHtml}
+      body: `${nudgeHtml}${emptyHtml}
         <div style="text-align:center"><a href="${mapsUrl}" style="display:inline-block;margin:6px 0;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px;font-size:14px">📍 Navigeer naar de gym</a></div>
         <div style="margin-top:16px;border-top:1px solid #ece9f5;padding-top:14px">
           <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo kom je binnen</p>
@@ -266,6 +279,53 @@ export async function sendCreditsExpiring({ to, name, count, date }) {
       title: "Niet vergeten te trainen 💪",
       intro: `Hallo ${esc(name) || "daar"}, ${count === 1 ? "1 sessie van je saldo vervalt" : `${count} sessies van je saldo vervallen`} op ${esc(date)}. Boek ze in en laat niets verloren gaan!`,
       cta: { href: `${SITE}/boeken`, label: "Sessie boeken" },
+    }),
+    FROM_BOOKING
+  );
+}
+
+// ---- Member: sessietegoed is op (overgang 1 → 0) ----
+// Zelfde lijn als sendCreditsExpiring, maar het omgekeerde moment: niets vervalt, er is gewoon
+// niets meer. Bewust één mail, en enkel wanneer er niets gepland staat (zie reminders.js) — wie
+// net met zijn laatste beurt boekte, las het al in zijn bevestigingsmail.
+export async function sendCreditsEmpty({ to, name }) {
+  return send(
+    to,
+    "Je sessiesaldo is op — zo boek je verder",
+    shell({
+      title: "Je saldo staat op 0",
+      intro: `Hallo ${esc(name) || "daar"}, je laatste sessie van je saldo is opgebruikt. Niets aan de hand — je kan gewoon verder boeken, dit zijn je opties:`,
+      rows: [
+        ["Losse sessie", "€ 15 per uur, niets vooraf"],
+        ["10-beurtenkaart", "€ 150 · 11 sessies (10 + 1 gratis)"],
+        ["Abonnement", "€ 12/mnd · 1 sessie inbegrepen, daarna alles aan € 12"],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685">Geen haast en geen verplichting: een losse sessie boeken kan altijd, ook zonder saldo.</p>`,
+      cta: { href: `${SITE}/lidmaatschap`, label: "Bekijk de opties" },
+    }),
+    FROM_BOOKING,
+    undefined,
+    "credits_op"
+  );
+}
+
+// ---- Meegenodigde buddy/gast: korte dag-vooraf-herinnering ----
+// Bewust korter dan de herinnering van de boeker: een genodigde betaalt niets, kan niets
+// verplaatsen en krijgt géén deurcode — die komt bij wie boekte. Alles wat hij moet weten is
+// wanneer, waar, en met wie hij binnengaat.
+export async function sendGuestSessionReminder({ to, name, fromName, serviceName, startsAt, endsAt }) {
+  return send(
+    to,
+    "Herinnering: je traint binnenkort mee bij Fittin'",
+    shell({
+      title: "Tot binnenkort in de zaal! 💪",
+      intro: `Hallo ${esc(name) || "daar"}, ${esc(fromName) || "een Fittin'-lid"} nam je mee naar deze sessie:`,
+      rows: [
+        ["Sessie", esc(serviceName)],
+        ["Wanneer", dayLabel(startsAt)],
+        ["Uur", timeRange(startsAt, endsAt)],
+      ],
+      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">De toegangscode gaat naar wie de zaal boekte — spreek dus af om samen binnen te gaan. Sportkledij en een drinkbus volstaan.</p>`,
     }),
     FROM_BOOKING
   );

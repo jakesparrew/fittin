@@ -121,6 +121,12 @@ export default async function Abonnementen({ searchParams }) {
         <Link href="/beheer/leden" className="rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm font-bold text-brand transition hover:border-accent">Alle leden →</Link>
       </div>
 
+      {/* De ?q=-filter hierboven bestond al, alleen het invoerveld ontbrak: zoeken kon enkel door
+          zelf ?q= in de adresbalk te typen. */}
+      <div className="mt-4">
+        <ListSearch placeholder="Zoek een abonnee op naam of e-mail…" className="w-full max-w-md" />
+      </div>
+
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label="Actieve abonnementen" value={alleActief.length} hint={`${euro(mrr)} per maand vast`} />
         <Stat label="Gemiddeld lid sinds" value={`${gemMaanden.toFixed(1)} mnd`} hint="hoe langer, hoe waardevoller" />

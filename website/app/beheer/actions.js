@@ -853,9 +853,11 @@ export async function adminSetRole(formData) {
   return { ok: true };
 }
 
-// Mark a member problem report as handled (staff). RLS enforces gym scope + staff role.
+// Een probleemmelding van een lid afsluiten. Beheerder-only, net als resolveClientError hieronder:
+// de melding leeft op /beheer/meldingen (een beheerderspagina) en afsluiten is de enige handeling
+// die ze uit beeld haalt. Een coach die ze per ongeluk afvinkt laat het lid zonder opvolging achter.
 export async function resolveProblemReport(formData) {
-  const { supabase, error } = await requireStaff();
+  const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
   if (!id) return { error: "Geen melding gekozen." };

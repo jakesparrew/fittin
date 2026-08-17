@@ -35,19 +35,16 @@ export const metadata = {
     "Fittin' is een privé fitness in Gent. Reserveer de zaal voor jezelf (en vrienden) of train met een personal coach. Je eerste sessie is gratis.",
   applicationName: "Fittin'",
   appleWebApp: { capable: true, title: "Fittin'", statusBarStyle: "default" },
+  // Bewust ZONDER title/description/url: die erven alle pagina's, waardoor elke gedeelde workout,
+  // coach of oefening het homepagekaartje toonde. Next vult og:/twitter: title en description
+  // automatisch met de title en description van de pagina zelf zodra ze hier ontbreken.
   openGraph: {
     type: "website",
     locale: "nl_BE",
     siteName: "Fittin'",
-    title: "Fittin' | Privé fitness & personal training in Gent",
-    description:
-      "Reserveer de privégym in Gent — alleen of met vrienden — of train met een personal coach.",
-    url: siteUrl,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Fittin' | Privé fitness & personal training in Gent",
-    description: "Reserveer de privégym in Gent — alleen of met vrienden — of train met een personal coach.",
   },
 };
 
@@ -60,6 +57,11 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="nl" className={`${lato.variable} ${display.variable}`}>
+      <head>
+        {/* De oefeningdemo's staan nog op jsdelivr; zonder preconnect kost de eerste afbeelding een
+            volledige DNS+TLS-ronde. Weg zodra de stills naar Supabase Storage gespiegeld zijn. */}
+        <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+      </head>
       <body className="bg-white font-sans text-brand antialiased">
         <PWARegister />
         <ChunkErrorRecovery />

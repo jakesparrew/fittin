@@ -28,27 +28,35 @@ export default async function Analytics() {
   const d60 = new Date(now.getTime() - 60 * 86400000);
 
   const [{ data: payments }, { data: bookings }, { data: members }, { data: memRows }, { count: subCount }] = await Promise.all([
-    supabase.from("payments").select("amount_cents, kind, created_at").eq("gym_id", gym.id).gte("created_at", yearAgo.toISOString()),
+    supabase.from("payments").select("user_id, amount_cents, kind, created_at").eq("gym_id", gym.id).gte("created_at", yearAgo.toISOString()),
     supabase.from("bookings").select("starts_at, status, user_id, coach_id, created_at").eq("gym_id", gym.id).gte("starts_at", yearAgo.toISOString()),
-    supabase.from("profiles").select("id, full_name, role, created_at").eq("gym_id", gym.id),
+    supabase.from("profiles").select("id, full_name, role, welcome_code_used, created_at").eq("gym_id", gym.id),
     supabase.from("memberships").select("user_id, status").eq("gym_id", gym.id),
     supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "active"),
   ]);
   const subStatus = new Map((memRows || []).map((m) => [m.user_id, m.status]));
-  const activeMemberships = (memRows || []).filter((m) => m.status === "actief").length;
 
   const pays = payments || [];
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
   const lids = (members || []).filter((m) => m.role === "lid");
+  const lidIds = new Set(lids.map((m) => m.id));
   const nameById = new Map((members || []).map((m) => [m.id, m.full_name || "Lid"]));
   const totalMembers = lids.length;
+  // Abonnementen tellen alleen mee voor wie ook in stap 1 van de trechter zit. Zonder deze filter
+  // konden coach- en beheeraccounts de laatste stap breder maken dan de eerste — een trechter die
+  // naar onderen toe uitzet leest als groei terwijl het een telfout is.
+  const activeMemberships = (memRows || []).filter((m) => m.status === "actief" && lidIds.has(m.user_id)).length;
 
   // --- Revenue ---
   const revInMonth = (back) => pays.filter((p) => ym(new Date(p.created_at)) === thisYM - back).reduce((a, p) => a + (p.amount_cents || 0), 0);
   const revThis = revInMonth(0), revLast = revInMonth(1);
   const revDelta = revLast ? Math.round(((revThis - revLast) / revLast) * 100) : null;
   const mrr = pays.filter((p) => p.kind === "abonnement" && new Date(p.created_at) >= d30).reduce((a, p) => a + (p.amount_cents || 0), 0);
-  const arpu = totalMembers ? Math.round(revThis / totalMembers) : 0;
+  // ARPU per BETALEND lid, niet per account. Delen door alle accounts (waarvan de meeste in een
+  // gegeven maand niets kopen) geeft een cijfer dat vanzelf daalt naarmate je meer aanmeldingen
+  // hebt — precies het omgekeerde signaal van wat er gebeurt.
+  const betalersThis = new Set(pays.filter((p) => ym(new Date(p.created_at)) === thisYM && p.user_id).map((p) => p.user_id));
+  const arpu = betalersThis.size ? Math.round(revThis / betalersThis.size) : 0;
 
   const revTrend = [];
   for (let i = 7; i >= 0; i--) revTrend.push({ label: MON[(now.getMonth() - i + 12) % 12], value: revInMonth(i) });
@@ -60,9 +68,9 @@ export default async function Analytics() {
   for (let i = 7; i >= 0; i--) growth.push({ label: MON[(now.getMonth() - i + 12) % 12], value: newInMonth(i) });
 
   // --- Engagement (from confirmed bookings) ---
-  const lastVisit = new Map(), visitCount = new Map(), visitThisMonth = new Map();
+  const lastVisit = new Map(), visitCount = new Map(), visitThisMonth = new Map(), komtNog = new Set();
   for (const b of confirmed) {
-    if (new Date(b.starts_at) > now) continue;
+    if (new Date(b.starts_at) > now) { komtNog.add(b.user_id); continue; }
     const prev = lastVisit.get(b.user_id);
     if (!prev || new Date(b.starts_at) > new Date(prev)) lastVisit.set(b.user_id, b.starts_at);
     visitCount.set(b.user_id, (visitCount.get(b.user_id) || 0) + 1);
@@ -72,25 +80,39 @@ export default async function Analytics() {
   const activeRate = totalMembers ? Math.round((visitedLast30 / totalMembers) * 100) : 0;
   const visitsThisMonthTotal = [...visitThisMonth.values()].reduce((a, v) => a + v, 0);
   const avgVisits = visitedLast30 ? (visitsThisMonthTotal / visitedLast30).toFixed(1) : "0";
-  const atRisk = lids.filter((m) => { const lv = lastVisit.get(m.id); return !lv || new Date(lv) < d30; }).length;
+  // Zelfde definitie als /beheer/leden?filter=atrisk (waar dit cijfer naartoe linkt): al getraind,
+  // >30 dagen stil, en niets meer in de agenda. Wie nooit boekte hoort in de onboarding, niet hier.
+  const atRisk = lids.filter((m) => { const lv = lastVisit.get(m.id); return lv && !komtNog.has(m.id) && new Date(lv) < d30; }).length;
 
   // --- No-show ---
   const recent = (bookings || []).filter((b) => new Date(b.starts_at) >= d60 && new Date(b.starts_at) <= now);
   const noShows = recent.filter((b) => b.status === "no_show").length;
   const noShowRate = recent.length ? Math.round((noShows / recent.length) * 100) : 0;
 
-  // --- Funnel ---
-  const bookedOnce = new Set([...visitCount.keys()].filter((id) => nameById.has(id)));
-  const bookedRepeat = [...visitCount.entries()].filter(([id, n]) => n >= 2 && nameById.has(id)).length;
+  // --- Funnel --- alle stappen op dezelfde basis: leden (rol 'lid'). Coaches en beheerders horen
+  // niet in een klanttrechter.
+  const bookedOnce = new Set([...visitCount.keys()].filter((id) => lidIds.has(id)));
+  const bookedRepeat = [...visitCount.entries()].filter(([id, k]) => k >= 2 && lidIds.has(id)).length;
   const funnel = [
     { label: "Accounts", value: totalMembers },
-    { label: "Eerste boeking", value: [...bookedOnce].filter((id) => lids.find((l) => l.id === id)).length },
+    { label: "Eerste boeking", value: bookedOnce.size },
     { label: "Terugkerend (2+)", value: bookedRepeat },
     { label: "Abonnee", value: activeMemberships || 0 },
   ];
 
+  // --- Het gratis eerste uur --- de belangrijkste belofte van de site had tot nu geen enkel
+  // geaggregeerd cijfer: je zag wel dat leden binnenkwamen, niet of het weggeven ooit een betalende
+  // klant opleverde. Geen nieuwe tracking nodig: welcome_code_used staat op het profiel en het
+  // aantal bevestigde sessies staat al in visitCount.
+  const gratisGebruikt = lids.filter((m) => m.welcome_code_used);
+  const gratisDaarnaBetaald = gratisGebruikt.filter((m) => (visitCount.get(m.id) || 0) >= 2).length;
+  const gratisFunnel = [
+    { label: "Gratis sessie gebruikt", value: gratisGebruikt.length },
+    { label: "Tweede sessie betaald", value: gratisDaarnaBetaald },
+  ];
+
   // --- Tops ---
-  const topMembers = [...visitCount.entries()].filter(([id]) => lids.find((l) => l.id === id)).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const topMembers = [...visitCount.entries()].filter(([id]) => lidIds.has(id)).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const coachCount = new Map();
   for (const b of confirmed) if (b.coach_id) coachCount.set(b.coach_id, (coachCount.get(b.coach_id) || 0) + 1);
   const topCoaches = [...coachCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
@@ -131,9 +153,11 @@ export default async function Analytics() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi label="Omzet deze maand" value={euro(revThis)} delta={revDelta} />
         <Kpi label="MRR (abonnementen)" value={euro(mrr)} sub="laatste 30 dagen" />
-        <Kpi label="Actieve leden" value={totalMembers} sub={`+${newThis} deze maand`} good={newThis >= newLast} />
+        {/* 'Accounts', niet 'Actieve leden': dit telt iedereen met een profiel, ook wie nooit boekte.
+            Hoeveel daarvan écht actief zijn staat in de KPI hiernaast. */}
+        <Kpi label="Accounts" value={totalMembers} sub={`+${newThis} deze maand`} good={newThis >= newLast} />
         <Kpi label="Actief (30d)" value={activeRate + "%"} sub={`${visitedLast30}/${totalMembers} kwamen`} />
-        <Kpi label="ARPU" value={euro(arpu)} sub="omzet per lid / maand" />
+        <Kpi label="ARPU" value={euro(arpu)} sub={`per betalend lid · ${betalersThis.size} betaalden`} />
       </div>
 
       {/* Trends */}
@@ -162,6 +186,12 @@ export default async function Analytics() {
         </Card>
         <Card title="Conversie-funnel" subtitle="van account tot abonnee">
           <Funnel steps={funnel} />
+          {gratisGebruikt.length > 0 && (
+            <div className="mt-5 border-t border-borderc pt-4">
+              <p className="mb-2 text-xs font-black uppercase tracking-widest text-lav">Het gratis eerste uur</p>
+              <Funnel steps={gratisFunnel} />
+            </div>
+          )}
         </Card>
       </div>
 
