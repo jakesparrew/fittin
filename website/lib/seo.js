@@ -29,7 +29,10 @@ export function healthClubLd() {
     address: ADDRESS,
     geo: { "@type": "GeoCoordinates", latitude: 51.0686, longitude: 3.7558 },
     hasMap: "https://www.google.com/maps?q=Aannemersstraat+186,+9040+Gent",
-    sameAs: ["https://www.instagram.com/fittin_gent/", "https://www.facebook.com/fittingent"],
+    // sameAs vertelt Google WELKE profielen dezelfde entiteit zijn. De Facebook-pagina /fittingent
+    // staat er bewust NIET meer in: die is niet meer in ons beheer, en ze eraan koppelen versterkt
+    // juist het verband tussen fittin.be en de oude fittingent-naam dat we willen doorknippen.
+    sameAs: ["https://www.instagram.com/fittin_gent/"],
     openingHoursSpecification: [{
       "@type": "OpeningHoursSpecification",
       dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],

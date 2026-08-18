@@ -45,9 +45,11 @@ export default function Footer() {
             </li>
             <li>Aannemersstraat 186, 9040 Gent</li>
             <li>Gratis parking</li>
+            {/* Enkel Instagram. De Facebook-pagina /fittingent is niet meer in ons beheer (gehackt),
+                dus we sturen er geen bezoekers meer heen. Ze staat om dezelfde reden ook niet meer in
+                de sameAs van de structured data — zie lib/seo.js. */}
             <li className="flex gap-4 pt-2">
               <a href="https://www.instagram.com/fittin_gent/" className="font-semibold transition hover:text-white">Instagram</a>
-              <a href="https://www.facebook.com/fittingent" className="font-semibold transition hover:text-white">Facebook</a>
             </li>
             <li className="pt-2 text-xs text-lav/70">De Wereld Draait Door VZW · BE 0772.565.606</li>
           </ul>
