@@ -87,7 +87,11 @@ export default function CalorieCalculator() {
         </div>
 
         {/* Results */}
-        <div>
+        {/* min-w-0: een grid-item weigert standaard smaller te worden dan zijn eigen min-content, en
+            de dagplan-tabel eist 323px. Zonder dit duwde die eis het HELE document op 370px — op een
+            scherm van 320 viel de kolom V dus buiten beeld, en body{overflow-x:clip} maakte ze
+            onbereikbaar in plaats van enkel lelijk. */}
+        <div className="min-w-0">
           {!r ? (
             <p className="text-sm text-brand/50">Vul je gegevens in om je resultaat te zien.</p>
           ) : (
@@ -108,19 +112,19 @@ export default function CalorieCalculator() {
               <div className="mt-6">
                 <p className="text-sm font-black text-brand">Voorbeeld dagplan</p>
                 <p className="text-xs text-brand/50">Verdeling van je {round(r.cals)} kcal over de dag.</p>
-                <div className="mt-3 overflow-hidden rounded-2xl border border-borderc">
+                <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc">
                   <table className="w-full text-sm">
                     <thead className="bg-paper text-left text-xs uppercase tracking-wide text-lav">
-                      <tr><th className="px-4 py-2">Maaltijd</th><th className="px-4 py-2 text-right">kcal</th><th className="px-4 py-2 text-right">E</th><th className="px-4 py-2 text-right">K</th><th className="px-4 py-2 text-right">V</th></tr>
+                      <tr><th className="px-2 py-2 sm:px-4">Maaltijd</th><th className="px-2 py-2 sm:px-4 text-right">kcal</th><th className="px-2 py-2 sm:px-4 text-right">E</th><th className="px-2 py-2 sm:px-4 text-right">K</th><th className="px-2 py-2 sm:px-4 text-right">V</th></tr>
                     </thead>
                     <tbody className="divide-y divide-borderc">
                       {MEALS.map((m) => (
                         <tr key={m.name}>
-                          <td className="px-4 py-2 font-semibold text-brand">{m.name}</td>
-                          <td className="px-4 py-2 text-right tabular-nums text-brand">{round(r.cals * m.pct)}</td>
-                          <td className="px-4 py-2 text-right tabular-nums text-brand/60">{round(r.protein * m.pct)}g</td>
-                          <td className="px-4 py-2 text-right tabular-nums text-brand/60">{round(r.carbs * m.pct)}g</td>
-                          <td className="px-4 py-2 text-right tabular-nums text-brand/60">{round(r.fat * m.pct)}g</td>
+                          <td className="px-2 py-2 sm:px-4 font-semibold text-brand">{m.name}</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand">{round(r.cals * m.pct)}</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand/60">{round(r.protein * m.pct)}g</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand/60">{round(r.carbs * m.pct)}g</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand/60">{round(r.fat * m.pct)}g</td>
                         </tr>
                       ))}
                     </tbody>

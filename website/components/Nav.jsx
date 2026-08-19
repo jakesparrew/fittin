@@ -106,7 +106,10 @@ export default function Nav() {
               </Link>
             </>
           )}
-          <button onClick={() => setOpen(!open)} className="rounded-lg border border-borderc p-2 md:hidden" aria-label="Menu" aria-expanded={open} aria-controls="mobile-menu">
+          {/* h-11 w-11 = 44x44: het enige navigatie-element van de kopbalk op mobiel mag geen 38x32-doelwit
+              zijn. flex-col + justify-center houdt het streepjes-icoon exact zoals het was; enkel het
+              aanraakvlak groeit, de kopbalk (h-16) blijft even hoog. */}
+          <button onClick={() => setOpen(!open)} className="flex h-11 w-11 flex-col items-center justify-center rounded-lg border border-borderc md:hidden" aria-label="Menu" aria-expanded={open} aria-controls="mobile-menu">
             <span className="mb-1 block h-0.5 w-5 bg-brand"></span>
             <span className="mb-1 block h-0.5 w-5 bg-brand"></span>
             <span className="block h-0.5 w-5 bg-brand"></span>

@@ -585,14 +585,24 @@ export async function adminAdjustCredits(formData) {
 
 // ---- Coach billing config ----
 export async function setCoachBilling(formData) {
-  const { supabase, profile, error } = await requireStaff(true);
+  const { profile, error } = await requireStaff(true);
   if (error) return { error };
   // Coach billing is fixed: always € 12/sessie via prepaid sessietegoed (no free/invoice, no abo).
-  await supabase
+  // De coach_*-kolommen zijn niet schrijfbaar voor rol 'authenticated' (0015 grants): met de
+  // gebruikersclient weigert Postgres met 42501, PostgREST raakt 0 rijen en de knop meldde tóch
+  // "opgeslagen". Daarom via service role na de beheerderscontrole — en de gym_id-filter blijft
+  // staan, want admin omzeilt RLS.
+  const admin = createAdminClient();
+  const { data: rows, error: e } = await admin
     .from("profiles")
     .update({ coach_billing_mode: "credit", coach_session_price_cents: 1200 })
     .eq("id", formData.get("coachId"))
-    .eq("gym_id", profile.gym_id);
+    .eq("gym_id", profile.gym_id)
+    .select("id");
+  if (e) return { error: e.message };
+  // Vangnet: 0 rijen betekent dat er niets veranderd is (verkeerde coach, andere gym, of opnieuw
+  // een ontbrekend recht). Beter een eerlijke fout dan een vinkje dat liegt.
+  if (!rows?.length) return { error: "Facturatie niet opgeslagen — coach niet gevonden in deze gym." };
   revalidatePath("/beheer/coaches");
   revalidatePath("/coach");
   return { ok: true };
@@ -724,7 +734,7 @@ export async function setCoachPublic(formData) {
 }
 
 export async function addCoach(formData) {
-  const { supabase, error } = await requireStaff(true);
+  const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
   const memberId = formData.get("memberId");
   const { error: e } = await supabase.rpc("admin_set_role", { p_member: memberId, p_role: "coach" });
@@ -734,7 +744,11 @@ export async function addCoach(formData) {
   // private and the coach first-run checklist walks them through it.
   const { data: cp } = await supabase.from("profiles").select("coach_photo_url, coach_bio").eq("id", memberId).single();
   const ready = !!(cp?.coach_photo_url && String(cp?.coach_bio || "").trim());
-  await supabase.from("profiles").update({ coach_public: ready }).eq("id", memberId);
+  // Zelfde reden als in setCoachPublic: coach_public is niet schrijfbaar voor 'authenticated', dus
+  // de gebruikersclient liet deze poort stil in het niets vallen. Service role + gym-guard.
+  const admin = createAdminClient();
+  const { error: pErr } = await admin.from("profiles").update({ coach_public: ready }).eq("id", memberId).eq("gym_id", profile.gym_id);
+  if (pErr) return { error: pErr.message };
   try {
     const { data: m } = await supabase.from("profiles").select("email, full_name").eq("id", memberId).single();
     if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role: "coach" });

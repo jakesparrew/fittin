@@ -28,7 +28,12 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const gym = await getGymCached();
   const w = gym ? await getPublicWorkoutBySlug(gym.id, slug) : null;
-  return w ? { title: `${w.name} | Workouts | Fittin'`, description: w.subtitle } : { title: "Workout | Fittin'" };
+  // Deelbare pagina: de deelknop en de nieuwsbrief sturen er verkeer met UTM-parameters naartoe,
+  // dus elke variant moet naar dezelfde canonical URL wijzen.
+  const canonical = `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/workouts/${slug}`;
+  return w
+    ? { title: `${w.name} | Workouts | Fittin'`, description: w.subtitle, alternates: { canonical } }
+    : { title: "Workout | Fittin'" };
 }
 
 export default async function WorkoutDetail({ params }) {

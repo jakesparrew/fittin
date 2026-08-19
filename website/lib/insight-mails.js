@@ -12,9 +12,9 @@
 import { eur, statGrid, calloutBox } from "@/lib/email-visuals";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
-export const LOS_CENTS = 1500;
-export const KAART_CENTS_PER_SESSIE = 15000 / 11; // ≈ € 13,64
-export const ABO_CENTS_PER_SESSIE = 1200;
+const LOS_CENTS = 1500;
+const KAART_CENTS_PER_SESSIE = 15000 / 11; // ≈ € 13,64
+const ABO_CENTS_PER_SESSIE = 1200;
 
 const half = (n) => Math.round(n * 2) / 2;
 const voornaam = (naam) => String(naam || "").trim().split(/\s+/)[0] || "sporter";
@@ -63,10 +63,11 @@ export function buildAboVoorstel({ name, math }) {
       ])}
       ${loont
         ? calloutBox(`Zelfde sessies, zelfde gym: <strong>${eur(math.besparingMaand)} per maand goedkoper</strong> — dat is ${eur(math.besparingJaar)} op een jaar.`, "good")
-        : calloutBox(`Aan jouw huidige ritme kost het abo ongeveer hetzelfde — maar elke sessie erbij kost je dan <strong>€ 12 in plaats van € 15</strong>, en je kaart kan nooit meer "op" zijn.`, "neutral")}
+        : calloutBox(`Aan jouw huidige ritme kost het abo ongeveer hetzelfde — maar elke sessie erbij kost je dan <strong>€ 12 in plaats van € 15</strong>, en je hoeft nooit meer een kaart bij te kopen.`, "neutral")}
       <p style="margin:16px 0;font-size:15px;line-height:1.6;color:#2b2550">
         Het abo is € 12 per maand met één sessie inbegrepen, en daarna élke sessie aan € 12.
-        Maandelijks opzegbaar, geen instapkost, niets dat vervalt.</p>`,
+        Maandelijks opzegbaar en geen instapkost. Eén ding eerlijk gezegd: de inbegrepen sessie
+        spaar je niet op — die gebruik je binnen de maand.</p>`,
     cta: { href: `${SITE}/lidmaatschap`, label: "Bekijk het abo →" },
   };
 }

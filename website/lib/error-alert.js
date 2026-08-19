@@ -68,15 +68,22 @@ export async function alertNewClientErrors(admin) {
       ? `\n\n(+ ${rest} andere nieuwe foutgroep${rest === 1 ? "" : "en"} deze ronde — zie /beheer/meldingen)`
       : "";
     for (const to of RECIPIENTS) {
-      await sendErrorAlert({
-        to,
-        message: g.message,
-        path: g.path,
-        stack: (g.stack || "") + staart,
-        count: g.count,
-        userNames: wie,
-        firstSeen: g.first,
-      });
+      // Eén kapotte groep mag de ronde niet omleggen: gooit dit vóór de alerted_at-markering
+      // hieronder, dan blijven álle rijen ongemarkeerd en probeert elke volgende cronbeurt
+      // precies dezelfde rijen opnieuw — een alarm dat zichzelf in een lus vastdraait.
+      try {
+        await sendErrorAlert({
+          to,
+          message: g.message,
+          path: g.path,
+          stack: (g.stack || "") + staart,
+          count: g.count,
+          userNames: wie,
+          firstSeen: g.first,
+        });
+      } catch (e) {
+        console.error("foutalarm versturen mislukt:", g.path, e?.message);
+      }
     }
     alerted++;
   }

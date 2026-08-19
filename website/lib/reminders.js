@@ -11,7 +11,13 @@ import { enrollMemberInTargetDrip } from "@/lib/newsletter";
 // reminder_sent guards against duplicates regardless of exact cron timing.
 export async function sendDueReminders() {
   const admin = createAdminClient();
-  const from = new Date(Date.now() + 6 * 3600000).toISOString();
+  // Ondergrens bewust op 1u en niet op 6u. Verplaatst een lid zijn sessie, dan zet de
+  // reschedule-RPC reminder_sent terug op false (0117), en deze cron draait maar één keer per dag
+  // (09:00 UTC). Viel de nieuwe starttijd in het gat tussen die beurt en +6u, dan vertrok er nooit
+  // meer een herinnering — terwijl de bevestigingsmail er letterlijk een belooft. Gemeten op
+  // productie: 2 van de 23 ruim vooraf geboekte sessies van de laatste 14 dagen kregen er geen.
+  // reminder_sent blijft de dubbelstuur-bewaking, dus een lagere ondergrens kost niets.
+  const from = new Date(Date.now() + 1 * 3600000).toISOString();
   const to = new Date(Date.now() + 30 * 3600000).toISOString();
   const { data: rows } = await admin
     .from("bookings")
@@ -263,7 +269,7 @@ export async function sendGuestFollowups() {
   const to = new Date(Date.now() - 20 * 3600000).toISOString();
   const { data: rows } = await admin
     .from("email_invites")
-    .select("id, email, inviter_id, created_at, inviter:profiles!email_invites_inviter_id_fkey(full_name)")
+    .select("id, email, inviter_id, created_at, inviter:profiles!email_invites_inviter_id_fkey(full_name, referral_code)")
     .eq("followup_sent", false)
     .gte("created_at", from)
     .lt("created_at", to);
@@ -280,7 +286,14 @@ export async function sendGuestFollowups() {
     const { data: claimed } = await admin.from("email_invites").update({ followup_sent: true }).eq("id", inv.id).eq("followup_sent", false).select("id");
     if (!claimed || !claimed.length) continue;
     try {
-      const signupUrl = `${SITE}/login?mode=signup&ref=${encodeURIComponent(inv.inviter_id)}`;
+      // ?ref= moet de referral_code van de uitnodiger dragen (8 tekens), niet zijn user-id:
+      // redeem_referral zoekt op `upper(profiles.referral_code) = upper(p_code)`, dus een UUID
+      // levert altijd 'Onbekende code.' op — en die fout wordt in /api/me geslikt, dus onzichtbaar.
+      // Geen code (oud profiel)? Dan een gewone registratielink, liever dan een code die faalt.
+      const refCode = String(inv.inviter?.referral_code || "").trim();
+      const signupUrl = refCode
+        ? `${SITE}/login?mode=signup&ref=${encodeURIComponent(refCode)}`
+        : `${SITE}/login?mode=signup`;
       const r = await sendGuestFollowup({ to: email, inviterName: inv.inviter?.full_name, signupUrl });
       if (r?.ok === false) { await admin.from("email_invites").update({ followup_sent: false }).eq("id", inv.id); continue; }
       sent++;

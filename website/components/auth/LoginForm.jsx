@@ -91,7 +91,10 @@ export default function LoginForm() {
 
           {refCode && mode === "signup" && (
             <div className="mt-4 rounded-2xl bg-accent/10 p-3 text-sm font-semibold text-accentdark">
-              Je bent uitgenodigd met vriendcode <span className="font-black">{refCode}</span> — jullie krijgen allebei een gratis sessie.
+              {/* Alleen de nieuwe vriend krijgt tegoed: redeem_referral schrijft 1 credit weg voor
+                  wie de code gebruikt, reward_pending_referral geeft de uitnodiger een punt op het
+                  scoreboard (referral_points) en bewust géén sessie. Dezelfde belofte als /community. */}
+              Je bent uitgenodigd met vriendcode <span className="font-black">{refCode}</span> — jouw gratis sessie staat klaar zodra je account er is. Wie je uitnodigde, krijgt er een punt op het scoreboard voor.
             </div>
           )}
 
@@ -167,12 +170,14 @@ function PasswordField({ autoComplete }) {
           required
           className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 pr-12 text-brand outline-none transition focus:border-accent"
         />
+        {/* Tikvlak i.p.v. enkel het icoon: 20×20 px haalde het WCAG-minimum van 24×24 niet, op de
+            inlogpagina van de hele app. tabIndex={-1} is bewust weg — met het toetsenbord moet je
+            je wachtwoord ook kunnen tonen. Het veld heeft pr-12, dus 44×44 past er zonder overlap. */}
         <button
           type="button"
-          tabIndex={-1}
           onClick={() => setShow((s) => !s)}
           aria-label={show ? "Verberg wachtwoord" : "Toon wachtwoord"}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-brand/40 transition hover:text-brand"
+          className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-brand/40 transition hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {show ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M6.61 6.61A18.45 18.45 0 0 0 1 12s4 8 11 8a9.12 9.12 0 0 0 5.39-1.61" /><line x1="2" y1="2" x2="22" y2="22" /><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /></svg>

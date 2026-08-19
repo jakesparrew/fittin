@@ -4,6 +4,7 @@ import Reveal from "@/components/anim/Reveal";
 import { getSessionProfile, roleHome } from "@/lib/auth";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 import { healthClubLd, jsonLdScript } from "@/lib/seo";
+import { getPublicPricing, price } from "./pricing";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -33,16 +34,21 @@ const steps = [
   ["Open de deur & train", "Je toegangscode komt automatisch ± 5 minuten voor je sessie, of je opent de deur via de app. De hele zaal voor jou — alleen, met vrienden of met coach.", "03"],
 ];
 
+// "ook met z'n vieren" volgt de capaciteit uit de services-rij: zet de beheerder de zaal op 3 of 5,
+// dan mag deze chip niet blijven staan op vier.
+const MET_ZN = { 2: "tweeën", 3: "drieën", 4: "vieren", 5: "vijven", 6: "zessen" };
+
 // De prijs- en locatiefeiten die een koude bezoeker boven de vouw moet zien. De zaal-framing
-// (€ 15 voor de hele zaal) vervangt bewust "1 tot 4 personen": dat las als een limiet, niet als
-// het argument dat samen trainen niets extra kost.
-const heroChips = [
-  { t: "€ 15 voor de hele zaal — ook met z'n vieren" },
+// (de losse prijs voor de hele zaal) vervangt bewust "1 tot 4 personen": dat las als een limiet,
+// niet als het argument dat samen trainen niets extra kost.
+// Zonder prijs uit de databank valt de prijs-chip weg — een verouderd bedrag is erger dan geen.
+const heroChips = (p) => [
+  p && { t: `${price(p.singleCents)} voor de hele zaal${MET_ZN[p.capacity] ? ` — ook met z'n ${MET_ZN[p.capacity]}` : ""}` },
   { t: "sessies van 1 uur" },
   { t: "elke dag 6–23u" },
   { t: "geen lidgeld" },
   { t: "Sint-Amandsberg, Gent · gratis parking", href: "/degym#locatie" },
-];
+].filter(Boolean);
 
 // Homepage "alles in één app" feature showcase.
 const appFeatures = [
@@ -51,10 +57,81 @@ const appFeatures = [
   { title: "~800 oefeningen met demo's", icon: "book", desc: "Een volledige oefeningenbibliotheek met bewegende demo-beelden, de juiste spieren en heldere uitleg. Altijd perfecte techniek." },
   { title: "Eigen plannen & sjablonen", icon: "ai", desc: "Stel je eigen workout-plannen samen of kies een kant-en-klaar sjabloon dat past bij jouw doel." },
   { title: "Training loggen met PR's", icon: "list", desc: "Log je sets en gewicht, krijg een melding bij elk nieuw persoonlijk record en volg je progressie week na week." },
-  { title: "Community & leaderboard", icon: "trophy", desc: "Klim in de ranking, doe mee aan challenges, train met je buddies en volg de activiteitenfeed." },
+  // "Challenges" stond hier als belofte, maar er draait er geen enkele: challenges worden handmatig
+  // aangemaakt in /beheer en de tabel is leeg, dus wie hiervoor een account maakt leest op
+  // /community "Nog geen challenges". Het woord komt terug zodra er één loopt.
+  { title: "Community & leaderboard", icon: "trophy", desc: "Klim in de ranking, train met je buddies en volg de activiteitenfeed van de gym." },
   { title: "Persoonlijke coaching", icon: "coach", desc: "Je coach bouwt je programma in de app — jij volgt het onder 'Training', je coach volgt jouw opvolging op. Begeleiding op maat." },
   { title: "Slimme toegang & boeken", icon: "key", desc: "Boek elke dag van 6 tot 23u de hele zaal privé. Je toegangscode komt automatisch ± 5 min vooraf en de deur opent via de app." },
 ];
+
+// De prijskaarten van de teaser. Alles wat een bedrag, een aantal beurten of een aantal personen is,
+// komt uit getPublicPricing() — niet uit deze file.
+function pricingCards(p) {
+  const { singleCents, memberCents, capacity, card, abo } = p;
+  const out = [
+    {
+      name: "Losse sessie",
+      price: price(singleCents),
+      per: "/ sessie",
+      items: [
+        `Vanaf 1 uur — 1u30 tot 4u kan ook, aan ${price(singleCents)} per uur`,
+        capacity ? `1 tot ${capacity} personen` : "De hele zaal voor jou",
+        "Geen verplichting",
+      ],
+      cta: "Boek nu",
+      href: "/boeken",
+      hot: false,
+    },
+  ];
+  if (card) {
+    // Hoeveel beurten "gratis" zijn, staat nergens opgeslagen: het is wat je méér krijgt dan wat
+    // hetzelfde bedrag aan de losse prijs koopt. Naar boven afgerond, zodat een prijswijziging
+    // nooit meer gratis beurten belooft dan er werkelijk zijn (zelfde regel als /lidmaatschap).
+    const betaald = Math.ceil(card.cents / singleCents);
+    const gratis = card.credits - betaald;
+    out.push({
+      name: card.name,
+      price: price(card.cents),
+      per: `/ ${card.credits} sessies`,
+      items: [
+        gratis > 0 ? `${betaald} + ${gratis} gratis sessie${gratis === 1 ? "" : "s"}` : `${card.credits} sessies`,
+        "6 maanden geldig",
+        capacity > 1 ? `Tot ${capacity - 1} vrienden mee` : "Privé trainen",
+      ],
+      cta: "Koop kaart",
+      href: "/lidmaatschap",
+      hot: false,
+    });
+  }
+  if (abo) {
+    out.push({
+      name: abo.name,
+      price: price(abo.cents),
+      per: "/ maand",
+      items: [
+        `${abo.credits} sessie${abo.credits === 1 ? "" : "s"} / maand inbegrepen`,
+        memberCents != null ? `Alle sessies aan ${price(memberCents)}` : "Voordeeltarief op elke sessie",
+        "Maandelijks opzegbaar",
+      ],
+      cta: "Word member",
+      href: "/lidmaatschap",
+      hot: true,
+      // "Beste prijs / sessie" is een claim: enkel tonen als het rekenwerk ze waarmaakt.
+      badge: p.aboIsCheapest ? "Beste prijs / sessie" : null,
+    });
+  }
+  out.push({
+    name: "Personal training",
+    price: "Op aanvraag",
+    per: "",
+    items: ["1-op-1, duo of trio", "Schema & opvolging op maat", "Gratis intake + proeftraining"],
+    cta: "Ontdek coaching",
+    href: "/personal-training",
+    hot: false,
+  });
+  return out;
+}
 
 export default async function Home() {
   // Al ingelogd? Sla de marketing-homepage over en ga meteen naar je dashboard.
@@ -65,6 +142,12 @@ export default async function Home() {
   const gym = await getGymCached();
   const coachCount = gym?.id ? (await getPublicCoachesCached(gym.id)).length : 0;
   const eenCoach = coachCount === 1;
+  // Alle bedragen op deze pagina komen uit dezelfde rijen waarmee create_booking en Stripe rekenen.
+  // Ze stonden hier als letterlijke tekst: één prijswijziging op /beheer/diensten liet de homepage
+  // liegen zonder dat iemand het merkte.
+  const pricing = await getPublicPricing();
+  const chips = heroChips(pricing);
+  const cards = pricing ? pricingCards(pricing) : null;
   return (
     <main className="overflow-hidden">
       <script {...jsonLdScript(jsonLd)} />
@@ -141,7 +224,7 @@ export default async function Home() {
           </Reveal>
           <Reveal eager delay={320}>
             <div className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-3 text-sm font-bold text-white/85 sm:mt-12">
-              {heroChips.map((c, i) => (
+              {chips.map((c, i) => (
                 <span key={c.t} className="flex items-center gap-3">
                   {i > 0 && <span className="h-1 w-1 rounded-full bg-accent" />}
                   {c.href ? (
@@ -244,7 +327,10 @@ export default async function Home() {
 
       {/* ============ PRICING TEASER ============ */}
       {/* Staat bewust meteen na "Zo begin je": wat het kost is de eerste vraag na "hoe werkt het",
-          en verderop stond deze sectie pas als achtste blok. */}
+          en verderop stond deze sectie pas als achtste blok.
+          Geen prijzen uit de databank? Dan tonen we deze sectie niet: liever geen prijskaarten dan
+          kaarten met een bedrag dat niet meer klopt met wat er wordt aangerekend. */}
+      {cards && (
       <section className="bg-paper">
         <div className="mx-auto max-w-6xl px-5 py-24">
           <Reveal>
@@ -252,15 +338,10 @@ export default async function Home() {
             <h2 className="mt-3 text-4xl font-black md:text-5xl">Betaal enkel voor je tijd</h2>
           </Reveal>
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { name: "Losse sessie", price: "€ 15", per: "/ sessie", items: ["Vanaf 1 uur — 1u30 tot 4u kan ook, aan € 15 per uur", "1 tot 4 personen", "Geen verplichting"], cta: "Boek nu", href: "/boeken", hot: false },
-              { name: "10-beurtenkaart", price: "€ 150", per: "/ 11 sessies", items: ["10 + 1 gratis sessie", "6 maanden geldig", "Tot 3 vrienden mee"], cta: "Koop kaart", href: "/lidmaatschap", hot: false },
-              { name: "Member-abonnement", price: "€ 12", per: "/ maand", items: ["1 sessie / maand inbegrepen", "Alle sessies aan € 12", "Maandelijks opzegbaar"], cta: "Word member", href: "/lidmaatschap", hot: true },
-              { name: "Personal training", price: "Op aanvraag", per: "", items: ["1-op-1, duo of trio", "Schema & opvolging op maat", "Gratis intake + proeftraining"], cta: "Ontdek coaching", href: "/personal-training", hot: false },
-            ].map((p, i) => (
+            {cards.map((p, i) => (
               <Reveal key={p.name} delay={i * 90} className="h-full">
                 <div className={"relative flex h-full flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 " + (p.hot ? "border-accent bg-brand text-white shadow-xl shadow-brand/20" : "border-borderc bg-white hover:shadow-xl hover:shadow-brand/5")}>
-                  {p.hot && <span className="absolute -top-3 left-8 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">Beste prijs / sessie</span>}
+                  {p.badge && <span className="absolute -top-3 left-8 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">{p.badge}</span>}
                   <p className={"text-xs font-black uppercase tracking-widest " + (p.hot ? "text-accent" : "text-lav")}>{p.name}</p>
                   <p className="mt-3 text-4xl font-black">{p.price}<span className={"text-base font-bold " + (p.hot ? "text-white/50" : "text-brand/40")}> {p.per}</span></p>
                   <ul className="mt-6 flex-1 space-y-3 text-sm">
@@ -278,6 +359,7 @@ export default async function Home() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ============ COACHING ============ */}
       <section className="bg-white">

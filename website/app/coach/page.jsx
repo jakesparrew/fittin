@@ -204,6 +204,13 @@ export default async function CoachDashboard({ searchParams }) {
       </div>
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
+      {/* Tegenhanger van hierboven: wie zijn Stripe-betaling afbreekt, kreeg hier geen woord terug.
+          Coaches landen hier zowel na een afgebroken tegoed-aankoop als na een afgebroken boeking
+          (/account stuurt hen door). `geannuleerd=1` blijft aanvaard voor checkoutsessies die nog
+          met de oude cancel_url onderweg zijn. Zonder afgebroken betaling: onzichtbaar. */}
+      {(sp.betaling === "afgebroken" || sp.geannuleerd === "1") && (
+        <p className="mt-4 rounded-xl border border-borderc bg-white p-3 text-sm text-brand/70">Je betaling is afgebroken — er is niets aangerekend.</p>
+      )}
 
       <TodayStrip sessions={todaySessions} next={nextSummary} />
 

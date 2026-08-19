@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
 import { sendEventSignup } from "@/lib/email";
 
@@ -61,18 +62,38 @@ export async function signupEvent(formData) {
     line_items: [{ quantity: 1, price_data: { currency: "eur", unit_amount: ev.price_cents, product_data: { name: `${ev.title} — Fittin' event` } } }],
     metadata: { kind: "event", event_id: eventId, user_id: user.id, signup_id: signupId || "" },
     success_url: `${siteUrl()}/account?event=1`,
-    cancel_url: `${siteUrl()}/community?geannuleerd=1`,
+    cancel_url: `${siteUrl()}/account?betaling=afgebroken`,
   });
-  if (signupId) await supabase.from("event_signups").update({ stripe_session_id: session.id }).eq("id", signupId);
+  // Het sessie-id op de gereserveerde plaats zetten moet met de service-rol: migratie 0132 trok
+  // UPDATE op event_signups in voor `authenticated`, dus met de gebruikersclient gaf dit 42501 —
+  // stil, want de teruggave werd weggegooid. Mislukt het alsnog, dan is dat niet fataal (de
+  // webhook schrijft het id later toch weg), maar het hoort wel in de logs te staan.
+  if (signupId) {
+    const admin = createAdminClient();
+    const { error: linkErr } = await admin.from("event_signups").update({ stripe_session_id: session.id }).eq("id", signupId);
+    if (linkErr) console.error("event_signups koppelen aan Stripe-sessie mislukt:", signupId, linkErr.message);
+  }
   redirect(session.url);
 }
 
+// Uitschrijven mag een lid alleen zelf voor een GRATIS event dat nog niet betaald is — zie de
+// policy event_signups_delete (0142). Een betaalde inschrijving wissen zou de plaats vrijgeven
+// terwijl de betaling blijft staan; dat hoort via het beheer te lopen zodat er terugbetaald wordt.
+// Zonder deze controle raakte de delete stil 0 rijen en bleef de knop "werken" zonder effect.
 export async function cancelSignup(formData) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
-  await supabase.from("event_signups").delete().eq("id", formData.get("signupId")).eq("user_id", user.id);
+  const { data, error } = await supabase
+    .from("event_signups")
+    .delete()
+    .eq("id", formData.get("signupId"))
+    .eq("user_id", user.id)
+    .select("id");
   revalidatePath("/community");
+  if (error) return { error: error.message };
+  if (!data?.length) return { error: "Je bent al betaald ingeschreven — mail info@fittin.be om je plaats vrij te geven." };
+  return { ok: true };
 }

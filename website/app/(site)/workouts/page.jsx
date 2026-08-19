@@ -5,6 +5,9 @@ export const revalidate = 300;
 export const metadata = {
   title: "Workouts | Fittin'",
   description: "Kant-en-klare workouts om mee te volgen — borst, schouders, rug en meer. Met demo's, sets, rusttimer en voortgang.",
+  // Deze pagina's worden gedeeld (deelknop + nieuwsbrief) en komen dus binnen met UTM-parameters:
+  // zonder canonical wordt elke variant een aparte URL in de index.
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/workouts` },
 };
 
 // Inline category accents (safe regardless of Tailwind palette config).

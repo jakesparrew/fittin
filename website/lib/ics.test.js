@@ -43,6 +43,30 @@ describe("bookingIcs", () => {
     expect(icsAttachment({ id: null })).toBe(null);
   });
 
+  it("houdt elke regel binnen de 75 octetten van RFC 5545 (line folding)", () => {
+    const s = bookingIcs(boeking);
+    const langste = Math.max(...s.split("\r\n").map((r) => Buffer.byteLength(r, "utf8")));
+    expect(langste).toBeLessThanOrEqual(75);
+    // Ontvouwen (CRLF + spatie weg) moet de originele tekst teruggeven — dus niets verloren,
+    // en de meerbyte-· uit de SUMMARY staat er nog heel.
+    const ontvouwd = s.replace(/\r\n /g, "");
+    expect(ontvouwd).toContain("Je toegangscode komt ± 5 minuten voor je sessie per e-mail.");
+    expect(ontvouwd).toContain("SUMMARY:Fit60 · Fittin'");
+    expect(s).not.toContain("�"); // geen halve UTF-8-tekens
+  });
+
+  it("draagt een SEQUENCE die stijgt, zodat een verplaatste sessie het agenda-item bijwerkt", () => {
+    const bevestiging = bookingIcs(boeking, new Date("2026-08-18T10:00:00Z"));
+    const verplaatsing = bookingIcs(boeking, new Date("2026-08-19T10:00:00Z"));
+    const seq = (s) => Number(s.match(/\r\nSEQUENCE:(\d+)/)[1]);
+    expect(seq(bevestiging)).toBeGreaterThanOrEqual(0);
+    expect(seq(verplaatsing)).toBeGreaterThan(seq(bevestiging));
+    // DTSTAMP volgt hetzelfde moment, niet de starttijd: anders loopt hij bij een verplaatsing
+    // naar vroeger achteruit en leest de agenda dat als een oudere versie.
+    expect(bevestiging).toContain("DTSTAMP:20260818T100000Z");
+    expect(verplaatsing).toContain("DTSTAMP:20260819T100000Z");
+  });
+
   it("levert een Resend-bijlage met base64-inhoud", () => {
     const a = icsAttachment(boeking);
     expect(a.filename).toBe("fittin-sessie.ics");

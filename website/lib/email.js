@@ -5,7 +5,6 @@ import { icsAttachment } from "@/lib/ics";
 
 // Transactional email via Resend. Degrades to a no-op until configured.
 const key = process.env.RESEND_API_KEY;
-export const isEmailConfigured = Boolean(key);
 const resend = key ? new Resend(key) : null;
 
 // Per-purpose sending identities (separate verified domains keep reputations isolated):
@@ -396,7 +395,11 @@ export async function sendIntakeNotice({ to, prospectName, prospectEmail, phone,
 }
 
 // ---- Member: booking moved to a new time ----
-export async function sendBookingRescheduled({ to, name, serviceName, startsAt, endsAt }) {
+// `bookingId` is optioneel maar belangrijk: zonder agenda-bijlage blijft de OUDE tijd in de agenda
+// staan, mét alarm, terwijl de mail zegt dat de sessie verplaatst is. De UID is stabiel per
+// boeking en de SEQUENCE stijgt, dus de agenda werkt het bestaande item bij i.p.v. een tweede te
+// maken (zie lib/ics.js).
+export async function sendBookingRescheduled({ to, name, serviceName, startsAt, endsAt, bookingId, address }) {
   await send(
     to,
     "Je Fittin'-sessie is verplaatst",
@@ -411,7 +414,10 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
       body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">We mailen je de toegangscode opnieuw, ± 5 minuten voor de nieuwe starttijd.</p>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
     }),
-    FROM_BOOKING
+    FROM_BOOKING,
+    undefined,
+    null,
+    [icsAttachment({ id: bookingId, startsAt, endsAt, serviceName, address })].filter(Boolean)
   );
 }
 
@@ -620,29 +626,6 @@ export async function sendWaitlistOpen({ to, name, serviceName, startsAt, bookUr
   );
 }
 
-// ---- Admin: a coach requested session credits (needs approval — money is waiting) ----
-export async function sendCoachRequestNotice({ to, coachName, qty, note }) {
-  return send(
-    to,
-    `${coachName} vraagt ${qty} coach-sessies aan`,
-    shell({
-      title: "Sessie-aanvraag van een coach 🏋️",
-      intro: `${esc(coachName)} vraagt <b>${qty} sessies</b> (€ ${(qty * 12).toFixed(2).replace(".", ",")}) aan om via factuur/overschrijving te betalen.`,
-      rows: [
-        ["Coach", esc(coachName)],
-        ["Aantal", `${qty} sessies`],
-        ["Bedrag", `€ ${(qty * 12).toFixed(2).replace(".", ",")}`],
-        ...(note ? [["Opmerking", esc(note)]] : []),
-      ],
-      body: `<p style="font-size:13px;color:#6b6685;margin-top:10px">Keur goed of wijs af — bij goedkeuring wordt het tegoed bijgeschreven en verschijnt er een openstaande post bij Betalingen waarvoor je meteen een factuur kan maken.</p>`,
-      cta: { href: `${SITE}/beheer/coaches#aanvragen`, label: "Bekijk de aanvraag" },
-    }),
-    FROM,
-    REPLY_TO,
-    "coach_request"
-  );
-}
-
 // ---- Member: event signup confirmed ----
 export async function sendEventSignup({ to, name, title, startsAt }) {
   await send(
@@ -674,7 +657,10 @@ export async function sendSessionReminder({ to, name, serviceName, startsAt, end
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
-      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">Je toegangscode komt automatisch ± 5 minuten voor de start binnen. Kan je toch niet? Je kan je sessie tot 6u vooraf verplaatsen in je account. Nog niet in je agenda? Het item zit in bijlage.</p>`,
+      // "Verplaatsen kan tot 6u vooraf" alleen tonen zolang dat ook nog kán: sinds de ondergrens
+      // van de herinneringscron op 1u staat (zie lib/reminders.js) kan deze mail ook binnen die
+      // zes uur vertrekken, en dan zou de zin een deur openen die al dicht is.
+      body: `<p style="font-size:14px;color:#6b6685;margin-top:12px">Je toegangscode komt automatisch ± 5 minuten voor de start binnen.${new Date(startsAt).getTime() - Date.now() > 6 * 3600000 ? " Kan je toch niet? Je kan je sessie tot 6u vooraf verplaatsen in je account." : ""} Nog niet in je agenda? Het item zit in bijlage.</p>`,
       cta: { href: `${SITE}/account`, label: "Mijn sessies" },
     }),
     FROM_BOOKING,
@@ -683,19 +669,6 @@ export async function sendSessionReminder({ to, name, serviceName, startsAt, end
     // Zelfde UID als in de bevestigingsmail: wie het bestand toen al toevoegde, krijgt hier geen
     // tweede afspraak maar dezelfde — wie het toen niet deed, krijgt een laatste kans.
     [icsAttachment({ id: bookingId, startsAt, endsAt, serviceName, address })].filter(Boolean)
-  );
-}
-
-// ---- Coach: session-credits granted by the superadmin ----
-export async function sendCoachSessionsGranted({ to, name, qty }) {
-  await send(
-    to,
-    "Je coach-sessies zijn goedgekeurd",
-    shell({
-      title: `+${qty} coach-sessie${qty > 1 ? "s" : ""} toegekend ✅`,
-      intro: `Hallo ${esc(name) || "coach"}, de beheerder heeft je aanvraag goedgekeurd. Je kan nu sessies inplannen met je clienten.`,
-      cta: { href: `${SITE}/coach`, label: "Naar coach-dashboard" },
-    })
   );
 }
 
@@ -1055,15 +1028,18 @@ export function weekReportHtml({ name, report }) {
     : sectionTitle("Wat jij deze week best doet", "") + calloutBox("Niets dringends. Geen openstaande betalingen, geen mislukte abo's, geen meldingen. 👌", "good");
 
   // ---- Draait de machine? ----
-  const machineOk = !r.health.mailsFailed && !r.health.accessCronBad && !r.health.activationCronBad;
+  // lockOffline is bewust géén "taak liep niet": de deurcodemail vertrok wél, alleen syncte een
+  // persoonlijke code mogelijk niet naar het keypad. Eigen regel, eigen woorden.
+  const machineOk = !r.health.mailsFailed && !r.health.accessCronBad && !r.health.activationCronBad && !r.health.lockOffline;
   const machine = sectionTitle("Draait de app?", "")
     + (machineOk
       ? calloutBox(`De app verstuurde deze week <b>${r.health.mailsSent} mails</b> (bevestigingen, deurcodes, herinneringen, win-backs) — <b>geen enkele mislukt</b>. Deurcodes en dagelijkse taken liepen op tijd.`, "good")
       : calloutBox(
           `<b>Let op — iets loopt niet.</b><ul style="margin:8px 0 0;padding-left:18px;line-height:1.6">`
-          + (r.health.mailsFailed ? `<li><b>${r.health.mailsFailed} mail(s) mislukt</b> deze week. Check Resend (domein, suppressielijst).</li>` : "")
+          + (r.health.mailsFailed ? `<li><b>${r.health.mailsFailed} mail(s) niet aangekomen</b> deze week (mislukt of gebouncet). Check Resend (domein, suppressielijst) — bij een deurcode stond dat lid voor een dichte deur.</li>` : "")
           + (r.health.accessCronBad ? `<li><b>Deurcode-taak liep niet recent.</b> Leden kunnen daardoor zonder code voor de deur staan.</li>` : "")
           + (r.health.activationCronBad ? `<li><b>Dagelijkse taak liep niet.</b> Herinneringen en win-backs staan stil.</li>` : "")
+          + (r.health.lockOffline ? `<li><b>Het slot leek ${r.health.lockOffline}× offline</b> deze week. De deurcodemails vertrokken wél en de reservecode werkt altijd, maar een persoonlijke code syncet dan mogelijk niet — check de Bridge/Wi-Fi.</li>` : "")
           + `</ul>`, "warn"));
 
   // ---- Abonnementen, in één regel ----
@@ -1088,12 +1064,17 @@ export async function sendErrorAlert({ to, message, path, stack, count, userName
   const wie = userNames.length
     ? userNames.map((n) => esc(n)).join(", ")
     : "een niet-ingelogde bezoeker";
+  // Intl.DateTimeFormat gooit op een Invalid Date. Eén rotte rij zou dan de hele alarmronde
+  // omleggen vóór alerted_at gezet is, waarna elke volgende cronbeurt dezelfde rijen opnieuw
+  // probeert. Een alarm zonder exact uur is oneindig veel beter dan geen alarm.
+  const t = firstSeen ? new Date(firstSeen) : null;
+  const wanneer = t && !Number.isNaN(t.getTime()) ? `Sinds ${fmt(t, { hour: "2-digit", minute: "2-digit" })}` : "Sinds kort";
   return send(
     to,
     `🐛 Fout op ${path || "de site"} — ${userNames[0] ? esc(userNames[0]) : "bezoeker"} loopt vast`,
     shell({
       title: "Er gaat iets mis in de app",
-      intro: `Sinds ${fmt(firstSeen, { hour: "2-digit", minute: "2-digit" })} loopt <b>${wie}</b> vast op <b>${esc(path || "?")}</b>${count > 1 ? ` — al <b>${count}×</b>` : ""}.`,
+      intro: `${wanneer} loopt <b>${wie}</b> vast op <b>${esc(path || "?")}</b>${count > 1 ? ` — al <b>${count}×</b>` : ""}.`,
       body:
         `<pre style="background:#f6f5fb;border-radius:10px;padding:12px 14px;font-size:12px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word">${esc(message)}</pre>` +
         (stack ? `<pre style="background:#f6f5fb;border-radius:10px;padding:12px 14px;font-size:10px;line-height:1.5;overflow:auto;white-space:pre-wrap;word-break:break-word;color:#6b6685;max-height:180px">${esc(String(stack).slice(0, 1200))}</pre>` : "") +

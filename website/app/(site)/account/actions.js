@@ -79,7 +79,7 @@ export async function payCoachRequest(formData) {
     line_items: [{ quantity: 1, price_data: { currency: "eur", unit_amount: req.amount_cents, product_data: { name: `Coaching — ${req.coach?.full_name || "coach"}${req.description ? ` · ${req.description}` : ""}` } } }],
     metadata: { kind: "coach_payment", request_id: req.id, user_id: user.id },
     success_url: `${siteUrl()}/account?betaald=1`,
-    cancel_url: `${siteUrl()}/account`,
+    cancel_url: `${siteUrl()}/account?betaling=afgebroken`,
   });
   await supabase.from("coach_payment_requests").update({ stripe_session_id: session.id }).eq("id", req.id);
   redirect(session.url);

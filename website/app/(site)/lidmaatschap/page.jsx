@@ -173,6 +173,11 @@ export default async function Lidmaatschap() {
             // prijswijziging nooit meer gratis beurten belooft dan er werkelijk zijn.
             const paidEquiv = !isAbo && singleCents ? Math.ceil(p.price_cents / singleCents) : null;
             const bonus = paidEquiv != null ? p.credits - paidEquiv : 0;
+            // De prijs per sessie van de beurtenkaart stond alléén in de vergelijkingstabel, en die
+            // is verborgen onder 640 px: op de telefoon moest de bezoeker zelf delen om te zien dat
+            // de kaart goedkoper is dan een losse sessie. Hij staat nu op de kaart zelf, net als het
+            // abonnement zijn "€ 12 per sessie" toont.
+            const perSession = !isAbo && p.credits ? Math.round(p.price_cents / p.credits) : null;
             const badge = isAbo ? (aboIsCheapest ? "⭐ Beste prijs / sessie" : null) : bonus > 0 ? `${paidEquiv} + ${bonus} GRATIS` : `${p.credits} SESSIES`;
             return (
               <div key={p.id} className={"relative flex flex-col rounded-3xl border-2 p-7 " + (isAbo ? "border-accent bg-white shadow-lg shadow-accent/10" : "border-brand/15 bg-white")}>
@@ -190,7 +195,7 @@ export default async function Lidmaatschap() {
                 <p className="mt-0.5 text-xs font-bold text-brand/50">
                   {isAbo
                     ? memberCents != null ? `${price(memberCents)} per sessie` : "maandelijks opzegbaar"
-                    : bonus > 0 ? `${p.credits} sessies — ${paidEquiv} + ${bonus} gratis` : `${p.credits} sessies`}
+                    : perSession != null ? `± ${euro(perSession)} per sessie` : `${p.credits} sessies`}
                 </p>
                 <ul className="mt-4 flex-1 space-y-2 text-sm text-brand/70">
                   {isAbo ? (
@@ -231,7 +236,8 @@ export default async function Lidmaatschap() {
         </div>
 
         {/* Prijzen vergeleken — op de telefoon werd dit een zijwaartse scroller; daar doen de drie
-            kaarten en de adviesalinea hieronder het werk al. */}
+            kaarten en de adviesalinea hieronder het werk al. Het cijfer dat de kaart verkoopt (prijs
+            per sessie) staat sinds kort op de kaart zelf, dus mobiel mist niets meer. */}
         <div className="hidden sm:block">
           <h2 className="mt-12 text-xl font-black text-brand">Prijzen vergeleken</h2>
           <div className="mt-3 overflow-x-auto rounded-3xl border border-borderc bg-white">

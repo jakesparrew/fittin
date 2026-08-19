@@ -1,14 +1,30 @@
 import Link from "next/link";
 import { healthClubLd, jsonLdScript } from "@/lib/seo";
+import { getPublicPricing, price } from "../pricing";
 
-export const metadata = {
-  title: "Privégym in Gent | Fittin'",
-  description:
-    "Een modern uitgeruste privégym in Gent (Sint-Amandsberg). Reserveer de zaal voor jou en je vrienden — € 15 per sessie van 1 uur, zonder lidgeld.",
-  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/degym` },
-};
+// De pagina is verder statisch, maar de prijzen komen uit de databank: zonder revalidate zou een
+// prijswijziging op /beheer/diensten hier pas bij de volgende deploy binnenkomen.
+export const revalidate = 300;
 
-const memberCards = [
+const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+// Vangnet: zonder databank noemen we geen enkel bedrag, liever dan een verouderd bedrag.
+const BASE_DESC =
+  "Een modern uitgeruste privégym in Gent (Sint-Amandsberg). Reserveer de zaal voor jou en je vrienden — sessies van 1 uur, zonder lidgeld.";
+
+export async function generateMetadata() {
+  const p = await getPublicPricing();
+  return {
+    title: "Privégym in Gent | Fittin'",
+    description: p
+      ? `Een modern uitgeruste privégym in Gent (Sint-Amandsberg). Reserveer de zaal voor jou en je vrienden — ${price(p.singleCents)} per sessie van 1 uur, zonder lidgeld.`
+      : BASE_DESC,
+    alternates: { canonical: `${SITE}/degym` },
+  };
+}
+
+// Elk bedrag en elk aantal personen komt uit de services/packages-rijen waarmee create_booking en
+// Stripe rekenen: de literals die hier stonden konden een prijswijziging stilzwijgend tegenspreken.
+const memberCards = (p) => [
   {
     title: "Lid worden",
     items: [
@@ -22,14 +38,16 @@ const memberCards = [
   {
     title: "Als lid",
     items: [
-      // "Als lid" = een account, niet een abonnement: die € 15 is de losse prijs. Wie het
-      // maandabonnement neemt, boekt aan de ledenprijs (member_price_cents) — noem dat verschil,
-      // anders leest deze kaart als "leden betalen € 15" terwijl abonnees € 12 betalen.
-      "Reserveer de gym voor € 15,00 — met maandabonnement € 12,00",
+      // "Als lid" = een account, niet een abonnement: de losse prijs geldt voor iedereen met een
+      // account. Wie het maandabonnement neemt, boekt aan de ledenprijs (member_price_cents) — noem
+      // dat verschil, anders leest deze kaart als "leden betalen de volle prijs".
+      p && (p.memberCents != null
+        ? `Reserveer de gym voor ${price(p.singleCents)} — met maandabonnement ${price(p.memberCents)}`
+        : `Reserveer de gym voor ${price(p.singleCents)}`),
       "Eén sessie = 1 uur",
-      "1 tot 4 personen",
+      p?.capacity ? `1 tot ${p.capacity} personen` : null,
       "Geen extra kosten",
-    ],
+    ].filter(Boolean),
   },
   {
     title: "Praktisch",
@@ -56,7 +74,9 @@ const loves = [
 
 const localBusinessLd = healthClubLd(); // shared source of truth (lib/seo)
 
-export default function DeGym() {
+export default async function DeGym() {
+  const pricing = await getPublicPricing();
+  const cards = memberCards(pricing);
   return (
     <main>
       <script {...jsonLdScript(localBusinessLd)} />
@@ -85,7 +105,7 @@ export default function DeGym() {
       {/* Member info */}
       <section>
         <div className="mx-auto grid max-w-6xl gap-5 px-5 py-20 md:grid-cols-3">
-          {memberCards.map((card) => (
+          {cards.map((card) => (
             <div key={card.title} className="rounded-2xl border border-borderc bg-white p-7">
               <h2 className="text-xl font-black">{card.title}</h2>
               <ul className="mt-4 space-y-3">
@@ -166,8 +186,8 @@ export default function DeGym() {
             Fittin&rsquo; is een project van De Wereld Draait Door, vereniging zonder winstoogmerk.
             Anders dan de hedendaagse gymketens hanteren wij geen verplicht lidgeld. We vinden het
             belangrijk een toegankelijk tarief te bieden: je betaalt enkel voor de tijd waarin je
-            gebruik maakt van onze gym, met of zonder coach. Een maandabonnement (€ 12) is mogelijk,
-            maar nooit verplicht.
+            gebruik maakt van onze gym, met of zonder coach. Een maandabonnement
+            {pricing?.abo ? ` (${price(pricing.abo.cents)})` : ""} is mogelijk, maar nooit verplicht.
           </p>
         </div>
       </section>

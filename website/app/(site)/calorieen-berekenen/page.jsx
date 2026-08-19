@@ -8,12 +8,10 @@ export const metadata = {
   description:
     "Bereken in 30 seconden hoeveel calorieën je per dag nodig hebt om af te vallen, op gewicht te blijven of spiermassa op te bouwen. Inclusief eiwitten, koolhydraten, vetten en een voorbeeld dagplan. Gratis, geen account nodig.",
   alternates: { canonical: `${SITE}/calorieen-berekenen` },
-  openGraph: {
-    title: "Calorieën berekenen — gratis calorie- & macrocalculator",
-    description: "Hoeveel calorieën heb jij nodig? Bereken je dagbehoefte, macro's en een voorbeeld dagplan.",
-    url: `${SITE}/calorieen-berekenen`,
-    type: "website",
-  },
+  // Bewust GEEN eigen openGraph-blok: een openGraph-object zonder images overschreef het
+  // bestandsgebaseerde app/opengraph-image.jsx, waardoor net deze deelbare pagina als enige zonder
+  // beeld in WhatsApp en Facebook belandde. Zonder blok vult Next og:title/og:description uit de
+  // title en description hierboven, en blijft de afbeelding van het bestand behouden.
 };
 
 const FAQ = [

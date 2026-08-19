@@ -18,12 +18,18 @@ export default function ToastHost() {
   }, []);
 
   return (
-    <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex flex-col gap-2">
+    /* Op mobiel bovenaan, op md+ rechtsonder. Onderaan zitten op de telefoon drie vaste balken
+       (tabbalk, de bevestigbalk van het boeken, de knoppenbalk van de workout-speler); een toast
+       van 4,2 seconden legde zich daar bovenop en dekte de tabbladen af. Boven de vouw is er
+       onder de sticky kopbalk (h-16) wél vrije ruimte. */
+    <div className="pointer-events-none fixed left-4 right-4 top-20 z-[100] flex flex-col items-end gap-2 md:bottom-4 md:left-auto md:right-4 md:top-auto">
       {toasts.map((t) => (
         <div
           key={t.id}
           className={
-            "pointer-events-auto flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand/20 " +
+            // Geen pointer-events: er valt niets te klikken in een toast, en pointer-events-auto
+            // ving tikken af die voor de onderliggende knoppen bedoeld waren.
+            "flex max-w-full items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand/20 " +
             (t.type === "error" ? "bg-red-500" : t.type === "info" ? "bg-brand/80" : "bg-brand")
           }
         >

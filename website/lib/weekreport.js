@@ -14,7 +14,7 @@ import { sendWeekReport } from "@/lib/email";
 const bxlDay = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d);
 const WEEKDAYS = ["maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag", "zondag"];
 
-export function lastWeekRange(now = new Date()) {
+function lastWeekRange(now = new Date()) {
   const d = new Date(now);
   d.setHours(0, 0, 0, 0);
   const dow = (d.getDay() + 6) % 7;           // 0 = maandag
@@ -45,6 +45,7 @@ export async function buildWeekReport(gym, now = new Date()) {
     { data: cronRows },
     { data: openInvoices },
     { data: uninvoiced },
+    { data: accessRuns },
   ] = await Promise.all([
     admin.from("bookings").select("starts_at, ends_at, status, persons, price_cents, paid, payment_source, user_id").eq("gym_id", gym.id).gte("starts_at", sIso).lt("starts_at", eIso),
     admin.from("bookings").select("status, user_id").eq("gym_id", gym.id).gte("starts_at", pIso).lt("starts_at", sIso),
@@ -65,6 +66,10 @@ export async function buildWeekReport(gym, now = new Date()) {
     // niet — waardoor € 156 maandenlang onzichtbaar bleef oplopen.
     admin.from("bookings").select("coach_id, coach_charge_cents").eq("gym_id", gym.id)
       .eq("coach_billing", "invoice").eq("status", "bevestigd").is("coach_invoiced_at", null),
+    // Deurcode-beurten van de gerapporteerde week mét detail. Een beurt waarin het Nuki-slot offline
+    // leek zet ok=false terwijl de deurcodemail wél vertrok; enkel op ok kijken maakt daar "de taak
+    // liep niet" van, en zo'n vals alarm leert de eigenaar het échte alarm te negeren.
+    admin.from("cron_runs").select("ok, detail").eq("job", "access_codes").gte("created_at", sIso).lt("created_at", eIso),
   ]);
 
   // ---- Verkeer + trechter -----------------------------------------------------------------
@@ -167,20 +172,31 @@ export async function buildWeekReport(gym, now = new Date()) {
     .map(([cid, cents]) => ({ name: nameOf.get(cid) || "Coach", cents }));
 
   // ---- Draait de machine? ----------------------------------------------------------------
-  const mailsSent = (mailLog || []).filter((m) => m.status === "sent").length;
-  const mailsFailed = (mailLog || []).filter((m) => m.status === "failed").length;
+  // Een email_log-rij is een mail die de app zélf aanmaakte; de Resend-webhook werkt de status
+  // daarna bij. 'sent' is dus enkel een tussenstand die binnen seconden 'delivered' wordt — erop
+  // tellen gaf structureel nul. Een harde bounce hoort bij de mislukte kant: dát is precies het
+  // geval waarin een lid zijn deurcode of bevestiging niet kreeg.
+  const mailMislukt = (m) => m.status === "failed" || m.status === "bounced";
+  const mailsSent = (mailLog || []).filter((m) => !mailMislukt(m)).length;
+  const mailsFailed = (mailLog || []).filter(mailMislukt).length;
   const lastRun = {};
   for (const r of cronRows || []) if (!lastRun[r.job]) lastRun[r.job] = r;
+  // Alleen ouderdom telt: "de taak liep niet" is iets anders dan "de taak liep met een
+  // waarschuwing". Dat tweede krijgt hieronder zijn eigen, correct benoemde regel.
   const cronStale = (job, maxMin) => {
     const r = lastRun[job];
     if (!r) return true;
-    return r.ok === false || (Date.now() - new Date(r.created_at).getTime()) / 60000 > maxMin;
+    return (Date.now() - new Date(r.created_at).getTime()) / 60000 > maxMin;
   };
+  const lockOffline = (accessRuns || []).filter((r) =>
+    r.ok === false && (r.detail?.errors || []).some((e) => String(e).includes("offline"))
+  ).length;
   const health = {
     mailsSent,
     mailsFailed,
     accessCronBad: cronStale("access_codes", 20),
     activationCronBad: cronStale("activation", 60 * 30),
+    lockOffline,
   };
 
   return {

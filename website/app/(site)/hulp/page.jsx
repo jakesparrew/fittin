@@ -7,6 +7,8 @@ export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Hulp nodig? | Fittin'",
   description: "Loop je vast bij Fittin'? Hier vind je onze contactgegevens, antwoorden op veelgestelde vragen en een formulier om je vraag te stellen.",
+  // Zonder canonical kan elke variant met UTM- of deelparameters als aparte URL geïndexeerd worden.
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/hulp` },
 };
 
 // Eén plek waar je terechtkan als er iets misloopt. Aanleiding: de hulpknop stond alleen op
@@ -34,8 +36,10 @@ export default async function HulpPagina() {
       a: "Vraag een nieuw wachtwoord aan via 'Wachtwoord vergeten' op de inlogpagina. Krijg je die mail niet binnen, kijk dan even in je ongewenste post — en laat het ons hieronder weten, dan zetten we het recht.",
     },
     {
-      v: "Hoe annuleer of verplaats ik een sessie?",
-      a: "Onder Mijn account staat bij elke geboekte sessie een knop om te verplaatsen, tot 6 uur vóór de start. Lukt het niet meer op tijd? Laat het ons weten, we zoeken mee.",
+      // De titel vroeg naar annuleren, maar dat kan een lid zelf niet: er bestaat enkel
+      // rescheduleBookingAction. Beloof dus alleen wat de knop doet, en zeg wat je met annuleren doet.
+      v: "Hoe verplaats ik een sessie?",
+      a: "Onder Mijn account staat bij elke geboekte sessie een knop om te verplaatsen, tot 6 uur vóór de start. Zelf annuleren kan niet — mail ons op info@fittin.be en we regelen het. Lukt het niet meer op tijd? Laat het ons weten, we zoeken mee.",
     },
     {
       v: "Hoe zeg ik mijn abonnement op?",

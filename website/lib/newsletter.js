@@ -45,58 +45,12 @@ const listHeaders = (token) => ({
   "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
 });
 
-// Send a one-off newsletter campaign to every active subscriber (resumable + deduped).
-export async function sendNewsletterCampaign(campaignId) {
-  if (!resend) return { error: "E-mail niet geconfigureerd." };
-  const admin = createAdminClient();
-  const { data: c } = await admin.from("campaigns").select("*").eq("id", campaignId).single();
-  if (!c) return { error: "Campagne niet gevonden." };
-  if (c.kind !== "newsletter") return { error: "Geen nieuwsbrief-campagne." };
-
-  const [{ data: subs }, { data: existing }] = await Promise.all([
-    admin.from("subscribers").select("id, email, name, unsub_token").eq("gym_id", c.gym_id).eq("status", "active"),
-    admin.from("campaign_sends").select("subscriber_id").eq("campaign_id", campaignId),
-  ]);
-  const done = new Set((existing || []).map((e) => e.subscriber_id));
-  const targets = (subs || []).filter((s) => !done.has(s.id));
-
-  await admin.from("campaigns").update({ status: "sending", total: (subs || []).length }).eq("id", campaignId);
-
-  let sent = 0;
-  for (const part of chunk(targets, 100)) {
-    const payload = part.map((s) => ({
-      from: FROM_NEWS,
-      to: s.email,
-      replyTo: REPLY_TO,
-      subject: c.subject || c.name,
-      html: newsletterHtml({ subject: c.subject, preheader: c.preheader, body: c.body_html, unsubUrl: unsubFor(s.unsub_token) }),
-      headers: listHeaders(s.unsub_token),
-    }));
-    let ids = [];
-    try {
-      const res = await resend.batch.send(payload);
-      ids = res?.data?.data || res?.data || []; // Resend batch → { data: { data: [{id}] } }
-    } catch (e) {
-      console.error("newsletter batch failed:", e?.message);
-    }
-    const rows = part.map((s, i) => ({
-      gym_id: c.gym_id,
-      campaign_id: campaignId,
-      subscriber_id: s.id,
-      email: s.email,
-      resend_id: ids[i]?.id || null,
-      status: ids[i]?.id ? "sent" : "failed",
-      sent_at: new Date().toISOString(),
-    }));
-    if (rows.length) await admin.from("campaign_sends").insert(rows);
-    sent += rows.filter((r) => r.status === "sent").length;
-  }
-
-  await admin.from("campaigns").update({ status: "sent", sent, sent_at: new Date().toISOString() }).eq("id", campaignId);
-  return { ok: true, sent };
-}
-
 // ---- Background queue (scale sending: queue now, drain in paced batches) ----
+//
+// Dit is de ENIGE verzendweg. De vroegere sendNewsletterCampaign — een zelf-tikkende ketting die
+// alles in één request probeerde te verzenden — is bewust weg: die keten stierf telkens na ~3-4
+// tikken en liet honderden mensen halverwege staan. Verzenden gebeurt nu in kleine beurten via de
+// cron op /api/queue/process (*/5). Zet er geen tweede weg naast.
 
 // Queue a newsletter: create 'queued' send rows for every active subscriber (fast, non-blocking),
 // flip the campaign to 'sending'. A worker then drains the queue in batches.
@@ -247,7 +201,7 @@ export async function enrollSubscriberInDrips(gymId, subscriber) {
 // Zorg dat een gerichte reeks (abo-pitch, comeback) bestaat voor deze gym; maak ze bij eerste
 // gebruik aan vanuit de vaste inhoud. Idempotent: bestaat de campagne al (eventueel met door de
 // beheerder aangepaste teksten), dan blijft die versie staan — de inhoud in code is enkel het zaad.
-export async function ensureTargetDrip(gymId, key) {
+async function ensureTargetDrip(gymId, key) {
   const { TARGET_DRIPS } = await import("@/lib/insight-mails");
   const def = TARGET_DRIPS[key];
   if (!def) return { error: "Onbekende reeks." };
@@ -335,7 +289,13 @@ export async function cancelDripsForUser(userId) {
   } catch (e) { console.error("cancelDripsForUser:", e?.message); }
 }
 
-// Record a Resend webhook event against the matching send + bump campaign counters.
+// Record a Resend webhook event against the matching send + hertel de campagnetellers.
+//
+// ⚠️ Open- en klikcijfers blijven 0 zolang de eigenaar op news.fittin.be geen open/click tracking
+// aanzet in het Resend-dashboard (gemeten via GET /domains: open_tracking=false, click_tracking=
+// false). Resend stuurt dan simpelweg nooit een email.opened/clicked-event. De webhook is dus NIET
+// stuk — kijk eerst naar die instelling. Bewust niet aanzetten op booking.fittin.be en fittin.be:
+// een trackingpixel in een deurcodemail schaadt daar enkel de bezorging.
 export async function recordResendEvent(type, emailId) {
   if (!emailId) return;
   const admin = createAdminClient();
@@ -343,36 +303,41 @@ export async function recordResendEvent(type, emailId) {
   if (!row) return;
   const now = new Date().toISOString();
   const map = {
-    "email.delivered": { status: "delivered", col: "delivered" },
-    "email.opened": { status: "opened", col: "opened", at: "opened_at" },
-    "email.clicked": { status: "clicked", col: "clicked", at: "clicked_at" },
-    "email.bounced": { status: "bounced", col: "bounced" },
-    "email.complained": { status: "bounced", col: "bounced" },
+    "email.delivered": { status: "delivered" },
+    "email.opened": { status: "opened", at: "opened_at" },
+    "email.clicked": { status: "clicked", at: "clicked_at" },
+    "email.bounced": { status: "bounced" },
+    "email.complained": { status: "bounced" },
+    // Deze twee ontbraken. 'suppressed' = Resend heeft de mail nooit buiten gestuurd (adres staat
+    // op zijn suppressielijst), 'failed' = de verzending zelf liep mis. Zonder de types bleven die
+    // rijen eeuwig op 'sent' hangen (14 stuks na de nieuwsbrief van 716) en bleef de abonnee
+    // 'active' — dus mailde élke volgende campagne datzelfde dode adres opnieuw en zakte de
+    // reputatie van het verzenddomein verder weg. suppressed telt daarom als bounce.
+    "email.suppressed": { status: "bounced" },
+    "email.failed": { status: "failed" },
   };
   const m = map[type];
   if (!m) return;
 
-  // Only advance status forward & count an event type once per send.
-  const rank = { queued: 0, scheduled: 0, sent: 1, delivered: 2, opened: 3, clicked: 4, bounced: 2, failed: 1 };
+  // Status schuift enkel vooruit — een late 'delivered' mag een 'clicked' niet terugdraaien.
+  const rank = { queued: 0, scheduled: 0, sent: 1, failed: 1, delivered: 2, bounced: 2, opened: 3, clicked: 4 };
   const patch = {};
   if ((rank[m.status] ?? 0) >= (rank[row.status] ?? 0)) patch.status = m.status;
   if (m.at && !row[m.at]) patch[m.at] = now;
-  const firstTime =
-    (m.col === "opened" && !row.opened_at) ||
-    (m.col === "clicked" && !row.clicked_at) ||
-    (m.col === "delivered" && row.status !== "delivered") ||
-    (m.col === "bounced" && row.status !== "bounced");
   if (Object.keys(patch).length) await admin.from("campaign_sends").update(patch).eq("id", row.id);
-  if (firstTime) {
-    const { data: c } = await admin.from("campaigns").select(m.col).eq("id", row.campaign_id).single();
-    if (c) await admin.from("campaigns").update({ [m.col]: (c[m.col] || 0) + 1 }).eq("id", row.campaign_id);
-  }
+
+  // Tellers hertellen i.p.v. lezen-+1-schrijven. Bij een campagne van 716 komen de webhooks in
+  // bulk binnen; die read-modify-write verloor massaal updates (campaigns.delivered stond op 364
+  // terwijl er 673 delivered-rijen waren). Hertellen kan niets verliezen en herstelt bestaande
+  // scheefstand vanzelf. RPC uit migratie 0144_amail.sql.
+  const { error: telErr } = await admin.rpc("recount_campaign", { p_campaign: row.campaign_id });
+  if (telErr) console.error("recount_campaign faalde — is 0144_amail.sql toegepast?", telErr.message);
 
   // Suppress the address so future campaigns/drips skip it (protects sender reputation).
   if (row.subscriber_id) {
     if (type === "email.complained") {
       await admin.from("subscribers").update({ status: "unsubscribed" }).eq("id", row.subscriber_id);
-    } else if (type === "email.bounced") {
+    } else if (type === "email.bounced" || type === "email.suppressed") {
       await admin.from("subscribers").update({ status: "bounced" }).eq("id", row.subscriber_id).neq("status", "unsubscribed");
     }
   }

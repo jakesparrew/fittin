@@ -86,11 +86,19 @@ const ROLE_LABEL = { lid: "Lid", coach: "Coach", beheerder: "Beheerder" };
 
 export default async function AccountPage({ searchParams }) {
   if (!isSupabaseConfigured) redirect("/login");
-  const { user, profile } = await getSessionProfile();
-  if (!user) redirect("/login?next=/account");
-  // Coaches don't have a member account dashboard — send them to their coach dashboard.
-  if (profile?.role === "coach") redirect("/coach");
   const sp = (await searchParams) || {};
+  // De meldingen op deze pagina hangen aan de querystring (bv. ?betaling=afgebroken, de cancel_url
+  // van Stripe). Wie hier uitgelogd of als coach binnenkwam, werd doorgestuurd zónder die
+  // parameters en las dus een kale pagina die nergens zei dat er niets aangerekend was.
+  // Daarom reist de querystring mee naar het inlogscherm én naar het coach-dashboard.
+  const qs = new URLSearchParams(
+    Object.entries(sp).flatMap(([k, v]) => (Array.isArray(v) ? v.map((x) => [k, String(x)]) : v == null ? [] : [[k, String(v)]])),
+  ).toString();
+  const withQs = (path) => (qs ? `${path}?${qs}` : path);
+  const { user, profile } = await getSessionProfile();
+  if (!user) redirect(`/login?next=${encodeURIComponent(withQs("/account"))}`);
+  // Coaches don't have a member account dashboard — send them to their coach dashboard.
+  if (profile?.role === "coach") redirect(withQs("/coach"));
 
   const supabase = await createClient();
   const admin = createAdminClient();
@@ -286,7 +294,10 @@ export default async function AccountPage({ searchParams }) {
         {/* Wie zijn Stripe-betaling afbreekt, landt hier (cancel_url) — sinds kort niet alleen bij een
             boeking, maar ook bij een beurtenkaart of abonnement, want /lidmaatschap leest geen
             searchParams en zweeg dus volledig. De tekst mag daarom geen "je uur" veronderstellen
-            tenzij er écht een reservering wacht. Zonder afgebroken betaling: onzichtbaar. */}
+            tenzij er écht een reservering wacht. Zonder afgebroken betaling: onzichtbaar.
+            Alle cancel_urls in de app wijzen intussen naar ?betaling=afgebroken (boeken,
+            lidmaatschap, community-events en coach-betaalverzoeken); coaches krijgen dezelfde
+            melding op /coach, want deze pagina stuurt hen mét querystring door. */}
         {sp.betaling === "afgebroken" && (
           <p className="mb-6 rounded-2xl border border-borderc bg-white p-4 text-sm text-brand/70">
             {pendingPay.length > 0 ? (

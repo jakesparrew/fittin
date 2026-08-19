@@ -162,10 +162,14 @@ export default function BookingClient({
   const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
   const durLabel = (n) => (n % 1 ? `${Math.floor(n)}u30` : `${n} uur`);
-  // Een uitgelogde bezoeker heeft nog geen profiel, dus welcomeAvailable is voor hem altijd false —
-  // en las daardoor "Totaal € 15,00" onder een knop die "je eerste uur gratis" belooft. Het gratis
-  // uur geldt bij de eerste boeking, dus de belofte klopt ook voor een uitgelogd bestaand lid.
+  // Een uitgelogde bezoeker heeft nog geen profiel, dus we weten NIET of zijn gratis uur nog
+  // bestaat — de meeste leden hebben het al opgebruikt. Daarom is dit enkel een voorwaardelijke
+  // belofte in tekst; het bedrag zelf blijft de echte prijs. Vroeger werd hier € 15,00 doorstreept
+  // met "Gratis", wat voor elk terugkerend lid onwaar was zodra het inlogde.
   const guestWelcome = !isLoggedIn && isFit60 && duration === 1;
+  // Het gratis uur geldt enkel voor 1 uur. Ingelogd staat die waarschuwing er al; uitgelogd las de
+  // bezoeker "Totaal € 30,00" recht boven een knop die zijn eerste uur gratis beloofde.
+  const guestWelcomeTooLong = !isLoggedIn && isFit60 && duration > 1;
   // De stapnummers moeten volgen wat er écht staat: valt de dienstkeuze weg, dan begint het
   // formulier bij 1.
   const showServicePicker = services.length > 1;
@@ -184,15 +188,9 @@ export default function BookingClient({
 
   // Het bedrag onder "Totaal" en in de mobiele balk komt uit één berekening — die twee mogen nooit
   // iets anders zeggen.
-  const totalValue = (compact) =>
+  const totalValue = () =>
     welcomeApplies ? "Gratis"
     : creditApplies ? `${sess(duration)} sessie${duration === 1 ? "" : "s"}`
-    : guestWelcome ? (
-      <>
-        <span className={"mr-1.5 line-through " + (compact ? "text-xs text-brand/40" : "text-xl text-lav")}>{euro(priceCents)}</span>
-        Gratis
-      </>
-    )
     : discountInfo?.ok ? euro(discountInfo.cents)
     : euro(priceCents);
   // Volgt er straks een Stripe-pagina? Dan moet de bezoeker het venster van 15 minuten kennen.
@@ -701,9 +699,10 @@ export default function BookingClient({
 
             <div className="mt-6 flex items-baseline justify-between border-t border-white/15 pt-5">
               <span className="text-lav">Totaal</span>
-              <span className="text-3xl font-black text-accent">{totalValue(false)}</span>
+              <span className="text-3xl font-black text-accent">{totalValue()}</span>
             </div>
-            {guestWelcome && <p className="mt-1 text-right text-xs text-lav">Je eerste uur is gratis — bij je eerste boeking.</p>}
+            {guestWelcome && <p className="mt-1 text-right text-xs text-lav">Is dit je állereerste boeking? Dan is dit uur gratis — je rekent niets af.</p>}
+            {guestWelcomeTooLong && <p className="mt-1 text-right text-xs font-bold text-amber-300">Een gratis eerste uur geldt enkel voor een sessie van 1 uur — bij {durLabel(duration)} betaal je de volledige prijs.</p>}
 
             {error && <p className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm font-semibold text-red-100">{error}</p>}
 
@@ -715,7 +714,9 @@ export default function BookingClient({
               <div className="mt-6 space-y-2">
                 {/* Carry the chosen slot through signup/login so it's pre-selected when they land back. */}
                 <Link href={`/login?mode=signup&next=${encodeURIComponent(selected ? `/boeken?d=${selected.dateStr}&h=${selected.hour}&p=${persons}&u=${duration}` : "/boeken")}`} className="block w-full rounded-full bg-accent py-3.5 text-center font-bold text-brand transition hover:opacity-90">
-                  Maak account & boek je eerste uur gratis
+                  {/* De knoptekst mag niets beloven wat het totaal erboven tegenspreekt: het gratis
+                      uur geldt enkel voor een sessie van 1 uur. */}
+                  {duration === 1 ? "Maak account & boek je eerste uur gratis" : "Maak account & reserveer"}
                 </Link>
                 <p className="text-center text-xs text-lav">
                   Al een account?{" "}
@@ -745,7 +746,7 @@ export default function BookingClient({
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-brand">{days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · {slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}</p>
-              <p className="text-sm font-black text-accentdark">{totalValue(true)}</p>
+              <p className="text-sm font-black text-accentdark">{totalValue()}</p>
             </div>
             {isLoggedIn ? (
               <button onClick={submit} disabled={busy} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30 transition enabled:hover:-translate-y-0.5 disabled:opacity-50">

@@ -4,6 +4,7 @@ export const metadata = {
   title: "Toegang & huisregels | Fittin'",
   description:
     "Zo kom je binnen in de privégym in Gent: je toegangscode komt 5 minuten voor je sessie binnen. Plus de huisregels en hoe je de zaal netjes achterlaat.",
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/huisregels` },
 };
 
 const entrySteps = [

@@ -1,6 +1,13 @@
 import Link from "next/link";
 
-export const metadata = { title: "Affiliate-disclosure | Fittin'" };
+// Zonder eigen description erfde deze pagina die van de homepage ("privé fitness in Gent...") —
+// in Google en bij delen las /disclosure dus als de startpagina.
+export const metadata = {
+  title: "Affiliate-disclosure | Fittin'",
+  description:
+    "Sommige links op fittin.be zijn affiliate-links. Zo werkt het, wat het voor jou betekent, en waarom het niets aan de prijs verandert.",
+  alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/disclosure` },
+};
 
 export default function Disclosure() {
   return (

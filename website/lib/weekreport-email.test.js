@@ -53,7 +53,11 @@ const fullReport = {
   health: { mailsSent: 61, mailsFailed: 0, accessCronBad: false, activationCronBad: false },
 };
 
-const brokenHealth = { ...fullReport, health: { mailsSent: 40, mailsFailed: 3, accessCronBad: true, activationCronBad: false } };
+const brokenHealth = { ...fullReport, health: { mailsSent: 40, mailsFailed: 3, accessCronBad: true, activationCronBad: false, lockOffline: 0 } };
+
+// Het slot dat offline lijkt is géén "taak liep niet": de deurcodemail vertrok wél. Vroeger werd
+// dat als hetzelfde alarm gerapporteerd, en een vals alarm leert de eigenaar het echte negeren.
+const slotOffline = { ...fullReport, health: { mailsSent: 61, mailsFailed: 0, accessCronBad: false, activationCronBad: false, lockOffline: 7 } };
 
 // Verkeerscijfers (G5-6). `traffic` kan null zijn — de meetlaag is best-effort en mag het rapport
 // niet meeslepen — dus beide gevallen horen getest.
@@ -115,8 +119,16 @@ describe("weekReportHtml", () => {
   it("waarschuwt zichtbaar als mails of crons falen", () => {
     const html = weekReportHtml({ name: "Ran", report: brokenHealth });
     expect(html).toContain("Let op");
-    expect(html).toContain("3 mail(s) mislukt");
+    expect(html).toContain("3 mail(s) niet aangekomen"); // mislukt én gebouncet, want beide = niet ontvangen
     expect(html).toContain("Deurcode-taak");
+  });
+
+  it("noemt een offline slot bij naam en roept géén vals deurcode-alarm op", () => {
+    const html = weekReportHtml({ name: "Ran", report: slotOffline });
+    expect(html).toContain("Het slot leek 7× offline");
+    expect(html).toContain("De deurcodemails vertrokken wél");
+    expect(html).not.toContain("Deurcode-taak liep niet recent");
+    expect(html).not.toContain("undefined");
   });
 
   it("schrijft een preview weg met PREVIEW_DIR (handmatig nakijken)", () => {

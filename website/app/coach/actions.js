@@ -609,7 +609,7 @@ export async function buyCoachCredits(formData) {
       ],
       metadata: { kind: "coach_credits", coach_id: userId, credits: String(qty) },
       success_url: `${siteUrl()}/coach?gekocht=1`,
-      cancel_url: `${siteUrl()}/coach?geannuleerd=1`,
+      cancel_url: `${siteUrl()}/coach?betaling=afgebroken`,
     });
     url = session.url;
   } catch (e) {

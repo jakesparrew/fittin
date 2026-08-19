@@ -14,9 +14,11 @@ export default async function CoachBetalingen() {
   const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
 
   const admin = createAdminClient();
-  const [{ data: pays }, { data: ledger }] = await Promise.all([
+  const [{ data: pays }, { data: ledger }, { count: reqCount }] = await Promise.all([
     admin.from("payments").select("id, amount_cents, kind, description, created_at, receipt_url").eq("user_id", userId).eq("kind", "coach_credits").order("created_at", { ascending: false }).limit(300),
     supabase.from("coach_ledger").select("delta").eq("coach_id", userId),
+    // Enkel tellen: de CSV-knop hieronder mag niet verschijnen als er niets te exporteren valt.
+    supabase.from("coach_payment_requests").select("id", { count: "exact", head: true }).eq("coach_id", userId),
   ]);
   const purchases = pays || [];
   const balance = (ledger || []).reduce((a, r) => a + Number(r.delta || 0), 0); // numeric-safe (0117)
@@ -28,7 +30,15 @@ export default async function CoachBetalingen() {
       <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand print:hidden">← Dashboard</Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <h1 className="text-3xl font-black text-brand">Betalingen</h1>
-        <PrintButton label="⬇ PDF / afdrukken" />
+        <div className="flex flex-wrap gap-2 print:hidden">
+          {/* De export bestond al maar had nergens een link. Ze gaat over wat je clienten JOU
+              betalen (betaalverzoeken), niet over de aankopen in de tabel hieronder — vandaar het
+              aparte label. Geen betaalverzoeken? Dan geen knop. */}
+          {(reqCount ?? 0) > 0 && (
+            <a href="/coach/betalingen/export" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">⬇ Client-betalingen (CSV)</a>
+          )}
+          <PrintButton label="⬇ PDF / afdrukken" />
+        </div>
       </div>
       <p className="mt-1 max-w-2xl text-sm text-brand/50">
         Je betalingen aan Fittin: aankopen van <b>sessietegoed (€ 12 / sessie)</b> waarmee je je clienten in de zaal boekt.
