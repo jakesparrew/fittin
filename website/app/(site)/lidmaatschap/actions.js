@@ -56,7 +56,20 @@ export async function buyPackage(formData) {
   }
 
   if (pkg.kind === "abonnement") {
-    const session = await stripe.checkout.sessions.create({
+    // 🔴 Bancontact valt weg bij een abonnement als je Stripe zelf laat kiezen.
+    //
+    // Gemeten op dit account: mode "payment" biedt card, bancontact, eps, klarna, link, mb_way,
+    // amazon_pay en satispay aan — mode "subscription" enkel card, klarna, link, amazon_pay en
+    // satispay. Bancontact is dé betaalmethode in België, dus een lid dat daarmee betaalt kon wél
+    // losse uren kopen maar géén abonnement. Precies de klacht van 13-08-2026: "Betaalmogelijkheid
+    // werd niet geaccepteerd, maar wel voor losse uren te kopen."
+    //
+    // Bancontact kán wel terugkerend, via een SEPA-mandaat: de eerste maand wordt meteen met
+    // Bancontact betaald en dat mandaat dekt de maanden daarna. Daarom vragen we de methodes
+    // expliciet op. De webhook is hier al op gebouwd — een abo-sessie krijgt zijn sessietegoed pas
+    // bij invoice.paid, dus bij een trage incasso wordt er nooit te vroeg waarde uitgedeeld.
+    const aboMethodes = ["card", "bancontact", "sepa_debit", "link"];
+    const aboSessie = {
       mode: "subscription",
       customer,
       ...bizCustomer,
@@ -71,7 +84,17 @@ export async function buyPackage(formData) {
       success_url: `${siteUrl()}/account?abo=1`,
       // Zie hierboven: enkel /account zegt iets terug bij een afgebroken betaling.
       cancel_url: `${siteUrl()}/account?betaling=afgebroken`,
-    });
+    };
+    // Vangnet: staat SEPA-incasso niet aan op het Stripe-account, dan weigert Stripe deze lijst.
+    // In dat geval vallen we terug op de automatische methodes — dan is het abonnement nog altijd
+    // te kopen met een kaart, precies zoals vandaag. Nooit slechter dan de huidige toestand.
+    let session;
+    try {
+      session = await stripe.checkout.sessions.create({ ...aboSessie, payment_method_types: aboMethodes });
+    } catch (e) {
+      console.error("abo-checkout met bancontact/sepa geweigerd, terugval op automatisch:", e?.message);
+      session = await stripe.checkout.sessions.create(aboSessie);
+    }
     redirect(session.url);
   }
 
