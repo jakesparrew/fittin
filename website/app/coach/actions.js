@@ -341,11 +341,18 @@ export async function coachRescheduleBooking(formData) {
   return { ok: true, message: "Sessie verplaatst ✓" };
 }
 
-// Free 1h start-times for a date (availability-aware dropdowns). Returns decimals e.g. [6, 6.5, 9, ...].
-export async function coachDayAvailability(dateStr) {
+// Vrije starttijden op een dag, voor de dropdowns. Geeft decimalen terug, bv. [6, 6.5, 9, ...].
+//
+// `hours` = de duur van de sessie die verplaatst wordt, `excludeId` = die boeking zelf. Zonder die
+// twee gaf de lijst uren terug die reschedule_booking daarna alsnog weigerde: ze toetste altijd op
+// één uur (dus een sessie van 90 min kon net over een andere boeking vallen) en telde de boeking
+// die je aan het verplaatsen bent mee als bezet.
+export async function coachDayAvailability(dateStr, hours = 1, excludeId = null) {
   const { supabase, error } = await requireCoach();
   if (error) return { hours: [], ok: false };
-  const { data, error: e } = await supabase.rpc("coach_free_hours", { p_date: dateStr });
+  const { data, error: e } = await supabase.rpc("coach_free_hours", {
+    p_date: dateStr, p_hours: Number(hours) || 1, p_exclude: excludeId || null,
+  });
   if (e) return { hours: [], ok: false };
   return { hours: (data || []).map(Number), ok: true };
 }

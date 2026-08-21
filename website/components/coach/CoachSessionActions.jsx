@@ -8,11 +8,26 @@ const fh = (h) => `${pad(Math.floor(h))}:${h % 1 ? "30" : "00"}`;
 const toast = (type, msg) => { try { window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type, msg } })); } catch {} };
 const todayStr = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
 
-// Per-session controls for a coach: Verplaats (to a free slot) + Annuleer. Both only up to 6h before.
-// `reserved` = slot booked without a client yet; `clients` = [{id,label}] connected clients to assign.
-export default function CoachSessionActions({ bookingId, startsAt, reserved = false, clients = [], seriesId = null }) {
+// Bediening per sessie voor een coach: Verplaats (naar een vrij uur) + Annuleer.
+//
+// Verplaatsen kan tot 1 UUR vooraf, annuleren blijft op 6 uur. Reden voor het verschil: een client
+// die 's ochtends afbelt is de normale gang van zaken, en de coach kan die sessie dan nog verzetten
+// zolang de zaal vrij is — dat kost niemand iets. Een sessie annuleren geeft een beurt terug en
+// laat het uur leeg achter, dus dat blijft op zes uur staan. De databank bewaakt beide grenzen zelf
+// (reschedule_booking, migratie 0146); wat hier gebeurt is enkel om geen knop te tonen die toch
+// geweigerd wordt.
+const VERPLAATS_VENSTER_MS = 1 * 3600000;
+const ANNULEER_VENSTER_MS = 6 * 3600000;
+
+// `reserved` = slot geboekt zonder client; `clients` = [{id,label}] verbonden clients om toe te wijzen.
+export default function CoachSessionActions({ bookingId, startsAt, endsAt = null, reserved = false, clients = [], seriesId = null }) {
   const router = useRouter();
-  const locked = Date.now() > new Date(startsAt).getTime() - 6 * 3600000;
+  const tot = new Date(startsAt).getTime();
+  const kanVerplaatsen = Date.now() < tot - VERPLAATS_VENSTER_MS;
+  const kanAnnuleren = Date.now() < tot - ANNULEER_VENSTER_MS;
+  // Duur in uren, zodat de vrije-urenlijst geen slot voorstelt waar deze sessie niet in past.
+  const duur = endsAt ? Math.max(0.5, Math.round(((new Date(endsAt) - new Date(startsAt)) / 3600000) * 2) / 2) : 1;
+  const locked = !kanVerplaatsen && !kanAnnuleren;
   const [mode, setMode] = useState(null); // null | 'move' | 'assign'
   const [date, setDate] = useState(todayStr());
   const [hours, setHours] = useState(null);
@@ -20,7 +35,7 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
   const [client, setClient] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (locked) return <span className="text-xs text-brand/40">Wijzigen kan tot 6u vooraf</span>;
+  if (locked) return <span className="text-xs text-brand/40">Wijzigen kan tot 1u vooraf</span>;
 
   async function submitAssign() {
     if (!client) { toast("error", "Kies een client."); return; }
@@ -35,7 +50,7 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
 
   async function loadHours(d) {
     setHours(null); setHour("");
-    const r = await coachDayAvailability(d);
+    const r = await coachDayAvailability(d, duur, bookingId);
     setHours(r?.hours || []);
   }
   async function openMove() { setMode("move"); await loadHours(date); }
@@ -76,9 +91,9 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
   if (mode === "move") {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <input type="date" min={todayStr()} value={date} onChange={(e) => { setDate(e.target.value); loadHours(e.target.value); }} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
+        <input type="date" min={todayStr()} value={date} onChange={(e) => { setDate(e.target.value); loadHours(e.target.value); }} aria-label="Nieuwe datum" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
         <select value={hour} onChange={(e) => setHour(e.target.value)} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-          <option value="">{hours === null ? "Laden…" : hours.length ? "Vrij uur…" : "Geen vrij uur"}</option>
+          <option value="">{hours === null ? "Laden…" : hours.length ? "Vrij uur…" : "Zaal die dag volzet"}</option>
           {(hours || []).map((h) => <option key={h} value={h}>{fh(h)}</option>)}
         </select>
         <button onClick={submitMove} disabled={busy} className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-brand disabled:opacity-50">{busy ? "Bezig…" : "Bevestig"}</button>
@@ -105,9 +120,16 @@ export default function CoachSessionActions({ bookingId, startsAt, reserved = fa
       {reserved && (
         <button onClick={() => setMode("assign")} className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-brand transition hover:brightness-95">+ Client toevoegen</button>
       )}
-      <button onClick={openMove} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent hover:text-accentdark">Verplaats</button>
-      <button onClick={doCancel} disabled={busy} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer</button>
-      {seriesId && (
+      {kanVerplaatsen && (
+        <button onClick={openMove} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent hover:text-accentdark">Verplaats</button>
+      )}
+      {kanAnnuleren ? (
+        <button onClick={doCancel} disabled={busy} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer</button>
+      ) : (
+        // Binnen 6 uur is annuleren dicht maar verplaatsen nog open — zeg dat, anders lijkt de knop zoek.
+        <span className="text-xs text-brand/40">Annuleren kon tot 6u vooraf</span>
+      )}
+      {kanAnnuleren && seriesId && (
         <button onClick={doCancelSeries} disabled={busy} title="Annuleer alle toekomstige sessies in deze reeks" className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand/70 transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer reeks 🔁</button>
       )}
     </div>

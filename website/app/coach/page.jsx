@@ -499,7 +499,7 @@ export default async function CoachDashboard({ searchParams }) {
                     {own ? "eigen boeking" : b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                   </span>
                   {!own && <ShareSession text={shareTextFor(b)} />}
-                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={own ? false : reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
+                  <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} endsAt={b.ends_at} reserved={own ? false : reserved} seriesId={seriesById[b.id]} clients={(members || []).map((m) => ({ id: m.id, label: m.full_name || m.email }))} />
                 </div>
               </div>
               );

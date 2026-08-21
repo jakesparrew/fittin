@@ -76,7 +76,7 @@ export default async function Agenda() {
                         {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                       </span>
                       {/* Eigen training: geen client-toewijzing aanbieden (het slot is van hemzelf). */}
-                      <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} reserved={own ? false : reserved} clients={clientOpts} />
+                      <CoachSessionActions bookingId={b.id} startsAt={b.starts_at} endsAt={b.ends_at} reserved={own ? false : reserved} clients={clientOpts} />
                     </div>
                   </div>
                   );
