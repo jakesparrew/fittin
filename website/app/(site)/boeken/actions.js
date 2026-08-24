@@ -53,6 +53,12 @@ function checkoutParams(booking, email, chargeCents, codeId) {
       },
     ],
     metadata: { booking_id: booking.id, ...(codeId ? { discount_code_id: codeId } : {}) },
+    // Alleen betaalmethodes die METEEN bevestigen. Een boeking houdt het uur 15 minuten vast; een
+    // methode met uitgestelde afwikkeling (SEPA-incasso bevestigt pas na dagen) betekent dat het lid
+    // betaalt, het uur intussen vrijvalt en de webhook dagen later automatisch terugstort — betaald,
+    // geen sessie. Sinds SEPA-incasso op het Stripe-account aanstaat zou Stripe die hier vanzelf
+    // aanbieden, dus we kiezen expliciet. Google Pay en Apple Pay rijden mee op "card".
+    payment_method_types: ["card", "bancontact", "paypal", "link"],
     // De reservering zelf valt na 15 minuten vrij (0121). Stripe eist minstens 30 minuten voor
     // expires_at, dus dit venster kan niet gelijklopen — het is enkel een bovengrens die voorkomt
     // dat een trage SCA/Bancontact-betaling nog uren later binnenkomt. De webhook vangt een late
@@ -74,6 +80,26 @@ function bookingErrorText(error) {
 }
 
 // Creates the booking (slot held immediately). Free → confirm + email. Paid → Stripe Checkout URL.
+// Maakt de checkout-sessie, met een vangnet op de methodelijst.
+//
+// De lijst hierboven is bewust beperkt tot methodes die meteen bevestigen. Weigert Stripe die lijst
+// ooit — bv. omdat PayPal op dit account niet (meer) beschikbaar is — dan zou het aanmaken van de
+// sessie falen en kon NIEMAND nog een sessie betalen. Daarom vallen we dan terug: eerst zonder
+// PayPal, en als laatste redmiddel op de automatische keuze van Stripe. Betalen blijft zo altijd
+// mogelijk; enkel de garantie "geen uitgestelde methode" valt in dat uiterste geval weg.
+async function maakCheckout(params) {
+  const zonderPaypal = { ...params, payment_method_types: (params.payment_method_types || []).filter((m) => m !== "paypal") };
+  const { payment_method_types: _weg, ...automatisch } = params;
+  for (const [poging, opties] of [["volledig", params], ["zonder paypal", zonderPaypal], ["automatisch", automatisch]]) {
+    try {
+      return await stripe.checkout.sessions.create(opties);
+    } catch (e) {
+      console.error(`checkout-sessie (${poging}) geweigerd:`, e?.message);
+      if (poging === "automatisch") throw e;
+    }
+  }
+}
+
 export async function createBookingAction({ serviceId, date, hour, persons, useWelcome, coachId, useCredit, discountCode, buddyIds, participantIds, emailInvites, hours }) {
   const supabase = await createClient();
   const {
@@ -228,7 +254,7 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
     return { ok: true, unpaid: true };
   }
 
-  const session = await stripe.checkout.sessions.create(checkoutParams(booking, user.email, chargeCents, codeId));
+  const session = await maakCheckout(checkoutParams(booking, user.email, chargeCents, codeId));
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", booking.id);
   // Persist the agreed charge + code (bookings columns are member-locked → service role) so a
   // resumed checkout re-charges the same amount. The redemption is recorded by the Stripe webhook
@@ -327,9 +353,7 @@ async function buildResumeCheckout(supabase, user, id) {
       await admin.from("bookings").update({ charge_cents: booking.price_cents, discount_code_id: null }).eq("id", id);
     }
   }
-  const session = await stripe.checkout.sessions.create(
-    checkoutParams(booking, user.email, chargeCents, codeId)
-  );
+  const session = await maakCheckout(checkoutParams(booking, user.email, chargeCents, codeId));
   await supabase.from("bookings").update({ stripe_session_id: session.id }).eq("id", id);
   return session.url;
 }
