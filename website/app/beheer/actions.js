@@ -881,6 +881,56 @@ export async function resolveProblemReport(formData) {
   return { ok: true, message: "Melding afgehandeld ✓" };
 }
 
+// Rechtstreeks antwoorden op een probleemmelding, vanuit het beheer.
+//
+// WAAROM: hier stond een `mailto:`-link. Die doet niets wanneer er op het toestel geen standaard
+// mailprogramma is ingesteld — en wie Gmail in een browsertabblad gebruikt, heeft dat niet. De knop
+// leek dus stuk terwijl er gewoon nooit iets kon gebeuren. Nu vertrekt het antwoord langs dezelfde
+// weg als een inbox-antwoord (Resend, afzender info@fittin.be) en blijft het bewaard in sent_emails,
+// zodat er een spoor is van wat er naar het lid ging.
+export async function replyProblemReport(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const id = formData.get("id");
+  const body = String(formData.get("body") || "").trim();
+  if (!id) return { error: "Geen melding gekozen." };
+  if (!body) return { error: "Schrijf een antwoord." };
+
+  const admin = createAdminClient();
+  const { data: melding } = await admin
+    .from("problem_reports")
+    .select("id, message, created_at, user_id, gym_id")
+    .eq("id", id).eq("gym_id", profile.gym_id).maybeSingle();
+  if (!melding) return { error: "Melding niet gevonden." };
+
+  const { data: lid } = await admin.from("profiles").select("email, full_name").eq("id", melding.user_id).maybeSingle();
+  if (!lid?.email) return { error: "Dit lid heeft geen e-mailadres." };
+
+  // De oorspronkelijke melding onderaan meesturen: het lid weet dan meteen waarover dit gaat.
+  const { sendReply } = await import("@/lib/inbox");
+  const tekst = `${body}
+
+---
+Je melding: "${melding.message}"`;
+  const r = await sendReply({
+    fromEmail: "info@fittin.be", toEmail: lid.email,
+    subject: "Je melding bij Fittin'", body: tekst,
+  });
+  if (r?.error) return { error: r.error.message || "Versturen mislukt." };
+
+  try {
+    await admin.from("sent_emails").insert({
+      gym_id: profile.gym_id, from_email: "info@fittin.be", to_email: lid.email,
+      subject: "Re: Je melding bij Fittin'", body: tekst, sent_by: profile.id,
+    });
+  } catch (e) { console.error("antwoord op melding niet gelogd:", e?.message); }
+
+  // Antwoorden IS de opvolging, dus de melding gaat meteen uit de open lijst.
+  await admin.from("problem_reports").update({ status: "afgehandeld" }).eq("id", id);
+  revalidatePath("/beheer/meldingen");
+  return { ok: true, message: `Antwoord verstuurd naar ${lid.full_name || lid.email} ✓` };
+}
+
 // Sluit een automatische foutlog af. Markeert alle bestaande voorvallen van datzelfde soort fout
 // (zelfde melding + pagina) als afgehandeld. Gebeurt hij dáárna opnieuw, dan komt hij als nieuwe
 // open rij binnen en verschijnt hij vanzelf terug — dat is precies de bedoeling: een fout die je

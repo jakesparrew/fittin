@@ -4,6 +4,7 @@ import { resolveProblemReport, resolveClientError } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
 import { classifyClientError, explainClass } from "@/lib/error-triage";
 import ListSearch from "@/components/admin/ListSearch";
+import ProblemReply from "@/components/admin/ProblemReply";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +107,7 @@ export default async function Meldingen({ searchParams }) {
                 <div className="min-w-0">
                   <p className="font-black text-brand">{r.member?.full_name || "Lid"} <span className="font-semibold text-brand/40">· {fmt(r.created_at)}{r.page ? ` · ${r.page}` : ""}</span></p>
                   <p className="mt-1 text-sm text-brand/80">{r.message}</p>
-                  {r.member?.email && <a href={`mailto:${r.member.email}`} className="mt-1 inline-block text-xs font-bold text-accentdark hover:underline">Antwoord {r.member.email} →</a>}
+                  {r.member?.email && <ProblemReply id={r.id} email={r.member.email} naam={r.member.full_name} />}
                 </div>
                 <ActionForm action={resolveProblemReport} className="shrink-0">
                   <input type="hidden" name="id" value={r.id} />
