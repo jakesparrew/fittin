@@ -31,7 +31,7 @@ const groups = [
 
 const STORE_KEY = "fittin_admin_nav_collapsed";
 
-export default function AdminSidebar({ name, role }) {
+export default function AdminSidebar({ name, role, badges = {} }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false); // mobile drawer
   const [collapsed, setCollapsed] = useState({}); // { [groupTitle]: true } — folded sections
@@ -96,7 +96,14 @@ export default function AdminSidebar({ name, role }) {
                 {!folded && grp.items.map((it) => (
                   <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className={linkClass(it.href)}>
                     <span className="w-4 text-center">{it.icon}</span>
-                    {it.label}
+                    <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                    {/* Aantal open items. Staat er niets open, dan staat er ook niets — een teller op
+                        nul is ruis en leert je hem te negeren. */}
+                    {badges[it.href] > 0 && (
+                      <span className="ml-auto shrink-0 rounded-full bg-accent px-2 py-0.5 text-[11px] font-black text-brand" aria-label={`${badges[it.href]} open`}>
+                        {badges[it.href] > 99 ? "99+" : badges[it.href]}
+                      </span>
+                    )}
                   </Link>
                 ))}
               </div>

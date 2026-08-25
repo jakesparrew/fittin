@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getGymSecrets } from "@/lib/gym-secrets";
+import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { invoiceCoachSessions, markPaymentPaid, createManualInvoice } from "../actions";
 import { coachDebts, debtReasons } from "@/lib/coach-debt";
 import ActionForm from "@/components/ui/ActionForm";
@@ -90,6 +91,28 @@ export default async function Financien({ searchParams }) {
 
   const label = jaar ? String(from.getFullYear()) : `${MAAND[from.getMonth()]} ${from.getFullYear()}`;
 
+  // Wat staat er nog bij Stripe? Sinds SEPA-incasso aanstaat is "onderweg" een echt bedrag: die
+  // betalingen bevestigen pas na dagen. Uitbetalingen staan op manueel, dus het saldo loopt op tot
+  // je zelf uitbetaalt — dan wil je kunnen zien hoeveel er klaarstaat zonder Stripe te openen.
+  //
+  // Best-effort: geen Stripe-sleutel of een hapering betekent dat dit blok gewoon niet verschijnt.
+  // Een boekhoudpagina mag nooit stukgaan op een extern saldo.
+  let stripeSaldo = null;
+  if (isStripeConfigured) {
+    try {
+      const [bal, payouts] = await Promise.all([
+        stripe.balance.retrieve(),
+        stripe.payouts.list({ limit: 1 }),
+      ]);
+      const som = (arr) => (arr || []).filter((b) => b.currency === "eur").reduce((n, b) => n + b.amount, 0);
+      stripeSaldo = {
+        beschikbaar: som(bal.available),
+        onderweg: som(bal.pending),
+        laatste: payouts?.data?.[0] || null,
+      };
+    } catch (e) { console.error("Stripe-saldo ophalen mislukt:", e?.message); }
+  }
+
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       {/* Print-only kop met de wettelijke gegevens — zo is de PDF meteen bruikbaar voor de boekhouder. */}
@@ -112,6 +135,48 @@ export default async function Financien({ searchParams }) {
           <PrintButton label="⬇ PDF / afdrukken" />
         </div>
       </div>
+
+      {/* Saldo bij Stripe. Verschijnt alleen als Stripe antwoordt — leeg = onzichtbaar. */}
+      {stripeSaldo && (
+        <div className="mt-4 rounded-2xl border border-borderc bg-white p-5 print:hidden">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-widest text-lav">Op je Stripe-rekening</p>
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-2">
+                <span>
+                  <span className="text-2xl font-black text-brand">{euro(stripeSaldo.beschikbaar)}</span>
+                  <span className="ml-2 text-sm text-brand/50">klaar om uit te betalen</span>
+                </span>
+                {stripeSaldo.onderweg > 0 && (
+                  <span>
+                    <span className="text-lg font-black text-brand/70">{euro(stripeSaldo.onderweg)}</span>
+                    <span className="ml-2 text-sm text-brand/50">onderweg</span>
+                  </span>
+                )}
+              </div>
+              {stripeSaldo.laatste && (
+                <p className="mt-2 text-xs text-brand/45">
+                  Laatste uitbetaling: {euro(stripeSaldo.laatste.amount)} op {fmtDay(new Date(stripeSaldo.laatste.arrival_date * 1000).toISOString())}
+                  {stripeSaldo.laatste.status !== "paid" ? ` · ${stripeSaldo.laatste.status}` : ""}
+                </p>
+              )}
+            </div>
+            <a
+              href="https://dashboard.stripe.com/balance/overview"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-accent hover:text-accentdark"
+            >
+              Open in Stripe →
+            </a>
+          </div>
+          <p className="mt-3 text-xs text-brand/45">
+            {stripeSaldo.onderweg > 0
+              ? "\"Onderweg\" zijn betalingen die nog moeten landen — een SEPA-incasso doet daar enkele dagen over."
+              : "Dit is het saldo bij Stripe, niet je bankrekening. Uitbetalen doe je in Stripe zelf."}
+          </p>
+        </div>
+      )}
 
       {/* Periodekiezer */}
       <div className="mt-4 flex flex-wrap items-center gap-2 print:hidden">
