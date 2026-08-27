@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { coachRescheduleBooking, cancelCoachBooking, cancelCoachSeries, coachDayAvailability, coachAssignClient } from "@/app/coach/actions";
 
@@ -23,13 +23,32 @@ const ANNULEER_VENSTER_MS = 6 * 3600000;
 export default function CoachSessionActions({ bookingId, startsAt, endsAt = null, reserved = false, clients = [], seriesId = null }) {
   const router = useRouter();
   const tot = new Date(startsAt).getTime();
-  const kanVerplaatsen = Date.now() < tot - VERPLAATS_VENSTER_MS;
-  const kanAnnuleren = Date.now() < tot - ANNULEER_VENSTER_MS;
+
+  // 🔴 De klok mag NIET meespelen in de eerste render.
+  //
+  // Dit stond eerst als `Date.now() < tot - VENSTER` middenin de render. De server rekent dat uit op
+  // zijn moment, de browser een fractie later — valt een van de grenzen daar precies tussen, dan
+  // rendert de server een knop waar de browser een tekstje verwacht en gooit React #418
+  // (hydratatie-mismatch). Dat gebeurde op 26-08 om 07:39: een sessie om 08:39, dus exact op de
+  // grens van één uur. De hele agenda liep vast.
+  //
+  // Daarom: vóór hydratatie is `nu` null en tonen server én browser hetzelfde (alle knoppen). Pas
+  // ná het aankoppelen zet het effect de echte tijd en verdwijnt wat niet meer mag. De databank
+  // bewaakt de grenzen sowieso (reschedule_booking, 0146), dus die korte tussenstand kan niets
+  // doorlaten wat niet mag.
+  const [nu, setNu] = useState(null);
+  useEffect(() => { setNu(Date.now()); }, []);
+  const gemount = nu !== null;
+  const kanVerplaatsen = !gemount || nu < tot - VERPLAATS_VENSTER_MS;
+  const kanAnnuleren = !gemount || nu < tot - ANNULEER_VENSTER_MS;
+
   // Duur in uren, zodat de vrije-urenlijst geen slot voorstelt waar deze sessie niet in past.
   const duur = endsAt ? Math.max(0.5, Math.round(((new Date(endsAt) - new Date(startsAt)) / 3600000) * 2) / 2) : 1;
-  const locked = !kanVerplaatsen && !kanAnnuleren;
+  const locked = gemount && !kanVerplaatsen && !kanAnnuleren;
   const [mode, setMode] = useState(null); // null | 'move' | 'assign'
-  const [date, setDate] = useState(todayStr());
+  // Leeg beginnen en pas invullen bij het openen: todayStr() leest de klok, en de server (UTC) kan
+  // 's avonds een andere dag zien dan de browser (Europe/Brussels) — dezelfde valkuil als hierboven.
+  const [date, setDate] = useState("");
   const [hours, setHours] = useState(null);
   const [hour, setHour] = useState("");
   const [client, setClient] = useState("");
@@ -53,7 +72,12 @@ export default function CoachSessionActions({ bookingId, startsAt, endsAt = null
     const r = await coachDayAvailability(d, duur, bookingId);
     setHours(r?.hours || []);
   }
-  async function openMove() { setMode("move"); await loadHours(date); }
+  async function openMove() {
+    const d = date || todayStr();
+    setDate(d);
+    setMode("move");
+    await loadHours(d);
+  }
 
   async function submitMove() {
     if (!date || hour === "") { toast("error", "Kies een dag en vrij uur."); return; }

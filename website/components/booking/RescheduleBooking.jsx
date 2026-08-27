@@ -22,7 +22,17 @@ export default function RescheduleBooking({ bookingId, startsAt, openHour = 6, c
   const [busy, setBusy] = useState(false);
   const [taken, setTaken] = useState(new Set()); // ms-timestamps of booked slots on the chosen day
 
-  const locked = Date.now() > new Date(startsAt).getTime() - 6 * 3600000;
+  // 🔴 De klok mag niet meespelen in de eerste render: de server rekent hem uit op zijn moment en
+  // de browser een fractie later. Valt de grens van 6 uur daar precies tussen, dan rendert de server
+  // iets anders dan de browser en gooit React #418 — de pagina loopt dan vast. Dat gebeurde op
+  // /coach/agenda met exact dit patroon, en het verklaart vermoedelijk ook de 45 #418-fouten die
+  // deze zomer op /account gelogd zijn.
+  //
+  // Vóór hydratatie is `nu` null en tonen server én browser hetzelfde; het effect zet daarna de
+  // echte tijd. De RPC bewaakt het venster sowieso, dus die korte tussenstand laat niets door.
+  const [nu, setNu] = useState(null);
+  useEffect(() => { setNu(Date.now()); }, []);
+  const locked = nu !== null && nu > new Date(startsAt).getTime() - 6 * 3600000;
   const hours = [];
   for (let h = openHour; h < closeHour; h += 0.5) hours.push(h);
 
