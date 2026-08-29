@@ -24,6 +24,16 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  async redirects() {
+    return [
+      // /supplementen staat TIJDELIJK uit (29-08-2026): er liep geen affiliate (AWIN_AFFID was
+      // nooit ingevuld) en de pagina haalde 15 weergaven in 30 dagen. Ze komt terug zodra er een
+      // echte partner is. Daarom permanent:false → een 307, zodat Google de URL blijft kennen en
+      // hem niet uit de index gooit. Bestemming is de calorieënpagina: de dichtstbijzijnde
+      // voedingspagina, en meteen de plek die er vroeger zelf naar linkte.
+      { source: "/supplementen", destination: "/calorieen-berekenen", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

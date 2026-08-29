@@ -27,7 +27,7 @@ export default async function sitemap() {
   // /events staat er bewust niet in: geen enkele pagina linkt ernaar en dezelfde events staan al
   // op /boeken. /plannen, /community, /login en /uitschrijven horen achter een login of zijn geen
   // landingspagina — die staan in robots.js op disallow.
-  const staticRoutes = ["", "/degym", "/personal-training", "/coaches", "/coach-worden", "/oefeningen", "/workouts", "/boeken", "/lidmaatschap", "/calorieen-berekenen", "/supplementen", "/hulp", "/huisregels", "/disclosure", "/privacy", "/voorwaarden", "/cookies"];
+  const staticRoutes = ["", "/degym", "/personal-training", "/coaches", "/coach-worden", "/oefeningen", "/workouts", "/boeken", "/lidmaatschap", "/calorieen-berekenen", "/hulp", "/huisregels", "/disclosure", "/privacy", "/voorwaarden", "/cookies"];
   const entries = staticRoutes.map((r) => ({ url: `${site}${r}` }));
 
   // Long-tail content — best-effort: a DB hiccup must never break the sitemap (fall back to static).
