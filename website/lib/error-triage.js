@@ -11,6 +11,10 @@ const NETWERK = [
   "load failed",
   "failed to fetch",
   "networkerror",
+  // Firefox' formulering wanneer de bódy-stream van een al gestart antwoord wegvalt — de
+  // verbinding brak terwijl de pagina binnenstroomde. Chrome en WebKit zeggen hierboven hetzelfde
+  // met andere woorden. Gezien op 29-08-2026: 2× /account, één bezoeker, geen stack, daarna stil.
+  "error in input stream",
   "network request failed",
   "the network connection was lost",
   "the request timed out",

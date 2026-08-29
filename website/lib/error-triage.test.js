@@ -40,6 +40,7 @@ describe("classifyClientError", () => {
     expect(classifyClientError("Load failed")).toBe("netwerk");             // Safari iOS
     expect(classifyClientError("Failed to fetch")).toBe("netwerk");         // Chrome
     expect(classifyClientError("The network connection was lost.")).toBe("netwerk");
+    expect(classifyClientError("Error in input stream")).toBe("netwerk");   // Firefox, stream brak af
   });
 
   it("herkent DOM-gerommel van buitenaf", () => {
