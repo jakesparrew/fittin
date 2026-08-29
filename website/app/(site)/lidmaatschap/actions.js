@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { stripe, isStripeConfigured, bizCustomer } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizCustomer, invoiceForBusiness } from "@/lib/stripe";
 import { getOrCreateCustomer } from "@/lib/stripe-customer";
 import { recordConsent } from "@/lib/legal";
 
@@ -40,6 +40,7 @@ export async function buyPackage(formData) {
       mode: "payment",
       customer,
       ...bizCustomer,
+      ...invoiceForBusiness,
       line_items: [
         {
           quantity: 1,

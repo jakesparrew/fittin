@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { stripe, isStripeConfigured, bizGuest } from "@/lib/stripe";
+import { stripe, isStripeConfigured, bizGuest, invoiceForBusiness } from "@/lib/stripe";
 import { sendBookingRescheduled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk } from "@/lib/email";
 import { notify, notifyMany } from "@/lib/notify";
 import { getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
@@ -76,6 +76,7 @@ export async function payCoachRequest(formData) {
     mode: "payment",
     customer_email: user.email,
     ...bizGuest,
+    ...invoiceForBusiness,
     line_items: [{ quantity: 1, price_data: { currency: "eur", unit_amount: req.amount_cents, product_data: { name: `Coaching — ${req.coach?.full_name || "coach"}${req.description ? ` · ${req.description}` : ""}` } } }],
     metadata: { kind: "coach_payment", request_id: req.id, user_id: user.id },
     success_url: `${siteUrl()}/account?betaald=1`,

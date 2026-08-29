@@ -33,7 +33,7 @@ export default async function AccountBetalingen() {
         <h1 className="text-3xl font-black text-brand">Betalingen &amp; facturen</h1>
         <PrintButton label="⬇ Overzicht als PDF" />
       </div>
-      <p className="mt-1 max-w-2xl text-sm text-brand/60">Download je <b>betaalbewijs</b> of een <b>factuur</b> per betaling. Wil je een factuur op je bedrijfsnaam (B2B)? Vul hieronder je gegevens in.</p>
+      <p className="mt-1 max-w-2xl text-sm text-brand/60">Download je <b>betaalbewijs</b> of een <b>factuur</b> per betaling. Betaal je als bedrijf? Vink dan bij het betalen <b>&ldquo;Ik koop als bedrijf&rdquo;</b> aan en geef je btw-nummer in — of vul hieronder eenmalig je gegevens in.</p>
 
       {/* Billing details — optional, for an invoice on a company name */}
       <details open={!hasBilling} className="mt-6 rounded-2xl border border-borderc bg-white p-5">
