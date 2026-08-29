@@ -374,15 +374,61 @@ export async function sendIntakeConfirmation({ to, name }) {
   );
 }
 
-// ---- Owner: new PT intake request (reply-to = the prospect, so replying answers them directly) ----
-export async function sendIntakeNotice({ to, prospectName, prospectEmail, phone, goal }) {
+// ---- Coach-aanmelding vanaf /coach-worden: bevestiging aan de kandidaat ----
+export async function sendCoachApplyConfirmation({ to, name }) {
   return send(
     to,
-    `Nieuwe PT-intake aanvraag — ${prospectName}`,
+    "We hebben je aanmelding goed ontvangen 💪",
+    shell({
+      title: "Je coach-aanmelding is binnen ✅",
+      intro: `Hallo ${esc(name) || "daar"}, bedankt voor je interesse om te coachen bij Fittin'!`,
+      body: `<p style="font-size:14px;color:#6b6685">We bekijken je aanmelding en nemen binnen enkele dagen contact op voor een kennismaking in de zaal — vrijblijvend, voor allebei.</p>`,
+      cta: { href: `${SITE}/coach-worden`, label: "Meer over coachen bij Fittin'" },
+    })
+  );
+}
+
+// ---- Coach-aanmelding: melding aan de eigenaar (reply-to = de kandidaat) ----
+export async function sendCoachApplyNotice({ to, applicantName, applicantEmail, phone, specialty, socials, about }) {
+  return send(
+    to,
+    // Alleen de naam in het onderwerp — specialiteit is vrije bezoekerstekst en het onderwerp is
+    // platte tekst zonder esc(), dus die hoort in de tabel hieronder (zelfde regel als bij intake).
+    `Nieuwe coach-aanmelding — ${applicantName}`,
+    shell({
+      title: "Nieuwe coach-aanmelding 🏋️",
+      intro: "Iemand wil coach worden bij Fittin' via fittin.be/coach-worden:",
+      rows: [
+        ["Naam", esc(applicantName)],
+        ["E-mail", esc(applicantEmail)],
+        ...(phone ? [["Telefoon", esc(phone)]] : []),
+        ...(specialty ? [["Specialiteit", esc(specialty)]] : []),
+        ...(socials ? [["Website / socials", esc(socials)]] : []),
+      ],
+      body: `<p style="font-size:14px;color:#6b6685;white-space:pre-wrap">${esc(about || "(niets ingevuld)")}</p><p style="font-size:13px;color:#9b97ab;margin-top:12px">Antwoord gewoon op deze mail — je antwoord gaat rechtstreeks naar ${esc(applicantEmail)}.</p>`,
+    }),
+    FROM,
+    applicantEmail
+  );
+}
+
+// ---- Owner: new PT intake request (reply-to = the prospect, so replying answers them directly) ----
+export async function sendIntakeNotice({ to, prospectName, prospectEmail, phone, kan, beschikbaar, goal }) {
+  return send(
+    to,
+    // De eigenaar werkt in de praktijk vanuit Gmail, dus het onderwerp is de enige plek die hij ziet
+    // zónder de mail te openen. Alleen `beschikbaar` mag hier: die string is volledig opgebouwd uit
+    // constanten in personal-training/options.js, dus er kan geen bezoekerstekst in. De vrije
+    // nalijn zit in `kan` en blijft in de tabel. Dit is een ander subject-veld dan dat van de
+    // inbound_emails-rij, dus de "PT-intake%"-telling in de action wordt hier niet geraakt.
+    `Nieuwe PT-intake aanvraag — ${prospectName}${beschikbaar ? ` · ${beschikbaar}` : ""}`,
     shell({
       title: "Nieuwe intake-aanvraag 🏋️",
       intro: "Iemand vroeg een gratis intake/proeftraining aan via fittin.be:",
       rows: [
+        // Bovenaan, want hierop routeert de eigenaar. shell() escapet niets, en `kan` kan de vrije
+        // nalijn van de bezoeker bevatten — dus zelf door esc().
+        ...(kan ? [["Kan", esc(kan)]] : []),
         ["Naam", esc(prospectName)],
         ["E-mail", esc(prospectEmail)],
         ...(phone ? [["Telefoon", esc(phone)]] : []),

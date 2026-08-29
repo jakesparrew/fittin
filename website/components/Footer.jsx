@@ -27,6 +27,7 @@ export default function Footer() {
             <li><Link href="/degym" className="transition hover:text-white">De gym</Link></li>
             <li><Link href="/personal-training" className="transition hover:text-white">Personal training</Link></li>
             <li><Link href="/coaches" className="transition hover:text-white">Coaches</Link></li>
+            <li><Link href="/coach-worden" className="transition hover:text-white">Word coach</Link></li>
             {/* Dezelfde pagina heette in de nav "Prijzen" en hier "Lidmaatschap" — dat laatste botst
                 bovendien met de hoofdboodschap "geen lidgeld". Eén naam, de URL blijft. */}
             <li><Link href="/lidmaatschap" className="transition hover:text-white">Prijzen</Link></li>

@@ -58,6 +58,7 @@ export async function POST(req) {
       "booking_completed",    // boeking effectief bevestigd — de noemer onder checkout_started
       "signup_completed",     // account aangemaakt (de grootste uitvalstap)
       "intake_requested",     // PT-intake aangevraagd — het hoofddoel van de PT-tak
+      "coach_apply",          // coach-aanmelding verstuurd vanaf /coach-worden
       "install_prompt_shown", "install_accepted", "referral_link_shared", "waitlist_joined",
     ]);
     const event = EVENTS.has(String(body.event || "")) ? String(body.event) : null;
