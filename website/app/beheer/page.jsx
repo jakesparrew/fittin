@@ -30,6 +30,7 @@ export default async function BeheerDashboard() {
   // Week = Monday-based (matches the booking calendar).
   const dow = (dayStart.getDay() + 6) % 7;
   const weekStart = new Date(dayStart.getTime() - dow * 86400000);
+  const weekEnd = new Date(weekStart.getTime() + 7 * 86400000);
   const prevWeekStart = new Date(weekStart.getTime() - 7 * 86400000);
   const d60 = new Date(Date.now() - 60 * 86400000);
 
@@ -81,7 +82,12 @@ export default async function BeheerDashboard() {
     supabase.from("memberships").select("user_id, status, cancel_at_period_end, current_period_end, started_at").eq("gym_id", gym.id),
     // 60 days of confirmed bookings → abo-candidates ("books often, pays full price") + past_due context.
     supabase.from("bookings").select("user_id, payment_source").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", d60.toISOString()),
-    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", weekStart.toISOString()),
+    // "Deze week" moet ook bovenaan begrensd zijn. Zonder de .lt() hieronder telde deze kaart elke
+    // bevestigde boeking vanaf maandag én ALLE toekomstige — op 30-08-2026 stond er 50 waar er 27
+    // in deze week vielen (de 23 andere lagen later). Erger dan het getal zelf was de vergelijking:
+    // "vorige week" is wél begrensd, dus de kaart zette (deze week + alle toekomst) naast (vorige
+    // week alleen) en stond daardoor bijna altijd op groen.
+    supabase.from("bookings").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", weekStart.toISOString()).lt("starts_at", weekEnd.toISOString()),
     supabase.from("bookings").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", prevWeekStart.toISOString()).lt("starts_at", weekStart.toISOString()),
     supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).gte("created_at", weekStart.toISOString()),
     supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).gte("created_at", prevWeekStart.toISOString()).lt("created_at", weekStart.toISOString()),
