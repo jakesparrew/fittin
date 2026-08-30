@@ -11,8 +11,27 @@ const fmtSets = (sets) =>
     : null;
 const supLetter = (g) => (g ? String.fromCharCode(64 + Number(g)) : null);
 
-export default function WorkoutPlayer({ days }) {
+// `focus` = het kale sessiescherm: één oefening open, de rest dichtgeklapt, en na het loggen
+// springt hij vanzelf naar de eerstvolgende die nog niet af is. Zonder die stand toont dit
+// component alle dagen tegelijk volledig uitgeklapt — bruikbaar als overzicht, onbruikbaar als je
+// er met zweethanden in de zaal doorheen moet.
+export default function WorkoutPlayer({ days, focus = false }) {
   const [openDetail, setOpenDetail] = useState(null);
+  // In focusstand: welke oefening staat open. Begint op de eerste die nog niet gedaan is.
+  const [actief, setActief] = useState(() => {
+    if (!focus) return null;
+    const alle = days.flatMap((d) => d.exercises);
+    return (alle.find((pe) => !pe.doneToday) || alle[0])?.peId ?? null;
+  });
+  // Na een geslaagde log door naar de volgende openstaande oefening. Blijft staan als dit de
+  // laatste was, zodat je je eigen resultaat nog ziet in plaats van naar een leeg scherm te kijken.
+  const naarVolgende = (peId) => {
+    if (!focus) return;
+    const alle = days.flatMap((d) => d.exercises);
+    const i = alle.findIndex((pe) => pe.peId === peId);
+    const volgende = alle.slice(i + 1).find((pe) => !pe.doneToday) || alle.find((pe) => !pe.doneToday && pe.peId !== peId);
+    if (volgende) setActief(volgende.peId);
+  };
   const [rest, setRest] = useState(null); // { left, total }
   const [feedback, setFeedback] = useState({});
   const [busyPe, setBusyPe] = useState(null);
@@ -73,6 +92,12 @@ export default function WorkoutPlayer({ days }) {
       try { res = await logExercise(fd); } catch { res = { error: "Opslaan mislukt — probeer opnieuw." }; }
       setFeedback((f) => ({ ...f, [peId]: res?.error ? { msg: res.error, err: true } : { msg: res?.pr ? "🏆 Nieuw PR!" : "Gelogd ✓" } }));
       setBusyPe(null);
+      if (!res?.error) {
+        // Rust meteen laten lopen: in de zaal tik je "Log" en leg je je telefoon weg.
+        const pe = days.flatMap((d) => d.exercises).find((x) => x.peId === peId);
+        if (focus && pe?.rest_sec) setRest({ left: pe.rest_sec, total: pe.rest_sec });
+        naarVolgende(peId);
+      }
     });
   };
   const doToggle = (peId) => {
@@ -95,8 +120,10 @@ export default function WorkoutPlayer({ days }) {
       {days.map((day) => {
         const done = day.exercises.filter((pe) => pe.doneToday).length;
         return (
-          <section key={day.id} className="rounded-3xl border border-borderc bg-white p-5 md:p-6">
-            <div className="flex items-center justify-between gap-2">
+          <section key={day.id} className={focus ? "" : "rounded-3xl border border-borderc bg-white p-5 md:p-6"}>
+            {/* In focusstand draagt de vaste kopbalk van het sessiescherm de dagnaam en de teller;
+                die hier nog eens tonen kost alleen ruimte. */}
+            <div className={focus ? "hidden" : "flex items-center justify-between gap-2"}>
               <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
               <div className="flex items-center gap-2">
                 {done > 0 && done === day.exercises.length && (
@@ -113,6 +140,31 @@ export default function WorkoutPlayer({ days }) {
                 const rows = entries[pe.peId] || [];
                 const last = fmtSets(pe.lastSets);
                 const topLast = (pe.lastSets || []).reduce((m, s) => Math.max(m, s.weight_kg || 0), 0);
+
+                // Dichtgeklapt in focusstand: één regel, één tikdoel over de volle breedte.
+                if (focus && pe.peId !== actief) {
+                  return (
+                    <button
+                      key={pe.peId}
+                      type="button"
+                      onClick={() => { setActief(pe.peId); setOpenDetail(null); }}
+                      className={
+                        "flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition " +
+                        (pe.doneToday ? "border-accent/40 bg-accent/5" : "border-borderc bg-paper hover:border-lav")
+                      }
+                    >
+                      <ExerciseMedia exercise={pe.exercise} thumb className="h-11 w-11 shrink-0" rounded="rounded-lg" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-bold text-brand">{pe.exercise?.name}</span>
+                        <span className="block text-xs text-ink-soft">{pe.sets ?? "–"} × {pe.reps ?? "–"}</span>
+                      </span>
+                      <span className={"shrink-0 text-sm font-black " + (pe.doneToday ? "text-accentdark" : "text-brand/25")}>
+                        {pe.doneToday ? "✓" : "○"}
+                      </span>
+                    </button>
+                  );
+                }
+
                 return (
                   <div key={pe.peId} className={"rounded-2xl border p-4 transition " + (pe.doneToday ? "border-accent/40 bg-accent/5" : "border-borderc bg-paper")}>
                     <div className="flex items-start gap-3">

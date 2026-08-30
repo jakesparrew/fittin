@@ -6,13 +6,11 @@ import { isSupabaseConfigured } from "@/lib/supabase/config";
 import MessageThread from "@/components/MessageThread";
 import ProgressPanel from "@/components/progress/ProgressPanel";
 import WorkoutPlayer from "./WorkoutPlayer";
+import VandaagKaart from "./VandaagKaart";
+import { bouwDagen, kiesDagId, schatMinuten } from "@/lib/training-dagen";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn training | Fittin'" };
-
-const asArray = (sj) =>
-  Array.isArray(sj) ? sj : sj && typeof sj === "object" && (sj.reps != null || sj.weight_kg != null) ? [sj] : [];
-const topW = (sj) => asArray(sj).reduce((m, s) => Math.max(m, s?.weight_kg || 0), 0);
 
 const EX_FIELDS = "id, name, slug, muscle, category, primary_muscles, secondary_muscles, equipment, difficulty, instructions, tips, image_url, animation_url, video_url, frames";
 
@@ -52,43 +50,16 @@ export default async function Training() {
   const weekAgo = new Date(Date.now() - 7 * 86400000);
   const weekDays = new Set((logs || []).filter((l) => new Date(l.created_at) >= weekAgo).map((l) => l.logged_on));
 
-  // Index logs per program-exercise for done-today / last-session / PR.
-  const byPe = {};
-  for (const l of logs || []) (byPe[l.program_exercise_id] ||= []).push(l);
+  // Dagen bouwen doet lib/training-dagen.js, zodat het sessiescherm gegarandeerd dezelfde dagen,
+  // dezelfde volgorde en dezelfde "vandaag" ziet als deze pagina.
+  const days = bouwDagen(program, logs, today);
+  const vandaagDag = days.find((d) => d.id === kiesDagId(days, logs, today)) || days[0] || null;
 
-  const rawDays = program ? [...(program.program_days || [])].sort((a, b) => a.day_no - b.day_no) : [];
-  const days = rawDays.map((d) => ({
-    id: d.id,
-    name: d.name,
-    day_no: d.day_no,
-    exercises: [...(d.program_exercises || [])]
-      .sort((a, b) => (a.position || 0) - (b.position || 0))
-      .map((pe) => {
-        const peLogs = byPe[pe.id] || [];
-        const doneToday = peLogs.some((l) => l.logged_on === today);
-        // Prefer the most recent prior session that actually logged sets (not a bare done-toggle).
-        const lastLog = peLogs.find((l) => l.logged_on !== today && asArray(l.sets_json).length) || peLogs.find((l) => l.logged_on !== today);
-        const pr = peLogs.reduce((m, l) => Math.max(m, topW(l.sets_json)), 0);
-        return {
-          peId: pe.id,
-          sets: pe.sets,
-          reps: pe.reps,
-          rest_sec: pe.rest_sec,
-          notes: pe.notes,
-          tempo: pe.tempo,
-          targetWeight: pe.target_weight_kg,
-          rpe: pe.rpe,
-          supersetGroup: pe.superset_group,
-          exercise: pe.exercises,
-          doneToday,
-          lastSets: lastLog ? asArray(lastLog.sets_json) : [],
-          pr,
-        };
-      }),
-  }));
-
-  const totalEx = days.reduce((a, d) => a + d.exercises.length, 0);
-  const doneToday = days.reduce((a, d) => a + d.exercises.filter((pe) => pe.doneToday).length, 0);
+  // De teller telt de dag van vandaag, niet alle dagen samen. Wie zijn volledige trainingsdag
+  // afwerkte kreeg hiervoor "6/24 · 25%" te zien — feitelijk juist over het hele programma, maar
+  // het las als "je bent voor driekwart niet klaar" op het moment dat je net klaar bént.
+  const totalEx = vandaagDag ? vandaagDag.exercises.length : 0;
+  const doneToday = vandaagDag ? vandaagDag.exercises.filter((pe) => pe.doneToday).length : 0;
   const pct = totalEx ? Math.round((doneToday / totalEx) * 100) : 0;
   const coachName = program?.coach?.full_name || coachLink?.coach?.full_name;
 
@@ -102,6 +73,11 @@ export default async function Training() {
           <Link href="/plannen" className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-accent">Mijn plannen →</Link>
         </div>
         {coachName && <p className="mt-2 text-sm text-brand/60">Samengesteld door {coachName}</p>}
+
+        {/* Bovenaan, vóór chat en grafieken: wat doe ik nu. Alles daaronder is naslag. */}
+        {vandaagDag && (
+          <VandaagKaart dag={vandaagDag} dagen={days} minuten={schatMinuten(vandaagDag.exercises)} klaar={doneToday} />
+        )}
 
         {myCoachId && (
           <section id="berichten" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-white p-6">
@@ -151,22 +127,26 @@ export default async function Training() {
           </div>
         ) : (
           <>
-            <div className="mt-8 rounded-3xl bg-brand p-6 text-white">
-              <div className="flex flex-wrap items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-lav">Vandaag</p>
-                  <p className="mt-1 text-2xl font-black">{doneToday}/{totalEx} oefeningen</p>
-                </div>
-                <p className="text-sm text-lav">{weekDays.size} actieve {weekDays.size === 1 ? "dag" : "dagen"} deze week</p>
-              </div>
-              <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-white/15">
-                <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
-              </div>
-            </div>
+            {/* Hier stond een tweede donkere kaart met exact dezelfde teller als de startkaart
+                hierboven. Wat ze wél als enige toonde — hoeveel dagen je deze week actief was —
+                blijft, maar dan als lichte regel in plaats van een blok dat om aandacht vraagt. */}
+            <p className="mt-8 text-sm font-semibold text-ink-soft">
+              {weekDays.size} actieve {weekDays.size === 1 ? "dag" : "dagen"} deze week
+              {pct > 0 && pct < 100 ? ` · vandaag ${pct}% klaar` : ""}
+            </p>
 
-            <div className="mt-6">
-              <WorkoutPlayer days={days} />
-            </div>
+            {/* Het volledige schema blijft bereikbaar als naslag, maar dichtgeklapt: wie gewoon wil
+                trainen gebruikt de knop bovenaan. */}
+            <details className="group mt-4">
+              <summary className="cursor-pointer list-none rounded-2xl border border-borderc bg-white px-5 py-4 font-bold text-brand transition hover:border-lav">
+                <span className="float-right text-ink-soft transition group-open:rotate-180">▾</span>
+                Volledig schema bekijken
+                <span className="ml-2 font-normal text-ink-soft">({days.length} {days.length === 1 ? "dag" : "dagen"})</span>
+              </summary>
+              <div className="mt-4">
+                <WorkoutPlayer days={days} />
+              </div>
+            </details>
           </>
         )}
       </div>

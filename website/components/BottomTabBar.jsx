@@ -34,6 +34,10 @@ export default function BottomTabBar() {
   const role = me ? (me.loggedIn ? me.role || "lid" : null) : undefined; // undefined=loading, null=gast
   const unread = me?.unread || 0;
 
+  // Tijdens een trainingssessie verdwijnt de balk. Dat scherm heeft een eigen ✕ met bevestiging;
+  // een tabbalk eronder nodigt uit om er middenin weg te tikken, en dekt bovendien de rusttimer af.
+  if (pathname.startsWith("/training/sessie")) return null;
+
   const tabs = !role ? TABS.guest : TABS[role] || TABS.lid;
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
 

@@ -43,6 +43,9 @@ export async function logExercise(formData) {
   });
   if (error) return { error: error.message };
   revalidatePath("/training");
+  // Het sessiescherm is een eigen route; zonder deze regel bleef het na het loggen de oude
+  // stand tonen (voortgangsbalk, teller, afsluitkaart) tot je handmatig verversde.
+  revalidatePath("/training/sessie");
   return { ok: true, pr: isPr };
 }
 
@@ -68,4 +71,7 @@ export async function toggleExerciseDone(formData) {
   if (existing) await supabase.from("workout_logs").delete().eq("id", existing.id);
   else await supabase.from("workout_logs").insert({ gym_id: profile.gym_id, user_id: user.id, program_exercise_id: peId, sets_json: { done: true } });
   revalidatePath("/training");
+  // Het sessiescherm is een eigen route; zonder deze regel bleef het na het loggen de oude
+  // stand tonen (voortgangsbalk, teller, afsluitkaart) tot je handmatig verversde.
+  revalidatePath("/training/sessie");
 }
