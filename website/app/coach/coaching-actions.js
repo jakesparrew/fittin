@@ -124,9 +124,18 @@ export async function coachAddProgramExercise(formData) {
   const dayId = formData.get("dayId");
   const { data: day } = await supabase.from("program_days").select("id").eq("id", dayId).eq("program_id", programId).maybeSingle();
   if (!day) return { error: "Ongeldige dag." };
+  // Achteraan de dag zetten. Zonder dit bleef `position` op de default 0 staan voor élke rij die
+  // een coach toevoegt, terwijl /training wél op position sorteert (training/page.jsx:65). Sorteren
+  // op een kolom die overal 0 is, is geen sorteren: de databank geeft dan de heap-volgorde terug en
+  // die verschuift na elke wijziging. Gevolg: de coach zet de squat vooraan en het lid opent zijn
+  // schema met bicep curls.
+  const { data: laatste } = await supabase
+    .from("program_exercises").select("position").eq("program_day_id", dayId)
+    .order("position", { ascending: false }).limit(1).maybeSingle();
   await supabase.from("program_exercises").insert({
     program_day_id: dayId,
     exercise_id: formData.get("exerciseId"),
+    position: (laatste?.position ?? 0) + 1,
     sets: num(formData.get("sets")),
     reps: num(formData.get("reps")),
     rest_sec: num(formData.get("rest_sec")),
@@ -203,9 +212,24 @@ export async function coachAssignProgram(formData) {
   for (const d of days || []) {
     const { data: nd } = await supabase.from("program_days").insert({ program_id: copy.id, day_no: d.day_no, name: d.name }).select("id").single();
     if (!nd) continue;
-    const { data: exs } = await supabase.from("program_exercises").select("exercise_id, sets, reps, rest_sec").eq("program_day_id", d.id);
+    // Alle voorschriftkolommen mee, niet enkel sets/reps/rust. Hiervoor stond hier
+    // .select("exercise_id, sets, reps, rest_sec") — dus notitie, tempo, streefgewicht, RPE,
+    // superset én volgorde verdwenen precies op de tap "Toewijzen", terwijl de coach ze op zijn
+    // sjabloon nog zag staan. Gemeten op 30-08-2026: van de 86 oefeningen in sjablonen droegen er
+    // 55 een voorschrift; van de 68 in toegewezen programma's nul. Een wildvreemd lid dat een
+    // publiek schema overnam (adoptProgram, loop-actions.js:190) kreeg een getrouwere kopie dan
+    // de betalende client van de coach.
+    const { data: exs } = await supabase
+      .from("program_exercises")
+      .select("exercise_id, sets, reps, rest_sec, position, section, rep_text, tempo, notes, rpe, target_weight_kg, superset_group, superset_order")
+      .eq("program_day_id", d.id)
+      .order("position")
+      .order("id");
     if ((exs || []).length) {
-      await supabase.from("program_exercises").insert(exs.map((e) => ({ program_day_id: nd.id, exercise_id: e.exercise_id, sets: e.sets, reps: e.reps, rest_sec: e.rest_sec })));
+      // De hele rij overnemen, alleen de dag wisselt. target_weight_kg gaat hier WEL mee — anders
+      // dan bij adoptProgram: daar neemt een vreemde het gewicht van een ander over, hier schrijft
+      // de coach het streefgewicht bewust voor aan déze client.
+      await supabase.from("program_exercises").insert(exs.map((e) => ({ ...e, program_day_id: nd.id })));
     }
   }
 

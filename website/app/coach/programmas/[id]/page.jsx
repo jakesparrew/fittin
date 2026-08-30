@@ -42,7 +42,17 @@ export default async function CoachProgramBuilder({ params }) {
     return <div className="px-4 py-6 md:px-8 md:py-8">Programma niet gevonden. <Link href="/coach/programmas" className="text-accentdark">Terug</Link></div>;
   }
   const clients = (links || []).map((l) => l.client).filter(Boolean);
-  const days = [...(program.program_days || [])].sort((a, b) => a.day_no - b.day_no);
+  // Ook de oefeningen BINNEN een dag sorteren. Dat gebeurde hier niet, terwijl /training wél op
+  // position sorteert — dus coach en lid konden dezelfde dag in een andere volgorde zien. `id` als
+  // tweede sleutel houdt de bestaande rijen (die allemaal nog op position 0 staan) stabiel op hun
+  // plek zolang de backfill-migratie niet is toegepast.
+  const days = [...(program.program_days || [])]
+    .sort((a, b) => a.day_no - b.day_no)
+    .map((d) => ({
+      ...d,
+      program_exercises: [...(d.program_exercises || [])]
+        .sort((a, b) => (a.position || 0) - (b.position || 0) || String(a.id).localeCompare(String(b.id))),
+    }));
 
   // Member progress when assigned (read via service role — the coach can't read a client's logs under RLS).
   const lastByPe = {};
