@@ -23,6 +23,9 @@ export async function createChallenge(formData) {
     starts_on: formData.get("starts_on") || null,
     ends_on: formData.get("ends_on") || null,
     reward_credits: num(formData.get("reward_credits"), 0),
+    // Plafond op het aantal winnaars (0148). Zonder dit is er geen bovengrens op wat een challenge
+    // kost. Leeg laten kan bewust — dan is er geen limiet — maar de wizard vult altijd iets in.
+    max_winners: num(formData.get("max_winners"), null),
   });
   if (e) return { error: e.message };
   revalidatePath("/beheer/challenges");

@@ -13,6 +13,10 @@ export default function ChallengeWizard() {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
   const [goalType, setGoalType] = useState("sessions");
+  // Plafond op het aantal winnaars. Zonder dit staat er geen bovengrens op wat een challenge kost:
+  // haalt iedereen hem, dan betaal je iedereen. Standaard 15 — ruim boven de 7 leden die ooit tien
+  // sessies haalden, dus het knelt in de praktijk niet, maar de kost is wél begrensd.
+  const [maxWinners, setMaxWinners] = useState(15);
   const [goalCount, setGoalCount] = useState(12);
   const [reward, setReward] = useState(5);
   const [name, setName] = useState("");
@@ -51,6 +55,7 @@ export default function ChallengeWizard() {
         <input type="hidden" name="name" value={name || `${goalCount}× ${goal?.label}`} />
         <input type="hidden" name="starts_on" value={startsOn} />
         <input type="hidden" name="ends_on" value={endsOn} />
+        <input type="hidden" name="max_winners" value={maxWinners} />
 
         {step === 1 && (
           <div className="space-y-3">
@@ -77,6 +82,15 @@ export default function ChallengeWizard() {
                 <button type="button" key={n} onClick={() => setReward(n)} className={"h-12 rounded-2xl border-2 px-5 font-black transition " + (reward === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n} sessie{n > 1 ? "s" : ""}</button>
               ))}
             </div>
+            {/* De rem. Een challenge zonder plafond kan iedereen halen, en dan betaal je iedereen. */}
+            <label className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl bg-paper p-4">
+              <span className="text-sm font-bold text-brand">Hoogstens</span>
+              <input type="number" min="1" value={maxWinners} onChange={(e) => setMaxWinners(Math.max(1, parseInt(e.target.value, 10) || 1))} className="w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+              <span className="text-sm font-bold text-brand">winnaars</span>
+              <span className="w-full text-xs text-ink-soft">
+                Kost je dus hoogstens {maxWinners * reward} sessie{maxWinners * reward === 1 ? "" : "s"} — ongeveer € {(maxWinners * reward * 3.5).toFixed(0)} aan echte kosten. Wie eerst is, is eerst.
+              </span>
+            </label>
           </div>
         )}
 
