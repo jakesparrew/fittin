@@ -50,8 +50,10 @@ export default async function Plannen() {
             <input name="name" placeholder="Naam van je plan" aria-label="Naam van je plan" className="rounded-full border-2 border-borderc bg-white px-4 py-2.5 text-sm text-brand outline-none focus:border-accent" />
             <SubmitButton className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand">+ Nieuw plan</SubmitButton>
           </form>
-          <span className="text-sm text-brand/40">of</span>
-          <Link href="/plannen/genereer" className="rounded-full border-2 border-accent bg-accent/5 px-5 py-2.5 text-sm font-black text-accentdark transition hover:bg-accent/15">🪄 Laat een schema voor je maken</Link>
+          {/* Hier stond "🪄 Laat een schema voor je maken", de knop naar de AI-generator. Die is
+              uitgezet zolang ANTHROPIC_API_KEY niet ingevuld is: de knop leidde gegarandeerd naar
+              een scherm dat "AI-generatie is nog niet geconfigureerd" antwoordt. Een knop die altijd
+              faalt is erger dan geen knop. Terugzetten = deze regels en de route herstellen. */}
         </div>
 
         {/* Member's plans */}

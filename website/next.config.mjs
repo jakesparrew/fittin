@@ -32,6 +32,10 @@ const nextConfig = {
       // hem niet uit de index gooit. Bestemming is de calorieënpagina: de dichtstbijzijnde
       // voedingspagina, en meteen de plek die er vroeger zelf naar linkte.
       { source: "/supplementen", destination: "/calorieen-berekenen", permanent: false },
+      // De AI-schemagenerator staat uit zolang ANTHROPIC_API_KEY niet ingevuld is (30-08-2026).
+      // Ook tijdelijk (307): wie een bladwijzer of oude link heeft, komt op zijn eigen plannen uit
+      // in plaats van op een 404.
+      { source: "/plannen/genereer", destination: "/plannen", permanent: false },
     ];
   },
 };
