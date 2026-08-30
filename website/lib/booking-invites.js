@@ -31,10 +31,21 @@ export async function sendBookingInvites(admin, booking, fromName) {
   }
 
   // Non-members invited by e-mail → signup invite.
+  //
+  // De link droeg hier GEEN ref-code. Dit is het sterkste uitnodigingsmoment in de app — iemand
+  // die effectief meekomt trainen — en precies daar werd het account zonder enige koppeling aan de
+  // uitnodiger aangemaakt. Er ontstond dus nooit een referrals-rij en niemand werd ooit beloond.
+  // Nu gaat de code van de boeker mee, en landt de gast op /uitnodiging in plaats van op een
+  // loginformulier.
   try {
+    const { data: boeker } = await admin.from("profiles").select("referral_code").eq("id", booking.user_id).maybeSingle();
+    const code = String(boeker?.referral_code || "").trim();
+    const signupUrl = code
+      ? `${siteUrl()}/uitnodiging/${encodeURIComponent(code)}`
+      : `${siteUrl()}/login?mode=signup&next=/boeken`;
     const { data: invs } = await admin.from("email_invites").select("email").eq("booking_id", booking.id);
     for (const inv of invs || []) {
-      if (inv.email) await sendEmailInvite({ to: inv.email, fromName: from, serviceName, startsAt: booking.starts_at, endsAt: booking.ends_at, signupUrl: `${siteUrl()}/login?mode=signup&next=/boeken` });
+      if (inv.email) await sendEmailInvite({ to: inv.email, fromName: from, serviceName, startsAt: booking.starts_at, endsAt: booking.ends_at, signupUrl });
     }
   } catch (e) {
     console.error("sendBookingInvites (emails):", e?.message);

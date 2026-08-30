@@ -531,7 +531,9 @@ export default async function CoachDashboard({ searchParams }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <p className="font-bold text-brand">Breng leden aan</p>
-            <p className="mt-0.5 text-xs text-brand/50">Deel je code. Voor elk nieuw lid dat zijn eerste sessie boekt, krijg jij een gratis introsessie om samen te trainen.</p>
+            {/* Stond: "dat zijn eerste sessie boekt". De beloning valt pas ná die sessie (0147) —
+                een boeking kan afgezegd of niet nagekomen worden. De tekst zegt nu wat er gebeurt. */}
+            <p className="mt-0.5 text-xs text-ink-soft">Deel je code. Zodra een nieuw lid via jou zijn eerste sessie gedaan heeft, krijgen jullie allebei een gratis sessie.</p>
           </div>
           <div className="flex gap-4 text-center">
             <div><p className="text-2xl font-black text-brand">{referredCount || 0}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Aangebracht</p></div>

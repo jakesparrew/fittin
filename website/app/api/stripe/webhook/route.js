@@ -137,24 +137,11 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
   }
   // Referred member just paid → reward the referrer (deferred anti-farm reward).
   if (booking.user_id) await admin.rpc("reward_pending_referral", { p_user: booking.user_id });
-  // Coach referral: if the referrer is a coach, give them ONE free intro session (a credit) the
-  // first time their referred member pays — no cash commission.
-  if (booking.user_id) {
-    try {
-      const { data: ref } = await admin.from("referrals").select("referrer_id").eq("referred_id", booking.user_id).maybeSingle();
-      if (ref?.referrer_id) {
-        const { data: rp } = await admin.from("profiles").select("role, gym_id").eq("id", ref.referrer_id).single();
-        if (rp?.role === "coach") {
-          const reason = `aanbreng:${booking.user_id}`; // idempotency marker — one reward per referred member
-          const { data: already } = await admin.from("credits_ledger").select("id").eq("user_id", ref.referrer_id).eq("reason", reason).maybeSingle();
-          if (!already) {
-            await admin.from("credits_ledger").insert({ gym_id: rp.gym_id, user_id: ref.referrer_id, delta: 1, reason, ref_id: booking.id });
-            await admin.from("notifications").insert({ gym_id: rp.gym_id, user_id: ref.referrer_id, type: "system", title: "Gratis introsessie verdiend 🎉", body: "Een aangebracht lid boekte — train samen met jouw gratis sessie.", link: "/coach" });
-          }
-        }
-      }
-    } catch {}
-  }
+  // Hier stond een APART coachblok dat de aanbrengende coach +1 tegoed gaf met reden
+  // 'aanbreng:{uuid}'. Sinds migratie 0147 beloont reward_pending_referral hierboven iederéén —
+  // lid én coach — via dezelfde weg. Dit blok laten staan zou een coach dus dubbel uitbetalen.
+  // Het had bovendien hetzelfde grondprobleem als de rest: het vuurde alleen bij een Stripe-
+  // betaling, terwijl de eerste sessies van een aangebracht lid gratis zijn.
   // Honest nudge (Batch 2.3): count paid single ("los") sessions in the last 30 days so the
   // confirmation can show what a card/abo would have cost. Only for los — abo/credit are irrelevant.
   let nudgeCount = 0;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { after } from "next/server";
 import { runAllActivations } from "@/lib/activation";
-import { sendDueReminders, sendCreditExpiryWarnings, sendFirstSessionFollowups, sendGuestFollowups, sendAboSuggestions, sendCreditsEmptyWarnings, startComebackSeries } from "@/lib/reminders";
+import { sendDueReminders, sendCreditExpiryWarnings, sendFirstSessionFollowups, sendGuestFollowups, sendAboSuggestions, sendCreditsEmptyWarnings, startComebackSeries, rewardDueReferrals } from "@/lib/reminders";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkLockBatteries } from "@/lib/lock-battery";
 import { purgeExpiredData } from "@/lib/retention";
@@ -39,6 +39,10 @@ export async function GET(req) {
   let creditsEmpty = 0, comebacks = 0;
   try { creditsEmpty = await sendCreditsEmptyWarnings(); } catch (e) { console.error("cron credits-empty failed:", e?.message); }
   try { comebacks = await startComebackSeries(); } catch (e) { console.error("cron comeback series failed:", e?.message); }
+  // Aanbrengbeloningen die de webhook nooit kon uitbetalen (gratis of met tegoed geboekte eerste
+  // sessies komen niet langs Stripe). Draait ná de sessie, dus hoogstens een dag vertraging.
+  let aanbrengen = 0;
+  try { aanbrengen = await rewardDueReferrals(); } catch (e) { console.error("cron aanbreng-beloningen failed:", e?.message); }
   // Batterij van het deurslot. Dagelijks volstaat: een batterij zakt over dagen, niet over minuten,
   // en dit meelaten liften in de 5-minutencron zou 288 Nuki-calls per dag kosten voor niets.
   let battery = null;
@@ -51,7 +55,7 @@ export async function GET(req) {
   const results = await runAllActivations();
   const sent = results.reduce((a, r) => a + (r.sent || 0), 0);
   // Health heartbeat (Batch 6.5).
-  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, creditsEmpty, comebacks, battery, retentie } }); } catch {}
+  try { await createAdminClient().from("cron_runs").insert({ job: "activation", ok: true, detail: { ran: results.length, sent, reminders, firstFollowups, guestFollowups, aboSuggestions, creditsEmpty, comebacks, aanbrengen, battery, retentie } }); } catch {}
   // Safety net: resume any newsletter queue that stalled (chain died) by kicking the worker.
   after(async () => {
     try { await fetch(`${SITE}/api/queue/process`, { cache: "no-store", headers: { Authorization: `Bearer ${secret}` } }); } catch {}

@@ -10,14 +10,19 @@ export default function ShareReferral({ code, compact = false }) {
   if (!code) return null;
 
   const site = typeof window !== "undefined" ? window.location.origin : "https://fittin.be";
-  const url = `${site}/login?mode=signup&ref=${encodeURIComponent(code)}`;
-  const msg = `Kom trainen bij Fittin' 💪 Je eerste sessie is gratis. Maak je account via mijn link: ${url}`;
+  // Wees hier /uitnodiging/{code} en niet meer rechtstreeks naar /login?mode=signup: die pagina
+  // heet "Inloggen | Fittin'", en dát was wat WhatsApp als voorvertoning toonde. De nieuwe pagina
+  // heeft een eigen deelkaartje en stuurt daarna door naar exact dezelfde aanmeldweg.
+  const url = `${site}/uitnodiging/${encodeURIComponent(code)}`;
+  // De oude tekst verkocht "een gratis sessie". Het echte argument is sterker en klopt beter met
+  // het verdienmodel: je boekt de hele zaal, en met z'n vieren betaal je hetzelfde.
+  const msg = `Ik train bij Fittin' in Gent — je boekt er de héle zaal privé voor jezelf, geen wachtrij aan de toestellen. € 15 per uur, met tot 4 man dezelfde prijs. Via mijn link is jouw eerste uur gratis: ${url}`;
 
   const copy = async () => {
     try {
       // Prefer the native share sheet on mobile; fall back to clipboard.
       if (navigator.share) {
-        await navigator.share({ title: "Train mee bij Fittin'", text: "Je eerste sessie is gratis 💪", url });
+        await navigator.share({ title: "Train mee bij Fittin'", text: "Je boekt de héle zaal privé — jouw eerste uur is gratis 💪", url });
       } else {
         await navigator.clipboard.writeText(url);
         setCopied(true);

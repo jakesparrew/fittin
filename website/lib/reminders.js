@@ -476,3 +476,31 @@ export async function sendAboSuggestions() {
   }
   return sent;
 }
+
+// Aanbrengbeloningen uitbetalen die nooit gevuurd hebben.
+//
+// reward_pending_referral werd tot 30-08-2026 alleen aangeroepen vanuit de Stripe-webhook. Maar de
+// eerste sessies van een aangebracht lid zijn per constructie gratis — zijn welkomuur, of het
+// tegoed uit redeem_referral — en gratis boekingen worden inline bevestigd zonder Stripe. De
+// beloning hing dus precies op het pad waar een vers aangebracht lid nooit langskomt, en de teller
+// stond op 0 referrals.
+//
+// due_referrals() (migratie 0147) geeft de leden terug van wie de eerste bevestigde sessie voorbij
+// is en van wie de aanbrenger nog niets kreeg. Bewust ná de sessie en niet bij het boeken: een
+// gratis boeking kan afgezegd of gewoon niet nagekomen worden, en dan zou een wegwerpmailadres een
+// sessie waard zijn. De RPC is idempotent (ze doet alleen iets bij status 'pending'), dus deze
+// veeg en de webhook kunnen elkaar niet dubbel uitbetalen.
+export async function rewardDueReferrals() {
+  const admin = createAdminClient();
+  const { data, error } = await admin.rpc("due_referrals");
+  if (error) { console.error("due_referrals:", error.message); return 0; }
+  let beloond = 0;
+  for (const userId of data || []) {
+    const id = typeof userId === "string" ? userId : userId?.referred_id;
+    if (!id) continue;
+    const { error: e } = await admin.rpc("reward_pending_referral", { p_user: id });
+    if (e) { console.error("reward_pending_referral", id, e.message); continue; }
+    beloond += 1;
+  }
+  return beloond;
+}
