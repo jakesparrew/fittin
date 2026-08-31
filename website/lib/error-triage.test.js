@@ -41,6 +41,10 @@ describe("classifyClientError", () => {
     expect(classifyClientError("Failed to fetch")).toBe("netwerk");         // Chrome
     expect(classifyClientError("The network connection was lost.")).toBe("netwerk");
     expect(classifyClientError("Error in input stream")).toBe("netwerk");   // Firefox, stream brak af
+    // Een Event als afwijzingsreden komt van een mislukte resource, nooit uit onze eigen code.
+    expect(classifyClientError("unhandledrejection: [object Event]")).toBe("netwerk");
+    // Maar een échte fout die toevallig via een afwijzing binnenkomt, blijft wél een app-fout.
+    expect(classifyClientError("unhandledrejection: x is not a function")).toBe("app");
   });
 
   it("herkent DOM-gerommel van buitenaf", () => {

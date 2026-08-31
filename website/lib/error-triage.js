@@ -15,6 +15,11 @@ const NETWERK = [
   // verbinding brak terwijl de pagina binnenstroomde. Chrome en WebKit zeggen hierboven hetzelfde
   // met andere woorden. Gezien op 29-08-2026: 2× /account, één bezoeker, geen stack, daarna stil.
   "error in input stream",
+  // Een promise die afgewezen wordt mét een Event als reden. Dat kan per constructie geen fout uit
+  // onze eigen code zijn — een Event komt van een mislukte resource (afbeelding, script) of een
+  // afgebroken verzoek. Sinds 31-08-2026 schrijft ErrorLogger die uit als "error op IMG <url>";
+  // de kale vorm hieronder blijft staan voor de rijen van vóór die datum.
+  "unhandledrejection: [object event]",
   "network request failed",
   "the network connection was lost",
   "the request timed out",
