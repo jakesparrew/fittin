@@ -348,3 +348,131 @@ export async function setWorkoutPublic(formData) {
   revalidatePath(`/beheer/programmas/${programId}`);
   return { ok: true, message: "Gepubliceerd als publieke workout ✓", slug };
 }
+
+// ───────────────────────── De nieuwe programmabouwer (mobiel-eerst) ─────────────────────────
+//
+// De oude bouwer stuurde ~900 oefeningen als prop naar een dropdown, deed één serverrit per
+// bewerking en had geen enkele manier om te herordenen. Deze acties dragen de nieuwe opzet:
+// zoeken gebeurt op de server (niets meer meesturen), en een dag wordt in ÉÉN rit opgeslagen
+// in plaats van in zes tot negen losse.
+
+// Serverzoek voor het oefeningblad. Bewust met een limiet: de bouwer toont een blad, geen
+// bibliotheek. De velden zijn wat ExerciseMedia en het detailvenster nodig hebben.
+export async function coachZoekOefeningen(q) {
+  const { supabase, profile, error } = await requireCoach();
+  if (error) return { rows: [] };
+  const zoek = String(q || "").trim().slice(0, 60);
+  let query = supabase
+    .from("exercises")
+    .select("id, name, category, equipment, difficulty, muscle, primary_muscles, secondary_muscles, instructions, tips, image_url, animation_url, video_url, frames")
+    .eq("gym_id", profile.gym_id)
+    .order("name")
+    .limit(40);
+  if (zoek) query = query.ilike("name", `%${zoek}%`);
+  const { data } = await query;
+  return { rows: data || [] };
+}
+
+// Eén dag in één keer opslaan: naam, alle rijen (bestaand én nieuw, met hun volgorde) en wat
+// verwijderd is. Vervangt de zes-formulieren-per-dag-dans van de oude bouwer.
+export async function coachBewaarDag({ programId, dayId, naam, rijen, verwijderd }) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
+  const { data: day } = await supabase.from("program_days").select("id").eq("id", dayId).eq("program_id", programId).maybeSingle();
+  if (!day) return { error: "Ongeldige dag." };
+
+  // Alles wat van de client komt, hier opnieuw begrenzen — de payload is maar een voorstel.
+  const schoon = (r, i) => ({
+    exercise_id: r.exercise_id,
+    position: i + 1,
+    sets: num(r.sets),
+    // Cijfers gaan in reps, al de rest ("8-12", "30 sec", "AMRAP") in rep_text — de kolom die
+    // sinds 0071 bestaat, door WorkoutFollow al getoond wordt, maar nooit invulbaar was.
+    reps: num(r.reps),
+    rep_text: (r.rep_text || "").toString().trim().slice(0, 40) || null,
+    rest_sec: num(r.rest_sec),
+    notes: (r.notes || "").toString().trim().slice(0, 300) || null,
+    tempo: (r.tempo || "").toString().trim().slice(0, 20) || null,
+    target_weight_kg: flt(r.target_weight_kg),
+    rpe: r.rpe != null && r.rpe !== "" ? Math.max(1, Math.min(10, num(r.rpe, 1))) : null,
+    superset_group: num(r.superset_group),
+    section: (r.section || "").toString().trim().slice(0, 40) || null,
+  });
+
+  if (String(naam || "").trim()) {
+    await supabase.from("program_days").update({ name: String(naam).trim().slice(0, 80) }).eq("id", dayId);
+  }
+
+  // Verwijderen eerst, dan bijwerken/toevoegen — zo kan een verwijderde en heraangemaakte
+  // oefening niet op een unieke botsing lopen. Alles blijft begrensd op déze dag.
+  const weg = (verwijderd || []).filter(Boolean).slice(0, 100);
+  if (weg.length) {
+    const { error: delErr } = await supabase.from("program_exercises").delete().in("id", weg).eq("program_day_id", dayId);
+    // 23503: er hangen workout_logs aan (de kolom heeft geen on delete). Niet stil slikken — de
+    // oude bouwer meldde hier "Verwijderd ✓" terwijl er niets gebeurde.
+    if (delErr) return { error: delErr.code === "23503" ? "Deze oefening heeft al gelogde trainingen van je client en kan niet weg. Pas ze aan in plaats van ze te verwijderen." : delErr.message };
+  }
+
+  for (const [i, r] of (rijen || []).slice(0, 60).entries()) {
+    if (!r.exercise_id) continue;
+    const rij = schoon(r, i);
+    if (r.id) {
+      const { error: e } = await supabase.from("program_exercises").update(rij).eq("id", r.id).eq("program_day_id", dayId);
+      if (e) return { error: e.message };
+    } else {
+      const { error: e } = await supabase.from("program_exercises").insert({ ...rij, program_day_id: dayId });
+      if (e) return { error: e.message };
+    }
+  }
+
+  revalidatePath(`/coach/programmas/${programId}`);
+  return { ok: true };
+}
+
+// Nieuwe dag zonder formulier — de bouwer roept dit aan en ververst daarna zelf.
+export async function coachNieuweDag(programId) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
+  const { data: laatste } = await supabase.from("program_days").select("day_no").eq("program_id", programId).order("day_no", { ascending: false }).limit(1).maybeSingle();
+  const dagNr = (laatste?.day_no || 0) + 1;
+  const { data, error: e } = await supabase.from("program_days").insert({ program_id: programId, day_no: dagNr, name: `Dag ${dagNr}` }).select("id").single();
+  if (e) return { error: e.message };
+  revalidatePath(`/coach/programmas/${programId}`);
+  return { ok: true, dayId: data.id };
+}
+
+export async function coachVerwijderDagNieuw(programId, dayId) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
+  const { error: e } = await supabase.from("program_days").delete().eq("id", dayId).eq("program_id", programId);
+  if (e) return { error: e.code === "23503" ? "Deze dag heeft oefeningen met gelogde trainingen en kan niet weg." : e.message };
+  revalidatePath(`/coach/programmas/${programId}`);
+  return { ok: true };
+}
+
+// Dag dupliceren mét alle rijen — "week 2 is week 1 met iets meer gewicht" is het echte werk
+// van een coach, en tot nu betekende dat alles opnieuw intikken.
+export async function coachDupliceerDag(programId, dayId) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  if (!(await ownProgram(supabase, programId, userId))) return { error: "Geen eigen programma." };
+  const { data: bron } = await supabase.from("program_days").select("id, name, program_id").eq("id", dayId).eq("program_id", programId).maybeSingle();
+  if (!bron) return { error: "Ongeldige dag." };
+  const { data: laatste } = await supabase.from("program_days").select("day_no").eq("program_id", programId).order("day_no", { ascending: false }).limit(1).maybeSingle();
+  const { data: nieuw, error: e1 } = await supabase.from("program_days")
+    .insert({ program_id: programId, day_no: (laatste?.day_no || 0) + 1, name: `${bron.name || "Dag"} (kopie)`.slice(0, 80) })
+    .select("id").single();
+  if (e1) return { error: e1.message };
+  const { data: exs } = await supabase.from("program_exercises")
+    .select("exercise_id, sets, reps, rest_sec, position, section, rep_text, tempo, notes, rpe, target_weight_kg, superset_group, superset_order")
+    .eq("program_day_id", dayId).order("position").order("id");
+  if (exs?.length) {
+    const { error: e2 } = await supabase.from("program_exercises").insert(exs.map((x) => ({ ...x, program_day_id: nieuw.id })));
+    if (e2) return { error: e2.message };
+  }
+  revalidatePath(`/coach/programmas/${programId}`);
+  return { ok: true };
+}

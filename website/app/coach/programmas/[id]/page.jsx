@@ -1,17 +1,8 @@
 import Link from "next/link";
 import { getCoachContext } from "@/lib/coach";
 import { createAdminClient } from "@/lib/supabase/admin";
-import {
-  coachAddProgramDay,
-  coachAddProgramExercise,
-  coachUpdateProgramExercise,
-  coachDeleteProgramExercise,
-  coachAssignProgram,
-  coachDeleteProgram,
-  coachQuickExercise,
-} from "../../coaching-actions";
-import ExercisePicker from "@/components/admin/ExercisePicker";
-import ProgramExerciseEditor from "@/components/workouts/ProgramExerciseEditor";
+import { coachAssignProgram, coachDeleteProgram } from "../../coaching-actions";
+import Bouwer from "@/components/workouts/Bouwer";
 import PublishWorkoutPanel from "@/components/workouts/PublishWorkoutPanel";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ActionForm from "@/components/ui/ActionForm";
@@ -19,21 +10,28 @@ import ConfirmSubmit from "@/components/ui/ConfirmSubmit";
 
 export const dynamic = "force-dynamic";
 
+// De velden die de bouwer nodig heeft om beeld en het detailvenster te tonen. Bewust dezelfde
+// lijst als /training gebruikt — wat de coach ziet, is wat het lid ziet.
+const EX_FIELDS = "id, name, slug, muscle, category, primary_muscles, secondary_muscles, equipment, difficulty, instructions, tips, image_url, animation_url, video_url, frames";
+
+// De programmabouwer. Herbouwd op 31-08-2026: de oude versie stuurde ~900 oefeningen als prop naar
+// een dropdown per dag, deed één serverrit per bewerking en kon niet herordenen. De nieuwe bouwer
+// (components/workouts/Bouwer.jsx) houdt alles lokaal en slaat een dag in één rit op.
+// /beheer/programmas blijft op de oude editor — dat is het laptopscherm van de eigenaar.
 export default async function CoachProgramBuilder({ params }) {
   const { id } = await params;
   const ctx = await getCoachContext();
   if (!ctx) return null;
-  const { supabase, gym, userId } = ctx;
+  const { supabase, userId } = ctx;
 
-  const [{ data: program }, { data: exercises }, { data: links }] = await Promise.all([
+  const [{ data: program }, { data: links }] = await Promise.all([
     supabase
       .from("programs")
       .select(
-        "id, name, coach_id, is_template, member_id, is_public, slug, subtitle, level, est_minutes, focus, category, description, program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(name)))"
+        `id, name, coach_id, is_template, member_id, is_public, slug, subtitle, level, est_minutes, focus, category, description, program_days(id, day_no, name, program_exercises(id, position, sets, reps, rep_text, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, section, exercises(${EX_FIELDS})))`
       )
       .eq("id", id)
       .single(),
-    supabase.from("exercises").select("id, name").eq("gym_id", gym.id).order("name"),
     supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
   ]);
 
@@ -42,10 +40,9 @@ export default async function CoachProgramBuilder({ params }) {
     return <div className="px-4 py-6 md:px-8 md:py-8">Programma niet gevonden. <Link href="/coach/programmas" className="text-accentdark">Terug</Link></div>;
   }
   const clients = (links || []).map((l) => l.client).filter(Boolean);
-  // Ook de oefeningen BINNEN een dag sorteren. Dat gebeurde hier niet, terwijl /training wél op
-  // position sorteert — dus coach en lid konden dezelfde dag in een andere volgorde zien. `id` als
-  // tweede sleutel houdt de bestaande rijen (die allemaal nog op position 0 staan) stabiel op hun
-  // plek zolang de backfill-migratie niet is toegepast.
+
+  // Dagen gesorteerd, oefeningen op position (id als tweede sleutel houdt rijen van vóór de
+  // position-fix stabiel) — exact zoals de ledenkant sorteert.
   const days = [...(program.program_days || [])]
     .sort((a, b) => a.day_no - b.day_no)
     .map((d) => ({
@@ -54,29 +51,22 @@ export default async function CoachProgramBuilder({ params }) {
         .sort((a, b) => (a.position || 0) - (b.position || 0) || String(a.id).localeCompare(String(b.id))),
     }));
 
-  // Member progress when assigned (read via service role — the coach can't read a client's logs under RLS).
-  const lastByPe = {};
+  // Voortgang van de client (alleen bij een toegewezen programma) — via de service-rol, want de
+  // coach kan de logs van zijn client niet lezen onder RLS.
   let weekActive = 0;
   if (program.member_id) {
     const peIds = days.flatMap((d) => (d.program_exercises || []).map((pe) => pe.id));
     if (peIds.length) {
       const { data: mlogs } = await createAdminClient()
         .from("workout_logs")
-        .select("program_exercise_id, logged_on, created_at")
+        .select("logged_on, created_at")
         .eq("user_id", program.member_id)
         .in("program_exercise_id", peIds)
-        .order("created_at", { ascending: false })
+        .gte("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
         .limit(200);
-      const weekAgo = new Date(Date.now() - 7 * 86400000);
-      const wd = new Set();
-      for (const l of mlogs || []) {
-        if (!lastByPe[l.program_exercise_id]) lastByPe[l.program_exercise_id] = l.logged_on;
-        if (new Date(l.created_at) >= weekAgo) wd.add(l.logged_on);
-      }
-      weekActive = wd.size;
+      weekActive = new Set((mlogs || []).map((l) => l.logged_on)).size;
     }
   }
-  const fmtDay = (d) => (d ? new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(d)) : null);
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -107,66 +97,9 @@ export default async function CoachProgramBuilder({ params }) {
         <div className="mt-4"><PublishWorkoutPanel program={program} /></div>
       )}
 
-      {/* Days */}
-      <div className="mt-6 space-y-5">
-        {days.map((day) => {
-          const exs = [...(day.program_exercises || [])];
-          return (
-            <div key={day.id} className="rounded-2xl border border-borderc bg-white p-6">
-              <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
-              <div className="mt-3 space-y-2">
-                {exs.map((pe) => (
-                  <ProgramExerciseEditor
-                    key={pe.id}
-                    pe={pe}
-                    programId={program.id}
-                    updateAction={coachUpdateProgramExercise}
-                    deleteAction={coachDeleteProgramExercise}
-                    showProgress={!!program.member_id}
-                    lastDate={lastByPe[pe.id] ? fmtDay(lastByPe[pe.id]) : null}
-                  />
-                ))}
-                {exs.length === 0 && <p className="text-xs text-brand/40">Nog geen oefeningen op deze dag.</p>}
-              </div>
-
-              <ActionForm action={coachAddProgramExercise} success="Oefening toegevoegd ✓" className="mt-3 rounded-xl border border-dashed border-borderc p-3">
-                <input type="hidden" name="programId" value={program.id} />
-                <input type="hidden" name="dayId" value={day.id} />
-                <div className="flex flex-wrap items-end gap-2">
-                  <ExercisePicker name="exerciseId" options={(exercises || []).map((e) => ({ id: e.id, name: e.name }))} addAction={coachQuickExercise} />
-                  <input name="sets" type="number" placeholder="sets" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                  <input name="reps" type="number" placeholder="reps" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                  <input name="rest_sec" type="number" placeholder="rust(s)" className="w-20 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                  <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Oefening</button>
-                </div>
-                <details className="mt-2">
-                  <summary className="cursor-pointer text-xs font-bold text-brand/50">+ meer (notitie, streefgewicht, tempo, RPE, superset)</summary>
-                  <div className="mt-2 flex flex-wrap items-end gap-2">
-                    <input name="target_weight_kg" placeholder="streef kg" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                    <input name="tempo" placeholder="tempo 3-1-2" className="w-28 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                    <input name="rpe" type="number" min="1" max="10" placeholder="RPE" className="w-16 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                    <input name="superset_group" type="number" min="1" placeholder="superset #" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                    <input name="notes" placeholder="notitie voor de client" className="min-w-[12rem] flex-1 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
-                  </div>
-                </details>
-              </ActionForm>
-            </div>
-          );
-        })}
+      <div className="mt-6">
+        <Bouwer program={{ id: program.id, days }} />
       </div>
-
-      <ActionForm action={coachAddProgramDay} success="Dag toegevoegd ✓" className="mt-5">
-        <input type="hidden" name="programId" value={program.id} />
-        <button className="rounded-full border-2 border-dashed border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-accent">
-          + Dag toevoegen
-        </button>
-      </ActionForm>
-
-      {(!exercises || exercises.length === 0) && (
-        <p className="mt-6 rounded-xl bg-accent/10 p-3 text-sm font-semibold text-accentdark">
-          Tip: gebruik “+ Oefening” om meteen een oefening aan te maken, of blader de volledige bibliotheek op <Link href="/oefeningen" className="underline">Oefeningen</Link>.
-        </p>
-      )}
     </div>
   );
 }

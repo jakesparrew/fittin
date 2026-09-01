@@ -23,7 +23,7 @@ export default async function Training() {
   const [{ data: program }, { data: logs }, { data: coachLink }, { data: feedback }] = await Promise.all([
     supabase
       .from("programs")
-      .select(`id, name, coach:profiles!programs_coach_id_fkey(full_name), program_days(id, day_no, name, program_exercises(id, position, sets, reps, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(${EX_FIELDS})))`)
+      .select(`id, name, coach:profiles!programs_coach_id_fkey(full_name), program_days(id, day_no, name, program_exercises(id, position, sets, reps, rep_text, section, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(${EX_FIELDS})))`)
       .eq("member_id", user.id)
       .order("is_active", { ascending: false })
       .order("created_at", { ascending: false })

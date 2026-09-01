@@ -156,7 +156,7 @@ export default function WorkoutPlayer({ days, focus = false }) {
                       <ExerciseMedia exercise={pe.exercise} thumb className="h-11 w-11 shrink-0" rounded="rounded-lg" />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-bold text-brand">{pe.exercise?.name}</span>
-                        <span className="block text-xs text-ink-soft">{pe.sets ?? "–"} × {pe.reps ?? "–"}</span>
+                        <span className="block text-xs text-ink-soft">{pe.sets ?? "–"} × {pe.repText ?? pe.reps ?? "–"}</span>
                       </span>
                       <span className={"shrink-0 text-sm font-black " + (pe.doneToday ? "text-accentdark" : "text-brand/25")}>
                         {pe.doneToday ? "✓" : "○"}
@@ -179,7 +179,7 @@ export default function WorkoutPlayer({ days, focus = false }) {
                           {pe.doneToday && <span className="text-xs font-bold text-accentdark">✓ klaar</span>}
                         </div>
                         <p className="text-xs text-brand/50">
-                          doel: {pe.sets ?? "–"} × {pe.reps ?? "–"}{pe.targetWeight != null ? ` @ ${pe.targetWeight}kg` : ""}{pe.rest_sec ? ` · ${pe.rest_sec}s rust` : ""}
+                          doel: {pe.sets ?? "–"} × {pe.repText ?? pe.reps ?? "–"}{pe.targetWeight != null ? ` @ ${pe.targetWeight}kg` : ""}{pe.rest_sec ? ` · ${pe.rest_sec}s rust` : ""}
                           {pe.tempo ? ` · tempo ${pe.tempo}` : ""}{pe.rpe != null ? ` · RPE ${pe.rpe}` : ""}
                           {pe.exercise?.primary_muscles?.[0] ? ` · ${pe.exercise.primary_muscles[0]}` : pe.exercise?.muscle ? ` · ${pe.exercise.muscle}` : ""}
                         </p>

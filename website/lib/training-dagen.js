@@ -33,6 +33,9 @@ export function bouwDagen(program, logs, vandaag) {
             peId: pe.id,
             sets: pe.sets,
             reps: pe.reps,
+            // Vrije voorschriften ("8-12", "30 sec", "AMRAP") — sinds de nieuwe bouwer invulbaar.
+            repText: pe.rep_text || null,
+            section: pe.section || null,
             rest_sec: pe.rest_sec,
             notes: pe.notes,
             tempo: pe.tempo,
