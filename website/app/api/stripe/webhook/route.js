@@ -136,7 +136,15 @@ async function markBookingPaid(admin, bookingId, paymentIntent, session) {
     if (!already) { try { await recordRedemption(booking.gym_id, codeId, booking.user_id, booking.id); } catch (e) { console.error("recordRedemption:", e?.message); } }
   }
   // Referred member just paid → reward the referrer (deferred anti-farm reward).
-  if (booking.user_id) await admin.rpc("reward_pending_referral", { p_user: booking.user_id });
+  //
+  // Bewust in een try: deze aanroep stond hier kaal, en markBookingPaid gooit dan mee als de RPC
+  // faalt. Gevolg zou zijn dat de webhook 500 geeft, Stripe opnieuw probeert, en de boeking
+  // intussen niet als betaald gemarkeerd staat. Een aanbrengbeloning mag nooit een betaling kunnen
+  // breken; mislukt ze, dan pikt de dagelijkse sweep (rewardDueReferrals) ze later gewoon op.
+  if (booking.user_id) {
+    try { await admin.rpc("reward_pending_referral", { p_user: booking.user_id }); }
+    catch (e) { console.error("reward_pending_referral (webhook):", e?.message); }
+  }
   // Hier stond een APART coachblok dat de aanbrengende coach +1 tegoed gaf met reden
   // 'aanbreng:{uuid}'. Sinds migratie 0147 beloont reward_pending_referral hierboven iederéén —
   // lid én coach — via dezelfde weg. Dit blok laten staan zou een coach dus dubbel uitbetalen.
@@ -455,7 +463,10 @@ async function handleEvent(event, admin) {
       await grantCredits(admin, prof.id, aboCredits, "abo", false, obj.id, periodEndSec ? new Date(periodEndSec * 1000).toISOString() : null);
       const aboPayId = await recordPayment(admin, { gymId: prof.gym_id, userId: prof.id, amountCents: obj.amount_paid, kind: "abonnement", description: "Maandabonnement", stripeId: obj.id });
       if (obj.hosted_invoice_url) await admin.from("payments").update({ receipt_url: obj.hosted_invoice_url }).eq("stripe_id", obj.id);
-      await admin.rpc("reward_pending_referral", { p_user: prof.id });
+      // Zelfde vangnet als bij de boeking: een aanbrengbeloning mag de abo-afhandeling — tegoed
+      // bijschrijven, betaling registreren — nooit kunnen doen falen.
+      try { await admin.rpc("reward_pending_referral", { p_user: prof.id }); }
+      catch (e) { console.error("reward_pending_referral (abo-webhook):", e?.message); }
       // Welcome the new member on their first invoice; thank them each renewal.
       try {
         const first = reason === "subscription_create";
