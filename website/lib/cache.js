@@ -47,6 +47,14 @@ export const getPublicCoachesCached = unstable_cache(
 );
 
 // Light list for the library grid (no instructions/frames) — keeps the payload small at ~900 rows.
+//
+// `coach_id is null` = alleen de gym-brede bibliotheek, zoals 0029 het bedoelde: coach_id null is
+// de door het beheer opgebouwde lijst, coach_id gezet is de persoonlijke oefening van één coach.
+// Die filter stond hier niet, waardoor de eigen rijen van een coach op de publieke (en door Google
+// geïndexeerde) bibliotheekpagina's terechtkwamen. Vandaag is dat één rij, maar sinds coaches een
+// bewaarde Instagram-clip in één tik tot oefening kunnen maken (0149) zou dat betekenen dat
+// andermans reels op onze publieke pagina's belanden. De programmabouwer en /coach/oefeningen
+// zoeken rechtstreeks en zien hun eigen oefeningen dus onveranderd.
 export const getExercisesCached = unstable_cache(
   async (gymId) => {
     const admin = createAdminClient();
@@ -54,6 +62,7 @@ export const getExercisesCached = unstable_cache(
       .from("exercises")
       .select("id, name, slug, category, muscle, primary_muscles, difficulty, equipment, image_url")
       .eq("gym_id", gymId)
+      .is("coach_id", null)
       .order("name");
     return data || [];
   },
@@ -70,6 +79,7 @@ export const getAlternativesByCategory = unstable_cache(
       .from("exercises")
       .select("id, name, slug, category, muscle, primary_muscles, image_url")
       .eq("gym_id", gymId)
+      .is("coach_id", null) // zelfde reden als hierboven: publieke pagina = gym-brede bibliotheek
       .eq("category", category)
       .neq("slug", excludeSlug)
       .order("name")

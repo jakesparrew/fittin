@@ -499,6 +499,7 @@ export default async function AccountPage({ searchParams }) {
           <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Mijn training</Link>
           <Link href="/training#voortgang" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">📈 Voortgang</Link>
           <Link href="/oefeningen" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Oefeningen</Link>
+          <Link href="/bewaard" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">▷ Mijn video&rsquo;s</Link>
           <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Community</Link>
         </div>
 

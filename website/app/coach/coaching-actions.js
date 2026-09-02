@@ -6,7 +6,7 @@ import { slotInstant } from "@/lib/time";
 import { logCoachActivity } from "@/lib/coachlog";
 import { notify, notifyAdmins } from "@/lib/notify";
 import { uploadEventImage, parseFaq } from "@/lib/eventmedia";
-import { exerciseRowFromForm } from "@/lib/exercise-fields";
+import { exerciseRowFromForm, uniqueSlug } from "@/lib/exercise-fields";
 import { viewAsActive } from "@/lib/coach";
 
 const num = (v, d = null) => {
@@ -475,4 +475,52 @@ export async function coachDupliceerDag(programId, dayId) {
   }
   revalidatePath(`/coach/programmas/${programId}`);
   return { ok: true };
+}
+
+// ---- Van bewaarde video naar echte oefening ----
+// De brug tussen de persoonlijke bibliotheek (/bewaard, migratie 0149) en de programmabouwer.
+// Zonder deze stap is een bewaarde reel een leuk plankje en niets meer: program_exercises hangt
+// aan een rij in `exercises`, dus daar moet iets staan voor je hem in een schema kan zetten.
+//
+// Waarom dit een BEWUSTE tik is en niet automatisch gebeurt bij het bewaren: `exercises` is
+// gedeeld met de rest van de gym. Wat iemand voor zichzelf bewaart hoort privé te blijven tot hij
+// beslist er iets van te maken voor zijn clienten.
+export async function coachClipNaarOefening(clipId) {
+  const { supabase, profile, userId, error } = await requireCoach();
+  if (error) return { error };
+
+  // RLS op clips laat enkel eigen rijen door, dus dit haalt nooit de bibliotheek van iemand anders.
+  const { data: clip } = await supabase
+    .from("clips").select("id, url, provider, ref, title, note").eq("id", clipId).maybeSingle();
+  if (!clip) return { error: "Deze video staat niet (meer) in je bibliotheek." };
+
+  // Twee keer dezelfde clip omzetten hoort geen tweede oefening te maken — dan staan er straks
+  // drie "Bulgarian split squat" in de kiezer en weet niemand welke de goede is.
+  const { data: bestaat } = await supabase
+    .from("exercises").select("id, name").eq("coach_id", userId).eq("video_url", clip.url).maybeSingle();
+  if (bestaat) return { ok: true, melding: `Stond er al als “${bestaat.name}” ✓` };
+
+  const naam = String(clip.title || "Video").trim().slice(0, 80);
+  const slug = await uniqueSlug(supabase, profile.gym_id, naam, null);
+  const { error: e } = await supabase.from("exercises").insert({
+    gym_id: profile.gym_id,
+    coach_id: userId,
+    name: naam,
+    slug,
+    video_url: clip.url,
+    // YouTube publiceert per video een blijvend beeldadres; dat mag als poster. Instagram en
+    // TikTok geven alleen ondertekende URL's die verlopen — daar blijft het beeld leeg en toont
+    // ExerciseMedia haar eigen tegel. Beter leeg dan over twee weken gebroken.
+    image_url: clip.provider === "youtube" && clip.ref ? `https://img.youtube.com/vi/${clip.ref}/hqdefault.jpg` : null,
+    // Een rechtstreeks videobestand mogen we wél zelf afspelen (meestal eigen materiaal), dus dat
+    // wordt de demo in de speler. Platformlinks nooit: die horen in hun eigen kader.
+    animation_url: clip.provider === "video" ? clip.url : null,
+    tips: clip.note || null,
+  });
+  if (e) return { error: e.message };
+
+  revalidateTag("exercises");
+  revalidatePath("/coach/oefeningen");
+  revalidatePath("/bewaard");
+  return { ok: true, melding: `“${naam}” staat nu bij je oefeningen ✓` };
 }

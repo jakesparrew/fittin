@@ -14,6 +14,7 @@ const items = [
   // "Events" verwijderd: die pagina is nog een ComingSoon-stub — een dood menu-item wekt een
   // onafgewerkte indruk. Terugzetten zodra coach-events echt bestaan.
   { href: "/coach/programmas", label: "Programma's & oefeningen", icon: "✎" },
+  { href: "/bewaard", label: "Bewaarde video's", icon: "▷" },
   { href: "/coach/beschikbaarheid", label: "Beschikbaarheid", icon: "◷" },
 ];
 

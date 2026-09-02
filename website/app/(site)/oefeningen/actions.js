@@ -12,6 +12,9 @@ export async function searchLibrary(q, category) {
     .from("exercises")
     .select("id, name, slug, category, muscle, primary_muscles, difficulty, equipment, image_url")
     .eq("gym_id", gym.id)
+    // Publieke zoekfunctie = gym-brede bibliotheek. Persoonlijke oefeningen van een coach horen
+    // hier niet (zie de nota bij getExercisesCached in lib/cache.js).
+    .is("coach_id", null)
     .order("name")
     .limit(60);
   if (category && category !== "alle") query = query.eq("category", category);
