@@ -57,16 +57,18 @@ export async function requestIntake(formData) {
   // De coach komt als id binnen, nooit als vrije tekst: de naam halen we zelf op, en alleen bij een
   // publiek coachprofiel. Zo kan niemand een willekeurige naam in de inbox van de eigenaar schrijven.
   let coachName = "";
+  let coach = null;
   if (isUuid(coachId)) {
     const { data: co } = await admin
       .from("profiles")
-      .select("full_name")
+      .select("id, full_name, email, is_test")
       .eq("id", coachId)
       .eq("gym_id", gym.id)
       .eq("role", "coach")
       .eq("coach_public", true)
       .maybeSingle();
     coachName = co?.full_name || "";
+    coach = co || null;
   }
 
   // Twee varianten, bewust: de MAIL krijgt "Kan" als eigen tabelrij bovenaan en mag hem dus niet
@@ -109,6 +111,20 @@ export async function requestIntake(formData) {
       await notify({ gymId: gym.id, userId: a.id, type: "system", title: `Nieuwe PT-intake: ${name}`, body, link: "/beheer/inbox" });
     }
   } catch (e) { console.error("intake notify:", e?.message); }
+
+  // Vroeg een client een specifieke coach aan, dan hoort die coach het RECHTSTREEKS te weten — niet
+  // alleen de beheerder. Tot nu ging elke intake enkel naar Fittin, zodat een coach zijn eigen lead
+  // pas hoorde als de eigenaar het doorgaf. De coach krijgt nu een in-app melding én dezelfde mail
+  // die de eigenaar krijgt (reply-to = de prospect), zodat hij meteen kan antwoorden. De prospect
+  // koos deze coach zelf uit, dus zijn contactgegevens delen met net die coach is verwacht.
+  if (coach?.id && !coach.is_test) {
+    try {
+      await notify({ gymId: gym.id, userId: coach.id, type: "system", title: `Nieuwe intake-aanvraag voor jou: ${name}`, body: [beschikbaar, goal].filter(Boolean).join(" · ").slice(0, 140) || email, link: "/coach" });
+    } catch (e) { console.error("intake coach notify:", e?.message); }
+    if (coach.email) {
+      try { await sendIntakeNotice({ to: coach.email, prospectName: name, prospectEmail: email, phone, kan, beschikbaar, goal: goalBlock }); } catch (e) { console.error("intake coach notice:", e?.message); }
+    }
+  }
   // `beschikbaar` gaat apart mee omdat alleen díé string in het onderwerp mag: ze bestaat
   // uitsluitend uit constanten uit options.js. `kan` bevat ook de vrije nalijn en blijft in de body.
   try { await sendIntakeNotice({ to: FORWARD_TO, prospectName: name, prospectEmail: email, phone, kan, beschikbaar, goal: goalBlock }); } catch (e) { console.error("intake notice:", e?.message); }
