@@ -29,6 +29,7 @@ import PrivacyControls from "@/components/account/PrivacyControls";
 import { hasConsent } from "@/lib/legal";
 import { euro } from "@/lib/format";
 import TrackBookingCompleted from "./TrackBookingCompleted";
+import TrackSignup from "@/components/TrackSignup";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -503,6 +504,7 @@ export default async function AccountPage({ searchParams }) {
           <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Community</Link>
         </div>
 
+        {sp.nieuw === "1" && <TrackSignup />}
         {sp.betaald === "1" && (
           <div className="mt-6 rounded-2xl bg-accent/15 p-4">
             {/* Betaalde boekingen keren via Stripe hier terug; zonder dit event telt de trechter

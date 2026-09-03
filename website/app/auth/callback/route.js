@@ -30,6 +30,11 @@ export async function GET(request) {
         // Just-created account (e.g. first Google sign-in) → kick off any welcome drip.
         if (prof?.created_at && Date.now() - new Date(prof.created_at).getTime() < 60000) {
           await enrollUserInDrips(user.id);
+          // Markeer de bestemming zodat de browser signup_completed kan afvuren. Meten moet daar
+          // gebeuren: /api/pv leidt de bezoeker-hash af uit IP + user-agent, en dat is hier nog
+          // exact dezelfde bezoeker als degene die op de advertentie klikte. Zonder dit telde de
+          // hele Google-route niet mee (6 events in 90 dagen tegenover 18 leden per maand).
+          dest += (dest.includes("?") ? "&" : "?") + "nieuw=1";
         }
         // Day-0 branded welcome for members who confirmed their own signup (email or Google). Admin-
         // created accounts get sendWelcomeNewAccount instead and are pre-marked, so they skip this.
