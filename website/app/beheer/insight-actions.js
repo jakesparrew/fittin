@@ -78,8 +78,19 @@ export async function sendInsightPreset(formData) {
   const mail = preset.bouw({ name: lid.full_name, ...extra, eindDatum: formData.get("eindDatum") || null });
 
   // Dedupe: zelfde soort naar zelfde lid max. 1× per 30 dagen.
+  //
+  // Hier stond `.eq("status", "sent")`, en dat maakte de hele rem stuk. De rij wordt wél als
+  // "sent" weggeschreven, maar de Resend-webhook zet hem seconden later op "delivered" — en dan
+  // vindt deze zoekopdracht niets meer. Nagemeten op productie: 743 rijen "delivered", 5
+  // "bounced", 2 "failed", en NUL "sent". De 30-dagenregel heeft dus nooit één keer gewerkt.
+  // Gevolg in het echt: Arne kreeg dezelfde overtuigingsmail op 29/08, 30/08 én 02/09.
+  //
+  // Nu op de vraag die we echt bedoelen: is deze mail al eens vertrokken? Alles behalve een
+  // mislukte verzending telt. Bounced blijft buiten de rem — dan is het adres stuk en heeft
+  // blokkeren geen zin zodra dat rechtgezet is.
   const { data: eerder } = await admin.from("email_log")
-    .select("created_at").eq("to_user_id", memberId).eq("kind", mail.kind).eq("status", "sent")
+    .select("created_at").eq("to_user_id", memberId).eq("kind", mail.kind)
+    .not("status", "in", "(failed,bounced)")
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
   if (eerder && !magOpnieuw(eerder.created_at)) {
     const dag = new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(eerder.created_at));
