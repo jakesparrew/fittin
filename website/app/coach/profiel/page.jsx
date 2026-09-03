@@ -3,6 +3,7 @@ import { getCoachContext } from "@/lib/coach";
 import { saveCoachProfile } from "../actions";
 import ActionForm from "@/components/ui/ActionForm";
 import PhotoUpload from "@/components/coach/PhotoUpload";
+import SpecialtyPicker from "@/components/coach/SpecialtyPicker";
 
 export const dynamic = "force-dynamic";
 const eur = (c) => (c != null ? (c / 100).toFixed(2).replace(".", ",") : "");
@@ -37,7 +38,10 @@ export default async function CoachProfiel() {
           Toon mijn profiel publiek op fittin.be/coaches
         </label>
         <Field name="full_name" label="Naam" defaultValue={me?.full_name} placeholder="Voornaam Naam" />
-        <Field name="specialty" label="Specialiteit" defaultValue={me?.coach_specialty} placeholder="bv. Krachttraining · afvallen · revalidatie" />
+        <div>
+          <label className="mb-1.5 block text-sm font-bold text-brand">Specialiteit</label>
+          <SpecialtyPicker name="specialty" defaultValue={me?.coach_specialty || ""} />
+        </div>
         <div>
           <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Personal-training tarieven</span>
           <div className="grid gap-3 sm:grid-cols-3">

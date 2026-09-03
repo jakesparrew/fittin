@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SpecialtyTags from "@/components/coach/SpecialtyTags";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -51,7 +52,7 @@ export default async function CoachesPage() {
               </div>
               <div className="p-5">
                 <p className="text-lg font-black text-brand">{c.full_name || "Coach"}</p>
-                {c.coach_specialty && <p className="mt-0.5 text-sm font-semibold text-accentdark">{c.coach_specialty}</p>}
+                <SpecialtyTags value={c.coach_specialty} className="mt-1.5" />
                 {c.coach_bio && <p className="mt-2 line-clamp-2 text-sm text-brand/60">{c.coach_bio}</p>}
                 <span className="mt-3 inline-block text-sm font-bold text-brand/60 transition group-hover:text-brand">Bekijk profiel →</span>
               </div>

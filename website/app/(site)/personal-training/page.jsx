@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SpecialtyTags from "@/components/coach/SpecialtyTags";
 import Image from "next/image";
 import { GymFoto } from "@/components/GymFotos";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
@@ -294,7 +295,7 @@ export default async function PersonalTraining() {
                   </div>
                   <div className="flex flex-1 flex-col p-6">
                     <h3 className="text-xl font-black">{coach.full_name || "Coach"}</h3>
-                    {coach.coach_specialty && <p className="mt-1 text-sm font-semibold text-accentdark">{coach.coach_specialty}</p>}
+                    <SpecialtyTags value={coach.coach_specialty} className="mt-1.5" />
                     <span className="mt-auto pt-4 text-sm font-bold text-brand/60 transition group-hover:text-brand">Bekijk profiel →</span>
                   </div>
                 </Link>

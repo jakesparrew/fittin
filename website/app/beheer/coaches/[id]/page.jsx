@@ -12,6 +12,7 @@ import ActionForm from "@/components/ui/ActionForm";
 import { coachDebts, debtOf, debtReasons } from "@/lib/coach-debt";
 import { COACH_SESSIE_KOLOMMEN, coachStats, statsVan, isCoachSessie } from "@/lib/coach-stats";
 import { fmtHour } from "@/lib/time";
+import SpecialtyPicker from "@/components/coach/SpecialtyPicker";
 
 // Alles wat vroeger per coach uitgeklapt op de lijstpagina stond. Een gewone subroute in plaats van
 // een lade: deelbaar, bookmarkbaar, en de blokken konden grotendeels ongewijzigd verhuizen.
@@ -205,7 +206,10 @@ export default async function CoachDetail({ params }) {
             <input type="hidden" name="coachId" value={c.id} />
             <Lbl t="Naam"><input name="full_name" defaultValue={c.full_name || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
             <Lbl t="Telefoon"><input name="phone" defaultValue={c.phone || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-            <Lbl t="Specialiteit"><input name="specialty" defaultValue={c.coach_specialty || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
+            <label className="block sm:col-span-2">
+              <span className="mb-1.5 block text-[10px] font-bold uppercase tracking-wide text-lav">Specialiteit</span>
+              <SpecialtyPicker name="specialty" defaultValue={c.coach_specialty || ""} />
+            </label>
             <Lbl t="Prijslijst (kort)"><input name="pricelist" defaultValue={c.coach_pricelist || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
             <label className="block sm:col-span-2"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Bio</span><textarea name="bio" rows={3} defaultValue={c.coach_bio || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></label>
             <Lbl t="PT 1-op-1 (€)"><input name="pt1_eur" defaultValue={c.coach_pt_price_cents != null ? c.coach_pt_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>

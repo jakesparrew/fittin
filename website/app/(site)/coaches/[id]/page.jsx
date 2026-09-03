@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SpecialtyTags from "@/components/coach/SpecialtyTags";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -128,7 +129,7 @@ export default async function CoachProfile({ params }) {
 
           <div>
             <h1 className="text-4xl font-black text-brand">{c.full_name}</h1>
-            {c.coach_specialty && <p className="mt-1 text-lg font-bold text-accentdark">{c.coach_specialty}</p>}
+            <SpecialtyTags value={c.coach_specialty} className="mt-2" />
             {c.coach_bio && <p className="mt-5 whitespace-pre-line leading-relaxed text-brand/70">{c.coach_bio}</p>}
 
             {c.coach_pricelist && (
