@@ -7,7 +7,7 @@ import { logCoachActivity } from "@/lib/coachlog";
 import { notify, notifyAdmins } from "@/lib/notify";
 import { uploadEventImage, parseFaq } from "@/lib/eventmedia";
 import { exerciseRowFromForm, uniqueSlug } from "@/lib/exercise-fields";
-import { viewAsActive } from "@/lib/coach";
+import { getViewAsCoach } from "@/lib/coach";
 
 const num = (v, d = null) => {
   const n = parseInt(v, 10);
@@ -35,7 +35,11 @@ async function requireCoach() {
   if (!user) return { error: "Niet ingelogd." };
   const { data: profile } = await supabase.from("profiles").select("id, gym_id, role").eq("id", user.id).single();
   if (!profile || !["coach", "beheerder"].includes(profile.role)) return { error: "Geen rechten." };
-  if (await viewAsActive()) return { error: "Alleen-lezen tijdens ‘bekijk als coach’. Ga terug naar beheerder om te wijzigen." };
+  // Bekijk-als schrijft echt, maar op naam van de coach die bekeken wordt (zie app/coach/actions.js).
+  // Elke schrijfactie hier zet coach_id expliciet, dus dit landt op de juiste rij en niet op die
+  // van de beheerder.
+  const alsCoach = await getViewAsCoach();
+  if (alsCoach) return { supabase, profile: alsCoach, userId: alsCoach.id };
   return { supabase, profile, userId: user.id };
 }
 

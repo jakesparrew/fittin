@@ -11,7 +11,7 @@ import { notify } from "@/lib/notify";
 import { enrollUserInDrips } from "@/lib/newsletter";
 import { logCoachActivity } from "@/lib/coachlog";
 import { notifyInviteesOfChange } from "@/lib/booking-invites";
-import { viewAsActive } from "@/lib/coach";
+import { getViewAsCoach } from "@/lib/coach";
 
 const cents = (v) => Math.round(parseFloat(String(v || "0").replace(",", ".")) * 100) || 0;
 
@@ -26,22 +26,68 @@ const numF = (v, d = 0) => {
   return Number.isFinite(n) ? n : d;
 };
 
+// "Bekijk als coach" was alleen-lezen. Dat maakte het onbruikbaar voor waar het voor bedoeld is:
+// de beheerder die een profiel rechtzet of een schema klaarzet zonder het wachtwoord van de coach
+// te vragen. Sinds nu schrijft hij echt — maar altijd op naam van de coach die hij bekijkt, nooit
+// op zijn eigen rij. Vandaar dat `userId` hier wisselt.
+//
+// Dit kan geen rechten geven: getViewAsCoach() kijkt zelf na of de ECHT ingelogde gebruiker
+// beheerder is en of de coach in diens gym zit. De cookie alleen doet niets.
+//
+// `namens` draagt wie het werkelijk deed, zodat elke wijziging in het logboek van de coach
+// terugvindbaar is.
 async function requireCoach() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return { error: "Niet ingelogd." };
-  const { data: profile } = await supabase.from("profiles").select("id, gym_id, role").eq("id", user.id).single();
+  const { data: profile } = await supabase.from("profiles").select("id, gym_id, role, full_name").eq("id", user.id).single();
   if (!profile || !["coach", "beheerder"].includes(profile.role)) return { error: "Geen rechten." };
-  if (await viewAsActive()) return { error: "Alleen-lezen tijdens ‘bekijk als coach’. Ga terug naar beheerder om te wijzigen." };
+  const alsCoach = await getViewAsCoach();
+  if (alsCoach) {
+    return {
+      supabase,
+      profile: alsCoach,
+      userId: alsCoach.id,
+      email: alsCoach.email,
+      namens: { doorId: user.id, doorNaam: profile.full_name || "de beheerder", coachId: alsCoach.id, gymId: alsCoach.gym_id },
+    };
+  }
   return { supabase, profile, userId: user.id, email: user.email };
+}
+
+// Een handvol acties loopt in de databank op auth.uid(): coach_book_session schrijft het tegoed af
+// van wie de RPC aanroept, set_client_price en coach_request_client kijken naar dezelfde bron. Een
+// beheerder die ze namens een coach uitvoert, zou dus zijn EIGEN sessie boeken en zijn eigen tegoed
+// aanspreken — stil en fout. Zolang die functies op auth.uid() staan, blijven ze geblokkeerd.
+// Aanvaarden van een aangebrachte klant hoort daar ook bij: die aanvaarding ís de afspraak met de
+// coach en mag niemand anders in zijn plaats zetten.
+const NIET_NAMENS = "Dit kan alleen de coach zelf — het loopt via zijn eigen sessie en zijn eigen tegoed. Ga terug naar beheerder.";
+
+// De tweede grens, en die is principieel in plaats van technisch: een beheerder mag alles wijzigen
+// wat van de coach IS, maar nooit in zijn naam tegen een client spreken. Feedback en een
+// betaalverzoek komen bij de client binnen als 'van je coach'; wie dat namens iemand anders
+// verstuurt, laat de client geloven dat de coach het schreef.
+const NAMENS_CLIENT = "Dit gaat als bericht naar de client, op naam van de coach. Dat kan hij alleen zelf doen.";
+
+// Elke wijziging die een beheerder namens een coach doet, komt in het logboek van die coach.
+// Zonder dat spoor is achteraf niet te zien wie iets veranderde, en dat is precies de vraag die
+// opkomt zodra er iets misgaat.
+async function logNamens(namens, wat) {
+  if (!namens) return;
+  await logCoachActivity({
+    gymId: namens.gymId,
+    coachId: namens.coachId,
+    type: "beheer",
+    summary: `${wat} — gedaan door ${namens.doorNaam} via ‘bekijk als coach’`,
+  });
 }
 
 // Coach adds a NEW client by e-mail straight from the booking screen: creates the account (or links
 // an existing one in this gym), assigns them as this coach's client, and sends the welcome/login mail.
 export async function coachCreateClient(formData) {
-  const { profile, userId, error } = await requireCoach();
+  const { profile, userId, error, namens } = await requireCoach();
   if (error) return { error };
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const full_name = String(formData.get("full_name") || "").trim();
@@ -71,6 +117,7 @@ export async function coachCreateClient(formData) {
     try { await enrollUserInDrips(uid); } catch {}
   }
   await admin.from("coach_clients").upsert({ gym_id: profile.gym_id, coach_id: userId, client_id: uid }, { onConflict: "gym_id,coach_id,client_id" });
+  await logNamens(namens, `Client ${email} aangemaakt en verbonden`);
   revalidatePath("/coach");
   revalidatePath("/coach/clienten");
   return { ok: true, clientId: uid };
@@ -95,8 +142,9 @@ const openstaandFout = (cents) =>
   `Je hebt nog € ${(cents / 100).toFixed(2).replace(".", ",")} openstaan bij de gym. Zuiver dat eerst aan — daarna kan je weer boeken.`;
 
 export async function coachBookSession(formData) {
-  const { supabase, userId, profile, error } = await requireCoach();
+  const { supabase, userId, profile, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NIET_NAMENS };
   const clientId = formData.get("clientId") || null; // null = reserveer enkel het slot (client later toevoegen)
   const clientName = String(formData.get("clientName") || "").trim().slice(0, 60); // externe client (niet op platform)
   // Duur in halve uren (0117): 1 · 1,5 · 2 — kost naar rato sessietegoed (1u30 = 1,5 tegoed).
@@ -191,8 +239,9 @@ export async function coachAssignClient(formData) {
 // Plan a recurring series of sessions for one client: same weekday + hour, weekly for N weeks.
 // Stops early on insufficient credit; skips weeks where the slot is already taken.
 export async function coachBulkBook(formData) {
-  const { supabase, profile, userId, error } = await requireCoach();
+  const { supabase, profile, userId, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NIET_NAMENS };
   const clientId = formData.get("clientId") || null; // null = reserveer enkel de slots (client optioneel)
   const bulkClientName = String(formData.get("clientName") || "").trim().slice(0, 60); // externe client (niet op platform)
   const serviceId = formData.get("serviceId");
@@ -332,8 +381,9 @@ export async function cancelCoachSeries(formData) {
 
 // Coach moves one of their sessions to a free slot (up to 6h before; the RPC re-checks hours/overlap/blocks).
 export async function coachRescheduleBooking(formData) {
-  const { supabase, userId, error } = await requireCoach();
+  const { supabase, userId, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NIET_NAMENS };
   const bookingId = formData.get("bookingId");
   const { error: e } = await supabase.rpc("reschedule_booking", {
     p_booking: bookingId, p_date: formData.get("date"), p_hour: numF(formData.get("hour")),
@@ -388,7 +438,7 @@ export async function coachInviteByEmail(formData) {
 
 // Upload a real profile photo to Supabase Storage and save the public URL.
 export async function uploadCoachPhoto(formData) {
-  const { userId, error } = await requireCoach();
+  const { userId, error, namens } = await requireCoach();
   if (error) return { error };
   const file = formData.get("photo");
   if (!file || typeof file === "string" || !file.size) return { error: "Kies een afbeelding." };
@@ -403,6 +453,7 @@ export async function uploadCoachPhoto(formData) {
   if (upErr) return { error: upErr.message };
   const { data: pub } = admin.storage.from("coach-photos").getPublicUrl(path);
   await admin.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", userId);
+  await logNamens(namens, "Profielfoto vervangen");
   revalidateTag("coaches"); // keep the cached public coach list/photo in sync
   revalidatePath("/coach/profiel");
   revalidatePath("/coaches");
@@ -411,7 +462,7 @@ export async function uploadCoachPhoto(formData) {
 
 // Save the coach's public profile (shown on the site at /coaches).
 export async function saveCoachProfile(formData) {
-  const { userId, error } = await requireCoach();
+  const { userId, error, namens } = await requireCoach();
   if (error) return { error };
   // coach_* columns aren't writable by 'authenticated' (0015 grants) → write via service role
   // after the requireCoach identity check, scoped to the caller's own row.
@@ -439,6 +490,7 @@ export async function saveCoachProfile(formData) {
     })
     .eq("id", userId);
   if (e) return { error: e.message };
+  await logNamens(namens, "Profiel gewijzigd");
   revalidateTag("coaches");
   revalidatePath("/coach/profiel");
   revalidatePath("/coaches");
@@ -447,8 +499,9 @@ export async function saveCoachProfile(formData) {
 
 // Set a coach's price for a specific client (overrides the default rate).
 export async function setClientPrice(formData) {
-  const { supabase, error } = await requireCoach();
+  const { supabase, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NIET_NAMENS };
   const clientId = formData.get("clientId");
   const price = cents(formData.get("price_eur"));
   if (price < 1) return { error: "Geef een geldig tarief (€)." };
@@ -461,8 +514,9 @@ export async function setClientPrice(formData) {
 
 // Coach sends a payment request to a client → the client pays via Stripe from their account.
 export async function sendCoachPaymentRequest(formData) {
-  const { supabase, profile, userId, error } = await requireCoach();
+  const { supabase, profile, userId, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NAMENS_CLIENT };
   const clientId = formData.get("clientId");
   const amount = cents(formData.get("amount_eur"));
   const sessions = Math.max(0, num(formData.get("sessions"), 0)); // >0 → top up coachee credit on payment
@@ -516,8 +570,9 @@ export async function coachSaveClientNote(formData) {
 // W3 — coach gives feedback to a client on their training. The client sees it under /training and
 // gets a bell notification. (Private note = for the coach; feedback = shown to the client.)
 export async function coachGiveFeedback(formData) {
-  const { supabase, profile, userId, error } = await requireCoach();
+  const { supabase, profile, userId, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NAMENS_CLIENT };
   const clientId = formData.get("clientId");
   const body = String(formData.get("body") || "").trim();
   if (!clientId || !body) return { error: "Schrijf een bericht." };
@@ -538,8 +593,9 @@ export async function coachGiveFeedback(formData) {
 // Coach invites a member to connect. The member gets a notification to accept. Until accepted the
 // client is "pending" and not bookable. (If the member already requested this coach, this accepts it.)
 export async function coachRequestClient(formData) {
-  const { supabase, profile, userId, error } = await requireCoach();
+  const { supabase, profile, userId, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NIET_NAMENS };
   const clientId = formData.get("clientId");
   if (!clientId) return { error: "Kies een lid." };
   const { error: e } = await supabase.rpc("coach_request_client", { p_client: clientId });
@@ -593,8 +649,9 @@ export async function removeCoachLink(formData) {
 // wordt op dat moment bevroren. Weigeren kan altijd en kost niets — de aanvraag gaat terug naar
 // de beheerder.
 export async function beantwoordDoorgave(formData) {
-  const { supabase, userId, error } = await requireCoach();
+  const { supabase, userId, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NIET_NAMENS };
   const id = String(formData.get("referralId") || "");
   const aanvaard = formData.get("accept") === "1";
   if (!id) return { error: "Geen doorgave." };
@@ -671,8 +728,9 @@ export async function deleteOwnAvailability(formData) {
 
 // Coach buys session-credits (so they don't pay per booking). Stripe one-time → coach_ledger.
 export async function buyCoachCredits(formData) {
-  const { supabase, userId, email, error } = await requireCoach();
+  const { supabase, userId, email, error, namens } = await requireCoach();
   if (error) return { error };
+  if (namens) return { error: NIET_NAMENS };
   if (!isStripeConfigured) return { error: "Betalingen nog niet geconfigureerd." };
   // Coaches always pay a flat € 12 per session — no volume discount, no subscription. They buy
   // 1–100 session-credits up front and spend them when booking client sessions.

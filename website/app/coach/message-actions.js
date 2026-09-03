@@ -14,7 +14,12 @@ export async function sendMessage(formData) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { error: "Niet ingelogd." };
-  if (await viewAsActive()) return { error: "Alleen-lezen tijdens ‘bekijk als coach’." };
+  // Berichten blijven de uitzondering in 'bekijk als coach', en niet uit voorzichtigheid alleen:
+  // de RLS op coach_messages staat enkel de coach of de client toe, dus een beheerder kan dit
+  // gesprek niet eens lezen. Het langs de service-role forceren zou een bericht in de draad van de
+  // coach zetten dat de client als 'van je coach' leest — dat is doorgaan voor iemand anders, en
+  // dat is nooit de bedoeling van deze modus.
+  if (await viewAsActive()) return { error: "Een bericht sturen kan alleen de coach zelf — de client moet weten wie hem schrijft." };
   if (user.id !== coachId && user.id !== clientId) return { error: "Geen toegang tot dit gesprek." };
   const { data: me } = await supabase.from("profiles").select("gym_id, full_name").eq("id", user.id).single();
   if (!me) return { error: "Profiel niet gevonden." };

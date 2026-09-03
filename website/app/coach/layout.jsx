@@ -38,7 +38,13 @@ export default async function CoachLayout({ children }) {
           <div className="z-30 md:sticky md:top-0">
             {viewCoach && (
               <div className="flex flex-wrap items-center justify-between gap-2 bg-brand px-4 py-2.5 text-white md:px-8">
-                <span className="text-sm font-bold">👁️ Je bekijkt als <span className="text-accent">{viewCoach.full_name || "coach"}</span> · alleen-lezen</span>
+                {/* De balk zei "alleen-lezen" toen dat klopte. Nu landen wijzigingen echt op het
+                    profiel van deze coach, dus moet dat er ook staan — een beheerder die denkt te
+                    kijken terwijl hij schrijft, is de gevaarlijkste stand. */}
+                <span className="text-sm font-bold">
+                  ✎ Je bewerkt als <span className="text-accent">{viewCoach.full_name || "coach"}</span>
+                  <span className="hidden font-normal text-white/70 sm:inline"> · wijzigingen komen op zijn naam</span>
+                </span>
                 <form action={stopViewAsCoach}><button className="rounded-full bg-accent px-4 py-1.5 text-xs font-black text-brand transition hover:brightness-95">← Terug naar beheerder</button></form>
               </div>
             )}
