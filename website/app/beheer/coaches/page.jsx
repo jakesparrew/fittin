@@ -1,336 +1,220 @@
 import Link from "next/link";
-import Image from "next/image";
 import { getAdminContext } from "@/lib/admin";
-import { addCoachAvailability, deleteCoachAvailability } from "../coaching-actions";
-import { setCoachBilling, grantCoachCredits, addCoach, adminAddUser, assignCoachClient, unassignCoachClient, setCoachPublic, adminSaveCoachProfile, adminUploadCoachPhoto, startViewAsCoach } from "../actions";
+import { addCoach, adminAddUser } from "../actions";
 import SearchSelect from "@/components/admin/SearchSelect";
 import ListSearch from "@/components/admin/ListSearch";
-import { coachDebts, debtReasons } from "@/lib/coach-debt";
+import CoachRow from "@/components/admin/CoachRow";
 import ActionForm from "@/components/ui/ActionForm";
-import { fmtHour } from "@/lib/time";
+import { BarChart } from "@/components/admin/Charts";
+import { coachDebts, debtOf } from "@/lib/coach-debt";
+import { COACH_SESSIE_KOLOMMEN, coachStats, statsVan, perWeek } from "@/lib/coach-stats";
+
+// Het coach-overzicht. Herbouwd omdat de vorige versie zeven kaarten van ~730 px onder elkaar zette
+// (396 px zelfs voor iemand die nooit één sessie deed), zodat je nooit twee coaches naast elkaar
+// zag, en omdat er nergens een euro op stond: het enige geldveld dat werd opgehaald
+// (coach_charge_cents) is sinds 0128 structureel 0, terwijl de echte coach-omzet in `payments`
+// staat en niet werd bevraagd.
+//
+// Alle vijftien bedieningen bestaan nog; ze verhuisden naar /beheer/coaches/[id].
 
 export const dynamic = "force-dynamic";
-const WD_FULL = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
+
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
-const eur = (c) => (c / 100).toFixed(2).replace(".", ",");
-// "invoice" (maandfactuur) is afgeschaft op 2026-08-07: coaches kopen vooraf of betalen ter
-// plekke. De label blijft bestaan voor de geschiedenis, maar is nergens meer te kiezen.
-const MODE = { free: "Gratis", credit: "Sessietegoed", invoice: "Maandfactuur (afgeschaft)" };
-const fmt = (iso) =>
-  new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+// De noemer is bewust afgebakend: dit zijn de vier soorten waarmee de gym zélf geld verdient.
+// kind='overig' blijft eruit — daar zit wat een CLIENT via het platform aan ZIJN COACH betaalt
+// (coach_payment_requests) plus event-inschrijvingen. Doorstroomgeld, geen gymomzet; zat het in de
+// noemer, dan zou het coach-aandeel juist zakken in een kwartaal waarin er méér gecoacht wordt.
+const GYM_KINDS = ["booking", "beurtenkaart", "abonnement", "coach_credits"];
+const BETAALD = ["betaald", "paid"];
 
 export default async function Coaches({ searchParams }) {
   const zoek = String((await searchParams)?.q || "").trim().toLowerCase();
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym } = ctx;
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const nu = new Date();
+  const venster = new Date(nu.getTime() - 190 * 86400000).toISOString(); // ~6 maanden, tijdvenster i.p.v. een limiet
 
-  const [{ data: people }, { data: avail }, { data: ledger }, { data: links }, { data: sessions }] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, email, role, coach_billing_mode, coach_session_price_cents, coach_public, coach_bio, coach_specialty, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_photo_url, phone, bill_company, bill_vat, bill_address").eq("gym_id", gym.id).order("full_name"),
-    supabase.from("coach_availability").select("*").eq("gym_id", gym.id).order("weekday"),
-    supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
-    supabase.from("coach_clients").select("id, coach_id, client_id").eq("gym_id", gym.id).eq("status", "accepted"),
-    supabase.from("bookings").select("id, coach_id, user_id, starts_at, status, coach_billing, coach_charge_cents, services(name)").eq("gym_id", gym.id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(400),
+  const [{ data: people }, { data: sessies }, { data: coachPay }, { data: gymPay }, { data: ledger }, schuld] = await Promise.all([
+    supabase.from("profiles").select("id, full_name, email, role, coach_public, is_test").eq("gym_id", gym.id).order("full_name"),
+    // coach_id, NIET coach_billing: dat laatste filter wist elke sessie die de beheerder voor een
+    // coach inboekte (zie de nota in lib/coach-stats.js).
+    supabase.from("bookings").select(COACH_SESSIE_KOLOMMEN).eq("gym_id", gym.id).not("coach_id", "is", null).gte("starts_at", venster).limit(4000),
+    supabase.from("payments").select("user_id, amount_cents, status").eq("gym_id", gym.id).eq("kind", "coach_credits").in("status", BETAALD),
+    supabase.from("payments").select("amount_cents").eq("gym_id", gym.id).in("kind", GYM_KINDS).in("status", BETAALD),
+    supabase.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id).limit(5000),
+    coachDebts(supabase, gym.id),
   ]);
-  const schuld = await coachDebts(supabase, gym.id);
-
-  const { data: activityRows } = await supabase.from("coach_activity").select("coach_id, summary, created_at").eq("gym_id", gym.id).order("created_at", { ascending: false }).limit(200);
-  const activityOf = {};
-  for (const a of activityRows || []) (activityOf[a.coach_id] ||= []).push(a);
-
-  const { data: commRows } = await supabase.from("coach_commissions").select("coach_id, amount_cents").eq("gym_id", gym.id);
-  const commByCoach = {};
-  for (const c of commRows || []) commByCoach[c.coach_id] = (commByCoach[c.coach_id] || 0) + c.amount_cents;
 
   const all = people || [];
+  const testIds = new Set(all.filter((p) => p.is_test).map((p) => p.id));
   const alleCoaches = all.filter((p) => p.role === "coach" || p.role === "beheerder");
-  // Zoeken op naam of e-mail. De tellers rechtsboven blijven op de volledige lijst staan.
-  const coaches = !zoek ? alleCoaches : alleCoaches.filter((p) =>
-    [p.full_name, p.email, p.coach_specialty].some((v) => String(v || "").toLowerCase().includes(zoek)));
-  const members = all.filter((p) => p.role !== "beheerder"); // assignable as clients
-  const name = (id) => all.find((p) => p.id === id)?.full_name || all.find((p) => p.id === id)?.email || "—";
+  const nonCoaches = all.filter((p) => p.role === "lid" && !p.is_test);
 
-  const byCoachAvail = {};
-  for (const a of avail || []) (byCoachAvail[a.coach_id] ||= []).push(a);
-  const balance = {};
-  for (const r of ledger || []) balance[r.coach_id] = (balance[r.coach_id] || 0) + r.delta;
+  const stats = coachStats(sessies || [], nu);
+  const saldo = {};
+  for (const r of ledger || []) saldo[r.coach_id] = (saldo[r.coach_id] || 0) + Number(r.delta || 0);
+  const betaald = {};
+  for (const p of coachPay || []) if (!testIds.has(p.user_id)) betaald[p.user_id] = (betaald[p.user_id] || 0) + (p.amount_cents || 0);
 
+  const coachOmzet = Object.values(betaald).reduce((a, n) => a + n, 0);
+  const gymOmzet = (gymPay || []).reduce((a, p) => a + (p.amount_cents || 0), 0);
+  const aandeel = gymOmzet > 0 ? Math.round((coachOmzet / gymOmzet) * 100) : 0;
 
-  const clientsOf = {};
-  for (const l of links || []) (clientsOf[l.coach_id] ||= []).push(l);
-  const sessOf = {};
-  for (const s of sessions || []) (sessOf[s.coach_id] ||= []).push(s);
+  // Actief = ooit een bevestigde sessie, of geld betaald, of iets openstaand. De rest is slapend en
+  // hoort niet tussen de mensen die de zaal dragen — maar verdwijnt nooit uit de lijst: "Bekijk als
+  // coach" bestaat alleen op deze pagina, en dat is de knop waarmee je de coach-app test.
+  const leeft = (c) => statsVan(stats, c.id).totaal > 0 || betaald[c.id] > 0 || debtOf(schuld, c.id).totaalCents > 0;
 
-  const hours = [];
-  for (let h = gym.open_hour; h <= gym.close_hour; h += 0.5) hours.push(h);
+  const signaalVan = (c) => {
+    const s = statsVan(stats, c.id);
+    const d = debtOf(schuld, c.id);
+    const bal = saldo[c.id] || 0;
+    // Eerste treffer wint: geld > dood tegoed > weggezakt. Eén signaal per coach, anders is de
+    // strook binnen een maand versleten behang.
+    if (d.totaalCents >= 2400) return { ernst: 0, icoon: "💶", tekst: `${c.full_name || c.email} staat ${euro(d.totaalCents)} open — zijn boekingen zijn geblokkeerd tot dat vereffend is.` };
+    // Drempels bewust streng: 21 dagen stilte erbij, anders vuurt dit bij elke coach die week per
+    // week boekt in plaats van vooruit — dus potentieel elke zondagavond opnieuw.
+    if (bal >= 5 && s.gepland === 0 && (s.dagenGeleden ?? 999) > 21) return { ernst: 1, icoon: "🎟", tekst: `${c.full_name || c.email} heeft ${String(bal).replace(".", ",")} beurten liggen en niets ingepland — al ${s.dagenGeleden} dagen niet geweest.` };
+    if (s.totaal >= 5 && (s.dagenGeleden ?? 0) > 30) return { ernst: 2, icoon: "🌙", tekst: `${c.full_name || c.email} deed ${s.totaal} sessies maar is al ${s.dagenGeleden} dagen niet geweest.` };
+    return null;
+  };
 
-  const totalLinks = (links || []).length;
-  const sessThisMonth = (sessions || []).filter((s) => s.status === "bevestigd" && new Date(s.starts_at) >= monthStart && new Date(s.starts_at) < now).length;
-  const nonCoaches = all.filter((p) => p.role === "lid");
+  const metSignaal = new Map();
+  for (const c of alleCoaches) {
+    if (c.is_test) continue; // een testaccount is geen signaal
+    const sig = signaalVan(c);
+    if (sig) metSignaal.set(c.id, sig);
+  }
+
+  const gefilterd = !zoek ? alleCoaches : alleCoaches.filter((p) =>
+    [p.full_name, p.email].some((v) => String(v || "").toLowerCase().includes(zoek)));
+
+  const actief = gefilterd.filter(leeft).sort((a, b) => {
+    const sa = metSignaal.get(a.id)?.ernst ?? 9;
+    const sb = metSignaal.get(b.id)?.ernst ?? 9;
+    if (sa !== sb) return sa - sb;
+    return statsVan(stats, b.id).sessies90 - statsVan(stats, a.id).sessies90;
+  });
+  const slapend = gefilterd.filter((c) => !leeft(c));
+  const drukste = Math.max(0, ...actief.map((c) => statsVan(stats, c.id).sessies90));
+
+  const signalen = [...metSignaal.entries()]
+    .filter(([id]) => gefilterd.some((c) => c.id === id))
+    .map(([id, s]) => ({ id, ...s }))
+    .sort((a, b) => a.ernst - b.ernst);
+
+  // Grafiek: coach-sessies per week, laatste 12 VOLLEDIGE weken. Testaccounts eruit.
+  const echteSessies = (sessies || []).filter((b) => !testIds.has(b.coach_id));
+  const { reeks, dezeWeek } = perWeek(echteSessies, nu, 12);
+  const totaalWeken = reeks.reduce((a, p) => a + p.value, 0);
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-black text-brand">Coaches</h1>
-          <p className="mt-1 text-sm text-brand/50">Toewijzingen, sessies, facturatie en beschikbaarheid per coach.</p>
-        </div>
-        <div className="flex gap-2 text-xs font-bold">
-          <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{alleCoaches.length} coaches</span>
-          <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{totalLinks} toewijzingen</span>
-          <span className="rounded-full bg-paper px-3 py-1.5 text-brand/60">{sessThisMonth} sessies deze maand</span>
-        </div>
-      </div>
+      <h1 className="text-3xl font-black text-brand">Coaches</h1>
+      <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-soft">
+        Coaches huren de zaal aan € 12 per beurt en kopen vooraf. Zij brachten{" "}
+        <strong className="text-brand">{euro(coachOmzet)}</strong> op
+        {aandeel > 0 && <> — {aandeel} % van de {euro(gymOmzet)} die de gym ooit ontving</>}.
+      </p>
 
-      {/* Add coach — promote a member OR create a brand-new coach account */}
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <ActionForm action={addCoach} success="Coach toegevoegd ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
-          <Lbl t="Maak een bestaand lid coach">
-            <SearchSelect name="memberId" required placeholder="Kies een lid…" options={nonCoaches.map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
-          </Lbl>
-          <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">+ Coach toevoegen</button>
-        </ActionForm>
-
-        <ActionForm action={adminAddUser} success="Coach aangemaakt + uitnodiging verstuurd ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
-          <input type="hidden" name="role" value="coach" />
-          <Lbl t="Nieuwe coach (naam)">
-            <input name="full_name" required placeholder="Voornaam Naam" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
-          </Lbl>
-          <Lbl t="E-mail">
-            <input name="email" type="email" required placeholder="coach@…" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
-          </Lbl>
-          <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">+ Nieuwe coach aanmaken</button>
-        </ActionForm>
-      </div>
-
-      <div className="mt-6">
-        <ListSearch placeholder="Zoek een coach op naam, e-mail of specialiteit…" className="w-full max-w-md" />
-      </div>
-
-      <div className="mt-4 space-y-5">
-        {zoek && coaches.length === 0 && (
-          <p className="rounded-2xl border border-borderc bg-white p-6 text-sm text-brand/50">Geen coach gevonden voor “{zoek}”.</p>
+      {/* Signaalstrook: smalle regels, geen kaarten. Nul signalen is een geldige uitkomst en
+          krijgt één gedempte regel in plaats van een leeg kader. */}
+      <div className="mt-5 overflow-hidden rounded-2xl border border-borderc bg-white">
+        {signalen.length === 0 ? (
+          // "Elke coach heeft betaald en is recent nog geweest" stond hier eerst, en dat was
+          // aantoonbaar onwaar: Jean Francois staat € 12 open en is 63 dagen weg — hij haalt
+          // alleen de drempels niet. Een lege strook betekent "niets dringend", niet "alles goed".
+          <p className="px-4 py-3 text-sm text-ink-soft">Niets dat vandaag om actie vraagt.</p>
+        ) : (
+          signalen.slice(0, 3).map((s) => (
+            <Link key={s.id} href={`/beheer/coaches/${s.id}`} className="flex items-center gap-3 border-t border-borderc px-4 py-2.5 text-sm transition first:border-t-0 hover:bg-paper/60">
+              <span aria-hidden>{s.icoon}</span>
+              <span className="min-w-0 flex-1 text-brand">{s.tekst}</span>
+              <span className="shrink-0 text-brand/30">›</span>
+            </Link>
+          ))
         )}
-        {coaches.map((c) => {
-          const cls = clientsOf[c.id] || [];
-          const assignedIds = new Set(cls.map((l) => l.client_id));
-          const ss = sessOf[c.id] || [];
-          const upcoming = ss.filter((s) => new Date(s.starts_at) >= now && s.status === "bevestigd").length;
-          return (
-            <div key={c.id} className="rounded-2xl border border-borderc bg-white p-6">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="text-lg font-black text-brand">{c.full_name || c.email}</p>
-                  <p className="text-xs text-brand/45">{c.email}{c.role === "beheerder" && " · beheerder"}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs font-bold">
-                  <ActionForm action={setCoachPublic} success="Zichtbaarheid bijgewerkt ✓">
-                    <input type="hidden" name="coachId" value={c.id} />
-                    <input type="hidden" name="on" value={c.coach_public ? "0" : "1"} />
-                    <button className={"rounded-full px-3 py-1 transition " + (c.coach_public ? "bg-accent text-brand" : "bg-paper text-brand/50 hover:bg-brand/5")} title={c.coach_public ? "Staat op de website — klik om te verbergen" : "Niet op de website — klik om te tonen"}>
-                      {c.coach_public ? "● Op website" : "○ Niet op website"}
-                    </button>
-                  </ActionForm>
-                  <span className="rounded-full bg-brand/5 px-3 py-1 text-brand/70">{MODE[c.coach_billing_mode] || "—"}</span>
-                  <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{cls.length} clients</span>
-                  <span className="rounded-full bg-paper px-3 py-1 text-brand/60">{upcoming} gepland</span>
-                  {/* Saldo én schuld staan hier bewust LOS van coach_billing_mode. Toen alle coaches
-                      naar 'credit' werden omgezet, verdween de schuld van de factuur-coaches uit
-                      beeld en toonden ze "Saldo: 0" alsof alles vereffend was. Schuld hangt aan de
-                      boekingen en de open posten, niet aan een instelling op het profiel. */}
-                  <span className="rounded-full bg-paper px-3 py-1 text-brand/60">Saldo: {String(balance[c.id] || 0).replace(".", ",")}</span>
-                  {schuld.get(c.id)?.totaalCents > 0 && (
-                    <span className="rounded-full bg-amber-100 px-3 py-1 font-bold text-amber-700" title={debtReasons(schuld.get(c.id)).join(" · ")}>
-                      Openstaand: {euro(schuld.get(c.id).totaalCents)} — {debtReasons(schuld.get(c.id)).join(" · ")}
-                    </span>
-                  )}
-                  {commByCoach[c.id] > 0 && <span className="rounded-full bg-paper px-3 py-1 text-brand/70">Commissie: {euro(commByCoach[c.id])}</span>}
-                </div>
-              </div>
-
-              {/* Bekijk als coach (read-only impersonatie) */}
-              <form action={startViewAsCoach} className="mt-4">
-                <input type="hidden" name="coachId" value={c.id} />
-                <button className="rounded-full border-2 border-brand px-4 py-2 text-sm font-bold text-brand transition hover:bg-brand hover:text-white">👁️ Bekijk als coach (read-only) →</button>
-              </form>
-
-              {/* Profiel & foto bewerken (volledig coach-profiel beheren) */}
-              <details className="mt-4 rounded-xl border border-borderc bg-paper/50 p-4">
-                <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Profiel &amp; foto bewerken</summary>
-                <div className="mt-4 flex flex-wrap items-start gap-5">
-                  <div className="text-center">
-                    {c.coach_photo_url
-                      ? <Image src={c.coach_photo_url} alt="" width={96} height={96} sizes="96px" className="h-24 w-24 rounded-2xl object-cover" />
-                      : <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-borderc text-2xl font-black text-brand/40">{(c.full_name || "?").slice(0, 1)}</div>}
-                    <ActionForm action={adminUploadCoachPhoto} success="Foto geüpload ✓" className="mt-2">
-                      <input type="hidden" name="coachId" value={c.id} />
-                      <input type="file" name="photo" accept="image/*" className="block w-32 text-[10px]" />
-                      <button className="mt-1 rounded-full bg-brand px-3 py-1 text-[10px] font-bold text-white">Upload foto</button>
-                    </ActionForm>
-                  </div>
-                  <ActionForm action={adminSaveCoachProfile} success="Profiel opgeslagen ✓" className="grid flex-1 gap-3 sm:grid-cols-2">
-                    <input type="hidden" name="coachId" value={c.id} />
-                    <Lbl t="Naam"><input name="full_name" defaultValue={c.full_name || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    <Lbl t="Telefoon"><input name="phone" defaultValue={c.phone || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    <Lbl t="Specialiteit"><input name="specialty" defaultValue={c.coach_specialty || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    <Lbl t="Prijslijst (kort)"><input name="pricelist" defaultValue={c.coach_pricelist || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    <label className="block sm:col-span-2"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Bio</span><textarea name="bio" rows={3} defaultValue={c.coach_bio || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></label>
-                    <Lbl t="PT 1-op-1 (€)"><input name="pt1_eur" defaultValue={c.coach_pt_price_cents != null ? c.coach_pt_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    <div className="grid grid-cols-2 gap-2">
-                      <Lbl t="PT 1-op-2 (€ pp)"><input name="pt2_eur" defaultValue={c.coach_pt2_price_cents != null ? c.coach_pt2_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                      <Lbl t="PT 1-op-3 (€ pp)"><input name="pt3_eur" defaultValue={c.coach_pt3_price_cents != null ? c.coach_pt3_price_cents / 100 : ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                    </div>
-                    <label className="flex items-center gap-2 text-xs font-bold text-brand/70"><input type="checkbox" name="public" defaultChecked={c.coach_public} className="h-4 w-4 accent-[#5fda6b]" /> Zichtbaar op de website</label>
-                    <div className="mt-1 rounded-lg border border-borderc bg-paper/50 p-3 sm:col-span-2">
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-lav">Facturatiegegevens (B2B — voor de factuur van zijn sessietegoed)</p>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        <Lbl t="Bedrijfsnaam"><input name="bill_company" defaultValue={c.bill_company || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                        <Lbl t="Btw-nummer"><input name="bill_vat" defaultValue={c.bill_vat || ""} placeholder="BE 0123.456.789" className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                      </div>
-                      <label className="mt-2 block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Facturatieadres</span><textarea name="bill_address" rows={2} defaultValue={c.bill_address || ""} className="w-full rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></label>
-                    </div>
-                    <div className="sm:col-span-2"><button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Profiel opslaan</button></div>
-                  </ActionForm>
-                </div>
-              </details>
-
-              {/* Nog te factureren sessies — ALLE, niet enkel die van deze maand. Het oude blok
-                  toonde "deze maand" en negeerde of er al gefactureerd was, waardoor oudere
-                  onbetaalde sessies onzichtbaar bleven terwijl ze wel te innen waren. */}
-              {schuld.get(c.id)?.factuurSessies > 0 && (
-                <details className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">
-                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-amber-700">
-                    Nog te factureren: {euro(schuld.get(c.id).factuurCents)} over {schuld.get(c.id).factuurSessies} sessie{schuld.get(c.id).factuurSessies === 1 ? "" : "s"} — bekijk lijnen
-                  </summary>
-                  <div className="mt-2 space-y-1">
-                    {schuld.get(c.id).sessies.map((s) => (
-                      <div key={s.id} className="flex justify-between text-xs">
-                        <span className="text-brand/70">{fmt(s.starts_at)}</span>
-                        <span className="font-bold text-brand">{euro(s.cents)}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <Link href="/beheer/financien" className="mt-3 inline-block rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90">Factureer via Financiën →</Link>
-                </details>
-              )}
-
-              {/* Activity log */}
-              {(activityOf[c.id] || []).length > 0 && (
-                <details className="mt-3 rounded-xl bg-paper/60 p-3 text-sm">
-                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Activiteitenlog ({activityOf[c.id].length})</summary>
-                  <div className="mt-2 max-h-56 space-y-1 overflow-y-auto">
-                    {activityOf[c.id].slice(0, 50).map((a, i) => (
-                      <div key={i} className="flex justify-between gap-3 text-xs">
-                        <span className="text-brand/70">{a.summary}</span>
-                        <span className="shrink-0 text-brand/40">{fmt(a.created_at)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </details>
-              )}
-
-              {/* Clients */}
-              <div className="mt-5 grid gap-5 lg:grid-cols-2">
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-lav">Toegewezen clients</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {cls.map((l) => (
-                      <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">
-                        <Link href={`/beheer/leden/${l.client_id}`} className="hover:text-accentdark">{name(l.client_id)}</Link>
-                        <ActionForm action={unassignCoachClient} success="Verwijderd ✓" className="inline">
-                          <input type="hidden" name="id" value={l.id} />
-                          <input type="hidden" name="clientId" value={l.client_id} />
-                          <button className="text-red-500 hover:underline" title="Verwijder">×</button>
-                        </ActionForm>
-                      </span>
-                    ))}
-                    {cls.length === 0 && <span className="text-xs text-brand/40">Nog geen clients toegewezen.</span>}
-                  </div>
-                  <ActionForm action={assignCoachClient} success="Client toegewezen ✓" className="mt-3 flex flex-wrap items-end gap-2">
-                    <input type="hidden" name="coachId" value={c.id} />
-                    <SearchSelect name="clientId" required placeholder="Wijs een lid toe…" options={members.filter((m) => m.id !== c.id && !assignedIds.has(m.id)).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
-                    <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Toewijzen</button>
-                  </ActionForm>
-                </div>
-
-                {/* Sessions with clients */}
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-wide text-lav">Sessies met clients</p>
-                  <div className="mt-2 space-y-1.5">
-                    {ss.slice(0, 6).map((s) => (
-                      <div key={s.id} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-sm">
-                        <span className="font-semibold text-brand">{name(s.user_id)}</span>
-                        <span className="text-xs text-brand/50">{fmt(s.starts_at)} · {s.services?.name || "Sessie"}</span>
-                      </div>
-                    ))}
-                    {ss.length === 0 && <p className="text-xs text-brand/40">Nog geen sessies.</p>}
-                    {ss.length > 6 && <p className="text-xs text-brand/40">+ {ss.length - 6} eerdere sessies</p>}
-                  </div>
-                </div>
-              </div>
-
-              {/* Config: billing + availability (tucked away) */}
-              <details className="mt-5 rounded-xl bg-paper/60 p-4">
-                <summary className="cursor-pointer text-xs font-bold uppercase tracking-wide text-lav">Facturatie & beschikbaarheid</summary>
-                <div className="mt-4 grid gap-4 md:grid-cols-2">
-                  <ActionForm action={setCoachBilling} success="Facturatie opgeslagen ✓" className="rounded-xl bg-white p-4">
-                    <input type="hidden" name="coachId" value={c.id} />
-                    <p className="text-sm text-brand/70">Facturatie: <strong className="text-brand">vast € 12 / sessie</strong> via sessietegoed. Coaches kopen 1–100 sessies vooraf — geen gratis, maandfactuur of abonnement.</p>
-                    {(c.coach_billing_mode !== "credit" || c.coach_session_price_cents !== 1200) && (
-                      <button className="mt-2 rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand">Standaard toepassen (€ 12 / sessietegoed)</button>
-                    )}
-                  </ActionForm>
-                  {/* Tegoed bijschrijven vraagt nu expliciet of er betaald is. Voordien maakte elke
-                      toekenning een ONBETAALDE post: de coach kon meteen trainen op sessies die
-                      nooit betaald raakten (zo ontstond de € 120 van Thomas). Er is geen tussenweg
-                      meer — het is betaald, of het is een cadeau. */}
-                  <ActionForm action={grantCoachCredits} success="Sessietegoed bijgeschreven ✓" className="rounded-xl bg-white p-4">
-                    <input type="hidden" name="coachId" value={c.id} />
-                    <div className="flex flex-wrap items-end gap-2">
-                      <Lbl t="Sessietegoed ±"><input name="delta" type="number" step="0.5" placeholder="bv. 10" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" /></Lbl>
-                      <Lbl t="Afrekening">
-                        <select name="betaling" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
-                          <option value="betaald">Betaald (cash/overschrijving ontvangen)</option>
-                          <option value="gratis">Gratis gegeven (niets aanrekenen)</option>
-                        </select>
-                      </Lbl>
-                      <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Toekennen</button>
-                    </div>
-                    <p className="mt-2 text-[11px] text-brand/45">
-                      Kiest de coach zelf online af te rekenen, dan hoef je hier niets te doen — het tegoed verschijnt automatisch na betaling.
-                    </p>
-                  </ActionForm>
-                </div>
-                <p className="mt-4 text-xs font-bold uppercase tracking-wide text-lav">Beschikbaarheid</p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(byCoachAvail[c.id] || []).map((a) => (
-                    <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand">
-                      {WD_FULL[a.weekday].slice(0, 2)} {fmtHour(a.from_hour)}–{fmtHour(a.to_hour)}
-                      <ActionForm action={deleteCoachAvailability} success="Verwijderd ✓" className="inline">
-                        <input type="hidden" name="id" value={a.id} />
-                        <button className="text-red-500 hover:underline">×</button>
-                      </ActionForm>
-                    </span>
-                  ))}
-                  {(byCoachAvail[c.id] || []).length === 0 && <span className="text-xs text-brand/40">Geen beschikbaarheid.</span>}
-                </div>
-                <ActionForm action={addCoachAvailability} success="Beschikbaarheid toegevoegd ✓" className="mt-3 flex flex-wrap items-end gap-2">
-                  <input type="hidden" name="coachId" value={c.id} />
-                  <Lbl t="Dag"><select name="weekday" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{WD_FULL.map((d, i) => <option key={i} value={i}>{d}</option>)}</select></Lbl>
-                  <Lbl t="Van"><select name="from_hour" defaultValue={9} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
-                  <Lbl t="Tot"><select name="to_hour" defaultValue={18} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{hours.map((h) => <option key={h} value={h}>{fmtHour(h)}</option>)}</select></Lbl>
-                  <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Beschikbaarheid</button>
-                </ActionForm>
-              </details>
-            </div>
-          );
-        })}
-        {coaches.length === 0 && (
-          <p className="rounded-xl bg-accent/10 p-4 text-sm font-semibold text-accentdark">Nog geen coaches. Maak hierboven een lid coach.</p>
+        {signalen.length > 3 && (
+          <details className="border-t border-borderc">
+            <summary className="cursor-pointer px-4 py-2 text-xs font-bold text-ink-soft">+ {signalen.length - 3} meer</summary>
+            {signalen.slice(3).map((s) => (
+              <Link key={s.id} href={`/beheer/coaches/${s.id}`} className="flex items-center gap-3 border-t border-borderc px-4 py-2.5 text-sm hover:bg-paper/60">
+                <span aria-hidden>{s.icoon}</span><span className="min-w-0 flex-1 text-brand">{s.tekst}</span>
+              </Link>
+            ))}
+          </details>
         )}
       </div>
+
+      {/* Zoeken pas vanaf 9 coaches: bij vijf namen op één scherm is een zoekbalk ruis. */}
+      {alleCoaches.length >= 9 && (
+        <div className="mt-5"><ListSearch placeholder="Zoek een coach op naam of e-mail…" className="w-full max-w-md" /></div>
+      )}
+
+      {/* Het roster */}
+      <div className="mt-5 overflow-hidden rounded-2xl border border-borderc bg-white">
+        <div className="hidden grid-cols-[minmax(0,2.4fr)_minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_minmax(0,1fr)_auto] gap-x-3 border-b border-borderc bg-paper/60 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-lav md:grid">
+          <span>Coach</span><span>Sessies 90 d</span><span>Laatst</span><span>Gepland</span><span>Tegoed</span><span>Betaald ooit</span><span />
+        </div>
+        {actief.map((c) => (
+          <CoachRow key={c.id} coach={c} stats={statsVan(stats, c.id)} saldo={saldo[c.id] || 0}
+            schuld={debtOf(schuld, c.id)} betaaldCents={betaald[c.id] || 0} drukste={drukste} />
+        ))}
+        {actief.length === 0 && (
+          <p className="px-4 py-6 text-sm text-ink-soft">{zoek ? `Geen coach gevonden voor “${zoek}”.` : "Nog geen actieve coach."}</p>
+        )}
+      </div>
+
+      {slapend.length > 0 && (
+        <details className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-white">
+          <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-ink-soft">Slapend · {slapend.length} <span className="font-normal">— nooit een sessie, niets open</span></summary>
+          <div className="border-t border-borderc">
+            {slapend.map((c) => (
+              <CoachRow key={c.id} coach={c} stats={statsVan(stats, c.id)} saldo={saldo[c.id] || 0}
+                schuld={debtOf(schuld, c.id)} betaaldCents={betaald[c.id] || 0} drukste={drukste} gedempt />
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* De grafiek staat ONDER de tabel: het roster beantwoordt een dagelijkse vraag, de grafiek
+          een maandelijkse. De lopende week zit er bewust niet in — die staat ernaast als tekst,
+          anders leest een halve week naast volle weken als een instorting die er niet is. */}
+      <div className="mt-6 rounded-2xl border border-borderc bg-white p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <p className="text-sm font-black text-brand">Coach-sessies per week</p>
+          <p className="text-xs text-ink-soft">laatste 12 volledige weken · deze week tot nu: <strong className="text-brand">{dezeWeek}</strong></p>
+        </div>
+        {totaalWeken === 0 ? (
+          <p className="py-6 text-center text-xs text-ink-soft">Nog geen coach-sessies in deze periode.</p>
+        ) : (
+          <div className="mt-3"><BarChart data={reeks} height={130} accentLast={false} /></div>
+        )}
+      </div>
+
+      {/* Coach toevoegen: een paar keer per jaar, dus onderaan en ingeklapt. */}
+      <details className="mt-3 rounded-2xl border border-borderc bg-white">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-ink-soft">+ Coach toevoegen</summary>
+        <div className="grid gap-4 border-t border-borderc p-4 lg:grid-cols-2">
+          <ActionForm action={addCoach} success="Coach toegevoegd ✓" className="flex flex-wrap items-end gap-2 rounded-xl bg-paper/60 p-4">
+            <Lbl t="Maak een bestaand lid coach">
+              <SearchSelect name="memberId" required placeholder="Kies een lid…" options={nonCoaches.map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
+            </Lbl>
+            <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">+ Coach toevoegen</button>
+          </ActionForm>
+          <ActionForm action={adminAddUser} success="Coach aangemaakt + uitnodiging verstuurd ✓" className="flex flex-wrap items-end gap-2 rounded-xl bg-paper/60 p-4">
+            <input type="hidden" name="role" value="coach" />
+            <Lbl t="Nieuwe coach (naam)">
+              <input name="full_name" required placeholder="Voornaam Naam" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+            </Lbl>
+            <Lbl t="E-mail">
+              <input name="email" type="email" required placeholder="coach@…" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+            </Lbl>
+            <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">+ Aanmaken</button>
+          </ActionForm>
+        </div>
+      </details>
     </div>
   );
 }

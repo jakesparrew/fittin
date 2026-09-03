@@ -337,14 +337,16 @@ export async function adminSaveCoachProfile(formData) {
     coach_pt_price_cents: eur(formData.get("pt1_eur")),
     coach_pt2_price_cents: eur(formData.get("pt2_eur")),
     coach_pt3_price_cents: eur(formData.get("pt3_eur")),
-    coach_public: formData.get("public") === "on",
+    // coach_public staat hier BEWUST niet meer bij. Deze actie schrijft altijd álle velden weg, dus
+    // elke "Profiel opslaan" op een scherm zonder die checkbox zette een coach ongemerkt van de
+    // website af — groene toast, geen foutmelding. Eén kolom, één schrijver: setCoachPublic.
     bill_company: formData.get("bill_company") || null,
     bill_vat: formData.get("bill_vat") || null,
     bill_address: formData.get("bill_address") || null,
   }).eq("id", coachId).eq("gym_id", profile.gym_id);
   if (e) return { error: e.message };
   revalidateTag("coaches");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/coaches");
   revalidatePath(`/coaches/${coachId}`);
   return { ok: true, message: "Profiel opgeslagen ✓" };
@@ -370,7 +372,7 @@ export async function adminUploadCoachPhoto(formData) {
   const { data: pub } = admin.storage.from("coach-photos").getPublicUrl(path);
   await admin.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", coachId);
   revalidateTag("coaches");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/coaches");
   return { ok: true, message: "Foto geüpload ✓" };
 }
@@ -534,7 +536,7 @@ export async function adminSetTestAccount(formData) {
     .eq("id", memberId).eq("gym_id", profile.gym_id);
   if (e) return { error: e.message };
   revalidatePath("/beheer/leden");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/beheer");
   return { ok: true, message: isTest ? "Gemarkeerd als testaccount — telt niet meer mee in cijfers ✓" : "Telt weer mee in de cijfers ✓" };
 }
@@ -603,7 +605,7 @@ export async function setCoachBilling(formData) {
   // Vangnet: 0 rijen betekent dat er niets veranderd is (verkeerde coach, andere gym, of opnieuw
   // een ontbrekend recht). Beter een eerlijke fout dan een vinkje dat liegt.
   if (!rows?.length) return { error: "Facturatie niet opgeslagen — coach niet gevonden in deze gym." };
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/coach");
   return { ok: true };
 }
@@ -641,7 +643,7 @@ export async function grantCoachCredits(formData) {
   try {
     await notify({ gymId: profile.gym_id, userId: coachId, type: "request", title: delta >= 0 ? `+${delta} sessietegoed bijgeschreven` : `${delta} sessietegoed aangepast`, body: "Door de beheerder", link: "/coach" });
   } catch {}
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/beheer/betalingen");
   revalidatePath("/beheer");
   revalidatePath("/coach");
@@ -689,7 +691,7 @@ export async function adminAddUser(formData) {
   await enrollUserInDrips(uid); // start any active welcome drip
 
   revalidatePath("/beheer/leden");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   return { ok: true };
 }
 
@@ -728,7 +730,7 @@ export async function setCoachPublic(formData) {
   const { error: e } = await admin.from("profiles").update({ coach_public: on }).eq("id", coachId).eq("gym_id", profile.gym_id);
   if (e) return { error: e.message };
   revalidateTag("coaches");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/coaches");
   return { ok: true };
 }
@@ -754,7 +756,7 @@ export async function addCoach(formData) {
     if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role: "coach" });
   } catch {}
   revalidateTag("coaches");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/beheer/leden");
   return { ok: true };
 }
@@ -779,7 +781,7 @@ export async function assignCoachClient(formData) {
     await notify({ gymId: profile.gym_id, userId: clientId, type: "coach_assigned", title: `${coach?.full_name || "Een coach"} is nu jouw coach`, body: "Bekijk je trainingsschema bij Mijn training.", link: "/training" });
     await notify({ gymId: profile.gym_id, userId: coachId, type: "coach_assigned", title: `${client?.full_name || "Een lid"} is aan jou toegewezen`, body: "Bekijk je client en stel een programma op.", link: "/coach/clienten" });
   } catch {}
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath(`/beheer/leden/${clientId}`);
   return { ok: true };
 }
@@ -792,7 +794,7 @@ export async function unassignCoachClient(formData) {
   if (id) q.eq("id", id);
   else q.eq("coach_id", formData.get("coachId")).eq("client_id", formData.get("clientId"));
   await q;
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   if (formData.get("clientId")) revalidatePath(`/beheer/leden/${formData.get("clientId")}`);
   return { ok: true };
 }
@@ -994,7 +996,7 @@ export async function invoiceCoachSessions(formData) {
   try {
     await notify({ gymId: profile.gym_id, userId: coachId, type: "system", title: "Factuur voor je coach-sessies", body: `${list.length} sessies · € ${(total / 100).toFixed(2).replace(".", ",")}`, link: "/coach/betalingen" });
   } catch {}
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/beheer/financien");
   revalidatePath("/beheer/betalingen");
   return { ok: true, paymentId: pay?.id, message: `Factuur opgemaakt: ${list.length} sessies · € ${(total / 100).toFixed(2).replace(".", ",")} — staat als open post bij Betalingen.` };

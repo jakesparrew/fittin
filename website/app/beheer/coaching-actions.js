@@ -153,7 +153,7 @@ export async function addCoachAvailability(formData) {
     to_hour: parseFloat(formData.get("to_hour")) || 18,
   });
   revalidateTag("coaches");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
 }
 
 export async function deleteCoachAvailability(formData) {
@@ -161,7 +161,7 @@ export async function deleteCoachAvailability(formData) {
   if (error) return { error };
   await supabase.from("coach_availability").delete().eq("id", formData.get("id"));
   revalidateTag("coaches");
-  revalidatePath("/beheer/coaches");
+  revalidatePath("/beheer/coaches", "layout");
 }
 
 // ---------------- Coach note on a member ----------------

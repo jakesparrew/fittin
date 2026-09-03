@@ -78,6 +78,19 @@ export async function coachDebts(supabase, gymId) {
   return aggregateDebts({ bookings: bk || [], payments: pay || [], ledger: led || [] });
 }
 
+// Een volledig nul-object voor een coach die in geen van de drie bronnen voorkomt.
+//
+// WAAROM DIT MOET: aggregateDebts bouwt alleen een entry voor een coach die ergens in de
+// boekingen, de open posten of het tegoedboek voorkomt. Voor een net aangemaakte coach — of voor
+// Sophie, die nooit iets deed — geeft `map.get(id)` dus `undefined`, en `undefined.saldo` sloopt
+// de pagina. De huidige pagina ontsnapt daaraan met een aparte saldo-map en `|| 0`; wie die
+// vereenvoudigt naar één bron loopt er recht in.
+export const LEGE_SCHULD = Object.freeze({
+  coachId: null, factuurCents: 0, factuurSessies: 0, sessies: [],
+  openPostCents: 0, saldo: 0, negatiefCents: 0, totaalCents: 0,
+});
+export const debtOf = (map, id) => (map && map.get(id)) || LEGE_SCHULD;
+
 // Korte omschrijving van waar de schuld vandaan komt, voor in de UI. Zonder deze uitleg leest
 // "€ 108 openstaand" als één bedrag, terwijl het uit twee heel verschillende dingen kan bestaan
 // die je elk anders moet innen (factureren vs. een bestaande factuur laten betalen).
