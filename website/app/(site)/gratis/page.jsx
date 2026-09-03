@@ -1,5 +1,6 @@
 import Link from "next/link";
 import GymFotos, { GymFoto } from "@/components/GymFotos";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // Campagne-landingspagina voor de "eerste sessie gratis"-advertentie.
 //
@@ -46,9 +47,28 @@ const STAPPEN = [
   ["Open de deur en train", "Je code komt vanzelf voor je sessie. De hele zaal voor jou."],
 ];
 
+// De twijfels die een koude bezoeker tegenhouden, hardop beantwoord. Objectiehandling is de
+// grootste conversiehefboom voor een concept dat mensen nog niet kennen (privégym, boek-en-ga).
+const FAQ = [
+  ["Is de eerste sessie écht gratis?", "Ja. Je maakt een account, boekt je eerste uur en dat is automatisch gratis — je hoeft geen kaartgegevens in te geven. Bevalt het niet, dan stopt het daar."],
+  ["Moet ik een abonnement nemen?", "Nee. Er is geen lidgeld en geen contract. Je betaalt € 15 voor een uur, en enkel wanneer je effectief traint. Kom je vaker, dan wordt het € 12 — maar dat hoeft niet."],
+  ["Moet ik ervaring hebben?", "Nee. Je traint in alle rust, zonder pottenkijkers. Wil je begeleiding, dan kan je een gratis intake met een van onze coaches aanvragen."],
+  ["Kan ik alleen komen, of met vrienden?", "Allebei. Je boekt de hele zaal — alleen, of met maximaal 4 personen, voor dezelfde prijs. Tijdens jouw uur staat er niemand anders."],
+];
+
 export default async function GratisLanding({ searchParams }) {
   const sp = (await searchParams) || {};
   const naarBoeken = boekenHref(sp);
+
+  // Sociale bewijskracht met een écht cijfer, niet met verzonnen reviews. Naar beneden afgerond op
+  // tien, zodat het niet fragiel-precies oogt en altijd waar blijft. Faalt de telling, dan valt de
+  // hele regel weg — een verzonnen aantal is erger dan geen.
+  let ledenTekst = null;
+  try {
+    const { count } = await createAdminClient()
+      .from("profiles").select("id", { count: "exact", head: true }).eq("role", "lid");
+    if (count && count >= 30) ledenTekst = `Al ruim ${Math.floor(count / 10) * 10} mensen trainen bij Fittin&rsquo; in Gent.`;
+  } catch { /* zonder cijfer verder */ }
 
   return (
     <main className="bg-white">
@@ -86,6 +106,14 @@ export default async function GratisLanding({ searchParams }) {
           </div>
         </div>
       </section>
+
+      {/* ── Sociale bewijskracht: één echt cijfer ── */}
+      {ledenTekst && (
+        <div className="border-b border-borderc bg-white">
+          <p className="mx-auto max-w-6xl px-5 py-4 text-center text-sm font-bold text-brand/70"
+             dangerouslySetInnerHTML={{ __html: `★ ${ledenTekst}` }} />
+        </div>
+      )}
 
       {/* ── Waarom (drie beats) ── */}
       <section className="bg-paper">
@@ -127,6 +155,24 @@ export default async function GratisLanding({ searchParams }) {
                 <h3 className="mt-3 text-xl font-black">{titel}</h3>
                 <p className="mt-2 text-sm leading-relaxed text-white/70">{tekst}</p>
               </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── FAQ: de twijfels wegnemen vóór de laatste vraag ── */}
+      <section>
+        <div className="mx-auto max-w-3xl px-5 py-20">
+          <h2 className="text-3xl font-black text-brand md:text-4xl">Even goed om te weten</h2>
+          <div className="mt-8 divide-y divide-borderc border-y border-borderc">
+            {FAQ.map(([vraag, antwoord]) => (
+              <details key={vraag} className="group py-4">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 text-lg font-black text-brand marker:content-['']">
+                  {vraag}
+                  <span className="shrink-0 text-2xl font-light text-accentdark transition group-open:rotate-45">+</span>
+                </summary>
+                <p className="mt-3 text-brand/65 leading-relaxed">{antwoord}</p>
+              </details>
             ))}
           </div>
         </div>
