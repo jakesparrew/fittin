@@ -19,6 +19,26 @@ const ABO_CENTS_PER_SESSIE = 1200;
 const half = (n) => Math.round(n * 2) / 2;
 const voornaam = (naam) => String(naam || "").trim().split(/\s+/)[0] || "sporter";
 
+// Telt deze boeking mee voor "abo-kandidaat"?
+//
+// DE ENIGE JUISTE REGEL: alleen een sessie die het lid ZELF betaalde. Een abonnement verlaagt de
+// prijs van je eigen sessies — het doet niets voor een sessie die iemand anders betaalde.
+//   • los mét prijs én betaald  → ja, dat is € 15 uit zijn eigen zak
+//   • beurtenkaart (credit)     → ja, vooraf betaald (price_cents is dan 0, dat hoort zo)
+//   • los à € 0                 → NEE: een coach die de zaal betaalt voor zijn client, of een
+//                                 gratis sessie die het beheer inplande
+//   • abo / gratis_code         → NEE (heeft al een abo, of welkomstsessie)
+//
+// Dit stond in vier bestanden apart, en drie ervan misten de prijscontrole. Gevolg, gemeten:
+// Pieter Veelaert stond op het dashboard als "8 sessies zonder abo", terwijl al zijn acht sessies
+// mét een coach waren en hem € 0 kostten — en hij kreeg twee keer een mail die hem voorrekende
+// hoeveel hij op die acht sessies zou besparen. Vandaar één functie waar iedereen langs gaat.
+export function teltVoorAbo(b) {
+  if (!b) return false;
+  if (b.payment_source === "credit") return true;
+  return b.payment_source === "los" && (b.price_cents || 0) > 0 && !!b.paid;
+}
+
 // Wat kost het huidige gedrag per maand, en wat zou het abo kosten?
 // `los` en `kaart` zijn aantallen sessies in de afgelopen 60 dagen.
 export function aboMath({ los = 0, kaart = 0 }) {

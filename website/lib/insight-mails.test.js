@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { aboMath, magOpnieuw, buildAboVoorstel, TARGET_DRIPS, HERHAAL_DAGEN } from "./insight-mails.js";
+import { aboMath, magOpnieuw, buildAboVoorstel, TARGET_DRIPS, HERHAAL_DAGEN, teltVoorAbo } from "./insight-mails.js";
 
 // De rekensom is het hele overtuigingsargument: "jij betaalde € X, met abo was dat € Y".
 // Eén fout cijfer in zo'n mail en het vertrouwen is weg — vandaar vaste voorbeelden.
@@ -79,5 +79,30 @@ describe("TARGET_DRIPS", () => {
       // De eerste mail vertrekt meteen — wie op de knop duwt, wil vandaag iets zien vertrekken.
       expect(d.steps[0].delay_hours).toBe(0);
     }
+  });
+});
+
+// teltVoorAbo — de regel die bepaalt wie "abo-kandidaat" is. Ze stond in vier bestanden apart en
+// drie daarvan misten de prijscontrole, waardoor sessies die de coach betaalde meetelden. Als dit
+// scheef staat, mailen we mensen een besparing op geld dat ze nooit uitgaven.
+describe("teltVoorAbo", () => {
+  it("telt een betaalde losse sessie", () => {
+    expect(teltVoorAbo({ payment_source: "los", price_cents: 1500, paid: true })).toBe(true);
+  });
+  it("telt een beurtenkaart, ook al staat de prijs op 0", () => {
+    expect(teltVoorAbo({ payment_source: "credit", price_cents: 0, paid: true })).toBe(true);
+  });
+  it("telt NIET wat de coach betaalde (los à € 0)", () => {
+    expect(teltVoorAbo({ payment_source: "los", price_cents: 0, paid: true })).toBe(false);
+  });
+  it("telt NIET een nog onbetaalde losse sessie", () => {
+    expect(teltVoorAbo({ payment_source: "los", price_cents: 1500, paid: false })).toBe(false);
+  });
+  it("telt NIET een abo- of welkomstsessie", () => {
+    expect(teltVoorAbo({ payment_source: "abo", price_cents: 1200, paid: true })).toBe(false);
+    expect(teltVoorAbo({ payment_source: "gratis_code", price_cents: 0, paid: true })).toBe(false);
+  });
+  it("valt niet over niets", () => {
+    expect(teltVoorAbo(null)).toBe(false);
   });
 });

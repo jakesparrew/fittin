@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendWeekReport } from "@/lib/email";
+import { teltVoorAbo } from "@/lib/insight-mails";
 
 // Data voor het wekelijkse rapport aan de beheerder.
 //
@@ -54,7 +55,7 @@ export async function buildWeekReport(gym, now = new Date()) {
     admin.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid").gte("created_at", sIso).lt("created_at", eIso),
     admin.from("profiles").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("role", "lid").gte("created_at", pIso).lt("created_at", sIso),
     admin.from("memberships").select("user_id, status, cancel_at_period_end, current_period_end, started_at").eq("gym_id", gym.id),
-    admin.from("bookings").select("user_id, payment_source").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", d60).lt("starts_at", eIso),
+    admin.from("bookings").select("user_id, payment_source, price_cents, paid").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", d60).lt("starts_at", eIso),
     admin.from("profiles").select("id, full_name, role").eq("gym_id", gym.id),
     admin.from("coach_ledger").select("coach_id, delta").eq("gym_id", gym.id),
     admin.from("problem_reports").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "open"),
@@ -145,13 +146,15 @@ export async function buildWeekReport(gym, now = new Date()) {
   const ending = active.filter((m) => m.cancel_at_period_end);
   const newAbos = all.filter((m) => m.started_at && m.started_at >= sIso && m.started_at < eIso).length;
 
-  // Abo-kandidaten: ≥3 los/kaart-sessies in 60 dagen zonder abo. Zelfde regel als het dashboard
-  // en als de automatische abo-mail, zodat de cijfers elkaar niet tegenspreken.
+  // Abo-kandidaten: ≥3 ZELFBETAALDE sessies in 60 dagen zonder abo. De regel staat nu écht op
+  // één plek (teltVoorAbo in lib/insight-mails.js). Deze nota beweerde al dat het dezelfde regel
+  // was als het dashboard en de automatische mail — maar dat klopte niet: de prijscontrole
+  // ontbrak hier en op het dashboard, waardoor sessies die de coach betaalde meetelden.
   const hasAbo = new Set(all.filter((m) => m.status === "actief" || m.status === "past_due").map((m) => m.user_id));
   const payCount = {};
   for (const b of bk60 || []) {
     if (!b.user_id || hasAbo.has(b.user_id) || !lidIds.has(b.user_id)) continue;
-    if (b.payment_source === "los" || b.payment_source === "credit") payCount[b.user_id] = (payCount[b.user_id] || 0) + 1;
+    if (teltVoorAbo(b)) payCount[b.user_id] = (payCount[b.user_id] || 0) + 1;
   }
   const candidates = Object.entries(payCount).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 4)
     .map(([uid, n]) => ({ name: nameOf.get(uid) || "Lid", sessions: n }));

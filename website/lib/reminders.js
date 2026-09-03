@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSessionReminder, sendGuestSessionReminder, sendAccessCode, sendCreditsExpiring, sendCreditsEmpty, sendFirstSessionFollowup, sendGuestFollowup, sendAboSuggestion } from "@/lib/email";
+import { teltVoorAbo } from "@/lib/insight-mails";
 import { getNukiConfig, ensureBookingKeypadCode, getLockHealth } from "@/lib/nuki";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import { notify } from "@/lib/notify";
@@ -455,9 +456,11 @@ export async function sendAboSuggestions() {
   const recent = new Set((logged || []).map((l) => (l.to_email || "").toLowerCase()));
   const stats = {};
   for (const b of bks || []) {
-    if (!b.user_id) continue;
-    if (b.payment_source === "los" && (b.price_cents || 0) > 0 && b.paid) (stats[b.user_id] ||= { los: 0, credit: 0 }).los++;
-    else if (b.payment_source === "credit") (stats[b.user_id] ||= { los: 0, credit: 0 }).credit++;
+    if (!b.user_id || !teltVoorAbo(b)) continue;
+    // Deze sweep had de regel als enige wél juist staan; ze staat nu in teltVoorAbo zodat het
+    // dashboard, het weekrapport en de mail er niet meer van kunnen afwijken.
+    if (b.payment_source === "credit") (stats[b.user_id] ||= { los: 0, credit: 0 }).credit++;
+    else (stats[b.user_id] ||= { los: 0, credit: 0 }).los++;
   }
   let sent = 0;
   for (const m of leden || []) {

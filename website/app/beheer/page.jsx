@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { isSettled } from "@/lib/booking-status";
 import { classifyClientError } from "@/lib/error-triage";
 import { TrendLine } from "@/components/admin/Charts";
+import { teltVoorAbo } from "@/lib/insight-mails";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,7 @@ export default async function BeheerDashboard() {
     // Subscriptions — the recurring backbone; drives the person-level action list below.
     supabase.from("memberships").select("user_id, status, cancel_at_period_end, current_period_end, started_at").eq("gym_id", gym.id),
     // 60 days of confirmed bookings → abo-candidates ("books often, pays full price") + past_due context.
-    supabase.from("bookings").select("user_id, payment_source").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", d60.toISOString()),
+    supabase.from("bookings").select("user_id, payment_source, price_cents, paid").eq("gym_id", gym.id).eq("status", "bevestigd").gte("starts_at", d60.toISOString()),
     // "Deze week" moet ook bovenaan begrensd zijn. Zonder de .lt() hieronder telde deze kaart elke
     // bevestigde boeking vanaf maandag én ALLE toekomstige — op 30-08-2026 stond er 50 waar er 27
     // in deze week vielen (de 23 andere lagen later). Erger dan het getal zelf was de vergelijking:
@@ -163,12 +164,19 @@ export default async function BeheerDashboard() {
   const bkCount = {}; // confirmed bookings per user, last 60d (incl. upcoming)
   for (const b of bk60 || []) if (b.user_id) bkCount[b.user_id] = (bkCount[b.user_id] || 0) + 1;
   const hasAbo = new Set(mems.filter((m) => m.status === "actief" || m.status === "past_due").map((m) => m.user_id));
-  // Abo-candidates: leden met ≥3 los/kaart-boekingen in 60d zonder abo → concreet voorstel waard.
+  // Abo-candidates: leden met ≥3 ZELFBETAALDE sessies in 60d zonder abo → concreet voorstel waard.
+  //
+  // teltVoorAbo is de gedeelde regel (lib/insight-mails.js). Hier stond een kale test op
+  // payment_source, zonder prijscontrole, en dat maakte de lijst gewoon fout: een sessie waarvoor
+  // de coach de zaal betaalt staat als `los` à € 0 op naam van het lid. Gemeten: van de acht
+  // kandidaten waren er drie onterecht — Pieter Veelaert stond op 8 sessies terwijl alle acht met
+  // een coach waren en hem niets kostten. Een abo verlaagt de prijs van je eigen sessies; voor
+  // sessies die iemand anders betaalt doet het niets.
   const payCount = {};
   const lidIds = new Set(ledenOnly.map((m) => m.id)); // enkel leden zijn abo-kandidaat, geen coaches
   for (const b of bk60 || []) {
     if (!b.user_id || hasAbo.has(b.user_id) || !lidIds.has(b.user_id)) continue;
-    if (b.payment_source === "los" || b.payment_source === "credit") payCount[b.user_id] = (payCount[b.user_id] || 0) + 1;
+    if (teltVoorAbo(b)) payCount[b.user_id] = (payCount[b.user_id] || 0) + 1;
   }
   const candidates = Object.entries(payCount).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 5);
 

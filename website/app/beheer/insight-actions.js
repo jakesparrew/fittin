@@ -4,7 +4,7 @@ import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { newsletterHtml, enrollMemberInTargetDrip } from "@/lib/newsletter";
-import { magOpnieuw, buildAboVoorstel, buildWinback, buildPastdueHulp, buildOpzegBehoud, aboMath } from "@/lib/insight-mails";
+import { magOpnieuw, buildAboVoorstel, buildWinback, buildPastdueHulp, buildOpzegBehoud, aboMath, teltVoorAbo } from "@/lib/insight-mails";
 import { FROM_NEWS, REPLY_TO } from "@/lib/email";
 
 // Acties achter de inzichten op het dashboard en de beheerlijsten. Owner-doel (2026-08-16):
@@ -42,13 +42,15 @@ const PRESETS = {
 async function ledenCijfers(admin, gymId, memberId) {
   const d60 = new Date(Date.now() - 60 * 86400000).toISOString();
   const [{ data: bk60 }, { data: laatste }] = await Promise.all([
-    admin.from("bookings").select("payment_source").eq("gym_id", gymId).eq("user_id", memberId)
+    admin.from("bookings").select("payment_source, price_cents, paid").eq("gym_id", gymId).eq("user_id", memberId)
       .eq("status", "bevestigd").gte("starts_at", d60).lte("starts_at", new Date().toISOString()),
     admin.from("bookings").select("starts_at").eq("gym_id", gymId).eq("user_id", memberId)
       .eq("status", "bevestigd").lte("starts_at", new Date().toISOString())
       .order("starts_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
-  const los = (bk60 || []).filter((b) => b.payment_source === "los").length;
+  // teltVoorAbo: alleen zelfbetaalde sessies. Hier stond een kale test op payment_source, en
+  // daardoor rekende de mail een besparing voor op sessies die de coach betaald had.
+  const los = (bk60 || []).filter((b) => b.payment_source === "los" && teltVoorAbo(b)).length;
   const kaart = (bk60 || []).filter((b) => b.payment_source === "credit").length;
   const { count: ooit } = await admin.from("bookings").select("id", { count: "exact", head: true })
     .eq("gym_id", gymId).eq("user_id", memberId).eq("status", "bevestigd");
