@@ -31,7 +31,7 @@ export default async function Verkeer({ searchParams }) {
     admin.rpc("pv_summary", { p_from: live.toISOString(), p_to: now.toISOString() }),
     admin.rpc("pv_events", win),
     admin.rpc("pv_path_visitors", { ...win, p_path: "/boeken" }),
-    admin.rpc("pv_campaigns", { ...win, p_limit: 8 }),
+    admin.rpc("pv_campaign_funnel", { ...win, p_limit: 20 }),
     admin.from("referrals").select("status, referred_id, rewarded_at").eq("gym_id", ctx.gym.id).gte("created_at", from.toISOString()),
   ]);
 
@@ -51,10 +51,12 @@ export default async function Verkeer({ searchParams }) {
   ];
   const heeftTrechter = trechter.some((t) => t.value > 0);
 
-  // Campagnetabel blijft onzichtbaar zolang er geen enkele UTM-link gebruikt is (declutter-regel:
-  // leeg = onzichtbaar). De intentiekolom komt uit 0137_meten.sql; draait die nog niet, dan is
-  // r.intent undefined en tonen we een streepje in plaats van een nul die niets betekent.
+  // De campagnetrechter (0151) toont per advertentie: bezoekers → aanmeldingen → boekingen.
+  // Blijft onzichtbaar zolang er geen UTM-link gebruikt is (declutter-regel: leeg = onzichtbaar).
+  // Attributie is zonder cookie/pixel en dus per definitie een ondergrens — een klik en een boeking
+  // op verschillende dagen matchen niet meer (zie de nota in 0151).
   const camps = (campagnes.data || []).filter((r) => r.utm_source && r.utm_source !== "(geen)");
+  const advLabel = { zaal: "De hele zaal", niemand: "Niemand wacht", lidgeld: "Geen lidgeld", coach: "Met coach" };
 
   // Referral: gedeeld (beacon) → aangemeld met code (rij in referrals) → beloond.
   const refRows = referrals.data || [];
@@ -133,12 +135,13 @@ export default async function Verkeer({ searchParams }) {
 
           {camps.length > 0 && (
             <div className="mt-5 overflow-x-auto">
-              <table className="w-full min-w-[520px] text-sm">
+              <table className="w-full min-w-[560px] text-sm">
                 <thead className="text-left text-xs font-bold uppercase tracking-wide text-lav">
                   <tr>
-                    <th className="py-2 pr-3">Campagne</th>
-                    <th className="py-2 pr-3">Bezoekers</th>
-                    <th className="py-2" title="Bezoekers die dezelfde dag een moment kozen of een betaling startten">Toonde interesse</th>
+                    <th className="py-2 pr-3">Bron · campagne · advertentie</th>
+                    <th className="py-2 pr-3 text-right">Bezoekers</th>
+                    <th className="py-2 pr-3 text-right" title="Maakten dezelfde dag een account aan">Aanmeldingen</th>
+                    <th className="py-2 text-right" title="Boekten dezelfde dag effectief een sessie">Boekingen</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-borderc">
@@ -146,16 +149,20 @@ export default async function Verkeer({ searchParams }) {
                     <tr key={i}>
                       <td className="py-2 pr-3 font-semibold text-brand">
                         {r.utm_source}
-                        {(r.utm_medium || r.utm_campaign) && (
-                          <span className="text-brand/40"> · {[r.utm_medium, r.utm_campaign].filter(Boolean).join(" · ")}</span>
-                        )}
+                        {r.utm_campaign && <span className="text-brand/40"> · {r.utm_campaign}</span>}
+                        {r.utm_content && <span className="text-accentdark"> · {advLabel[r.utm_content] || r.utm_content}</span>}
                       </td>
-                      <td className="py-2 pr-3 text-brand/70">{nl(r.visitors)}</td>
-                      <td className="py-2 font-bold text-accentdark">{r.intent == null ? "—" : nl(r.intent)}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-brand/70">{nl(r.visitors)}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-brand/70">{nl(r.signups)}</td>
+                      <td className="py-2 text-right font-bold tabular-nums text-accentdark">{nl(r.bookings)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+              <p className="mt-2 text-xs text-brand/45">
+                Toegeschreven zonder cookie of pixel — een klik en een boeking op verschillende dagen
+                tellen niet mee, dus dit is een ondergrens.
+              </p>
             </div>
           )}
 

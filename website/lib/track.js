@@ -16,7 +16,14 @@ export function readUtm() {
     const sp = new URLSearchParams(window.location.search);
     const src = sp.get("utm_source");
     if (!src) return null;
-    return { utm_source: src, utm_medium: sp.get("utm_medium") || "", utm_campaign: sp.get("utm_campaign") || "" };
+    // utm_content erbij: dat onderscheidt de ADVERTENTIES binnen één campagne (zaal/niemand/coach…).
+    // Zonder dit label weet je wel dát meta verkeer bracht, maar niet wélke advertentie werkte.
+    return {
+      utm_source: src,
+      utm_medium: sp.get("utm_medium") || "",
+      utm_campaign: sp.get("utm_campaign") || "",
+      utm_content: sp.get("utm_content") || "",
+    };
   } catch { return null; }
 }
 
