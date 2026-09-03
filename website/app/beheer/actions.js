@@ -1044,3 +1044,84 @@ export async function sendWeekReportTest() {
   if (!res?.ok) return { error: res?.skipped ? "E-mail is niet geconfigureerd." : "Versturen mislukt — check de e-mailinstellingen." };
   return { ok: `Weekrapport verstuurd naar ${me.email} ✓` };
 }
+
+// ---- Meldpunt: de lus sluiten (0150) ----
+//
+// Tot nu kon je een melding alleen "afhandelen". Antwoorden zette ze meteen op afgehandeld, dus je
+// KON niet zeggen "ik kijk ernaar, ik laat iets weten". Bij één tot drie meldingen per maand is
+// elke melder die afhaakt een significant deel van je sensoren — vandaar drie aparte stappen:
+// gezien, een notitie voor de volgende bezoeker, en opgelost.
+
+async function meldingVan(admin, gymId, id) {
+  const { data } = await admin
+    .from("problem_reports")
+    .select("id, user_id, category, message, acknowledged_at, resolved_at")
+    .eq("id", id).eq("gym_id", gymId).maybeSingle();
+  return data;
+}
+
+async function laatWeten(admin, userId, categorie, status, notitie) {
+  if (!userId) return;
+  const { data: lid } = await admin.from("profiles").select("email, full_name, is_test").eq("id", userId).maybeSingle();
+  if (!lid?.email || lid.is_test) return;
+  const { sendMeldingUpdate } = await import("@/lib/email");
+  try { await sendMeldingUpdate({ to: lid.email, name: lid.full_name, categorie, status, notitie }); } catch {}
+  try {
+    await notify({
+      gymId: null, userId, type: "system",
+      title: status === "gezien" ? "We hebben je melding gezien 👀" : "Je melding is opgelost ✅",
+      body: notitie || "",
+      link: "/account",
+    });
+  } catch {}
+}
+
+export async function bevestigMelding(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const m = await meldingVan(admin, profile.gym_id, formData.get("id"));
+  if (!m) return { error: "Melding niet gevonden." };
+  if (m.acknowledged_at) return { ok: true, message: "Stond al op gezien." };
+  const { error: e } = await admin.from("problem_reports").update({ acknowledged_at: new Date().toISOString() }).eq("id", m.id);
+  if (e) return { error: e.message };
+  const { catLabel } = await import("@/lib/meldpunt");
+  await laatWeten(admin, m.user_id, catLabel(m.category), "gezien", null);
+  revalidatePath("/beheer/meldingen");
+  return { ok: true, message: "Het lid weet dat je ernaar kijkt ✓" };
+}
+
+// De notitie die meereist in de deurcodemail van volgende bezoekers. Bewust de tekst van de
+// UITBATER en niet die van het lid: die kan een naam of een verwijt bevatten, en dat mail je niet
+// naar de rest van je leden.
+export async function zetZaalNotitie(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const m = await meldingVan(admin, profile.gym_id, formData.get("id"));
+  if (!m) return { error: "Melding niet gevonden." };
+  const notitie = String(formData.get("public_note") || "").trim().slice(0, 200) || null;
+  const { error: e } = await admin.from("problem_reports").update({ public_note: notitie }).eq("id", m.id);
+  if (e) return { error: e.message };
+  revalidatePath("/beheer/meldingen");
+  return { ok: true, message: notitie ? "Staat vanaf nu in de deurcodemail ✓" : "Waarschuwing weggehaald ✓" };
+}
+
+export async function losOpMelding(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const admin = createAdminClient();
+  const m = await meldingVan(admin, profile.gym_id, formData.get("id"));
+  if (!m) return { error: "Melding niet gevonden." };
+  const notitie = String(formData.get("resolved_note") || "").trim().slice(0, 300) || null;
+  // public_note mee op null: zodra het opgelost is, mag de waarschuwing niet blijven meereizen in
+  // de deurcodemails. Dat is precies het soort restje dat maanden blijft hangen.
+  const { error: e } = await admin.from("problem_reports")
+    .update({ resolved_at: new Date().toISOString(), resolved_note: notitie, status: "afgehandeld", public_note: null })
+    .eq("id", m.id);
+  if (e) return { error: e.message };
+  const { catLabel } = await import("@/lib/meldpunt");
+  await laatWeten(admin, m.user_id, catLabel(m.category), "opgelost", notitie);
+  revalidatePath("/beheer/meldingen");
+  return { ok: true, message: "Opgelost — het lid kreeg bericht ✓" };
+}

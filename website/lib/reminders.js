@@ -1,6 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSessionReminder, sendGuestSessionReminder, sendAccessCode, sendCreditsExpiring, sendCreditsEmpty, sendFirstSessionFollowup, sendGuestFollowup, sendAboSuggestion } from "@/lib/email";
 import { teltVoorAbo } from "@/lib/insight-mails";
+import { zorgVoorToken, openMeldingNotitie } from "@/lib/meldpunt";
 import { getNukiConfig, ensureBookingKeypadCode, getLockHealth } from "@/lib/nuki";
 import { getGymSecrets } from "@/lib/gym-secrets";
 import { notify } from "@/lib/notify";
@@ -316,7 +317,7 @@ export async function sendDueAccessCodes() {
   const to = new Date(Date.now() + 16 * 60000).toISOString();
   const { data: rows } = await admin
     .from("bookings")
-    .select("id, gym_id, user_id, coach_id, starts_at, ends_at, nuki_auth_name, services(name), gym:gyms(access_info, address), member:profiles!bookings_user_id_fkey(email, full_name), coach:profiles!bookings_coach_id_fkey(email, full_name)")
+    .select("id, gym_id, user_id, coach_id, starts_at, ends_at, nuki_auth_name, report_token, services(name), gym:gyms(access_info, address), member:profiles!bookings_user_id_fkey(email, full_name), coach:profiles!bookings_coach_id_fkey(email, full_name)")
     .eq("status", "bevestigd")
     .eq("access_sent", false)
     .or("paid.eq.true,payment_source.in.(credit,gratis_code)") // never hand a door code to an unpaid los/abo booking
@@ -331,6 +332,13 @@ export async function sendDueAccessCodes() {
   let sent = 0;
   const failures = []; // door-critical mint/config problems, surfaced to the cron so they're never silent
   const healthByGym = new Map(); // lock reachability, checked once per gym per run
+  // De waarschuwingsregel van een open melding ("de roeier staat buiten dienst") reist mee naar
+  // iedereen die vandaag binnenkomt. Eén keer per gym per beurt opgehaald.
+  const notitieByGym = new Map();
+  const zaalNotitie = async (gymId) => {
+    if (!notitieByGym.has(gymId)) notitieByGym.set(gymId, await openMeldingNotitie(admin, gymId));
+    return notitieByGym.get(gymId);
+  };
   for (const b of rows || []) {
     const address = b.gym?.address || "Aannemersstraat 186, 9040 Gent";
     const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`;
@@ -390,6 +398,11 @@ export async function sendDueAccessCodes() {
           personal,
           address,
           mapsUrl,
+          // Melden vanuit DEZE mail: het is de enige die 100% van de sessies bereikt en die
+          // iedereen opent, want de code staat erin. Dat is precies waarom de meldknop hier hoort
+          // en niet dichtgeklapt op een accountpagina.
+          reportToken: await zorgVoorToken(admin, b.id, b.report_token),
+          zaalNotitie: await zaalNotitie(b.gym_id),
         });
         sent++;
       } catch {}
@@ -410,6 +423,8 @@ export async function sendDueAccessCodes() {
           personal,
           address,
           mapsUrl,
+          reportToken: await zorgVoorToken(admin, b.id, b.report_token),
+          zaalNotitie: await zaalNotitie(b.gym_id),
         });
         sent++;
       } catch (e) { console.error("access code to coach failed:", b.id, e?.message); }
@@ -506,4 +521,62 @@ export async function rewardDueReferrals() {
     beloond += 1;
   }
   return beloond;
+}
+
+// S6 — de sterrenvraag na de sessie. Draait mee met de deurcode-cron (elke 5 minuten), zodat de
+// mail ~45 minuten na afloop vertrekt en niet pas de volgende ochtend.
+//
+// Drie remmen, elk met een reden:
+//  • feedback_asked_at op de BOEKING → idempotent, ook als de cron twee keer in hetzelfde venster
+//    draait. Dat is de echte claim; email_log is de tweede gordel.
+//  • max één vraag per lid per 30 dagen, op TO_EMAIL en niet op to_user_id — logEmail() schrijft
+//    to_user_id nooit (alleen insight-actions doet dat), dus een dedupe op die kolom vindt per
+//    definitie nul rijen. Precies de bug die de 30-dagenrem op de abo-mails maandenlang stil hield.
+//  • feedback_opt_out op het profiel → art. 21 AVG, apart van de nieuwsbrief-schakelaar.
+export async function sendSessionFeedbackRequests() {
+  const admin = createAdminClient();
+  const nu = Date.now();
+  const van = new Date(nu - 26 * 3600000).toISOString();  // niet ouder dan een dag: dan is het te laat
+  const tot = new Date(nu - 45 * 60000).toISOString();    // 45 min na afloop
+  const { data: rows } = await admin
+    .from("bookings")
+    .select("id, gym_id, user_id, starts_at, ends_at, report_token, member:profiles!bookings_user_id_fkey(email, full_name, is_test, feedback_opt_out)")
+    .eq("status", "bevestigd")
+    .is("feedback_asked_at", null)
+    .gte("ends_at", van)
+    .lte("ends_at", tot)
+    .limit(50);
+  if (!rows?.length) return 0;
+
+  const d30 = new Date(nu - 30 * 86400000).toISOString();
+  const { data: eerder } = await admin.from("email_log")
+    .select("to_email").eq("kind", "sessie_feedback").gte("created_at", d30);
+  const recent = new Set((eerder || []).map((l) => String(l.to_email || "").toLowerCase()));
+
+  const { sendSessionFeedback } = await import("@/lib/email");
+  const { zorgVoorToken } = await import("@/lib/meldpunt");
+  let sent = 0;
+  for (const b of rows) {
+    // Altijd claimen, ook als we niet mailen: anders komt deze boeking elke vijf minuten terug.
+    const { data: claim } = await admin.from("bookings")
+      .update({ feedback_asked_at: new Date().toISOString() })
+      .eq("id", b.id).is("feedback_asked_at", null).select("id");
+    if (!claim?.length) continue;
+
+    const m = b.member;
+    if (!m?.email || m.is_test || m.feedback_opt_out) continue;
+    if (recent.has(m.email.toLowerCase())) continue;
+    recent.add(m.email.toLowerCase());
+
+    try {
+      const token = await zorgVoorToken(admin, b.id, b.report_token);
+      const site = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+      const r = await sendSessionFeedback({
+        to: m.email, name: m.full_name, token, startsAt: b.starts_at,
+        uitschrijfUrl: `${site}/f/${token}/uit`,
+      });
+      if (r?.ok !== false) sent++;
+    } catch (e) { console.error("feedbackvraag mislukt:", b.id, e?.message); }
+  }
+  return sent;
 }

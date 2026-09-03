@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { sendDueAccessCodes } from "@/lib/reminders";
+import { sendDueAccessCodes, sendSessionFeedbackRequests } from "@/lib/reminders";
 import { revokeExpiredKeypadCodes, reconcileKeypadCodes } from "@/lib/nuki";
 import { alertNewClientErrors } from "@/lib/error-alert";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -20,7 +20,7 @@ export async function GET(req) {
   // Door codes are time-critical — a silent failure here strands members at a locked door.
   // Log every failure and return non-200 so Vercel's cron monitoring can alert on it.
   const errors = [];
-  let sent = 0, revoked = 0, swept = 0;
+  let sent = 0, revoked = 0, swept = 0, feedback = 0;
   try {
     const r = await sendDueAccessCodes();
     sent = r?.sent ?? 0;
@@ -35,7 +35,11 @@ export async function GET(req) {
   // onbekeken in de logs terwijl een betalend lid niet kon boeken). Best-effort: een kapot alarm
   // mag de deurcode-taak nooit meeslepen — de deur gaat vóór de telemetrie.
   try { await alertNewClientErrors(createAdminClient()); } catch (e) { console.error("cron error-alert failed:", e?.message); }
+  // De sterrenvraag ~45 min na de sessie liftt mee op deze cron van elke 5 minuten. Best-effort en
+  // bewust NIET in `errors`: een mislukte tevredenheidsvraag mag de deurcode-taak nooit rood
+  // kleuren. De deur gaat voor.
+  try { feedback = await sendSessionFeedbackRequests(); } catch (e) { console.error("cron feedbackvraag mislukt:", e?.message); }
   // Health heartbeat (Batch 6.5): one row per run so the cockpit shows this door-critical cron is alive.
-  try { await createAdminClient().from("cron_runs").insert({ job: "access_codes", ok: errors.length === 0, detail: { sent, revoked, swept, ...(errors.length ? { errors } : {}) } }); } catch {}
-  return NextResponse.json({ sent, revoked, swept, ...(errors.length ? { errors } : {}) }, { status: errors.length ? 500 : 200 });
+  try { await createAdminClient().from("cron_runs").insert({ job: "access_codes", ok: errors.length === 0, detail: { sent, revoked, swept, feedback, ...(errors.length ? { errors } : {}) } }); } catch {}
+  return NextResponse.json({ sent, revoked, swept, feedback, ...(errors.length ? { errors } : {}) }, { status: errors.length ? 500 : 200 });
 }

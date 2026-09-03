@@ -5,6 +5,8 @@ import ActionForm from "@/components/ui/ActionForm";
 import { classifyClientError, explainClass } from "@/lib/error-triage";
 import ListSearch from "@/components/admin/ListSearch";
 import ProblemReply from "@/components/admin/ProblemReply";
+import MeldingKaart from "@/components/admin/MeldingKaart";
+import { vorigeGebruiker } from "@/lib/meldpunt";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +25,7 @@ export default async function Meldingen({ searchParams }) {
   const [{ data: reports }, { data: errors }] = await Promise.all([
     supabase
       .from("problem_reports")
-      .select("id, message, page, status, created_at, member:profiles!problem_reports_user_id_fkey(full_name, email)")
+      .select("id, message, page, status, created_at, category, photo_path, booking_id, acknowledged_at, public_note, resolved_note, resolved_at, booking:bookings(starts_at), member:profiles!problem_reports_user_id_fkey(full_name, email)")
       .eq("gym_id", gym.id)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -61,8 +63,27 @@ export default async function Meldingen({ searchParams }) {
   const ruis = zichtbaar.filter((g) => g.kind !== "app");
 
   const alleReports = (reports || []).filter((r) => raakt([r.member?.full_name, r.member?.email, r.message, r.page]));
-  const open = alleReports.filter((r) => r.status === "open");
-  const done = alleReports.filter((r) => r.status !== "open");
+  const open = alleReports.filter((r) => !r.resolved_at && r.status === "open");
+  const done = alleReports.filter((r) => r.resolved_at || r.status !== "open");
+
+  // Foto's staan in een PRIVÉ-bak (0150): een foto van een vuile kleedkamer of een kapot toestel
+  // kan mensen bevatten en hoort niet achter een raadbare publieke URL. Ondertekende links van
+  // een uur, alleen voor dit scherm.
+  const fotoUrls = {};
+  for (const r of open) {
+    if (!r.photo_path) continue;
+    try {
+      const { data } = await admin.storage.from("meldingen").createSignedUrl(r.photo_path, 3600);
+      if (data?.signedUrl) fotoUrls[r.id] = data.signedUrl;
+    } catch {}
+  }
+  // Wie had de zaal vóór deze sessie? Enkel opgezocht bij netheid — daar is het de relevante
+  // vraag, en enkel de uitbater ziet het.
+  const vorigen = {};
+  for (const r of open) {
+    if (r.category !== "netheid" || !r.booking?.starts_at) continue;
+    vorigen[r.id] = await vorigeGebruiker(admin, gym.id, r.booking.starts_at, r.booking_id);
+  }
   // Resolve names for automatic errors that carried a logged-in user.
   const errUserIds = [...new Set((errors || []).map((e) => e.user_id).filter(Boolean))];
   const nameById = {};
@@ -75,7 +96,7 @@ export default async function Meldingen({ searchParams }) {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Meldingen</h1>
       <p className="mt-1 text-sm text-brand/50">
-        Problemen gemeld door leden (via “🛟 Werkt iets niet?” op hun account) én automatische foutlogs uit de app.
+        Problemen gemeld door leden — vanuit hun deurcodemail, met categorie en foto — én automatische foutlogs uit de app.
       </p>
 
       {/* Samenvatting bovenaan: wie via "Client-fouten" binnenkomt, ziet meteen waar de inhoud zit —
@@ -97,24 +118,12 @@ export default async function Meldingen({ searchParams }) {
           <p className="mt-3 text-sm text-brand/40">
             {zoek
               ? `Geen melding van een lid gevonden voor “${zoek}”.`
-              : "Nog geen meldingen van leden — zij vinden de meldknop onderaan hun account-pagina."}
+              : "Nog geen meldingen van leden. De meldlink staat onderaan elke deurcodemail."}
           </p>
         )}
         <div className="mt-3 space-y-2">
           {open.map((r) => (
-            <div key={r.id} className="rounded-2xl border border-amber-300 bg-amber-50 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="font-black text-brand">{r.member?.full_name || "Lid"} <span className="font-semibold text-brand/40">· {fmt(r.created_at)}{r.page ? ` · ${r.page}` : ""}</span></p>
-                  <p className="mt-1 text-sm text-brand/80">{r.message}</p>
-                  {r.member?.email && <ProblemReply id={r.id} email={r.member.email} naam={r.member.full_name} />}
-                </div>
-                <ActionForm action={resolveProblemReport} className="shrink-0">
-                  <input type="hidden" name="id" value={r.id} />
-                  <button className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90">✓ Afgehandeld</button>
-                </ActionForm>
-              </div>
-            </div>
+            <MeldingKaart key={r.id} melding={r} fotoUrl={fotoUrls[r.id]} vorige={vorigen[r.id]} />
           ))}
           {done.length > 0 && (
             <details className="rounded-2xl border border-borderc bg-white p-4">

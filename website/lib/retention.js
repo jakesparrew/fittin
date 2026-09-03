@@ -35,6 +35,12 @@ export async function purgeExpiredData() {
     page_views: await wis(admin, "page_views", "created_at", 14),
     client_errors: await wis(admin, "client_errors", "created_at", 12),
     door_log: await wis(admin, "door_log", "opened_at", 12),
+    // 0150. Zonder deze twee regels belooft het privacybeleid een bewaartermijn die nergens wordt
+    // uitgevoerd — precies de les die bovenaan dit bestand staat. 24 maanden: lang genoeg om te
+    // zien of een toestel telkens opnieuw stuk gaat, kort genoeg om geen jarenlang archief van
+    // klachten met foto's aan te leggen.
+    problem_reports: await wis(admin, "problem_reports", "created_at", 24),
+    session_feedback: await wis(admin, "session_feedback", "created_at", 24),
   };
 
   // Slapende leden: tellen, niet aanraken. Iemand zonder bevestigde sessie in 12 maanden én zonder

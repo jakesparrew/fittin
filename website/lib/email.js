@@ -468,7 +468,7 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
 }
 
 // ---- Member: access code, sent ~5 minutes before the session starts ----
-export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl }) {
+export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl, reportToken = null, zaalNotitie = null }) {
   // Persoonlijk vs reserve is geen detail: de eerste vervalt vanzelf na de sessie, de tweede is de
   // vaste code van de gym en blijft altijd geldig. Wie dat niet weet, stuurt hem gedachteloos door.
   const codeCaption = personal ? "Jouw persoonlijke code" : "Reservecode";
@@ -493,7 +493,13 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
         ["Uur", timeRange(startsAt, endsAt)],
         ...(address ? [["Adres", address]] : []),
       ],
-      body: `${codeHtml}${navHtml}
+      // De notitie van een openstaande melding reist mee naar iedereen die vandaag binnenkomt.
+      // Bewust bóven de code: wie weet dat de roeier buiten dienst staat, plant zijn uur anders.
+      // Het is altijd de tekst van de uitbater, nooit die van het meldende lid — die kan een naam
+      // of een verwijt bevatten.
+      body: `${zaalNotitie ? `<div style="margin:0 0 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px 14px">
+          <p style="margin:0;font-size:13px;color:#9a3412;line-height:1.6"><b>Let op:</b> ${esc(zaalNotitie)}</p>
+        </div>` : ""}${codeHtml}${navHtml}
         <div style="margin-top:16px;border-top:1px solid #ece9f5;padding-top:14px">
           <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo kom je binnen</p>
           <ol style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.6">
@@ -514,6 +520,12 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
               <b style="color:#22194F">${esc(address || "Aannemersstraat 186, 9040 Gent")}</b>.
             </p>
           </div>
+          ${reportToken ? `<div style="margin-top:12px;border-top:1px solid #ece9f5;padding-top:12px">
+            <p style="font-size:13px;color:#6b6685;margin:0;line-height:1.6">
+              🛠 Iets stuk, vuil of te warm?
+              <a href="${SITE}/m/${reportToken}" style="color:#1a7d34;font-weight:bold">Meld het hier</a> — twee tikken, wij lezen mee.
+            </p>
+          </div>` : ""}
         </div>`,
       cta: { href: `${SITE}/huisregels`, label: "Toegang & huisregels" },
     }),
@@ -1192,5 +1204,96 @@ export async function sendLockBatteryAlert({ to, gymName = "Fittin'", percent, c
     undefined,
     undefined,
     "slot_batterij"
+  );
+}
+
+// ---- Meldpunt: alarm naar de uitbater bij een urgente melding ----
+//
+// Alleen bij 'toestel' en 'deur': die raken de VOLGENDE bezoeker meteen. Netheid en temperatuur
+// blijven bij het belletje in de app — een alarm dat elke week afgaat voor een handdoek leert de
+// eigenaar om het te negeren, en dan werkt het ook niet meer wanneer het wél moet.
+//
+// `to` is de lijst met BEHEERDER-adressen van de gym, niet de ontwikkelaarslijst uit
+// lib/error-alert.js. Die verwarring is in dit project al eens gemaakt.
+export async function sendMeldingAlarm({ to, categorie, melder, bericht, wanneer, metFoto, vorige }) {
+  const lijst = (Array.isArray(to) ? to : [to]).filter(Boolean);
+  if (!lijst.length) return { ok: false, skipped: true };
+  const site = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+  return send(
+    lijst,
+    `🛟 ${categorie} gemeld in de zaal`,
+    shell({
+      title: `${categorie} 🛟`,
+      intro: `${esc(melder)} meldde dit tijdens of net na zijn sessie. Het volgende lid loopt hier tegenaan als er niets gebeurt.`,
+      rows: [
+        ["Wat", esc(categorie)],
+        ["Wie", esc(melder)],
+        ["Sessie", dayLabel(wanneer)],
+        ...(metFoto ? [["Foto", "meegestuurd — te zien in het beheer"]] : []),
+        ...(vorige ? [["Vorige gebruiker", `${esc(vorige.naam)} (${dayLabel(vorige.starts_at)})`]] : []),
+      ],
+      body: bericht
+        ? `<div style="margin-top:12px;background:#f5f6fa;border-radius:12px;padding:14px"><p style="margin:0;font-size:14px;color:#22194F;line-height:1.6">“${esc(bericht)}”</p></div>`
+        : `<p style="font-size:13px;color:#6b6685">Er stond geen extra uitleg bij.</p>`,
+      cta: { label: "Bekijk de melding", href: `${site}/beheer/meldingen` },
+    }),
+    FROM,
+    REPLY_TO,
+    "melding_alarm"
+  );
+}
+
+// ---- Meldpunt: het lid hoort dat er iets mee gebeurt ----
+export async function sendMeldingUpdate({ to, name, categorie, status, notitie }) {
+  const gezien = status === "gezien";
+  return send(
+    to,
+    gezien ? "We hebben je melding gezien 👀" : "Je melding is opgelost ✅",
+    shell({
+      title: gezien ? "Gezien 👀" : "Opgelost ✅",
+      intro: gezien
+        ? `Dag ${esc(name) || "daar"} — bedankt dat je het meldde (${esc(categorie)}). We kijken ernaar en laten iets weten zodra het geregeld is.`
+        : `Dag ${esc(name) || "daar"} — je melding over ${esc(categorie)} is opgelost.`,
+      body: notitie
+        ? `<div style="margin-top:8px;background:#f5f6fa;border-radius:12px;padding:14px"><p style="margin:0;font-size:14px;color:#22194F;line-height:1.6">${esc(notitie)}</p></div>`
+        : "",
+    }),
+    FROM,
+    REPLY_TO,
+    gezien ? "melding_gezien" : "melding_opgelost"
+  );
+}
+
+// ---- Na de sessie: één vraag, vijf klikbare sterren ----
+//
+// De sterren zijn LINKS, geen formulier: één tik in de mail is de hele beoordeling. Elke extra
+// stap halveert de respons, en er valt hier weinig te zeggen — het lid boekte zelf, opende zelf de
+// deur en trainde alleen.
+//
+// De reviewvraag staat NIET in deze mail en hangt niet aan de score: ze staat op de bedankpagina,
+// identiek voor wie 1 gaf en voor wie 5 gaf. Google's beleid verbiedt woordelijk "selectief vragen
+// om positieve reviews" (support.google.com/contributionpolicy/answer/7400114), en de sanctie loopt
+// tot schorsing van het bedrijfsprofiel.
+export async function sendSessionFeedback({ to, name, token, startsAt, uitschrijfUrl }) {
+  const ster = (n) =>
+    `<a href="${SITE}/f/${token}?s=${n}" style="display:inline-block;text-decoration:none;font-size:30px;padding:4px 6px;color:#f59e0b">★</a>`;
+  return send(
+    to,
+    "Hoe was je sessie?",
+    shell({
+      title: "Hoe was het?",
+      intro: `Dag ${esc(name) || "daar"} — je trainde ${dayLabel(startsAt)}. Eén tik, meer vragen we niet.`,
+      body: `
+        <div style="text-align:center;margin:10px 0 4px">${[1, 2, 3, 4, 5].map(ster).join("")}</div>
+        <p style="text-align:center;font-size:12px;color:#6b6685;margin:0">links = het kon beter · rechts = top</p>
+        <p style="font-size:12px;color:#6b6685;margin:18px 0 0;line-height:1.6">
+          Was er iets mis met de zaal? Dat mag je op het volgende scherm kwijt — daar leest de
+          zaakvoerder mee.
+          ${uitschrijfUrl ? `<br><a href="${uitschrijfUrl}" style="color:#6b6685">Liever geen vraag meer na je sessie? Zet het hier uit.</a>` : ""}
+        </p>`,
+    }),
+    FROM,
+    REPLY_TO,
+    "sessie_feedback"
   );
 }
