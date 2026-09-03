@@ -389,7 +389,7 @@ export async function sendCoachApplyConfirmation({ to, name }) {
 }
 
 // ---- Coach-aanmelding: melding aan de eigenaar (reply-to = de kandidaat) ----
-export async function sendCoachApplyNotice({ to, applicantName, applicantEmail, phone, specialty, socials, about }) {
+export async function sendCoachApplyNotice({ to, applicantName, applicantEmail, phone, specialty, socials, about, bijlagen = [] }) {
   return send(
     to,
     // Alleen de naam in het onderwerp — specialiteit is vrije bezoekerstekst en het onderwerp is
@@ -404,6 +404,9 @@ export async function sendCoachApplyNotice({ to, applicantName, applicantEmail, 
         ...(phone ? [["Telefoon", esc(phone)]] : []),
         ...(specialty ? [["Specialiteit", esc(specialty)]] : []),
         ...(socials ? [["Website / socials", esc(socials)]] : []),
+        // Cv en foto gaan bewust NIET als bijlage mee: ze staan in een privébak en horen achter een
+        // ondertekende link in het beheer, niet in een mailbox die doorgestuurd kan worden.
+        ...(bijlagen.length ? [["Bijlagen", `${esc(bijlagen.join(" + "))} — open ze in Beheer → Inbox`]] : []),
       ],
       body: `<p style="font-size:14px;color:#6b6685;white-space:pre-wrap">${esc(about || "(niets ingevuld)")}</p><p style="font-size:13px;color:#9b97ab;margin-top:12px">Antwoord gewoon op deze mail — je antwoord gaat rechtstreeks naar ${esc(applicantEmail)}.</p>`,
     }),

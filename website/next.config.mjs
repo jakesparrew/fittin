@@ -21,6 +21,16 @@ const nextConfig = {
       { protocol: "https", hostname: "cdn.jsdelivr.net" },
     ],
   },
+  experimental: {
+    serverActions: {
+      // De standaard is exact 1 MB, en dat is te weinig voor de dingen die deze app al door een
+      // server action stuurt: de meldpuntfoto (0150) mag 8 MB zijn en een gsm-foto is er zo 3 à 5,
+      // en sinds 0154 kan een kandidaat-coach een cv van maximaal 8 MB meesturen. Zonder deze regel
+      // krijgt de indiener een 413 op de plek waar hij net moeite deed. De keuring van type en
+      // grootte gebeurt in de actions zelf; dit is enkel het plafond van de leiding.
+      bodySizeLimit: "12mb",
+    },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

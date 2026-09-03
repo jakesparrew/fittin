@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { markRead, archiveInbox } from "../../inbox-actions";
 import InboxReply from "@/components/admin/InboxReply";
 import GeefDoorAanCoach from "@/components/admin/GeefDoorAanCoach";
@@ -13,6 +14,8 @@ const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brusse
 // onderwerp is de enige herkenning die een doorgestuurde intake op een ander adres overleeft, en
 // het adres de enige die een gewijzigde onderwerpregel overleeft.
 const isIntake = (m) => /^PT-intake/i.test(String(m.subject || "")) || m.to_email === "intake@fittin.be";
+
+const kb = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1).replace(".", ",")} MB` : `${Math.max(1, Math.round(n / 1024))} kB`);
 
 export default async function InboxItem({ params }) {
   const { id } = await params;
@@ -54,6 +57,25 @@ export default async function InboxItem({ params }) {
     // deed de gym de matching alsnog. Dan geldt het gewone tarief, niet het voorkeurtarief.
     if (voorkeurCoach && !voorkeurCoach.coach_accepting_clients) voorkeurCoach = null;
   }
+  // ── Bijlagen bij een coach-aanmelding (0154) ──────────────────────────────────────────────
+  // Cv en foto staan in een PRIVÉ-bak: een cv draagt een adres en een geboortedatum, en dat hoort
+  // niet achter een raadbare URL. Ondertekende links van een uur, alleen voor dit scherm.
+  const { data: bijlagen } = await supabase
+    .from("coach_application_files")
+    .select("id, soort, pad, bestandsnaam, mime, bytes")
+    .eq("inbound_email_id", id)
+    .order("soort");
+  const bijlageUrls = {};
+  for (const b of bijlagen || []) {
+    try {
+      // `download` alleen op het cv: dat is een document om te bewaren. Op de foto zou het een
+      // Content-Disposition: attachment zetten, en dan is de voorbeeldweergave hieronder stuk.
+      const opties = b.soort === "cv" && b.bestandsnaam ? { download: b.bestandsnaam } : {};
+      const { data } = await createAdminClient().storage.from("coach-aanmeldingen").createSignedUrl(b.pad, 3600, opties);
+      if (data?.signedUrl) bijlageUrls[b.id] = data.signedUrl;
+    } catch {}
+  }
+
   const coachNaam = (cid) => {
     const c = coaches.find((x) => x.id === cid);
     return c?.full_name || c?.email || "een coach";
@@ -84,6 +106,44 @@ export default async function InboxItem({ params }) {
           )}
         </div>
       </div>
+
+      {(bijlagen || []).length > 0 && (
+        <div className="mt-5 rounded-2xl border border-borderc bg-white p-5">
+          <p className="text-sm font-bold text-brand">Meegestuurd</p>
+          <p className="mt-1 text-xs text-brand/45">Deze bestanden staan privé. De links hieronder verlopen na een uur.</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {(bijlagen || []).map((b) => {
+              const url = bijlageUrls[b.id];
+              const foto = b.soort === "foto";
+              return url ? (
+                <a
+                  key={b.id}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-3 rounded-xl border border-borderc px-4 py-3 transition hover:border-accent"
+                >
+                  {/* De foto tonen scheelt een klik: de eigenaar wil vooral wéten wie er solliciteert.
+                      Een cv is nooit een voorbeeld waard — dat is een document om te openen. */}
+                  {foto ? (
+                    <img src={url} alt="" className="h-14 w-14 rounded-lg object-cover" />
+                  ) : (
+                    <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-paper text-lg font-black text-brand/50">PDF</span>
+                  )}
+                  <span className="min-w-0">
+                    <span className="block text-sm font-bold text-brand">{foto ? "Foto" : "Cv"}</span>
+                    <span className="block max-w-[16rem] truncate text-xs text-brand/45">{b.bestandsnaam || "bestand"}{b.bytes ? ` · ${kb(b.bytes)}` : ""}</span>
+                  </span>
+                </a>
+              ) : (
+                <p key={b.id} className="rounded-xl bg-paper px-4 py-3 text-xs text-brand/50">
+                  {foto ? "Foto" : "Cv"} kon niet geopend worden.
+                </p>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {intake && (
         <div className="mt-5">
