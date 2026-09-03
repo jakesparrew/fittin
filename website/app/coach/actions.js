@@ -110,13 +110,12 @@ export async function coachBookSession(formData) {
     p_hour: numF(formData.get("hour")),
     p_persons: num(formData.get("persons"), 1),
     p_hours: hours,
+    // Sinds 0152 schrijft de RPC de naam van een externe client zélf op de boeking. Dat moest wel:
+    // een update achteraf kan niet afgedwongen worden, en bij een coach met aangebrachte klanten
+    // weigert de databank een sessie waarvan niemand weet wie er traint.
+    p_client_name: clientName || null,
   });
   if (e) return { error: e.message };
-  // The RPC has no notes param — record the external client's name on the booking afterwards,
-  // so the gym sees WHO the coach trains with (admin grid + list show it on reserved slots).
-  if (!clientId && clientName) {
-    try { await createAdminClient().from("bookings").update({ notes: clientName }).eq("id", bookingId).eq("coach_id", userId); } catch {}
-  }
 
   try {
     const { data: booking } = await supabase.from("bookings").select("starts_at, ends_at, services(name)").eq("id", bookingId).single();
@@ -172,7 +171,21 @@ export async function coachAssignClient(formData) {
   } catch {}
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
-  return { ok: true, message: "Client toegevoegd ✓" };
+  // Een client pas achteraf koppelen loopt niet door de saldocontrole van coach_book_session, maar de
+  // trigger uit 0152 rekent hier wél een aanbreng aan zodra het een aangebrachte klant is. Zeg dus
+  // meteen wat het kostte en wat het saldo nu is — anders ontdekt de coach die halve beurt pas bij
+  // zijn volgende boeking, die dan zonder uitleg geweigerd wordt.
+  let extra = "";
+  try {
+    const { data: aanbreng } = await admin.from("coach_ledger").select("delta").eq("ref_id", bookingId).eq("reason", "aanbreng").maybeSingle();
+    if (aanbreng) {
+      const { data: led } = await supabase.from("coach_ledger").select("delta").eq("coach_id", userId);
+      const bal = (led || []).reduce((a, r) => a + Number(r.delta || 0), 0);
+      const beurt = String(Math.abs(Number(aanbreng.delta))).replace(".", ",");
+      extra = ` — ${beurt} beurt aanbreng aangerekend (klant via Fittin'), tegoed: ${String(bal).replace(".", ",")}`;
+    }
+  } catch {}
+  return { ok: true, message: "Client toegevoegd ✓" + extra };
 }
 
 // Plan a recurring series of sessions for one client: same weekday + hour, weekly for N weeks.
@@ -200,7 +213,7 @@ export async function coachBulkBook(formData) {
   let booked = 0; let firstErr = null; const bookedIds = [];
   for (let i = 0; i < weeks; i++) {
     const d = new Date(start.getTime() + i * 7 * 86400000);
-    const { data: bid, error: e } = await supabase.rpc("coach_book_session", { p_client: clientId, p_service: serviceId, p_date: fmtDate(d), p_hour: hour, p_persons: persons });
+    const { data: bid, error: e } = await supabase.rpc("coach_book_session", { p_client: clientId, p_service: serviceId, p_date: fmtDate(d), p_hour: hour, p_persons: persons, p_client_name: bulkClientName || null });
     if (e) {
       firstErr = e.message;
       if (/Onvoldoende|tegoed|credit/i.test(e.message)) break; // out of credits → stop
@@ -219,11 +232,10 @@ export async function coachBulkBook(formData) {
   // probleem en hoort niet onzichtbaar te blijven.
   const seriesId = crypto.randomUUID();
   if (bookedIds.length) {
-    // Externe client (niet op platform): naam op elke boeking, zodat beheer ziet met wie de coach traint.
-    const velden = { series_id: seriesId };
-    if (!clientId && bulkClientName) velden.notes = bulkClientName;
+    // De naam van een externe client zet de RPC zelf al op elke boeking (0152); hier blijft enkel
+    // het reeksnummer over.
     const { error: se } = await createAdminClient()
-      .from("bookings").update(velden).in("id", bookedIds).eq("coach_id", userId);
+      .from("bookings").update({ series_id: seriesId }).in("id", bookedIds).eq("coach_id", userId);
     if (se) console.error("reeks labelen mislukt (series_id/notes):", se.message);
   }
 
@@ -418,6 +430,9 @@ export async function saveCoachProfile(formData) {
       coach_pt2_price_cents: eur(formData.get("pt2_eur")),
       coach_pt3_price_cents: eur(formData.get("pt3_eur")),
       coach_public: formData.get("public") === "on",
+      // "Ik neem nieuwe klanten aan." Staat dit uit, dan verdwijnt de coach uit de intake-keuzelijst
+      // en weigert client_request_coach een nieuwe aanvraag (0152). Bestaande clienten blijven.
+      coach_accepting_clients: formData.get("accepting") === "on",
       bill_company: formData.get("bill_company") || null,
       bill_vat: formData.get("bill_vat") || null,
       bill_address: formData.get("bill_address") || null,
@@ -571,6 +586,65 @@ export async function removeCoachLink(formData) {
   revalidatePath("/coach/clienten");
   revalidatePath("/account");
   return { ok: true };
+}
+
+// ── Aanbrengvergoeding: de coach aanvaardt of weigert een klant van Fittin' ─────────
+// De aanvaarding IS de afspraak: pas daarna rekent de trigger uit 0152 iets aan, en het tarief
+// wordt op dat moment bevroren. Weigeren kan altijd en kost niets — de aanvraag gaat terug naar
+// de beheerder.
+export async function beantwoordDoorgave(formData) {
+  const { supabase, userId, error } = await requireCoach();
+  if (error) return { error };
+  const id = String(formData.get("referralId") || "");
+  const aanvaard = formData.get("accept") === "1";
+  if (!id) return { error: "Geen doorgave." };
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  // Alleen de eigen, nog niet beantwoorde doorgave — en scoped op coach_id, zodat een gemanipuleerd
+  // id nooit de afspraak van een collega raakt.
+  const { data: r } = await admin
+    .from("gym_referrals").select("id, gym_id, coach_id, client_id, client_name, client_email, fee_cents, status")
+    .eq("id", id).eq("coach_id", userId).maybeSingle();
+  if (!r) return { error: "Doorgave niet gevonden." };
+  if (r.status !== "voorgesteld") return { error: "Je hebt hier al op geantwoord." };
+
+  const nu = new Date().toISOString();
+  const { error: e } = await admin
+    .from("gym_referrals")
+    .update(aanvaard
+      ? { status: "aanvaard", accepted_at: nu }
+      : { status: "geweigerd", ended_at: nu, ended_by: userId, ended_reason: "geweigerd door de coach" })
+    .eq("id", id).eq("coach_id", userId).eq("status", "voorgesteld");
+  if (e) return { error: e.message };
+
+  if (aanvaard) {
+    // Wie aangebrachte klanten heeft, zegt voortaan bij élke boeking wie er traint. Anders is de
+    // vergoeding onhandhaafbaar: één leeg "eigen slot" en niemand weet nog wie er in de zaal stond.
+    // De beheerder kan dit per coach weer uitzetten in /beheer/aanbreng.
+    try { await admin.from("profiles").update({ coach_require_client: true }).eq("id", userId); } catch {}
+    // Bestaat het account al, dan meteen een verbindingsverzoek — de klant moet dat zelf aanvaarden.
+    if (r.client_id) {
+      try { await supabase.rpc("coach_request_client", { p_client: r.client_id }); } catch {}
+    }
+  }
+
+  try {
+    const { notifyAdmins } = await import("@/lib/notify");
+    const naam = r.client_name || r.client_email;
+    // requireCoach levert alleen id/gym_id/role — de naam apart ophalen voor de melding.
+    const { data: ik } = await supabase.from("profiles").select("full_name").eq("id", userId).single();
+    await notifyAdmins({
+      gymId: r.gym_id, actorId: userId, type: "system",
+      title: aanvaard ? `${ik?.full_name || "Een coach"} aanvaardde ${naam}` : `${ik?.full_name || "Een coach"} weigerde ${naam}`,
+      body: aanvaard ? "De aanbreng loopt vanaf nu." : "De aanvraag komt terug bij jou.",
+      link: "/beheer/aanbreng",
+    });
+  } catch {}
+
+  revalidatePath("/coach/clienten");
+  revalidatePath("/coach");
+  return { ok: true, message: aanvaard ? "Aanvaard ✓ — deze klant kost je een halve beurt extra per sessie." : "Geweigerd — er wordt niets aangerekend." };
 }
 
 export async function addOwnAvailability(formData) {

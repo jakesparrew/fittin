@@ -3,14 +3,25 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { coachBookSession } from "@/app/coach/actions";
 import { fmtHour, slotInstant } from "@/lib/time";
+import { beurtTekst, kostVanBoeking, FEE_STANDAARD_CENTS } from "@/lib/aanbreng";
 
 // Interactive week schedule for coaches: see gym-wide taken slots + your own planned sessions,
 // click a free slot → modal to pick a client/service → books via coachBookSession.
-export default function CoachScheduler({ days, hours, taken = [], mine = {}, members = [], services = [] }) {
+//
+// `aanbrengIds` = clienten die Fittin' doorgaf: met hen kost een boeking een halve beurt extra.
+// `clientVerplicht` = deze coach moet bij elke boeking zeggen wie er traint (0152). Beide leeg/uit
+// als default, zodat de planner ook werkt voor een coach zonder aanbreng.
+export default function CoachScheduler({ days, hours, taken = [], mine = {}, members = [], services = [], aanbrengIds = [], clientVerplicht = false }) {
   const router = useRouter();
   const [offset, setOffset] = useState(0); // 0 = this week, 7 = next week
   const [slot, setSlot] = useState(null); // { dateStr, hour, label }
   const [mobileDay, setMobileDay] = useState(null); // selected day on the phone layout
+  // Staat van het modalformulier. Nodig omdat de kost VÓÓR het boeken zichtbaar moet zijn en omdat
+  // het naamveld pas verplicht is zolang er geen client gekozen is.
+  const [clientId, setClientId] = useState("");
+  const [naam, setNaam] = useState("");
+  const [uren, setUren] = useState(1);
+  const aanbrengSet = new Set(aanbrengIds);
   const takenSet = new Set(taken);
   const week = days.slice(offset, offset + 7);
   const activeDay = week.find((d) => d.dateStr === mobileDay) ? mobileDay : week[0]?.dateStr;
@@ -26,6 +37,12 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
     if (state?.ok) { setSlot(null); router.refresh(); }
   }, [state, router]);
 
+  // Sluit de modal, dan begint het volgende uur met een leeg formulier — anders sleept de vorige
+  // client mee naar een sessie waar hij niet bij hoort.
+  useEffect(() => {
+    if (!slot) { setClientId(""); setNaam(""); setUren(1); }
+  }, [slot]);
+
   const hourLabel = fmtHour;
 
   return (
@@ -37,7 +54,7 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
           <button onClick={() => setOffset(7)} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (offset === 7 ? "bg-brand text-white" : "bg-paper text-brand/60")}>Volgende week</button>
         </div>
       </div>
-      <p className="mt-1 text-xs text-brand/50">Klik op een vrij uur om een sessie in te plannen — met een client, of reserveer het uur alvast voor jezelf.</p>
+      <p className="mt-1 text-xs text-brand/50">Klik op een vrij uur om een sessie in te plannen — {clientVerplicht ? "met je client, of met de naam van je externe client." : "met een client, of reserveer het uur alvast voor jezelf."}</p>
 
       {/* Desktop: full week grid */}
       <div className="mt-4 hidden overflow-x-auto md:block">
@@ -125,17 +142,28 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
             <form action={action} className="mt-4 space-y-3">
               <input type="hidden" name="date" value={slot.dateStr} />
               <input type="hidden" name="hour" value={slot.hour} />
-              {/* Zelfde regels als het hoofdformulier: client is OPTIONEEL (leeg = uur reserveren),
-                  en een externe client (niet op platform) kan bij naam genoemd worden. */}
-              <Lbl t="Client (optioneel)">
-                <select name="clientId" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm">
-                  <option value="">Nog geen client — reserveer het uur</option>
+              {/* Zelfde regels als het hoofdformulier: een externe client (niet op platform) kan bij
+                  naam genoemd worden, en de client blijft optioneel — behalve bij een coach die van
+                  de gym altijd moet zeggen wie er traint. */}
+              <Lbl t={clientVerplicht ? "Client" : "Client (optioneel)"}>
+                <select name="clientId" value={clientId} onChange={(e) => setClientId(e.target.value)} className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm">
+                  {/* Moet deze coach zeggen wie er traint, dan kan "nog geen client" enkel nog met
+                      een externe naam erbij — precies wat de databank straks afdwingt. */}
+                  <option value="" disabled={clientVerplicht && !naam.trim()}>Nog geen client — reserveer het uur</option>
                   {members.map((m) => <option key={m.id} value={m.id}>{m.full_name || m.email}</option>)}
                 </select>
               </Lbl>
+              {/* De planner kent wél de aangebrachte clienten, niet het bedrag per doorgave — vandaar
+                  het standaardtarief. Het exacte bedrag staat in het tegoedboek en op het dashboard. */}
+              {aanbrengSet.has(clientId) && (
+                <p className="-mt-1 text-xs font-bold text-accentdark">kost {beurtTekst(kostVanBoeking(uren, FEE_STANDAARD_CENTS))} beurt · klant via Fittin&rsquo;</p>
+              )}
               <Lbl t="Of naam (niet op platform)">
-                <input name="clientName" placeholder="bv. Sarah" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
+                <input name="clientName" value={naam} onChange={(e) => setNaam(e.target.value)} required={clientVerplicht && !clientId} placeholder="bv. Sarah" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </Lbl>
+              {clientVerplicht && !clientId && (
+                <p className="-mt-1 text-xs text-brand/50">Bij jou is dit verplicht: kies een client, of vul de naam van je externe client in.</p>
+              )}
               {services.length === 1 ? (
                 <input type="hidden" name="serviceId" value={services[0].id} />
               ) : (
@@ -147,7 +175,7 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
               )}
               <div className="flex gap-3">
                 <Lbl t="Duur">
-                  <select name="hours" defaultValue="1" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm">
+                  <select name="hours" value={uren} onChange={(e) => setUren(parseFloat(e.target.value))} className="rounded-lg border-2 border-borderc px-3 py-2 text-sm">
                     <option value="1">1 uur</option>
                     <option value="1.5">1u30</option>
                     <option value="2">2 uur</option>

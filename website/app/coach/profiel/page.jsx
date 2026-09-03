@@ -14,7 +14,7 @@ export default async function CoachProfiel() {
   const { supabase, userId } = ctx;
   const { data: me } = await supabase
     .from("profiles")
-    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_public, bill_company, bill_vat, bill_address")
+    .select("full_name, coach_bio, coach_specialty, coach_photo_url, coach_pricelist, coach_pt_price_cents, coach_pt2_price_cents, coach_pt3_price_cents, coach_public, coach_accepting_clients, bill_company, bill_vat, bill_address")
     .eq("id", userId)
     .single();
 
@@ -37,6 +37,15 @@ export default async function CoachProfiel() {
           <input type="checkbox" name="public" defaultChecked={me?.coach_public} className="h-4 w-4 accent-[#5fda6b]" />
           Toon mijn profiel publiek op fittin.be/coaches
         </label>
+        {/* Standaard aan: een coach die nooit iets instelde, staat open voor nieuwe klanten — anders
+            zou de intake op de site plots niemand meer voorstellen. Vandaar `?? true`. */}
+        <div className="rounded-xl bg-paper p-3">
+          <label className="flex items-center gap-2 text-sm font-bold text-brand">
+            <input type="checkbox" name="accepting" defaultChecked={me?.coach_accepting_clients ?? true} className="h-4 w-4 accent-[#5fda6b]" />
+            Ik neem nieuwe klanten aan
+          </label>
+          <p className="mt-1 text-xs text-brand/50">Staat dit uit, dan verdwijn je uit de keuzelijst bij een gratis intake op de site en kan niemand je nog aanvragen. Je bestaande clienten en sessies blijven gewoon.</p>
+        </div>
         <Field name="full_name" label="Naam" defaultValue={me?.full_name} placeholder="Voornaam Naam" />
         <div>
           <label className="mb-1.5 block text-sm font-bold text-brand">Specialiteit</label>

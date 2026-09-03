@@ -20,7 +20,7 @@ export default async function CoachesPage() {
   const { data: gym } = await supabase.from("gyms").select("id").eq("slug", "fittin").single();
   const admin = createAdminClient();
   const { data: coaches } = gym
-    ? await admin.from("profiles").select("id, full_name, coach_specialty, coach_photo_url, coach_bio").eq("gym_id", gym.id).eq("role", "coach").eq("coach_public", true).order("full_name")
+    ? await admin.from("profiles").select("id, full_name, coach_specialty, coach_photo_url, coach_bio, coach_accepting_clients").eq("gym_id", gym.id).eq("role", "coach").eq("coach_public", true).order("full_name")
     : { data: [] };
 
   const list = coaches || [];
@@ -53,6 +53,12 @@ export default async function CoachesPage() {
               <div className="p-5">
                 <p className="text-lg font-black text-brand">{c.full_name || "Coach"}</p>
                 <SpecialtyTags value={c.coach_specialty} className="mt-1.5" />
+                {/* Wie vol zit blijft in de lijst staan — zijn profiel is nog altijd nuttig — maar we
+                    zeggen het hier al, zodat niemand pas op de profielpagina merkt dat er geen route is.
+                    Neutrale grijze chip, geen waarschuwingskleur: dit is een stand van zaken, geen fout. */}
+                {c.coach_accepting_clients === false && (
+                  <span className="mt-2 inline-flex w-fit items-center rounded-full bg-paper px-2.5 py-1 text-xs font-bold text-ink-soft">Momenteel geen nieuwe klanten</span>
+                )}
                 {c.coach_bio && <p className="mt-2 line-clamp-2 text-sm text-brand/60">{c.coach_bio}</p>}
                 <span className="mt-3 inline-block text-sm font-bold text-brand/60 transition group-hover:text-brand">Bekijk profiel →</span>
               </div>

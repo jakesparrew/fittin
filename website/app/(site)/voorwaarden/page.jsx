@@ -73,7 +73,10 @@ export default function Voorwaarden() {
             </li>
             <li>
               <strong>Personal training</strong> spreek je rechtstreeks af met je coach. De coach bepaalt
-              zijn eigen tarief en factureert jou zelf; Fittin&rsquo; staat daar buiten.
+              zijn eigen tarief en factureert jou zelf; Fittin&rsquo; staat daar buiten. Voor klanten die
+              Fittin&rsquo; bij een coach aanbrengt, geldt voor die coach een hoger sessietarief voor het
+              gebruik van de zaal, dat hij vooraf per klant aanvaardt; aan het tarief dat jij met je coach
+              afspreekt, verandert dat niets.
             </li>
           </ul>
           <p>

@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCoachContext } from "@/lib/coach";
-import { setClientPrice, coachRequestClient, respondCoachLink, removeCoachLink } from "../actions";
+import { setClientPrice, coachRequestClient, respondCoachLink, removeCoachLink, beantwoordDoorgave } from "../actions";
+import { feeZin } from "@/lib/aanbreng";
 import ActionForm from "@/components/ui/ActionForm";
 import SearchSelect from "@/components/admin/SearchSelect";
 import AddClientInline from "@/components/coach/AddClientInline";
@@ -33,6 +34,21 @@ export default async function CoachClienten() {
   const linkedIds = new Set(all.map((l) => l.client.id));
   const { data: gymMembers } = await supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "lid").order("full_name");
   const connectable = (gymMembers || []).filter((m) => !linkedIds.has(m.id));
+
+  // Klanten die Fittin' aan deze coach doorgaf. Lezen mag met de gewone client (RLS toont enkel de
+  // eigen rijen); antwoorden gebeurt via de server action, nooit rechtstreeks van hier.
+  const { data: doorgaven } = await supabase
+    .from("gym_referrals")
+    .select("id, client_id, client_email, client_name, fee_cents, note, status, referred_at")
+    .eq("coach_id", userId)
+    .in("status", ["voorgesteld", "aanvaard"])
+    .order("referred_at", { ascending: false });
+  const voorstellen = (doorgaven || []).filter((r) => r.status === "voorgesteld");
+  const lopend = (doorgaven || []).filter((r) => r.status === "aanvaard");
+  // Zonder client_id valt er nog niets te koppelen: die persoon heeft nog geen account, dus hij
+  // kan daardoor ook nog niet als verbonden client in de lijst hieronder staan.
+  const doorgaveVan = new Map(lopend.filter((r) => r.client_id).map((r) => [r.client_id, r]));
+  const wachtOpAccount = lopend.filter((r) => !r.client_id);
 
   const now = Date.now();
   const weekAgoMs = now - 7 * 86400000;
@@ -126,6 +142,45 @@ export default async function CoachClienten() {
       <h1 className="mt-2 text-3xl font-black text-brand">Mijn clienten</h1>
       <p className="mt-1 text-sm text-brand/50">Verbind je met leden en volg hun vooruitgang. Enkel verbonden clienten kan je boeken.</p>
 
+      {/* Doorgegeven klanten die nog op een antwoord wachten. Bewust bovenaan: zolang de coach niet
+          antwoordt, wacht er iemand op een intake en wordt er niets aangerekend. */}
+      {voorstellen.length > 0 && (
+        <div className="mt-6 rounded-3xl border-2 border-amber-300 bg-white p-6">
+          <h2 className="flex items-center gap-2 text-lg font-black text-brand">
+            Fittin&rsquo; geeft een klant aan je door
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs text-amber-700">{voorstellen.length}</span>
+          </h2>
+          <p className="mt-1 text-sm text-brand/60">Deze mensen vroegen een intake aan bij Fittin&rsquo;. Jij beslist of je ze overneemt.</p>
+          <div className="mt-3 space-y-3">
+            {voorstellen.map((r) => (
+              <div key={r.id} className="rounded-2xl border border-borderc p-4">
+                <p className="font-bold text-brand">{r.client_name || r.client_email}</p>
+                <p className="text-xs text-brand/45">{r.client_email}</p>
+                {r.note && <p className="mt-2 rounded-xl bg-paper px-3 py-2 text-xs text-brand/60">{r.note}</p>}
+                <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">De voorwaarde: {feeZin(r.fee_cents)}.</p>
+                <ul className="mt-2 space-y-1 text-xs text-brand/60">
+                  <li>Die halve beurt komt van jouw tegoed. Wat je client betaalt, verandert niet.</li>
+                  <li>Aanvaard je, dan vul je vanaf dan bij élke boeking in met wie je traint. Voor iemand zonder account volstaat een naam.</li>
+                  <li>Weigeren kost je niets. De aanvraag gaat dan terug naar Fittin&rsquo;.</li>
+                </ul>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ActionForm action={beantwoordDoorgave} success="Aanvaard ✓">
+                    <input type="hidden" name="referralId" value={r.id} />
+                    <input type="hidden" name="accept" value="1" />
+                    <button className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Aanvaarden</button>
+                  </ActionForm>
+                  <ActionForm action={beantwoordDoorgave} success="Geweigerd ✓">
+                    <input type="hidden" name="referralId" value={r.id} />
+                    <input type="hidden" name="accept" value="0" />
+                    <button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Weigeren</button>
+                  </ActionForm>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Connect a client */}
       <div className="mt-6 rounded-3xl border-2 border-accent bg-white p-6 shadow-sm shadow-accent/10">
         <h2 className="text-lg font-black text-brand">Verbind een client</h2>
@@ -183,6 +238,17 @@ export default async function CoachClienten() {
         </div>
       )}
 
+      {/* Aanvaard, maar de klant staat nog niet in het systeem — dus ook nog niet in de lijst hieronder. */}
+      {wachtOpAccount.map((r) => (
+        <div key={r.id} className="mt-6 rounded-2xl border border-borderc bg-white p-4">
+          <p className="font-bold text-brand">Aanvaard, wacht op het account van {r.client_name || r.client_email}</p>
+          <p className="mt-1 text-xs text-brand/55">
+            Zodra deze persoon een account maakt, verschijnt die bij je verbonden clienten en loopt de aanbreng ({feeZin(r.fee_cents)}). Tot dan wordt er niets aangerekend.
+          </p>
+          <p className="mt-1 text-xs text-brand/40">{r.client_email}</p>
+        </div>
+      ))}
+
       {/* Connected clients */}
       <h2 className="mt-8 text-xl font-black text-brand">Verbonden clienten</h2>
       {accepted.length === 0 ? (
@@ -195,11 +261,20 @@ export default async function CoachClienten() {
           {accepted.map((l) => {
             const c = l.client;
             const next = nextByClient[c.id];
+            const doorgave = doorgaveVan.get(c.id);
             return (
               <div key={l.id} className="rounded-2xl border border-borderc bg-white p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-lg font-black text-brand">{c.full_name || c.email}</p>
+                    <p className="flex flex-wrap items-center gap-2 text-lg font-black text-brand">
+                      {c.full_name || c.email}
+                      {/* Chip zonder bedrag in beeld: het bedrag staat in de titel, zodat de kaart rustig blijft. */}
+                      {doorgave && (
+                        <span title={`Door Fittin' doorgegeven — ${feeZin(doorgave.fee_cents)}`} className="rounded-full bg-lav/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-brand/60">
+                          via Fittin&rsquo;
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-brand/45">{c.email}</p>
                   </div>
                   <span className={"rounded-full px-3 py-1 text-xs font-bold " + ((weekCount[c.id] || 0) > 0 ? "bg-accent/15 text-accentdark" : "bg-paper text-brand/50")}>

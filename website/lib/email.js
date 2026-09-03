@@ -553,6 +553,30 @@ export async function sendCoachBooked({ to, name, coachName, serviceName, starts
   );
 }
 
+// ---- Coach: Fittin' geeft een klant door (aanbrengvergoeding, 0152) ----
+// De coach moet dit expliciet aanvaarden; die aanvaarding is de afspraak. Het tarief staat daarom
+// in de mail zelf, niet alleen achter een knop — zodat niemand later kan zeggen dat hij het niet zag.
+export async function sendReferralProposal({ to, coachName, clientName, clientEmail, feeCents, note }) {
+  const beurten = String(Math.round(((feeCents || 0) / 1200) * 100) / 100).replace(".", ",");
+  const bedrag = "€ " + ((feeCents || 0) / 100).toFixed(2).replace(".", ",").replace(/,00$/, "");
+  await send(
+    to,
+    `Nieuwe klant van Fittin': ${clientName || clientEmail}`,
+    shell({
+      title: "Een klant voor jou 🤝",
+      intro: `Hallo ${esc(coachName) || "daar"}, wij kregen een aanvraag binnen en geven die aan jou door. Aanvaard je hem, dan kost elke sessie die je met deze klant boekt ${esc(beurten)} beurt extra bovenop je gewone sessietegoed.`,
+      rows: [
+        ["Klant", esc(clientName || "—")],
+        ["E-mail", esc(clientEmail)],
+        ["Extra per sessie", `${esc(beurten)} beurt (${esc(bedrag)})`],
+        ...(note ? [["Nota", esc(note)]] : []),
+      ],
+      body: `<p style="font-size:13px;color:#6b6685;margin-top:14px">Zolang je niet aanvaardt, verandert er niets en wordt er niets aangerekend. Weiger je, dan gaat de aanvraag terug naar Fittin'. Sessies met je eigen klanten blijven gewoon 1 beurt.</p>`,
+      cta: { href: `${SITE}/coach/clienten`, label: "Bekijk en aanvaard" },
+    })
+  );
+}
+
 // ---- Member: a coach got assigned to you ----
 export async function sendCoachAssigned({ to, name, coachName }) {
   await send(

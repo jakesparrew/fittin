@@ -12,6 +12,7 @@ import ShareSession from "@/components/coach/ShareSession";
 import BookingDetail from "@/components/BookingDetail";
 import { fmtHour } from "@/lib/time";
 import { sess } from "@/lib/format";
+import { beurtTekst, kostVanBoeking, feeZin, FEE_STANDAARD_CENTS } from "@/lib/aanbreng";
 import SubmitButton from "@/components/ui/SubmitButton";
 import ActionForm from "@/components/ui/ActionForm";
 
@@ -52,6 +53,7 @@ export default async function CoachDashboard({ searchParams }) {
     { data: takenRows },
     { data: openSessionRows },
     { data: openInvoiceRows },
+    { data: doorgaafRows },
   ] = await Promise.all([
     supabase.from("coach_clients").select("client:profiles!coach_clients_client_id_fkey(id, full_name, email)").eq("coach_id", userId).eq("status", "accepted"),
     supabase.from("services").select("id, name, type").eq("gym_id", gym.id).eq("active", true).order("price_cents"),
@@ -69,6 +71,9 @@ export default async function CoachDashboard({ searchParams }) {
     // het scherm nooit iets anders zegt dan wat de database doet.
     supabase.from("bookings").select("coach_charge_cents").eq("coach_id", userId).eq("coach_billing", "invoice").eq("status", "bevestigd").is("coach_invoiced_at", null),
     supabase.from("payments").select("amount_cents").eq("user_id", userId).eq("status", "onbetaald").eq("kind", "coach_credits"),
+    // Doorgegeven klanten die nu écht aangerekend worden: aanvaard én niet beëindigd. Een voorstel
+    // waar de coach nog niet op antwoordde kost hem niets, dus dat hoort hier niet bij.
+    supabase.from("gym_referrals").select("client_id, client_name, client_email, fee_cents").eq("coach_id", userId).eq("status", "aanvaard").is("ended_at", null),
   ]);
   const refLink = `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/login?mode=signup&ref=${meRef?.referral_code || ""}`;
   // Only verbonden (accepted) clients are bookable. New clients are connected via /coach/clienten.
@@ -106,6 +111,31 @@ export default async function CoachDashboard({ searchParams }) {
   // Coaches only book PT — show it as a fixed label, not a dropdown.
   const ptServices = (services || []).filter((s) => s.type === "pt");
   const ptService = ptServices[0] || (services || [])[0];
+
+  // ---- Aanbrengvergoeding (0152) -----------------------------------------------------------
+  // De trigger rekent enkel aan bij een coach die met sessietegoed betaalt (`coach_billing = 'credit'`).
+  // Bij een gratis of factuur-afspraak zwijgen we erover: die coach betaalt de aanbreng niet.
+  const doorgaven = doorgaafRows || [];
+  const aanbrengActief = mode === "credit" && doorgaven.length > 0;
+  const aanbrengIds = doorgaven.map((r) => r.client_id).filter(Boolean);
+  // De beheerder mag het bedrag per doorgave kiezen, dus groeperen we per tarief: één gemiddelde
+  // zou een bedrag noemen dat niemand betaalt. In de praktijk is er één tarief en blijft het één zin.
+  const perTarief = new Map();
+  for (const r of doorgaven) {
+    const f = Number(r.fee_cents) || FEE_STANDAARD_CENTS;
+    if (!perTarief.has(f)) perTarief.set(f, []);
+    perTarief.get(f).push(r.client_name || r.client_email || "een aangebrachte klant");
+  }
+  const namenZin = (n) => (n.length > 1 ? `${n.slice(0, -1).join(", ")} en ${n[n.length - 1]}` : n[0] || "");
+  // "1,5 beurt" maar "2 beurten": in het Nederlands blijft een kommagetal enkelvoud.
+  const beurtenZin = (n) => `${beurtTekst(n)} ${Number.isInteger(n) && n !== 1 ? "beurten" : "beurt"}`;
+  const tarieven = [...perTarief.entries()];
+  const aanbrengZin = tarieven.length === 1
+    ? `Sessies met een klant die Fittin’ aanbracht kosten ${beurtenZin(kostVanBoeking(1, tarieven[0][0]))}: ${feeZin(tarieven[0][0])}. Dat geldt voor ${namenZin(tarieven[0][1])}.`
+    : `Sessies met een klant die Fittin’ aanbracht kosten meer: ${tarieven.map(([f, namen]) => `${beurtenZin(kostVanBoeking(1, f))} met ${namenZin(namen)}`).join(", ")}.`;
+  // Staat dit aan, dan weigert de databank een boeking zonder client én zonder naam. Dat hoort hier
+  // te staan, niet pas als foutmelding na het opslaan.
+  const clientVerplicht = !!profile.coach_require_client;
 
   // ---- Interactive 14-day planner data (gym-wide taken slots + my own sessions) ----
   const keyOf = (iso) => {
@@ -289,8 +319,9 @@ export default async function CoachDashboard({ searchParams }) {
             ? <>Elke boeking kost jou <strong>1 sessietegoed ({euro(profile.coach_session_price_cents || 1200)} aan de gym)</strong>, vooraf te kopen, ongeacht het aantal personen.</>
             : mode === "free"
               ? <>Jouw boekingen zijn <strong>gratis</strong> (afspraak met de gym), ongeacht het aantal personen.</>
-              : <>Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen.</>}{" "}
+              : <>Elke boeking kost jou <strong>1 sessietegoed (€ 12 aan de gym)</strong>, ongeacht het aantal personen.{aanbrengActief && <> {aanbrengZin}</>}</>}{" "}
           De prijs die je je client(en) aanrekent, reken je apart af.
+          {clientVerplicht && <> Vul bij elke boeking in wie er traint: kies je client, of typ de naam van je externe client. Zonder naam wordt de sessie geweigerd.</>}
         </p>
         <Link href="/coach/clienten" className="mt-1 inline-block text-xs font-bold text-accentdark hover:underline">Zie je je client niet in de lijst? Verbind je clienten hier →</Link>
         {mode === "credit" && creditBalance < 1 && (
@@ -472,7 +503,7 @@ export default async function CoachDashboard({ searchParams }) {
             <Link href={`/coach?w=${planW + 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">→</Link>
           </div>
         </div>
-        <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={ptServices} />
+        <CoachScheduler days={schedDays} hours={hours} taken={takenKeys} mine={mineMap} members={members || []} services={ptServices} aanbrengIds={aanbrengActief ? aanbrengIds : []} clientVerplicht={clientVerplicht} />
       </div>
 
       {/* Upcoming sessions */}

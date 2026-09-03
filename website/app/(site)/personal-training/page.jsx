@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import SpecialtyTags from "@/components/coach/SpecialtyTags";
 import Image from "next/image";
 import { GymFoto } from "@/components/GymFotos";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 import { coachSlug } from "@/lib/slug";
 import { healthClubLd, faqLd, jsonLdScript } from "@/lib/seo";
@@ -13,6 +15,26 @@ export const metadata = {
     "Personal coaching bij Fittin' in Gent: gratis intake, een plan op maat in onze app en wekelijkse opvolging door je coach. Train privé in onze zaal. Prijs op aanvraag — start met een gratis proeftraining.",
   alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/personal-training` },
 };
+
+// Wie neemt er vandaag nieuwe klanten aan? Eigen cache, en geen gewone query: deze pagina wordt
+// statisch geprerenderd, dus een losse DB-oproep zou op bouwtijd bevriezen en het vinkje daarna
+// nooit meer volgen. Dezelfde tag "coaches" als lib/cache.js, zodat het opslaan van een coachprofiel
+// (dat revalidateTag("coaches") doet) deze lijst meteen mee ongeldig maakt.
+const getAccepterendeCoachIds = unstable_cache(
+  async (gymId) => {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("gym_id", gymId)
+      .eq("role", "coach")
+      .eq("coach_public", true)
+      .eq("coach_accepting_clients", true);
+    return (data || []).map((c) => c.id);
+  },
+  ["pt-accepterende-coaches"],
+  { revalidate: 300, tags: ["coaches"] }
+);
 
 const valueProps = [
   {
@@ -129,6 +151,11 @@ const Icon = ({ name }) => {
 export default async function PersonalTraining() {
   const gym = await getGymCached();
   const coaches = gym ? await getPublicCoachesCached(gym.id) : [];
+  // De kaarten tonen élke publieke coach, ook wie momenteel vol zit. De keuzelijst in het formulier
+  // niet: daar horen alleen coaches in die vandaag iemand kunnen aannemen. Blijft er niemand over,
+  // dan verbergt IntakeForm het veld vanzelf en komt de aanvraag gewoon bij Fittin' terecht.
+  const accepterend = new Set(gym ? await getAccepterendeCoachIds(gym.id) : []);
+  const keuzeCoaches = coaches.filter((c) => accepterend.has(c.id));
   return (
     <main>
       <script {...jsonLdScript(healthClubLd())} />
@@ -296,6 +323,10 @@ export default async function PersonalTraining() {
                   <div className="flex flex-1 flex-col p-6">
                     <h3 className="text-xl font-black">{coach.full_name || "Coach"}</h3>
                     <SpecialtyTags value={coach.coach_specialty} className="mt-1.5" />
+                    {/* Zelfde neutrale chip als op /coaches: eerlijk vóór de klik, zonder de coach af te branden. */}
+                    {!accepterend.has(coach.id) && (
+                      <span className="mt-2 inline-flex w-fit items-center rounded-full bg-paper px-2.5 py-1 text-xs font-bold text-ink-soft">Momenteel geen nieuwe klanten</span>
+                    )}
                     <span className="mt-auto pt-4 text-sm font-bold text-brand/60 transition group-hover:text-brand">Bekijk profiel →</span>
                   </div>
                 </Link>
@@ -400,7 +431,7 @@ export default async function PersonalTraining() {
             Laat je gegevens achter, dan mailen we je binnen 1 werkdag om een moment te prikken —
             of bellen we je als je je nummer invult. Volledig gratis en vrijblijvend.
           </p>
-          <IntakeForm coaches={coaches.map((c) => ({ id: c.id, name: c.full_name || "Coach", slug: coachSlug(c) }))} />
+          <IntakeForm coaches={keuzeCoaches.map((c) => ({ id: c.id, name: c.full_name || "Coach", slug: coachSlug(c) }))} />
         </div>
       </section>
     </main>

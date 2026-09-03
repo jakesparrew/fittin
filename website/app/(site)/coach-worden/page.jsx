@@ -4,7 +4,7 @@ import CoachApplyForm from "./CoachApplyForm";
 export const metadata = {
   title: "Word coach bij Fittin' | Personal trainer in Gent",
   description:
-    "Bouw je eigen PT-praktijk in een volledig uitgeruste privézaal in Gent. Geen huurcontract, geen vaste kosten — je betaalt € 12 per sessie en houdt zelf je klanten en je tarief.",
+    "Bouw je eigen PT-praktijk in een volledig uitgeruste privézaal in Gent. Geen huurcontract, geen vaste kosten — je betaalt € 12 per sessie voor je eigen klanten, € 18 voor een klant die wij aanbrengen, en je houdt je eigen tarief.",
   alternates: { canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/coach-worden` },
 };
 
@@ -18,7 +18,7 @@ const voordelen = [
   },
   {
     titel: "Geen huurcontract, geen vaste kosten",
-    tekst: "Je betaalt € 12 per sessie van 1 uur, enkel wanneer je effectief traint. Geen maandelijkse huur, geen minimumafname, geen opzegtermijn. Je tarief naar je klant bepaal je volledig zelf.",
+    tekst: "Je betaalt € 12 per sessie van 1 uur met je eigen klanten, enkel wanneer je effectief traint. Geen maandelijkse huur, geen minimumafname, geen opzegtermijn. Brengt Fittin' jou een klant aan, dan kost een sessie met die klant € 18 — dat aanvaard je vooraf, per klant, nooit stilzwijgend. Je tarief naar je klant bepaal je volledig zelf.",
   },
   {
     titel: "Jouw praktijk draait in onze app",
@@ -29,7 +29,7 @@ const voordelen = [
 const stappen = [
   ["1. Meld je aan", "Vul het formulier hieronder in. We nemen binnen enkele dagen contact op."],
   ["2. Kennismaking", "We drinken een koffie in de zaal, tonen je alles en overlopen hoe het werkt — vrijblijvend, voor allebei."],
-  ["3. Start met je klanten", "Je krijgt een coach-account, zet je beschikbaarheid en profiel op en boekt je eerste sessie. Wij sturen geïnteresseerde leden mee jouw richting uit."],
+  ["3. Start met je klanten", "Je krijgt een coach-account, zet je beschikbaarheid en profiel op en boekt je eerste sessie. Wij sturen geïnteresseerde leden mee jouw richting uit — zo'n klant kost je niets tot je hem aanvaardt, en daarna enkel € 18 voor de sessies die je effectief met hem traint."],
 ];
 
 export default function CoachWorden() {

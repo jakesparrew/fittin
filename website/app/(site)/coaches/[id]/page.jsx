@@ -48,7 +48,7 @@ export async function generateMetadata({ params }) {
 export default async function CoachProfile({ params }) {
   const { id } = await params;
   const admin = createAdminClient();
-  const c = await resolveCoach(admin, id, "id, gym_id, full_name, role, coach_public, coach_bio, coach_specialty, coach_photo_url, coach_pricelist");
+  const c = await resolveCoach(admin, id, "id, gym_id, full_name, role, coach_public, coach_accepting_clients, coach_bio, coach_specialty, coach_photo_url, coach_pricelist");
   if (!c) notFound();
   const [{ data: avail }, { data: gym }, { user }] = await Promise.all([
     admin.from("coach_availability").select("weekday, from_hour, to_hour").eq("coach_id", c.id).order("weekday"),
@@ -71,8 +71,13 @@ export default async function CoachProfile({ params }) {
 
   const coachUrl = `/coaches/${coachSlug(c)}`;
   const voornaam = (c.full_name || "").trim().split(/\s+/)[0] || "je coach";
-  // Querystring vóór het fragment, anders bereikt ?coach= de intakepagina nooit.
-  const intakeUrl = `/personal-training?coach=${coachSlug(c)}#intake`;
+  // Het vinkje "ik neem nieuwe klanten aan" zet de coach zelf in /coach/profiel. `!== false` en niet
+  // `=== true`: de kolom kwam er pas met 0152 bij, en een profiel zonder waarde hoort open te staan.
+  const neemtAan = c.coach_accepting_clients !== false;
+  // Querystring vóór het fragment, anders bereikt ?coach= de intakepagina nooit. Staat de coach
+  // dicht, dan laten we ?coach= weg: hij staat niet meer in de keuzelijst van het intakeformulier,
+  // dus de voorkeur zou daar toch nergens op slaan.
+  const intakeUrl = neemtAan ? `/personal-training?coach=${coachSlug(c)}#intake` : "/personal-training#intake";
 
   return (
     <main className="bg-paper">
@@ -90,12 +95,27 @@ export default async function CoachProfile({ params }) {
                 <div className="flex h-full items-center justify-center text-7xl font-black text-brand/15">{(c.full_name || "C").slice(0, 1)}</div>
               )}
             </div>
-            {/* Rechtstreeks boeken bij een coach staat bewust uit — de intake is de enige echte route. */}
-            <Link href={intakeUrl} className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center text-sm font-black text-brand transition hover:opacity-90">
-              Gratis proeftraining met {voornaam} →
-            </Link>
+            {/* Rechtstreeks boeken bij een coach staat bewust uit — de intake is de enige echte route.
+                Neemt de coach niemand aan, dan blijft het profiel gewoon staan (het is nuttig voor wie
+                al bij hem traint), maar er staat geen groene knop meer die iets belooft wat niet kan. */}
+            {neemtAan ? (
+              <Link href={intakeUrl} className="mt-4 block rounded-full bg-accent px-6 py-3.5 text-center text-sm font-black text-brand transition hover:opacity-90">
+                Gratis proeftraining met {voornaam} →
+              </Link>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-borderc bg-white p-4 text-center">
+                <p className="text-sm font-bold text-brand">{voornaam} neemt momenteel geen nieuwe klanten aan.</p>
+                <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
+                  Bekijk <Link href="/coaches" className="font-bold text-accentdark hover:underline">onze coaches</Link> of vraag een{" "}
+                  <Link href={intakeUrl} className="font-bold text-accentdark hover:underline">gratis intake</Link> aan — dan zoeken we samen wie bij je past.
+                </p>
+              </div>
+            )}
 
-            {/* Connect with this coach */}
+            {/* Connect with this coach. Staat de coach op "geen nieuwe klanten", dan verdwijnt enkel de
+                AANVRAAGknop: een bestaande verbinding of een uitnodiging die hij zelf stuurde blijft
+                zichtbaar en aanvaardbaar, want dat is geen nieuwe klant. De RPC client_request_coach
+                weigert zo'n aanvraag toch (0152), en een knop die zeker faalt is erger dan geen knop. */}
             {user && user.id !== c.id && (
               myLink?.status === "accepted" ? (
                 <p className="mt-3 rounded-full bg-accent/10 px-4 py-2.5 text-center text-sm font-bold text-accentdark">Verbonden met deze coach ✓</p>
@@ -115,14 +135,14 @@ export default async function CoachProfile({ params }) {
                   <input type="hidden" name="accept" value="1" />
                   <button className="w-full rounded-full border-2 border-accent px-6 py-3 text-sm font-black text-brand transition hover:bg-accent/10">Deze coach nodigde je uit — aanvaarden</button>
                 </ActionForm>
-              ) : (
+              ) : neemtAan ? (
                 <ActionForm action={clientRequestCoach} success="Aanvraag verstuurd ✓" className="mt-3">
                   <input type="hidden" name="coachId" value={c.id} />
                   <button className="w-full rounded-full border-2 border-borderc px-6 py-3 text-sm font-black text-brand transition hover:border-accent">+ Verbind met deze coach</button>
                 </ActionForm>
-              )
+              ) : null
             )}
-            {!user && (
+            {!user && neemtAan && (
               <Link href={`/login?next=/coaches/${coachSlug(c)}`} className="mt-3 block text-center text-sm font-semibold text-brand/50 hover:text-brand">Log in om te verbinden met deze coach</Link>
             )}
           </div>

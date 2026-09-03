@@ -66,6 +66,10 @@ export async function requestIntake(formData) {
       .eq("gym_id", gym.id)
       .eq("role", "coach")
       .eq("coach_public", true)
+      // Neemt die coach geen nieuwe klanten aan, dan behandelen we dit verder als een aanvraag
+      // zónder voorkeur: geen melding en geen mail naar hem, en zijn naam niet in de inboxtekst.
+      // De aanvraag zelf komt gewoon binnen bij Fittin', dat zelf beslist wie ze aanspreken.
+      .eq("coach_accepting_clients", true)
       .maybeSingle();
     coachName = co?.full_name || "";
     coach = co || null;
