@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GymFotos from "@/components/GymFotos";
 import { healthClubLd, jsonLdScript } from "@/lib/seo";
 import { getPublicPricing, price } from "../pricing";
 
@@ -139,6 +140,10 @@ export default async function DeGym() {
               </div>
             ))}
           </div>
+          {/* De zaal zelf. Wie een uur boekt, boekt een ruimte die hij nog nooit zag — tot nu stond
+              er op de hele site één beeld, en dat was een still uit de promovideo. */}
+          <GymFotos slugs={["zaal-logo-2", "dumbbells", "zaal-rek"]} className="mt-10" />
+          <p className="mt-3 text-xs text-brand/45">De zaal in Sint-Amandsberg — tijdens jouw uur heb je ze helemaal voor jezelf.</p>
         </div>
       </section>
 

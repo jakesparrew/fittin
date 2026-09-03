@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { GymFoto } from "@/components/GymFotos";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
 import { coachSlug } from "@/lib/slug";
 import { healthClubLd, faqLd, jsonLdScript } from "@/lib/seo";
@@ -167,11 +168,10 @@ export default async function PersonalTraining() {
                 zonder verplichting.
               </p>
             </div>
-            <Image
-              src="/video-poster.jpg"
-              alt="De trainingszaal van Fittin' in Gent — tijdens jouw sessie helemaal leeg"
-              width={1280}
-              height={720}
+            {/* Een échte coachfoto in plaats van de videostill van de lege zaal: op de
+                PT-pagina verkoop je de begeleiding, niet de ruimte. */}
+            <GymFoto
+              slug="training-duo"
               sizes="340px"
               className="hidden aspect-[4/3] w-full rounded-3xl border border-borderc object-cover md:block"
             />

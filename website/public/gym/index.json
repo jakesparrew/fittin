@@ -1,0 +1,74 @@
+[
+  {
+    "slug": "dumbbells",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  },
+  {
+    "slug": "training-pulldown",
+    "breedte": 0,
+    "hoogte": 0,
+    "staand": false
+  },
+  {
+    "slug": "bench",
+    "breedte": 1600,
+    "hoogte": 2000,
+    "staand": true
+  },
+  {
+    "slug": "rek",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  },
+  {
+    "slug": "training-duo-staand",
+    "breedte": 1600,
+    "hoogte": 2400,
+    "staand": true
+  },
+  {
+    "slug": "training-duo",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  },
+  {
+    "slug": "training-logo",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  },
+  {
+    "slug": "zaal-logo-staand",
+    "breedte": 1600,
+    "hoogte": 2000,
+    "staand": true
+  },
+  {
+    "slug": "zaal-logo",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  },
+  {
+    "slug": "zaal-logo-2",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  },
+  {
+    "slug": "zaal-breed",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  },
+  {
+    "slug": "zaal-rek",
+    "breedte": 1600,
+    "hoogte": 1067,
+    "staand": false
+  }
+]

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import GymFotos from "@/components/GymFotos";
 import { redirect } from "next/navigation";
 import Reveal from "@/components/anim/Reveal";
 import { getSessionProfile, roleHome } from "@/lib/auth";
@@ -288,6 +289,11 @@ export default async function Home() {
               </Reveal>
             ))}
           </div>
+          {/* De zaal in beeld, direct onder de belofte dat ze van jou is. Tot nu moest een
+              bezoeker die belofte op zijn woord geloven: de hele homepage had één beeld. */}
+          <Reveal delay={120}>
+            <GymFotos slugs={["zaal-logo", "training-logo", "bench"]} className="mt-14" />
+          </Reveal>
         </div>
       </section>
 
