@@ -453,6 +453,15 @@ export default async function CoachDashboard({ searchParams }) {
               </label>
               <SubmitButton className="rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand">Naar de kassa →</SubmitButton>
             </ActionForm>
+            {/* De vraag naar btw-gegevens hoort hier, op het moment dat er geld gaat — niet pas op de
+                factuur achteraf. Wie ze al ingevuld heeft, hoeft er niets over te lezen. */}
+            {!profile.bill_vat && (
+              <p className="mt-3 border-t border-accent/30 pt-3 text-xs leading-relaxed text-brand/60">
+                Factuur op je bedrijfsnaam nodig? Vink bij het afrekenen <b>&ldquo;Ik koop als bedrijf&rdquo;</b> aan en
+                geef je btw-nummer in — we nemen het daarna automatisch over. Of vul het eenmalig in bij{" "}
+                <Link href="/coach/profiel" className="font-bold text-accentdark hover:underline">je profiel</Link>.
+              </p>
+            )}
           </div>
           {/* Waar vroeger "vraag sessies aan — de beheerder factureert je later" stond.
               Die weg is bewust geschrapt (2026-08-07): ze schreef tegoed bij vóór er betaald was,

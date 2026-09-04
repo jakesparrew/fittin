@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendBookingConfirmation, sendEventSignup, sendMembershipPaymentFailed, sendMembershipCancelled, sendPaymentRefunded, sendPurchaseReceipt } from "@/lib/email";
 import { sendBookingInvites } from "@/lib/booking-invites";
 import { recordRedemption } from "@/lib/discounts";
+import { neemFacturatieOverVanStripe } from "@/lib/invoice";
 import { sess } from "@/lib/format"; // halve beurten (1,5) in Vlaamse notatie op de bon
 
 export const runtime = "nodejs";
@@ -326,6 +327,16 @@ async function handleEvent(event, admin) {
       // fire 'completed' with payment_status 'unpaid'/'processing' first — the real grant arrives on
       // async_payment_succeeded. Setup/subscription sessions carry no payment_status, so allow those.
       if (obj.mode === "payment" && obj.payment_status && obj.payment_status !== "paid") return;
+      // Wat de koper bij Stripe invulde onder "Ik koop als bedrijf" (bedrijfsnaam, btw-nummer,
+      // adres) overnemen in het profiel, zodat onze eigen factuur compleet is zonder dat iemand
+      // hetzelfde nummer twee keer moet intypen. Vult alleen lege velden aan en mag nooit falen.
+      {
+        const koper =
+          obj.metadata?.coach_id ||
+          obj.metadata?.user_id ||
+          (obj.customer ? (await profileFromCustomer(admin, obj.customer))?.id : null);
+        if (koper) await neemFacturatieOverVanStripe(stripe, admin, koper, obj);
+      }
       if (obj.metadata?.kind === "punchcard") {
         const credits = parseInt(obj.metadata.credits, 10) || 0;
         await grantCredits(admin, obj.metadata.user_id, credits, "aankoop", true, obj.id);
