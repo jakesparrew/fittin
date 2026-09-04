@@ -26,7 +26,21 @@ export const bizGuest = {
   billing_address_collection: "auto",
   customer_creation: "always",
 };
-// Spread into ONE-TIME (mode:'payment') Checkout sessions so Stripe auto-generates a real invoice
-// (with the business name + VAT number the customer enters) — receipts don't show VAT, invoices do.
-// NOT for subscriptions (those already invoice each cycle) or setup/€0 sessions.
-export const invoiceForBusiness = { invoice_creation: { enabled: true } };
+// Stripe's EIGEN factuur bij eenmalige betalingen staat UIT (04-09-2026, op vraag van de eigenaar).
+//
+// Waarom: er liepen twee factuurreeksen naast elkaar voor dezelfde verkoop — die van Stripe
+// (QZ8LYIM3-0007) en die van Fittin' (2026-0007). Stripe kent bovendien ons 6%-tarief niet: er is
+// geen tax rate en geen Stripe Tax geconfigureerd, dus zijn factuur toonde "€ 12,00" zonder enige
+// btw-regel. Onbruikbaar voor een btw-plichtige coach en onleesbaar voor de boekhouding.
+//
+// De verdeling is nu: Stripe factureert de abonnementen (dat doet hij sowieso, dat kan niet uit),
+// Fittin' factureert al de rest — eenmalige betalingen, cash, overschrijvingen, manuele facturen —
+// met de vzw-gegevens, de 6%-splitsing en de doorlopende nummering (/beheer/factuur).
+//
+// Wat WEL aan blijft: tax_id_collection hierboven. Dat vraagt het btw-nummer bij het afrekenen, en
+// de webhook neemt het over in het profiel (lib/invoice.js#neemFacturatieOverVanStripe) zodat de
+// Fittin'-factuur compleet is. De klant krijgt van Stripe nog gewoon een betaalbewijs; de webhook
+// valt daar automatisch op terug wanneer er geen Stripe-factuur bestaat.
+//
+// Terug aanzetten = { invoice_creation: { enabled: true } } — maar dan eerst 6% in Stripe zetten.
+export const invoiceForBusiness = {};

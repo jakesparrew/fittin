@@ -412,10 +412,10 @@ async function handleEvent(event, admin) {
       } else if (obj.metadata?.booking_id) {
         await markBookingPaid(admin, obj.metadata.booking_id, obj.payment_intent, obj);
       }
-      // Stash a downloadable document on the payment (keyed by session id) for the dashboards:
-      // prefer the Stripe INVOICE — die toont de bedrijfsnaam + het btw-nummer dat de klant in de
-      // checkout invulde (invoice_creation staat aan op alle eenmalige betalingen sinds 29-08) —
-      // and fall back to the plain receipt when no invoice exists.
+      // Een betaalbewijs op de betaling hangen voor de dashboards ("bewijs"-link). Sinds 04-09
+      // maakt Stripe geen eigen factuur meer bij eenmalige betalingen (zie lib/stripe.js), dus dit
+      // is in de praktijk het gewone Stripe-ontvangstbewijs. De factuur zelf komt uit
+      // /beheer/factuur. De invoice-tak blijft staan voor oudere sessies die er nog wel een hebben.
       try {
         let url = null;
         if (obj.invoice) {
