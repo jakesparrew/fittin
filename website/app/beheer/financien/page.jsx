@@ -339,6 +339,9 @@ export default async function Financien({ searchParams }) {
                 <th className="py-2">Datum</th><th className="py-2">Wie</th><th className="py-2">Soort</th>
                 <th className="py-2">Omschrijving</th><th className="py-2 text-right">Excl.</th>
                 <th className="py-2 text-right">Btw</th><th className="py-2 text-right">Incl.</th><th className="py-2">Status</th>
+                {/* De factuurknop stond alleen bij Betalingen, maar dit IS de pagina waar je met
+                    geld bezig bent — de owner zocht hem hier en vond hem niet. */}
+                <th className="py-2 text-right print:hidden">Factuur</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-borderc">
@@ -357,10 +360,13 @@ export default async function Financien({ searchParams }) {
                     <td className="py-2 text-right text-brand/60">{euro(incl - ex)}</td>
                     <td className={"py-2 text-right font-black " + (isRefund ? "text-brand/40 line-through" : "text-brand")}>{euro(incl)}</td>
                     <td className={"py-2 text-xs font-bold " + (isOpen ? "text-red-600" : isRefund ? "text-brand/40" : "text-accentdark")}>{isOpen ? "open" : isRefund ? "terugbetaald" : "betaald"}</td>
+                    <td className="py-2 text-right print:hidden">
+                      <Link href={`/beheer/factuur?payment=${p.id}`} className="whitespace-nowrap text-xs font-bold text-accentdark hover:underline">Factuur →</Link>
+                    </td>
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan={8} className="py-4 text-sm text-brand/40">Geen transacties in deze periode.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={9} className="py-4 text-sm text-brand/40">Geen transacties in deze periode.</td></tr>}
             </tbody>
             {rows.length > 0 && (
               <tfoot>
