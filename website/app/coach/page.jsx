@@ -303,6 +303,9 @@ export default async function CoachDashboard({ searchParams }) {
           { label: "Schrijf een korte bio", done: !!String(profile.coach_bio || "").trim(), hint: "Vertel over je aanpak en ervaring.", href: "/coach/profiel", cta: "Naar profiel" },
           { label: "Stel je tarieven in", done: !!profile.coach_pt_price_cents, hint: "Prijs voor 1-op-1 personal training.", href: "/coach/profiel", cta: "Naar profiel" },
           { label: "Zet jezelf zichtbaar op de site", done: !!profile.coach_public, hint: "Verschijn op /coaches zodat leden je vinden.", href: "/coach/profiel", cta: "Naar profiel" },
+          // Vóór het kopen, niet erna: de factuur leest deze gegevens uit het profiel, en drie coaches
+          // kochten al tegoed zonder ze — hun facturen bleven daardoor zonder btw-nummer.
+          { label: "Vul je facturatiegegevens in", done: !!profile.bill_vat || !!profile.bill_company, hint: "Bedrijfsnaam en btw-nummer — zo staat je factuur meteen juist.", href: "/coach/profiel", cta: "Naar profiel" },
           { label: "Koop je eerste sessietegoed", done: creditBalance > 0, hint: "Nodig om sessies met clienten te boeken.", href: "#tegoed", cta: "Koop tegoed" },
         ]} />
       )}
