@@ -53,6 +53,27 @@ describe("classifyClientError", () => {
     expect(classifyClientError("ResizeObserver loop completed with undelivered notifications.")).toBe("extern");
   });
 
+  // De échte melding die op 04-09-2026 om 18:13 op /boeken binnenkwam, van een Android-toestel dat
+  // via de Meta-advertentie kwam. De in-app browser van Facebook injecteert zijn eigen logger; bij
+  // het wegnavigeren valt de brug naar de app weg. Zolang de advertentie loopt kan dit bij elke
+  // klik gebeuren, en elke keer vertrok er een alarmmail.
+  it("herkent de in-app browser van Facebook en Instagram", () => {
+    const stack = "at sendDataToNative (iabjs://navigation_performance_logger_android:1:10198)";
+    expect(classifyClientError("Uncaught Error: Error invoking postMessage: Java object is gone", stack)).toBe("extern");
+    // Ook zonder bruikbare stack, want `postMessage` gebruiken we zelf nergens.
+    expect(classifyClientError("Error invoking postMessage: Java object is gone")).toBe("extern");
+    expect(isAppBug(classifyClientError("Error invoking postMessage: Java object is gone"))).toBe(false);
+  });
+
+  it("herkent geïnjecteerde code aan het schema in de stack", () => {
+    // Een boodschap die op zichzelf als app-fout zou tellen, maar uit een extensie komt.
+    expect(classifyClientError("x is not a function", "at f (chrome-extension://abc/inject.js:1:1)")).toBe("extern");
+    expect(classifyClientError("x is not a function", "at f (moz-extension://abc/inject.js:1:1)")).toBe("extern");
+    expect(classifyClientError("x is not a function", "at f (webkit-masked-url://hidden/script.js:1:1)")).toBe("extern");
+    // Onze eigen code staat op https en blijft dus gewoon een app-fout.
+    expect(classifyClientError("x is not a function", "at f (https://fittin.be/_next/static/chunk.js:1:1)")).toBe("app");
+  });
+
   it("herkent removeChild ook als alleen de stack het verraadt", () => {
     expect(classifyClientError("The object can not be found here.", "removeChild@[native code]")).toBe("extern");
   });
