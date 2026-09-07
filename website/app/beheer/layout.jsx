@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { getSessionProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import FactuurHerinneringGrap from "@/components/admin/FactuurHerinneringGrap";
 import ToastHost from "@/components/ui/ToastHost";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -33,12 +32,7 @@ export default async function BeheerLayout({ children }) {
   return (
     <div className="flex min-h-screen flex-col bg-paper md:flex-row">
       <AdminSidebar name={profile.full_name || "Beheerder"} role={profile.role} badges={badges} />
-      <main className="min-w-0 flex-1">
-        {/* Staat bewust IN main en niet erboven: zo loopt de balk over de inhoudskolom en schuift
-            hij de zijbalk niet op. Alleen zichtbaar voor de beheerder — zie de redirect hierboven. */}
-        <FactuurHerinneringGrap />
-        {children}
-      </main>
+      <main className="min-w-0 flex-1">{children}</main>
       <ToastHost />
     </div>
   );
