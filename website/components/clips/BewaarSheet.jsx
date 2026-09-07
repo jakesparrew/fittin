@@ -158,7 +158,7 @@ export default function BewaarSheet({ folders = [], sluit, na, initieelRuw = "",
   if (ingebed) return body;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Video bewaren">
+    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Video bewaren">
       <div className="flex items-center gap-3 border-b border-borderc px-4 py-3">
         <button type="button" onClick={sluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-brand/50 transition hover:bg-paper hover:text-brand">✕</button>
         <p className="flex-1 font-black text-brand">Video bewaren</p>

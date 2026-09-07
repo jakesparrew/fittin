@@ -130,8 +130,8 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
 
       {/* Booking modal */}
       {slot && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4" onClick={() => setSlot(null)}>
-          <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4" onClick={() => setSlot(null)}>
+          <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between">
               <div>
                 <h3 className="font-black text-brand">Sessie inplannen</h3>

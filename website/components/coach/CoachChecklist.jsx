@@ -35,7 +35,7 @@ export default function CoachChecklist({ steps }) {
           <p className="mt-1 text-sm text-brand/60">Zo verschijn je op de website en kunnen leden je vinden en boeken.</p>
           {/* Progress bar — a visible sense of "how far am I". */}
           <div className="mt-3 h-2 w-48 max-w-full overflow-hidden rounded-full bg-white">
-            <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${pct}%` }} />
+            <div className="h-full rounded-full bg-accent transition-all ease-uit" style={{ width: `${pct}%` }} />
           </div>
         </div>
         <button onClick={dismiss} className="rounded-full px-3 py-1.5 text-xs font-bold text-brand/40 transition hover:text-brand" title="Even verbergen — komt terug tot je profiel compleet is">Even verbergen</button>

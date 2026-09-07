@@ -254,8 +254,8 @@ export default function Bouwer({ program }) {
       {kiezer && <OefeningBlad onKies={(oefs) => voegToe(kiezer, oefs)} onSluit={() => setKiezer(null)} />}
 
       {detail && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand/40 p-3 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" onClick={() => setDetail(null)}>
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+        <div className="anim-fade fixed inset-0 z-50 flex items-end justify-center bg-brand/40 p-3 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" onClick={() => setDetail(null)}>
+          <div className="anim-in max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-lg font-black text-brand">{detail.name}</h2>
               <button type="button" onClick={() => setDetail(null)} aria-label="Sluiten" className="flex h-11 w-11 items-center justify-center rounded-full text-xl text-brand/50 hover:bg-paper">✕</button>
@@ -274,8 +274,8 @@ function RijBlad({ rij, onWijzig, onDupliceer, onOmhoog, onOmlaag, onVerwijder, 
   const invoer = "w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-base text-brand outline-none transition focus:border-accent";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand/40 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={onSluit}>
-      <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+    <div className="anim-fade fixed inset-0 z-50 flex items-end justify-center bg-brand/40 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={onSluit}>
+      <div className="anim-sheet max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 pb-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3">
           <ExerciseMedia exercise={rij.exercise} thumb className="h-12 w-12 shrink-0" rounded="rounded-xl" />
           <p className="min-w-0 flex-1 font-black leading-snug text-brand">{rij.exercise?.name}</p>
@@ -386,7 +386,7 @@ function OefeningBlad({ onKies, onSluit }) {
     setGekozen((g) => (g.some((x) => x.id === ex.id) ? g.filter((x) => x.id !== ex.id) : [...g, ex]));
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Oefeningen kiezen">
+    <div className="anim-fade fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Oefeningen kiezen">
       <div className="border-b border-borderc p-3">
         <div className="flex items-center gap-2">
           <input
