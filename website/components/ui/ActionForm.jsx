@@ -21,7 +21,11 @@ export default function ActionForm({ action, success = "Opgeslagen ✓", classNa
 
   return (
     <form action={formAction} className={className} aria-busy={pending} {...rest}>
-      <fieldset disabled={pending} className={"contents " + (pending ? "[&_button]:opacity-60 [&_button]:cursor-wait" : "")}>
+      {/* `[&_button]:transition` staat BUITEN de voorwaarde. Zat hij erin, dan verscheen hij op
+          hetzelfde moment als opacity-60 en viel er niets te animeren — het dimmen sprong dan nog
+          steeds in één frame. Nu vervaagt het bij het starten én bij het afronden, in alle 108
+          formulieren tegelijk. */}
+      <fieldset disabled={pending} className={"contents [&_button]:transition " + (pending ? "[&_button]:opacity-60 [&_button]:cursor-wait" : "")}>
         {children}
       </fieldset>
     </form>

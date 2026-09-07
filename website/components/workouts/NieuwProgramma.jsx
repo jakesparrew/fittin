@@ -105,7 +105,7 @@ export default function NieuwProgramma({ clients = [] }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Nieuw programma">
+    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Nieuw programma">
       {/* Kop: terug, voortgang, sluiten. */}
       <div className="flex items-center gap-3 border-b border-borderc px-4 py-3">
         <button

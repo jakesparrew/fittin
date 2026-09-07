@@ -142,7 +142,7 @@ export default async function CampaignDetail({ params }) {
                     <div key={s.id} className="flex items-center gap-3">
                       <span className="w-10 shrink-0 text-xs font-bold text-brand/50">#{s.step_no}</span>
                       <div className="h-5 flex-1 overflow-hidden rounded-full bg-paper">
-                        <div className="flex h-full items-center justify-end rounded-full bg-accent px-2 text-[10px] font-black text-brand transition-all" style={{ width: `${Math.max(w, 6)}%` }}>{reached}</div>
+                        <div className="flex h-full items-center justify-end rounded-full bg-accent px-2 text-[10px] font-black text-brand transition-all ease-uit" style={{ width: `${Math.max(w, 6)}%` }}>{reached}</div>
                       </div>
                       <span className="w-10 shrink-0 text-right text-xs font-bold text-brand/40">{w}%</span>
                     </div>

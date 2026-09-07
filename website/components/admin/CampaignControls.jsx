@@ -33,7 +33,7 @@ export function SendProgress({ id, initial }) {
         <span className="text-sm font-bold text-brand">{sent} / {total}</span>
       </div>
       <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-paper">
-        <div className={"h-full rounded-full bg-accent transition-all duration-500" + (sending ? " animate-pulse" : "")} style={{ width: pctv + "%" }} />
+        <div className={"h-full rounded-full bg-accent transition-all duration-500 ease-uit" + (sending ? " animate-pulse" : "")} style={{ width: pctv + "%" }} />
       </div>
       <p className="mt-2 text-xs text-brand/50">
         {sending ? "De nieuwsbrief wordt in batches verstuurd in de achtergrond — je kan deze pagina sluiten." : "Verzending afgerond."}

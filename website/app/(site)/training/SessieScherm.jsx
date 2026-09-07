@@ -36,7 +36,7 @@ export default function SessieScherm({ dag, minuten, resultaat }) {
           </span>
         </div>
         <div className="h-1 bg-borderc">
-          <div className="h-full bg-accent transition-all duration-300" style={{ width: `${pct}%` }} />
+          <div className="h-full bg-accent transition-all duration-300 ease-uit" style={{ width: `${pct}%` }} />
         </div>
       </header>
 
@@ -66,8 +66,8 @@ export default function SessieScherm({ dag, minuten, resultaat }) {
       </div>
 
       {stoppen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-brand/40 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true">
-          <div className="w-full max-w-sm rounded-3xl bg-white p-6">
+        <div className="anim-fade fixed inset-0 z-50 flex items-end justify-center bg-brand/40 p-4 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true">
+          <div className="anim-in w-full max-w-sm rounded-3xl bg-white p-6">
             <p className="text-lg font-black text-brand">Sessie stoppen?</p>
             <p className="mt-1.5 text-sm text-ink-soft">Je gelogde sets blijven bewaard — je kan later gewoon verder waar je gestopt bent.</p>
             <div className="mt-5 flex gap-2">

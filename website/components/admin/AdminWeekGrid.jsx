@@ -228,8 +228,8 @@ function PlanModal({ modal, members, services, coaches = [], onClose, onDone }) 
   useEffect(() => { if (state?.ok || blockState?.ok) onDone(); }, [state, blockState]); // eslint-disable-line
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
+      <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-black text-brand">Sessie inplannen</h3>
@@ -292,8 +292,8 @@ function RangeBlockModal({ modal, onClose, onDone }) {
   useEffect(() => { if (state?.ok) onDone(); }, [state]); // eslint-disable-line
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
+      <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-black text-brand">Reeks blokkeren</h3>
@@ -346,8 +346,8 @@ function RescheduleModal({ modal, onClose, onDone }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
+      <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
             <h3 className="font-black text-brand">Sessie verplaatsen</h3>

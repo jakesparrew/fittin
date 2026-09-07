@@ -15,6 +15,29 @@
   --color-borderc: #e6e4f0;
   --font-sans: var(--font-lato), "Lato", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), "Bricolage Grotesque", var(--font-lato), ui-sans-serif, sans-serif;
+
+  /* ---------- Beweging ----------
+     Aanleiding (2026-09-07): de app telde 529 bewegingsklassen, waarvan er 497 de kale `transition`
+     waren — verspreid over 144 bestanden, allemaal op de Tailwind-standaard van 150ms met een
+     symmetrische curve. Er was geen enkel token, dus elke nieuwe knop was opnieuw een gok.
+
+     Drie curves, meer heeft een interface niet nodig:
+       ease-uit     dingen die AANKOMEN (openen, verschijnen, binnenschuiven). Snel weg, zacht
+                    landen — dat leest als "het reageert meteen". Dit was al de curve van .reveal,
+                    dus het is de huiskeuze; ze staat nu alleen op één plek.
+       ease-in-uit  dingen die VERPLAATSEN tussen twee toestanden die allebei blijven bestaan.
+       ease-veer    bevestiging, met een minieme overshoot. Spaarzaam: een vinkje, een geslaagde
+                    actie. Nooit op iets dat vaak beweegt.
+
+     Duur blijft 150ms voor de standaard-transition: dat is hoveren, focussen, kleur. Sneller dan
+     100ms ziet niemand, trager dan 200ms voelt als vertraging op iets dat je 497 keer doet. */
+  --ease-uit: cubic-bezier(0.2, 0.6, 0.2, 1);
+  --ease-in-uit: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-veer: cubic-bezier(0.34, 1.32, 0.6, 1);
+
+  /* Deze twee sturen élke kale `transition`-klasse in de app in één keer bij. */
+  --default-transition-timing-function: var(--ease-uit);
+  --default-transition-duration: 150ms;
 }
 
 html {
@@ -65,10 +88,6 @@ h1, h2, h3, .font-display {
   0%, 100% { transform: translate(0, 0) scale(1); }
   50% { transform: translate(-14px, 16px) scale(1.06); }
 }
-@keyframes fade-up {
-  from { opacity: 0; transform: translateY(28px); }
-  to { opacity: 1; transform: translateY(0); }
-}
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -105,7 +124,7 @@ h1, h2, h3, .font-display {
 }
 
 /* Scroll reveal (toggled by IntersectionObserver) */
-.reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s cubic-bezier(0.2, 0.6, 0.2, 1), transform 0.7s cubic-bezier(0.2, 0.6, 0.2, 1); }
+.reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s var(--ease-uit), transform 0.7s var(--ease-uit); }
 .reveal.in { opacity: 1; transform: none; }
 
 /* Shine sweep on hover (wrap an element with .shine) */
@@ -119,10 +138,63 @@ h1, h2, h3, .font-display {
 }
 .shine:hover::after { animation: shimmer 0.9s ease; }
 
+/* ---------- Bewegingsvocabulaire voor de app-UI ----------
+   Drie klassen, bewust niet meer. Ze bestaan omdat overlays in deze app tot nu toe zonder enige
+   overgang op het scherm verschenen: een dialoog, een lade en een toast knalden er in één frame in.
+   Dat leest als een sprong in plaats van als iets dat opengaat, en je verliest het verband tussen
+   de knop die je indrukte en wat er gebeurt.
+
+   Alle drie zijn ENKEL voor binnenkomen. Verdwijnen animeren we niet: dat vraagt om de node in de
+   DOM te houden nadat React hem wil weghalen, en dat is precies het soort toestand-buiten-React dat
+   in dit project al eerder hydratatie- en focusproblemen gaf. Wegvallen mag hier abrupt zijn.
+
+   `both` houdt de BEGINstand vast tot de animatie start, zodat er geen frame lang een ongestileerde
+   flits te zien is. */
+@keyframes anim-in { from { opacity: 0; transform: translateY(6px) scale(0.985); } to { opacity: 1; transform: none; } }
+@keyframes anim-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes anim-sheet { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes anim-zij { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+
+/* Paneel, dialoog, menu, kaart die verschijnt. */
+.anim-in { animation: anim-in 200ms var(--ease-uit) both; }
+/* Het waas achter een dialoog. Korter dan het paneel zelf, zodat de achtergrond eerst wegvalt. */
+.anim-fade { animation: anim-fade 150ms var(--ease-uit) both; }
+/* Iets dat van de onderrand omhoog komt — op een telefoon de natuurlijke richting. */
+.anim-sheet { animation: anim-sheet 240ms var(--ease-uit) both; }
+/* Een lade die van de rechterrand inschuift (boekingsdetails, ledenfiche). Komt uit de richting
+   waar hij vandaan hoort te komen, zodat je begrijpt waar hij straks weer heen gaat. */
+.anim-zij { animation: anim-zij 220ms var(--ease-uit) both; }
+
+/* ---------- Minder beweging ----------
+   Tot 2026-09-07 dekte dit blok vijf decoratieve klassen. De ~500 `transition`-klassen, de spinner,
+   de skeletten en de shine-sweep vielen er buiten: wie beweging had uitgezet, kreeg in de hele app
+   nog steeds alles te zien. Nu is de regel universeel, met drie bewuste uitzonderingen. */
 @media (prefers-reduced-motion: reduce) {
-  .animate-floaty, .animate-floaty-slow, .animate-pulse-ring, .marquee-track, .brand-mesh { animation: none !important; }
-  .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+  }
   html { scroll-behavior: auto; }
+
+  /* UITZONDERING 1 — deze moeten op hun BEGINstand blijven, niet naar hun eindstand springen.
+     Een marquee die naar 100% springt staat op translateX(-50%): de helft van de logo's staat dan
+     buiten beeld. Een universele duur-van-nul is dus niet hetzelfde als "geen animatie". */
+  .marquee-track, .animate-floaty, .animate-floaty-slow, .animate-pulse-ring, .brand-mesh { animation: none !important; }
+  .shine:hover::after { animation: none !important; }
+
+  /* UITZONDERING 2 — .reveal begint op opacity:0 en wordt pas zichtbaar door een klasse die een
+     IntersectionObserver zet. Zonder deze regel blijft inhoud onzichtbaar als die observer niet
+     draait. Dit is geen verfraaiing maar een grendel tegen een lege pagina. */
+  .reveal { opacity: 1 !important; transform: none !important; }
+
+  /* UITZONDERING 3 — een spinner en een skelet zijn geen decor maar de melding "ik ben bezig".
+     Stilzetten maakt ze niet rustiger, het maakt ze kapot: een bevroren spinner leest als een
+     vastgelopen app. Ze blijven dus lopen, alleen trager. */
+  .animate-spin { animation-duration: 1.4s !important; animation-iteration-count: infinite !important; }
+  .animate-pulse { animation-duration: 3s !important; animation-iteration-count: infinite !important; }
 }
 
 /* Slim, subtle scrollbar for dark panels (admin/coach sidebars). Track stays invisible; a thin

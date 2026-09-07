@@ -52,9 +52,9 @@ export default function MemberDrawer() {
   const s = data?.stats || {};
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end" onClick={() => setId(null)}>
+    <div className="anim-fade fixed inset-0 z-50 flex justify-end" onClick={() => setId(null)}>
       <div className="absolute inset-0 bg-brand/30" />
-      <aside className="relative h-full w-full max-w-xl overflow-y-auto bg-paper shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <aside className="anim-zij relative h-full w-full max-w-xl overflow-y-auto bg-paper shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {loading || !data ? (
           <div className="flex h-full items-center justify-center text-brand/40">{loading ? "Laden…" : "Geen gegevens."}</div>
         ) : (

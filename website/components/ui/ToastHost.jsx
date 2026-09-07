@@ -29,7 +29,10 @@ export default function ToastHost() {
           className={
             // Geen pointer-events: er valt niets te klikken in een toast, en pointer-events-auto
             // ving tikken af die voor de onderliggende knoppen bedoeld waren.
-            "flex max-w-full items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand/20 " +
+            // anim-in: een toast verscheen vroeger in één frame, waardoor je hem in je ooghoek miste
+            // of hem aanzag voor een sprong in de pagina. 200ms opkomen legt het verband met de knop
+            // die je net indrukte.
+            "anim-in flex max-w-full items-center gap-2 rounded-xl px-4 py-3 text-sm font-bold text-white shadow-lg shadow-brand/20 " +
             (t.type === "error" ? "bg-red-500" : t.type === "info" ? "bg-brand/80" : "bg-brand")
           }
         >

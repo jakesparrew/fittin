@@ -123,7 +123,7 @@ export function Funnel({ steps }) {
               <span>{s.value}{i > 0 && <span className="ml-2 text-brand/40">{conv}%</span>}</span>
             </div>
             <div className="mt-1 h-7 overflow-hidden rounded-lg bg-paper">
-              <div className="flex h-full items-center rounded-lg bg-gradient-to-r from-brand to-[#3a2f73] px-2 text-[10px] font-black text-white transition-all" style={{ width: w + "%" }} />
+              <div className="flex h-full items-center rounded-lg bg-gradient-to-r from-brand to-[#3a2f73] px-2 text-[10px] font-black text-white transition-all ease-uit" style={{ width: w + "%" }} />
             </div>
           </div>
         );

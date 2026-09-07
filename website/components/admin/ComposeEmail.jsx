@@ -20,8 +20,8 @@ export default function ComposeEmail() {
     <>
       <button onClick={() => setOpen(true)} className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white transition hover:opacity-90">+ Nieuwe e-mail</button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-brand/40 p-4 pt-16" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="anim-fade fixed inset-0 z-50 flex items-start justify-center bg-brand/40 p-4 pt-16" onClick={() => setOpen(false)}>
+          <div className="anim-in w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
               <h2 className="font-black text-brand">Nieuwe e-mail</h2>
               <button onClick={() => setOpen(false)} className="text-brand/40 hover:text-brand">✕</button>

@@ -216,7 +216,7 @@ function ClipSheet({ clip, folders, sluit, na, onNaarOefening }) {
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label={clip.title}>
+    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label={clip.title}>
       <div className="flex items-center gap-3 border-b border-borderc px-4 py-3">
         <button type="button" onClick={sluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-brand/50 transition hover:bg-paper hover:text-brand">✕</button>
         <p className="min-w-0 flex-1 truncate font-black text-brand">{clip.title}</p>

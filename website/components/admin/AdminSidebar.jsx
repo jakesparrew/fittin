@@ -66,7 +66,7 @@ export default function AdminSidebar({ name, role, badges = {} }) {
         <button onClick={() => setOpen(true)} aria-label="Menu openen" className="rounded-lg px-3 py-1.5 text-2xl leading-none hover:bg-white/10">☰</button>
       </div>
       {/* Backdrop (mobile, when drawer open) */}
-      {open && <div onClick={() => setOpen(false)} className="fixed inset-0 z-40 bg-black/50 md:hidden" aria-hidden />}
+      {open && <div onClick={() => setOpen(false)} className="anim-fade fixed inset-0 z-40 bg-black/50 md:hidden" aria-hidden />}
       {/* Sidebar: static column on desktop, slide-in drawer on mobile. Only the <nav> scrolls. */}
       <aside className={"fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col bg-brand text-white transition-transform md:sticky md:top-0 md:h-screen md:z-auto md:w-60 md:translate-x-0 " + (open ? "translate-x-0" : "-translate-x-full")}>
         <div className="flex items-center justify-between px-6 pb-3 pt-5">

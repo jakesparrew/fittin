@@ -61,7 +61,7 @@ export default function WorkoutFollow({ workout, signupHref = "/login?mode=signu
           <span>{doneCount}/{total} klaar</span>
         </div>
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-borderc">
-          <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }} />
+          <div className="h-full rounded-full bg-accent transition-all duration-500 ease-uit" style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }} />
         </div>
       </div>
 
