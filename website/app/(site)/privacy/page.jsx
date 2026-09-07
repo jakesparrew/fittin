@@ -37,7 +37,7 @@ export default function Privacy() {
       <div className="mx-auto max-w-3xl px-5 py-16">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Privacy</p>
         <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Privacybeleid</h1>
-        <p className="mt-3 text-sm text-brand/50">Versie 2 — laatst bijgewerkt: 5 augustus 2026</p>
+        <p className="mt-3 text-sm text-brand/50">Versie 3 — laatst bijgewerkt: 8 september 2026</p>
 
         <p className="mt-6 leading-relaxed text-brand/70">
           Fittin&rsquo; verwerkt je persoonsgegevens volgens de Algemene Verordening
@@ -81,6 +81,16 @@ export default function Privacy() {
               <em>Grondslag: jouw uitdrukkelijke toestemming (art. 9.2.a AVG).</em> Die vragen we
               afzonderlijk, je kan ze op elk moment intrekken, en zonder die toestemming werkt de rest
               van Fittin&rsquo; gewoon.
+            </li>
+            <li>
+              <strong>Aanvragen en aanmeldingen</strong> — vraag je een gratis proeftraining aan, of meld
+              je je aan als coach, dan verwerken we wat je in dat formulier invult: je naam, e-mailadres,
+              telefoonnummer, geboortedatum, je doel of motivatie, en wanneer je kan. <strong>Geslacht is
+              optioneel</strong> — je mag het veld leeg laten en je aanvraag wordt gewoon behandeld. We
+              vragen deze gegevens om je aan de juiste coach te koppelen en de eerste sessie voor te
+              bereiden. Solliciteer je als coach, dan hoort daar ook je cv en foto bij, als je die
+              meestuurt. <em>Grondslag: het nemen van stappen op jouw verzoek vóór het sluiten van een
+              overeenkomst (art. 6.1.b AVG).</em>
             </li>
             <li>
               <strong>Communicatie</strong> — berichten met je coach of met ons, en je meldingen over
@@ -127,6 +137,7 @@ export default function Privacy() {
                 <Row wat="Betalingen en facturen" hoelang="7 jaar, wettelijke bewaartermijn voor de boekhouding. Deze gegevens verdwijnen dus niet bij het verwijderen van je account." />
                 <Row wat="Toegangscodes en deurlogs" hoelang="Codes worden na je sessie meteen ingetrokken. Logs bewaren we 12 maanden voor de veiligheid van een onbemande zaal; daarna worden ze automatisch verwijderd." />
                 <Row wat="Lichaamsmetingen en trainingslogs" hoelang="Zolang je toestemming loopt. Trek je ze in, dan wissen we ze." />
+                <Row wat="Aanvragen en aanmeldingen" hoelang="Zolang we je aanvraag opvolgen, en daarna hoogstens twee jaar — zodat we een eerdere vraag nog kunnen terugvinden als je later opnieuw contact opneemt. Een sollicitatie als coach, inclusief cv en foto, verwijderen we uiterlijk een jaar na de procedure." />
                 <Row wat="Nieuwsbrief" hoelang="Tot je uitschrijft. Je uitschrijving zelf houden we bij zodat we je niet opnieuw aanschrijven." />
                 <Row wat="Bezoekstatistieken" hoelang="14 maanden, daarna automatisch verwijderd door een dagelijkse opruimtaak." />
                 <Row wat="Foutmeldingen" hoelang="12 maanden, daarna automatisch verwijderd." />

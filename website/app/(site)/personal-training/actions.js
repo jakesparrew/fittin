@@ -6,6 +6,7 @@ import { FORWARD_TO } from "@/lib/inbox";
 import { notify } from "@/lib/notify";
 import { isUuid } from "@/lib/slug";
 import { beschikbaarheidZin, FORMULES } from "./options";
+import { keurGeboortedatum, keurGeslacht, persoonsregel } from "@/lib/aanmelding-velden";
 
 // Public "gratis intake & proeftraining" request — the redeem path for every PT CTA. Works without
 // an account (PT prospects are usually not members yet). The request lands in the superadmin Inbox
@@ -36,8 +37,16 @@ export async function requestIntake(formData) {
   // overleeft; de vrije nalijn leest daarachter als verfijning, niet als concurrent.
   const kan = [beschikbaar, when].filter(Boolean).join(" — ");
 
+  // Geslacht en geboortedatum. Het formulier markeert de datum als verplicht, maar dat is een
+  // attribuut in de browser: hier wordt het pas een regel. Geslacht mag leeg blijven — leeg IS het
+  // antwoord "zeg ik liever niet", dus daar hoort geen foutmelding bij.
+  const geslacht = keurGeslacht(formData.get("geslacht"));
+  const geboorte = keurGeboortedatum(formData.get("geboortedatum"), new Date());
+
   if (!name) return { error: "Vul je naam in." };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Vul een geldig e-mailadres in." };
+  if (geboorte.leeg) return { error: "Vul je geboortedatum in." };
+  if (geboorte.error) return { error: geboorte.error };
 
   const admin = createAdminClient();
   const { data: gym } = await admin.from("gyms").select("id").order("created_at").limit(1).single();
@@ -92,7 +101,11 @@ export async function requestIntake(formData) {
     formule ? `Formule: ${formule}` : "",
     coachName ? `Voorkeurcoach: ${coachName}` : "",
   ].filter(Boolean).join("\n");
-  const text = `${kop ? `${kop}\n\n` : ""}Naam: ${name}\nE-mail: ${email}${phone ? `\nTelefoon: ${phone}` : ""}\n\nDoel / vraag:\n${goal || "(niet ingevuld)"}`;
+  // De persoonsregel staat bij de identiteit en niet in `kop`: die kop is het budget van 120 tekens
+  // dat de inboxlijst toont, en daar hoort te staan wat je nodig hebt om de aanvraag toe te wijzen
+  // (wanneer, welke formule, welke coach) — niet wie iemand is.
+  const persoon = persoonsregel(geslacht, geboorte);
+  const text = `${kop ? `${kop}\n\n` : ""}Naam: ${name}\nE-mail: ${email}${phone ? `\nTelefoon: ${phone}` : ""}${persoon ? `\n${persoon}` : ""}\n\nDoel / vraag:\n${goal || "(niet ingevuld)"}`;
   const { error: insErr } = await admin.from("inbound_emails").insert({
     gym_id: gym.id,
     resend_id: `intake-${crypto.randomUUID()}`, // synthetic id — not a Resend message

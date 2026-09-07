@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { applyAsCoach } from "./actions";
 import { track } from "@/lib/track";
 import { MAX_BYTES, MAX_MB } from "@/lib/coach-aanmelding";
+import { GESLACHTEN } from "@/lib/aanmelding-velden";
 
 // Zelfde patroon als het intakeformulier: eigen client-formulier met een blijvend
 // bevestigingsblok, want een aanmelding wordt pas dagen later beantwoord.
@@ -75,6 +76,19 @@ export default function CoachApplyForm() {
         <label className="block text-sm font-bold text-brand">
           Telefoon <span className="font-normal text-ink-soft">(optioneel)</span>
           <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+        </label>
+        {/* Zie lib/aanmelding-velden.js: geboortedatum in plaats van leeftijd, en de keuring
+            (toekomst, onbestaande dag, typfout) gebeurt op de server. */}
+        <label className="block text-sm font-bold text-brand">
+          Geboortedatum
+          <input name="geboortedatum" type="date" required min="1920-01-01" autoComplete="bday" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+        </label>
+        <label className="block text-sm font-bold text-brand">
+          Geslacht <span className="font-normal text-ink-soft">(optioneel)</span>
+          <select name="geslacht" defaultValue="" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-white px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent">
+            <option value="">Zeg ik liever niet</option>
+            {GESLACHTEN.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
         </label>
         <label className="block text-sm font-bold text-brand">
           Specialiteit <span className="font-normal text-ink-soft">(optioneel)</span>

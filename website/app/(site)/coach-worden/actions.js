@@ -6,6 +6,7 @@ import { sendCoachApplyConfirmation, sendCoachApplyNotice } from "@/lib/email";
 import { FORWARD_TO } from "@/lib/inbox";
 import { notify } from "@/lib/notify";
 import { keurCv, keurFoto, leeg, opslagPad, veiligeBestandsnaam } from "@/lib/coach-aanmelding";
+import { keurGeboortedatum, keurGeslacht, persoonsregel } from "@/lib/aanmelding-velden";
 
 // Publieke coach-aanmelding vanaf /coach-worden — zelfde patroon als de PT-intake: werkt zonder
 // account (een coach die hier solliciteert ís nog geen gebruiker), landt als bericht in de
@@ -21,9 +22,16 @@ export async function applyAsCoach(formData) {
   const specialty = String(formData.get("specialty") || "").trim().replace(/\s+/g, " ").slice(0, 120);
   const about = String(formData.get("about") || "").trim().slice(0, 2000);
   const socials = String(formData.get("socials") || "").trim().replace(/\s+/g, " ").slice(0, 300);
+  // Zie het intakeformulier: het formulier markeert de datum als verplicht, maar dat is een
+  // browserattribuut. Geslacht mag leeg — leeg IS "zeg ik liever niet".
+  const geslacht = keurGeslacht(formData.get("geslacht"));
+  const geboorte = keurGeboortedatum(formData.get("geboortedatum"), new Date());
+
   if (!name) return { error: "Vul je naam in." };
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { error: "Vul een geldig e-mailadres in." };
   if (about.length < 20) return { error: "Vertel iets meer over jezelf — een paar zinnen volstaan." };
+  if (geboorte.leeg) return { error: "Vul je geboortedatum in." };
+  if (geboorte.error) return { error: geboorte.error };
 
   // Bijlagen keuren VOOR er iets weggeschreven wordt. Een afgekeurd bestand hoort een duidelijke
   // melding te geven waarna de kandidaat opnieuw kan versturen, niet een half opgeslagen aanmelding.
@@ -58,7 +66,8 @@ export async function applyAsCoach(formData) {
     socials ? `Website / socials: ${socials}` : "",
     bijlagen.length ? `Bijlagen: ${bijlagen.join(" + ")} — te openen in Beheer → Inbox` : "",
   ].filter(Boolean).join("\n");
-  const text = `${details ? `${details}\n\n` : ""}Naam: ${name}\nE-mail: ${email}${phone ? `\nTelefoon: ${phone}` : ""}\n\nOver de kandidaat:\n${about}`;
+  const persoon = persoonsregel(geslacht, geboorte);
+  const text = `${details ? `${details}\n\n` : ""}Naam: ${name}\nE-mail: ${email}${phone ? `\nTelefoon: ${phone}` : ""}${persoon ? `\n${persoon}` : ""}\n\nOver de kandidaat:\n${about}`;
 
   const { data: mail, error: insErr } = await admin.from("inbound_emails").insert({
     gym_id: gym.id,

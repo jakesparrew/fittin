@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { requestIntake } from "./actions";
 import { DAGDELEN, DAGEN, FORMULES } from "./options";
+import { GESLACHTEN } from "@/lib/aanmelding-velden";
 import { track } from "@/lib/track";
 
 // Zelfde selectie-idioom als de boekingsflow (BookingClient): accentrand + accent/10 = gekozen,
@@ -128,6 +129,23 @@ export default function IntakeForm({ coaches = [] }) {
         <label className="block text-sm font-bold text-brand">
           Telefoon <span className="font-normal text-brand/40">(optioneel)</span>
           <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+        </label>
+        {/* Geboortedatum en niet leeftijd: een leeftijd veroudert in de inbox, een datum niet.
+            Bewust GEEN dynamische max op dit veld — die zou de klok tijdens het renderen lezen en
+            dat is in dit project al een bron van hydratatiefouten geweest. De server keurt de
+            datum (toekomst, onmogelijke dag, typfout) in lib/aanmelding-velden.js. */}
+        <label className="block text-sm font-bold text-brand">
+          Geboortedatum
+          <input name="geboortedatum" type="date" required min="1920-01-01" autoComplete="bday" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+        </label>
+        <label className="block text-sm font-bold text-brand">
+          Geslacht <span className="font-normal text-brand/40">(optioneel)</span>
+          {/* Leeg is een volwaardig antwoord, geen ontbrekend antwoord. Daarom staat het als eerste
+              optie mét eigen tekst, in plaats van een lege regel die als vergeten leest. */}
+          <select name="geslacht" defaultValue="" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-white px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent">
+            <option value="">Zeg ik liever niet</option>
+            {GESLACHTEN.map((g) => <option key={g} value={g}>{g}</option>)}
+          </select>
         </label>
         <label className="block text-sm font-bold text-brand">
           Formule
