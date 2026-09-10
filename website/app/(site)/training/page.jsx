@@ -20,7 +20,7 @@ export default async function Training() {
   if (!user) redirect("/login?next=/training");
 
   const supabase = await createClient();
-  const [{ data: program }, { data: logs }, { data: coachLink }, { data: feedback }] = await Promise.all([
+  const [{ data: program }, { data: logs }, { data: coachLink }, { data: feedback }, { data: aiPlan }] = await Promise.all([
     supabase
       .from("programs")
       .select(`id, name, coach:profiles!programs_coach_id_fkey(full_name), program_days(id, day_no, name, program_exercises(id, position, sets, reps, rep_text, section, rest_sec, notes, tempo, target_weight_kg, rpe, superset_group, exercises(${EX_FIELDS})))`)
@@ -37,7 +37,18 @@ export default async function Training() {
       .limit(300),
     supabase.from("coach_clients").select("coach:profiles!coach_clients_coach_id_fkey(id, full_name)").eq("client_id", user.id).eq("status", "accepted").limit(1).maybeSingle(),
     supabase.from("workout_feedback").select("id, body, created_at, coach:profiles!workout_feedback_coach_id_fkey(full_name)").eq("client_id", user.id).order("created_at", { ascending: false }).limit(5),
+    supabase.from("coaching_plans").select("id, weken").eq("member_id", user.id).eq("status", "lopend").maybeSingle(),
   ]);
+
+  // Het programma hierboven IS de week van de AI-coach voor wie er een heeft — die weken worden als
+  // gewoon programma weggeschreven. Alleen: afvinken en lezen wat je coach schreef gebeurt op
+  // /coaching, en zonder deze strook is dat nergens te zien vanaf hier.
+  let coachWeek = null;
+  if (aiPlan?.id) {
+    const { data: w } = await supabase.from("coaching_weeks")
+      .select("weeknummer, unlocked_at, completed_at").eq("plan_id", aiPlan.id).order("weeknummer");
+    coachWeek = [...(w || [])].reverse().find((x) => x.unlocked_at && !x.completed_at) || null;
+  }
 
   const myCoachId = coachLink?.coach?.id || null;
   let coachMessages = [];
@@ -73,6 +84,19 @@ export default async function Training() {
           <Link href="/plannen" className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-accent">Mijn plannen →</Link>
         </div>
         {coachName && <p className="mt-2 text-sm text-brand/60">Samengesteld door {coachName}</p>}
+
+        {aiPlan && (
+          <Link href="/coaching"
+            className="anim-in mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent/30 bg-accent/5 px-5 py-3.5 transition hover:border-accent">
+            <span className="min-w-0">
+              <span className="block text-xs font-bold uppercase tracking-widest text-accentdark">Fittin&rsquo; coaching</span>
+              <span className="mt-0.5 block text-sm font-bold text-brand">
+                {coachWeek ? `Week ${coachWeek.weeknummer} van ${aiPlan.weken}` : `Je plan van ${aiPlan.weken} weken loopt`}
+              </span>
+            </span>
+            <span className="shrink-0 text-sm font-bold text-accentdark">Afvinken en opvolgen &rarr;</span>
+          </Link>
+        )}
 
         {/* Bovenaan, vóór chat en grafieken: wat doe ik nu. Alles daaronder is naslag. */}
         {vandaagDag && (
