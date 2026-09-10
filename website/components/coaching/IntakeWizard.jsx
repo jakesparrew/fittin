@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { bewaarIntake, startPlan } from "@/app/(site)/coaching/actions";
 import { VOEDINGSVOORKEUREN } from "@/lib/coaching/voeding-velden.js";
+import { GESLACHTEN } from "@/lib/aanmelding-velden";
 
 // Eén vraag per scherm, met bij elke vraag waarom we het vragen. Dat laatste is geen beleefdheid:
 // wie niet weet waarom je zijn gewicht vraagt, vult iets in of haakt af. En de gezondheidsvraag
@@ -52,6 +53,7 @@ export default function IntakeWizard({ profiel }) {
   const [voedingVrij, setVoedingVrij] = useState(profiel?.coaching_voeding_vrij || "");
   const [toestemming, setToestemming] = useState(!!profiel?.coaching_toestemming_at);
   const [geboortedatum, setGeboortedatum] = useState(profiel?.geboortedatum || "");
+  const [geslacht, setGeslacht] = useState(profiel?.geslacht || "");
   const [gewicht, setGewicht] = useState(profiel?.gewicht_kg || "");
   const [lengte, setLengte] = useState(profiel?.height_cm || "");
   const [beperkingen, setBeperkingen] = useState(profiel?.coaching_beperkingen || "");
@@ -77,6 +79,7 @@ export default function IntakeWizard({ profiel }) {
       fd.set("toestemming", toestemming ? "ja" : "nee");
       if (toestemming) {
         if (geboortedatum) fd.set("geboortedatum", geboortedatum);
+        if (geslacht) fd.set("geslacht", geslacht);
         if (gewicht) fd.set("gewicht", String(gewicht));
         if (lengte) fd.set("lengte", String(lengte));
         if (beperkingen) fd.set("beperkingen", beperkingen);
@@ -247,6 +250,20 @@ export default function IntakeWizard({ profiel }) {
               <label className="block text-sm font-bold text-brand">
                 Geboortedatum
                 <input type="date" value={geboortedatum} min="1920-01-01" onChange={(e) => setGeboortedatum(e.target.value)} className={VELD} />
+              </label>
+              <label className="block text-sm font-bold text-brand">
+                Geslacht <span className="font-normal text-brand/40">(mag je openlaten)</span>
+                <span className="mt-1.5 flex gap-2">
+                  {GESLACHTEN.map((g) => (
+                    <button key={g} type="button" onClick={() => setGeslacht(geslacht === g ? "" : g)}
+                      className={"flex-1 rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition " + (geslacht === g ? AAN : UIT)}>
+                      {g}
+                    </button>
+                  ))}
+                </span>
+                <span className="mt-1 block text-xs font-normal text-brand/45">
+                  Enkel gebruikt om je dagbehoefte te berekenen als je een weekmenu vraagt.
+                </span>
               </label>
               <label className="block text-sm font-bold text-brand">
                 Gewicht <span className="font-normal text-brand/40">(kg)</span>

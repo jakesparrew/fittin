@@ -17,7 +17,7 @@ import { roepMetTerugval, MODELLEN } from "./model.js";
 import { magNog, boekVerbruik } from "./budget.js";
 import { bouwContext, planSysteem, planVraag, analyseSysteem, analyseVraag, herplanSysteem } from "./prompt.js";
 import { kiesOefeningen, verdeelFocus, keurVoorschriften } from "./keuze.js";
-import { volgendeWeek, isRustweek, RUSTWEEK_DEEL, reeksAanHetEind } from "./progressie.js";
+import { volgendeWeek, isRustweek, RUSTWEEK_DEEL, reeksAanHetEind, raaktPijn, noemtEenPlek } from "./progressie.js";
 
 /**
  * JSON uit een modelantwoord halen. Modellen zetten er soms een codeblok of een zin omheen, ook
@@ -234,46 +234,88 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
     .select("id, program_day_id, exercise_id, sets, reps, rest_sec, position, section, rep_text, target_weight_kg")
     .in("program_day_id", dagIds.length ? dagIds : ["00000000-0000-0000-0000-000000000000"]);
 
+  // Hoeveel weken op rij pijn? Eén keer pijn vervangt een oefening; drie keer hoort naar een mens.
+  const { data: pijnRijen } = await admin.from("coaching_checkins")
+    .select("pijn, week_id").in("week_id", (weken || []).map((w) => w.id));
+  const pijnOpVolgorde = (weken || [])
+    .map((w) => (pijnRijen || []).find((c) => c.week_id === w.id))
+    .filter((c) => c !== undefined)
+    .map((c) => (c?.pijn ? "pijn" : "geen"));
+  const pijnWeken = reeksAanHetEind(pijnOpVolgorde, "pijn");
+
+  // De bibliotheek staat hier al klaar omdat de seinen de CATEGORIE van elke oefening nodig hebben:
+  // zonder die categorie kan pijn niet aan een plek gekoppeld worden en verving één vinkje het hele
+  // schema.
+  const bib = await bibliotheekVan(admin, gymId);
+  const bibOp = new Map(bib.map((b) => [b.id, b]));
+
+  // Vervangen doen we alleen als het lid een herkenbare plek noemde. Noemt hij niets — of iets wat
+  // we niet kunnen plaatsen — dan blijft het schema staan en wordt de week enkel lichter.
+  const pijnPlek = checkin?.pijn && noemtEenPlek(checkin?.pijn_waar) ? String(checkin.pijn_waar) : null;
+
   const oordeelPerSessie = new Map((sessies || []).map((s) => [s.program_day_id, s.oordeel]));
   const seinen = {};
   for (const o of oefeningen || []) {
     seinen[o.id] = {
       oordeel: oordeelPerSessie.get(o.program_day_id) || checkin?.zwaarte || "goed",
       reeksGoed: 0,
-      pijn: !!checkin?.pijn,
+      pijn: !!pijnPlek && raaktPijn(bibOp.get(o.exercise_id)?.category, pijnPlek),
     };
   }
 
   const besluitEnz = volgendeWeek(
     (oefeningen || []).map((o) => ({ ...o, start_reps: o.reps })),
     seinen,
-    { gepland, afgevinkt, checkinIngevuld: !!checkin, pijn: !!checkin?.pijn, teZwaarWeken }
+    { gepland, afgevinkt, checkinIngevuld: !!checkin, pijn: !!checkin?.pijn, teZwaarWeken, pijnWeken }
   );
 
+  // Twee takken openen GEEN nieuwe week: ze vragen iets aan het lid. Precies daarom moeten ze
+  // zichzelf kunnen beëindigen — de week blijft anders open staan, de cron vindt volgende zondag
+  // dezelfde toestand, en dan vertrekt dezelfde mail tot in de eeuwigheid. `volgende.besluit`
+  // draagt het antwoord: staat het er al, dan vroegen we het vorige week ook al.
   if (besluitEnz.besluit === "pauze_vragen") {
+    const alGevraagd = volgende.besluit === "pauze_vragen";
     await admin.from("coaching_weeks").update({ besluit: "pauze_vragen" }).eq("id", volgende.id);
+    if (alGevraagd) {
+      // Tweede keer, nog steeds niets gehoord. Dan pauzeren we zelf in plaats van te blijven vragen.
+      await admin.from("coaching_plans").update({ status: "gepauzeerd" }).eq("id", planId);
+      return { ok: true, besluit: "pauze_vragen", gepauzeerd: true };
+    }
     return { ok: true, besluit: "pauze_vragen" };
   }
   if (besluitEnz.besluit === "doorverwijzen") {
+    const alGemeld = !!plan.doorverwezen_at;
     await admin.from("coaching_weeks").update({ besluit: "doorverwijzen" }).eq("id", volgende.id);
     // Eén keer stempelen, niet elke zondag opnieuw: dit is het moment waarop de coach zegt dat een
     // mens beter meekijkt, en tegelijk het moment waarop er voor het beheer een lead ligt.
-    if (!plan.doorverwezen_at) {
+    if (!alGemeld) {
       await admin.from("coaching_plans").update({
         doorverwezen_at: new Date().toISOString(),
         doorverwijs_reden: besluitEnz.reden || "meerdere weken te zwaar",
       }).eq("id", planId);
+    } else {
+      // Al gemeld en het staat er nog steeds. Blijven mailen helpt niemand; het plan gaat op pauze
+      // tot het lid of een coach er iets mee doet.
+      await admin.from("coaching_plans").update({ status: "gepauzeerd" }).eq("id", planId);
     }
-    return { ok: true, besluit: "doorverwijzen", reden: besluitEnz.reden || null };
+    return { ok: true, besluit: "doorverwijzen", reden: besluitEnz.reden || null, alGemeld, gepauzeerd: alGemeld };
   }
 
-  // Nieuwe week samenstellen: dezelfde structuur, met de aangepaste voorschriften. Bij "inkorten"
-  // valt de laatste sessie weg; bij een rustweek zakt het volume.
-  const bib = await bibliotheekVan(admin, gymId);
-  const bibOp = new Map(bib.map((b) => [b.id, b]));
-  const deel = volgende.is_rustweek ? RUSTWEEK_DEEL : 1;
-  let dagenLijst = dagen || [];
-  if (besluitEnz.besluit === "inkorten" && dagenLijst.length > 1) dagenLijst = dagenLijst.slice(0, dagenLijst.length - 1);
+  // Nieuwe week samenstellen: dezelfde structuur, met de aangepaste voorschriften.
+  //
+  // Het volume is een VERHOUDING ten opzichte van de week die net afliep, niet een absolute factor.
+  // Dat is het verschil tussen een lichtere week en een plan dat elke maand permanent krimpt: elke
+  // week wordt uit de vorige gebouwd, dus een factor 0,6 die niet teruggedraaid wordt, blijft
+  // doorwerken tot er nog één set overblijft.
+  const vorigDeel = huidige.is_rustweek ? RUSTWEEK_DEEL : 1;
+  let deel = (volgende.is_rustweek ? RUSTWEEK_DEEL : 1) / vorigDeel;
+  // "Inkorten" en "aanpassen" maken de week lichter, maar laten geen sessie vallen. Een dag
+  // wegsnijden was permanent: de week erna wordt uit deze week gebouwd en die dag stond er dan
+  // gewoon niet meer in — na twee slechte weken traint iemand nog één keer per week zonder dat
+  // iemand dat zo besloten heeft.
+  if (besluitEnz.besluit === "inkorten") deel *= 0.75;
+  if (besluitEnz.besluit === "aanpassen") deel *= 0.85;
+  const dagenLijst = dagen || [];
 
   const gebruikt = [];
   const nieuweSessies = dagenLijst.map((d) => {
@@ -307,6 +349,12 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
   const { programId, dagIds: nieuweDagIds } = await schrijfWeekProgramma(admin, {
     gymId, memberId: plan.member_id, planNaam: "Coaching", weeknummer: volgende.weeknummer, sessies: nieuweSessies,
   });
+  // De rest van de app gaat uit van één actief programma per lid (zie de RPC set_active_plan uit
+  // 0062). Elke coachingweek een nieuw actief programma laten worden, betekende dat "+ in mijn
+  // schema" vanaf week 2 stilletjes in de AI-week schreef.
+  if (huidige.program_id) {
+    await admin.from("programs").update({ is_active: false }).eq("id", huidige.program_id);
+  }
 
   // De zin. Faalt het model, dan schrijven we er zelf een — een week gaat nooit niet open omdat
   // een taalmodel stilviel.

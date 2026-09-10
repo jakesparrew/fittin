@@ -54,7 +54,19 @@ export async function renamePlan(formData) {
 export async function deletePlan(formData) {
   const { supabase, user, error } = await me();
   if (error) return { error };
-  await supabase.from("programs").delete().eq("id", formData.get("id")).eq("member_id", user.id);
+  const id = formData.get("id");
+
+  // De weken van de AI-coach worden als gewone `programs`-rijen weggeschreven en staan dus ook in
+  // deze lijst. Zo'n rij verwijderen sleept via de cascade de coaching_sessions mee — het lid zou
+  // zijn eigen dossier stukmaken met een knop die "verwijderen" heet. Wie met zijn plan wil
+  // stoppen, doet dat op /coaching; dáár staat wat het betekent.
+  const { data: week } = await supabase
+    .from("coaching_weeks").select("id").eq("program_id", id).limit(1).maybeSingle();
+  if (week) {
+    return { error: "Dit is een week van je AI-coach. Stoppen doe je bij je coaching, niet hier." };
+  }
+
+  await supabase.from("programs").delete().eq("id", id).eq("member_id", user.id);
   redirect("/plannen");
 }
 

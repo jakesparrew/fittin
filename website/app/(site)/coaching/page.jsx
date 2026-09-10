@@ -7,6 +7,7 @@ import { coachAan } from "@/lib/coaching/model.js";
 import IntakeWizard from "@/components/coaching/IntakeWizard";
 import WeekPaneel from "@/components/coaching/WeekPaneel";
 import MaaltijdPaneel from "@/components/coaching/MaaltijdPaneel";
+import PlanBeheer from "@/components/coaching/PlanBeheer";
 import { maaltijdenAan, richtlijnVoor } from "@/lib/coaching/maaltijd.js";
 import { magCoaching } from "@/lib/coaching/toegang.js";
 import { MIJLPALEN } from "@/lib/coaching/mijlpalen.js";
@@ -75,6 +76,11 @@ export default async function CoachingPagina() {
   const kanMenuMaken = eten && !richtlijnVoor(profile).error;
   const afgevinkt = sessies.filter((s) => s.gedaan_at).length;
   const alleAf = sessies.length > 0 && afgevinkt === sessies.length;
+  // De check-in verscheen alleen bij een perfecte week. Maar de zondagmail vraagt juist aan wie
+  // NIET alles afwerkte hoe het ging — die klikte dan door naar een pagina zonder formulier, en
+  // daarmee was de hele feedbacklus onbereikbaar voor precies de weken waarover iets te zeggen valt.
+  const dagenOpen = open?.unlocked_at ? (Date.now() - new Date(open.unlocked_at).getTime()) / 86400000 : 0;
+  const magCheckin = alleAf || dagenOpen >= 6;
   const isLaatste = open?.weeknummer === plan.weken;
   const eerdere = weken.filter((w) => w.completed_at).reverse();
 
@@ -134,7 +140,7 @@ export default async function CoachingPagina() {
             <h2 className="font-display text-lg font-black text-brand">Deze week</h2>
             <span className="text-sm text-ink-soft">{afgevinkt} van {sessies.length} gedaan</span>
           </div>
-          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} isLaatsteWeek={isLaatste} maaltijden={eten} />
+          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} magCheckin={magCheckin} isLaatsteWeek={isLaatste} maaltijden={eten} />
         </div>
       )}
 
@@ -197,6 +203,10 @@ export default async function CoachingPagina() {
           </ul>
         </details>
       )}
+
+      <div className="mt-8">
+        <PlanBeheer status={plan.status} toestemming={!!profile?.coaching_toestemming_at} />
+      </div>
 
       <p className="mt-8 text-xs leading-relaxed text-brand/40">
         Je coach geeft geen medisch advies. Stop bij pijn en raadpleeg een arts of kinesist.

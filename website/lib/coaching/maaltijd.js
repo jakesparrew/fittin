@@ -91,11 +91,14 @@ export function schoonBoodschappen(rauw) {
  * stoppen, ook een menu dat al bestond.
  */
 export function richtlijnVoor(profiel) {
+  // `ontbreekt` onderscheidt "dit lid moet nog iets invullen" van "er ging iets stuk". De cron
+  // gebruikt dat verschil: het eerste is een normale toestand en hoort geen mislukte cronrun op te
+  // leveren, het tweede wel.
   if (!profiel?.coaching_toestemming_at) {
-    return { error: "Voor een weekmenu hebben we je lengte, gewicht en leeftijd nodig. Zet die toestemming aan bij je gegevens." };
+    return { ontbreekt: true, error: "Voor een weekmenu hebben we je lengte, gewicht en leeftijd nodig. Zet die toestemming aan bij je gegevens." };
   }
   if (!profiel.gewicht_kg || !profiel.height_cm || !profiel.geboortedatum) {
-    return { error: "Vul je gewicht, lengte en geboortedatum in — zonder die drie kan een menu alleen maar gokken." };
+    return { ontbreekt: true, error: "Vul je gewicht, lengte en geboortedatum in — zonder die drie kan een menu alleen maar gokken." };
   }
   const vrij = [profiel.coaching_beperkingen, profiel.coaching_voeding_vrij].filter(Boolean).join(" ");
   if (vraagtOmEenDietist(vrij)) {
@@ -106,7 +109,7 @@ export function richtlijnVoor(profiel) {
     gewichtKg: Number(profiel.gewicht_kg), lengteCm: Number(profiel.height_cm), leeftijd,
     geslacht: profiel.geslacht, sessiesPerWeek: profiel.coaching_dagen || 3, doel: profiel.coaching_doel,
   });
-  if (!behoefte) return { error: "Er ontbreken gegevens om een menu te berekenen." };
+  if (!behoefte) return { ontbreekt: true, error: "Er ontbreken gegevens om een menu te berekenen." };
   // De ondergrens is een grens, geen suggestie: ook als de formule lager uitkomt, gaan we er niet onder.
   return { richtlijn: Math.max(kcalOndergrens(profiel.geslacht), behoefte) };
 }
@@ -221,8 +224,11 @@ export async function zorgVoorMenu(admin, { gymId, memberId, profiel, weeknummer
   const grens = richtlijnVoor(profiel);
   if (grens.error) return grens;
 
-  const { data: bestaande } = await admin.from("coaching_mealweeks")
-    .select("*").eq("member_id", memberId).order("weeknummer", { ascending: false }).limit(1);
+  // Binnen DÍT plan zoeken. Zonder die grens pakt een tweede plan het menu van week 8 van het
+  // vorige plan als "vorige week", en dan klopt zowel de afwisseling als de richtlijn niet meer.
+  let vraag = admin.from("coaching_mealweeks").select("*").eq("member_id", memberId);
+  if (planId) vraag = vraag.eq("plan_id", planId);
+  const { data: bestaande } = await vraag.order("weeknummer", { ascending: false }).limit(1);
   const vorige = (bestaande || [])[0] || null;
   if (vorige && Number(vorige.weeknummer) === Number(weeknummer)) {
     return { ok: true, mealweekId: vorige.id, alBestond: true, richtlijn: vorige.kcal_richtlijn };

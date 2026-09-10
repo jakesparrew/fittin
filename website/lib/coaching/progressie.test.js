@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   stapVoor, volgendGewicht, volgendeHerhalingen, schuifOefening,
-  weekBesluit, isRustweek, reeksAanHetEind, volgendeWeek, RUSTWEEK_DEEL,
+  weekBesluit, isRustweek, reeksAanHetEind, volgendeWeek, RUSTWEEK_DEEL, raaktPijn, noemtEenPlek,
 } from "./progressie.js";
 
 // Dit bestand is de garantie dat de opvolging zonder AI klopt. Elke test legt een keuze vast die
@@ -218,5 +218,70 @@ describe("de volledige weekovergang", () => {
   it("werkt met een lege seinenlijst — wie niets aantikte, krijgt gewoon hetzelfde", () => {
     const uit = volgendeWeek(voorschriften, {}, { gepland: 3, afgevinkt: 3, checkinIngevuld: true });
     expect(uit.oefeningen[0].target_weight_kg).toBe(40);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Pijn hoort bij een PLEK, niet bij een week
+// ---------------------------------------------------------------------------
+// Deze groep bestaat omdat één weekbrede pijnvlag ooit het volledige schema verving: vinkte een
+// lid "ik had ergens pijn" aan, dan werd elke oefening van de week erna vervangen — ook de
+// oefeningen die niets met die plek te maken hadden.
+
+describe("pijn koppelen aan een plek", () => {
+  it("herkent gewone Vlaamse omschrijvingen en koppelt ze aan de juiste categorie", () => {
+    expect(raaktPijn("benen", "mijn linkerknie doet zeer")).toBe(true);
+    expect(raaktPijn("schouders", "rechterschouder")).toBe(true);
+    expect(raaktPijn("rug", "lage rug")).toBe(true);
+    expect(raaktPijn("armen", "elleboog")).toBe(true);
+    expect(raaktPijn("core", "buik")).toBe(true);
+    expect(raaktPijn("borst", "ribben")).toBe(true);
+  });
+
+  it("raakt de andere categorieën NIET", () => {
+    expect(raaktPijn("borst", "mijn linkerknie doet zeer")).toBe(false);
+    expect(raaktPijn("armen", "lage rug")).toBe(false);
+    expect(raaktPijn("benen", "schouder")).toBe(false);
+  });
+
+  it("vervangt niets wanneer het lid geen plek noemde", () => {
+    // De veilige kant: liever een week te licht dan een schema dat zonder aanleiding omgegooid wordt.
+    for (const leeg of ["", "   ", null, undefined]) {
+      expect(raaktPijn("benen", leeg)).toBe(false);
+      expect(noemtEenPlek(leeg)).toBe(false);
+    }
+  });
+
+  it("vervangt niets bij tekst die geen lichaamsdeel noemt", () => {
+    expect(noemtEenPlek("het ging gewoon niet deze week")).toBe(false);
+    expect(raaktPijn("benen", "het ging gewoon niet deze week")).toBe(false);
+  });
+
+  it("kijkt niet naar hoofdletters of categorie-notatie", () => {
+    expect(raaktPijn("BENEN", "KNIE")).toBe(true);
+  });
+
+  it("gaat om met een onbekende categorie", () => {
+    expect(raaktPijn(null, "knie")).toBe(false);
+    expect(raaktPijn("verzonnen", "knie")).toBe(false);
+  });
+});
+
+describe("aanhoudende pijn gaat naar een mens", () => {
+  const basis = { gepland: 3, afgevinkt: 3, checkinIngevuld: true };
+
+  it("verwijst door na drie weken op rij pijn", () => {
+    expect(weekBesluit({ ...basis, pijn: true, pijnWeken: 3 }).besluit).toBe("doorverwijzen");
+  });
+
+  it("past daarvóór alleen aan", () => {
+    expect(weekBesluit({ ...basis, pijn: true, pijnWeken: 1 }).besluit).toBe("aanpassen");
+    expect(weekBesluit({ ...basis, pijn: true, pijnWeken: 2 }).besluit).toBe("aanpassen");
+  });
+
+  it("laat een week zonder pijn de reeks breken", () => {
+    // reeksAanHetEind telt vanaf het einde, dus dit hangt aan de aanroeper; hier bewaken we alleen
+    // dat een nul-reeks niet doorverwijst.
+    expect(weekBesluit({ ...basis, pijn: false, pijnWeken: 0 }).besluit).toBe("door");
   });
 });

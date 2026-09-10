@@ -100,6 +100,10 @@ export function schuifOefening(v, sein = {}) {
   // Pijn overrulet alles. Er wordt niet "iets minder zwaar" gedaan met een oefening die pijn doet;
   // die gaat eruit. Het vervangen zelf is geen rekenwerk maar een keuze uit de bibliotheek, dus
   // dat markeren we hier en lossen we een laag hoger op.
+  //
+  // LET OP: `sein.pijn` hoort per OEFENING gezet te worden, niet per week. Stond hier ooit één
+  // weekbrede vlag, dan verving één vinkje "ik had ergens pijn" het volledige schema — ook de
+  // oefeningen die niets met die plek te maken hebben. Zie `raaktPijn` hieronder.
   if (pijn) return { ...v, vervangen: true, aangepast: true, reden: "pijn gemeld — oefening wordt vervangen" };
 
   const heeftGewicht = Number.isFinite(v.target_weight_kg) && v.target_weight_kg > 0;
@@ -129,6 +133,41 @@ export function schuifOefening(v, sein = {}) {
   };
 }
 
+/**
+ * Welke oefeningcategorieën raken de plek die het lid meldde.
+ *
+ * De check-in vraagt "waar precies?" als vrije tekst. Die tekst is het enige wat we hebben om te
+ * bepalen wát vervangen moet worden. Vindt hij niets herkenbaars — of vulde het lid niets in — dan
+ * vervangen we NIETS en wordt de week alleen lichter. Dat is de veilige kant: een oefening ten
+ * onrechte vervangen kost het vertrouwen in het schema, een week te licht kost één week.
+ */
+export const PIJNPLEKKEN = [
+  { woorden: ["knie", "been", "benen", "dij", "hamstring", "kuit", "heup", "lies", "bil", "enkel", "quad"], categorieën: ["benen"] },
+  { woorden: ["schouder", "nek", "deltoid", "rotator"], categorieën: ["schouders"] },
+  { woorden: ["rug", "onderrug", "lage rug", "lende", "lat", "wervel"], categorieën: ["rug"] },
+  { woorden: ["borst", "pectoral", "ribben"], categorieën: ["borst"] },
+  { woorden: ["arm", "biceps", "triceps", "elleboog", "pols", "onderarm", "hand"], categorieën: ["armen"] },
+  { woorden: ["buik", "core", "romp"], categorieën: ["core"] },
+];
+
+export function raaktPijn(categorie, pijnWaar) {
+  const t = String(pijnWaar || "").toLowerCase();
+  if (!t.trim() || !categorie) return false;
+  for (const plek of PIJNPLEKKEN) {
+    if (plek.woorden.some((w) => t.includes(w))) {
+      if (plek.categorieën.includes(String(categorie).toLowerCase())) return true;
+    }
+  }
+  return false;
+}
+
+/** Herkent de tekst überhaupt een lichaamsdeel? Zo niet, dan wordt er niets vervangen. */
+export function noemtEenPlek(pijnWaar) {
+  const t = String(pijnWaar || "").toLowerCase();
+  if (!t.trim()) return false;
+  return PIJNPLEKKEN.some((plek) => plek.woorden.some((w) => t.includes(w)));
+}
+
 // ---------------------------------------------------------------------------
 // Het besluit over een hele week
 // ---------------------------------------------------------------------------
@@ -141,7 +180,7 @@ export function schuifOefening(v, sein = {}) {
  * stopt het lid. De cijfers uit de zaal zeggen dat leden met gaten trainen, dus het plan moet
  * gaten aankunnen.
  *
- * @param {{gepland:number, afgevinkt:number, checkinIngevuld:boolean, pijn:boolean, teZwaarWeken:number}} s
+ * @param {{gepland:number, afgevinkt:number, checkinIngevuld:boolean, pijn:boolean, teZwaarWeken:number, pijnWeken:number}} s
  * @returns {{besluit:string, reden:string}}
  */
 export function weekBesluit(s) {
@@ -153,6 +192,12 @@ export function weekBesluit(s) {
   // persoon en hoort er een mens naar te kijken — dat is precies waar de coaches voor zijn.
   if ((s.teZwaarWeken || 0) >= 3) {
     return { besluit: "doorverwijzen", reden: "drie weken op rij te zwaar — een coach kijkt beter mee dan een aanpassing" };
+  }
+  // Hetzelfde geldt voor pijn die blijft terugkomen. Eén keer pijn is een oefening vervangen; drie
+  // weken op rij pijn is geen schemaprobleem meer, en de check-in belooft het lid ook expliciet dat
+  // de coach dan stopt met plannen.
+  if ((s.pijnWeken || 0) >= 3) {
+    return { besluit: "doorverwijzen", reden: "drie weken op rij pijn gemeld — daar hoort iemand naar te kijken" };
   }
   if (s.pijn) {
     return { besluit: "aanpassen", reden: "pijn gemeld — de week wordt herbekeken" };

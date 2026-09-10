@@ -16,7 +16,7 @@ const OORDELEN = [
   { v: "te_zwaar", l: "Te zwaar" },
 ];
 
-export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, isLaatsteWeek, maaltijden = false }) {
+export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, magCheckin = false, isLaatsteWeek, maaltijden = false }) {
   const [bezig, start] = useTransition();
   const [melding, setMelding] = useState(null);
   const [open, setOpen] = useState(sessies[0]?.id || null);
@@ -113,7 +113,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
 
       {/* De check-in verschijnt zodra de week rond is. Niet eerder: hem vooraf tonen maakt van een
           gesprek een formulier dat er altijd staat. */}
-      {alleSessiesAf && !checkin && <Checkin weekId={week.id} maaltijden={maaltijden} />}
+      {magCheckin && !checkin && <Checkin weekId={week.id} maaltijden={maaltijden} alleAf={alleSessiesAf} />}
 
       {alleSessiesAf && checkin && !isLaatsteWeek && (
         <form action={openWeek}>
@@ -132,7 +132,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
   );
 }
 
-function Checkin({ weekId, maaltijden }) {
+function Checkin({ weekId, maaltijden, alleAf }) {
   const [bezig, start] = useTransition();
   const [fout, setFout] = useState(null);
   const [pijn, setPijn] = useState(false);
@@ -151,7 +151,7 @@ function Checkin({ weekId, maaltijden }) {
 
   return (
     <form onSubmit={verstuur} className="anim-in rounded-3xl border-2 border-brand/15 bg-white p-6">
-      <h3 className="font-display text-lg font-black text-brand">Je week zit erop — hoe ging het?</h3>
+      <h3 className="font-display text-lg font-black text-brand">{alleAf ? "Je week zit erop — hoe ging het?" : "Hoe ging je week?"}</h3>
       <p className="mt-1 text-sm text-ink-soft">
         {maaltijden ? "Zes tikken" : "Vier tikken"}. Je coach gebruikt dit om je volgende week samen te stellen.
       </p>

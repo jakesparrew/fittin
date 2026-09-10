@@ -141,6 +141,84 @@ describe("de grenzen van de AI-coach", () => {
     expect(inIk).toBe(true);
   });
 
+  // ---- Wat de review van 10-09 boven water haalde. Elke test hieronder is een fout die er echt
+  // ---- in zat en die zonder deze regel stilletjes terug kan komen.
+
+  it("een vastgelopen plan blijft niet elke zondag dezelfde mail sturen", () => {
+    // pauze_vragen en doorverwijzen openen geen nieuwe week. Zonder een eindpunt vond de cron de
+    // week erna exact dezelfde toestand, en vertrok dezelfde mail — eindeloos.
+    const p = lees("lib/coaching/plan.js");
+    expect(p).toMatch(/alGevraagd[\s\S]{0,400}status: "gepauzeerd"/);
+    expect(p).toMatch(/alGemeld[\s\S]{0,600}status: "gepauzeerd"/);
+    expect(lees("app/api/cron/coaching/route.js")).toMatch(/uit\.gepauzeerd/);
+  });
+
+  it("de check-in staat er ook voor wie de week NIET afmaakte", () => {
+    // De zondagmail vraagt juist aan wie niet alles afwerkte hoe het ging. Stond het formulier
+    // alleen bij een perfecte week, dan kwam die persoon op een pagina zonder formulier.
+    expect(lees("app/(site)/coaching/page.jsx")).toMatch(/magCheckin\s*=\s*alleAf\s*\|\|/);
+    expect(lees("components/coaching/WeekPaneel.jsx")).toMatch(/\{magCheckin && !checkin &&/);
+  });
+
+  it("pijn vervangt alleen oefeningen op de gemelde plek", () => {
+    // Eén weekbrede vlag verving ooit het VOLLEDIGE schema van de week erna.
+    const p = lees("lib/coaching/plan.js");
+    // Het sein PER OEFENING moet door raaktPijn lopen. De weekbrede vlag in weekBesluit mag blijven
+    // — die bepaalt of de week lichter wordt, niet welke oefeningen sneuvelen.
+    expect(p).toMatch(/seinen\[o\.id\] = \{[\s\S]{0,240}raaktPijn\(/);
+  });
+
+  it("een lichtere week is tijdelijk, niet permanent", () => {
+    // Elke week wordt uit de vorige gebouwd. Een vaste factor 0,6 die niet teruggedraaid wordt,
+    // blijft doorwerken tot er nog één set overblijft.
+    expect(lees("lib/coaching/plan.js")).toMatch(/vorigDeel/);
+  });
+
+  it("inkorten laat geen sessiedag definitief vallen", () => {
+    const p = lees("lib/coaching/plan.js");
+    expect(p).not.toMatch(/dagenLijst\.slice\(0, dagenLijst\.length - 1\)/);
+  });
+
+  it("er blijft één actief programma per lid", () => {
+    // De rest van de app gaat uit van precies één actief plan (RPC set_active_plan, 0062).
+    expect(lees("lib/coaching/plan.js")).toMatch(/is_active: false/);
+  });
+
+  it("een coachingweek kan niet via /plannen weggegooid worden", () => {
+    // De weken staan als gewone programs-rijen in die lijst; verwijderen sleept via de cascade de
+    // coaching_sessions mee.
+    expect(lees("app/(site)/plannen/actions.js")).toMatch(/coaching_weeks[\s\S]{0,200}program_id/);
+  });
+
+  it("de toestemming kan ingetrokken worden terwijl er een plan loopt", () => {
+    // Art. 7.3 AVG: intrekken moet even makkelijk zijn als geven. De intakewizard verdwijnt zodra
+    // er een plan draait, dus zonder dit scherm was er geen enkele weg meer.
+    expect(lees("app/(site)/coaching/actions.js")).toMatch(/export async function zetToestemming/);
+    expect(lees("components/coaching/PlanBeheer.jsx")).toMatch(/zetToestemming/);
+    expect(lees("app/(site)/coaching/page.jsx")).toMatch(/<PlanBeheer/);
+  });
+
+  it("pauzeren en stoppen hebben een knop, want de mail belooft ze", () => {
+    expect(lees("components/coaching/PlanBeheer.jsx")).toMatch(/zetPlanStatus/);
+  });
+
+  it("het geslacht wordt gevraagd \u00e9n bewaard", () => {
+    // Zonder deze kolom rekende elk weekmenu met de laagste norm en was de ondergrens van 1.800
+    // kcal voor mannen dode code.
+    expect(lees("components/coaching/IntakeWizard.jsx")).toMatch(/GESLACHTEN/);
+    expect(lees("app/(site)/coaching/actions.js")).toMatch(/velden\.geslacht = geslacht/);
+  });
+
+  it("een lid dat nog iets moet invullen laat de cron niet mislukken", () => {
+    // "Meal plan aan, toestemming nog niet gegeven" is een normale toestand, geen storing.
+    expect(lees("lib/coaching/maaltijd.js")).toMatch(/ontbreekt: true/);
+    expect(lees("app/api/cron/coaching/route.js")).toMatch(/!m\.ontbreekt/);
+  });
+
+  it("het weekmenu kijkt niet over de plangrens heen", () => {
+    expect(lees("lib/coaching/maaltijd.js")).toMatch(/if \(planId\) vraag = vraag\.eq\("plan_id", planId\)/);
+  });
+
   it("de privacyverklaring noemt het model als verwerker", () => {
     // Zonder deze vermelding is elke aanroep een doorgifte aan een niet-vermelde verwerker — dat
     // was precies de reden dat de vorige AI-generator uitgezet werd (audit G0-6).

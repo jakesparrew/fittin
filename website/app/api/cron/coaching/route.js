@@ -117,7 +117,10 @@ export async function GET(req) {
 
       // ---- 3. Het plan is uit ----
       if (uit.klaar) {
-        const mijlpaal = await mijlpaalVoor(admin, { gymId: plan.gym_id, memberId: plan.member_id, planId: plan.id, planWeken: plan.weken });
+        const bereiktNu = await mijlpaalVoor(admin, { gymId: plan.gym_id, memberId: plan.member_id, planId: plan.id, planWeken: plan.weken });
+        // Ook hier geldt de module: wie geen motivatieberichten wil, krijgt ook in de slotmail geen
+        // felicitatieblok. De mijlpaal wordt wel genoteerd — ze is gebeurd.
+        const mijlpaal = Array.isArray(lid.coaching_modules) && lid.coaching_modules.includes("motivatie") ? bereiktNu : null;
         await sendCoachingWeek({
           to: lid.email, name: lid.full_name, soort: "afgerond",
           weekNr: open.weeknummer, totaalWeken: plan.weken, mijlpaal,
@@ -127,6 +130,10 @@ export async function GET(req) {
         afgerond++;
         continue;
       }
+
+      // Al gevraagd en het plan staat nu op pauze: dan is er niets meer te melden. Zonder deze
+      // uitzondering vertrok elke zondag opnieuw dezelfde mail, eindeloos.
+      if (uit.gepauzeerd) { gepauzeerd++; continue; }
 
       if (uit.besluit === "pauze_vragen") {
         // Niets gedaan en niets laten weten. Dan is de vraag niet "welke week nu" maar "ben je er nog".
@@ -175,7 +182,7 @@ export async function GET(req) {
           if (m.ok) {
             menu = await menuVoorWeek(admin, plan.member_id, weekNr);
             if (!m.hergebruikt && !m.alBestond) menus++;
-          } else if (m.error && !m.dietist) {
+          } else if (m.error && !m.dietist && !m.ontbreekt) {
             fouten.push(`menu ${plan.id}: ${m.error}`);
           }
         } catch (e) {

@@ -7,7 +7,7 @@ import { maakPlan, openVolgendeWeek } from "@/lib/coaching/plan.js";
 import { coachAan } from "@/lib/coaching/model.js";
 import { zorgVoorMenu, maakWeekmenu, maaltijdenAan, VOEDINGSVOORKEUREN } from "@/lib/coaching/maaltijd.js";
 import { magCoaching } from "@/lib/coaching/toegang.js";
-import { keurGeboortedatum } from "@/lib/aanmelding-velden";
+import { keurGeboortedatum, keurGeslacht } from "@/lib/aanmelding-velden";
 
 const MODULES = ["workouts", "mealplan", "motivatie"];
 
@@ -37,6 +37,7 @@ export async function bewaarIntake(formData) {
   const weken = parseInt(formData.get("weken"), 10);
   const toon = String(formData.get("toon") || "rustig").trim();
   const geboorte = keurGeboortedatum(formData.get("geboortedatum"), new Date());
+  const geslacht = keurGeslacht(formData.get("geslacht"));
   const gewicht = parseFloat(String(formData.get("gewicht") || "").replace(",", "."));
   const lengte = parseInt(formData.get("lengte"), 10);
   const beperkingen = String(formData.get("beperkingen") || "").trim().slice(0, 500);
@@ -69,6 +70,9 @@ export async function bewaarIntake(formData) {
   if (toestemming) {
     velden.coaching_toestemming_at = new Date().toISOString();
     if (geboorte.datum) velden.geboortedatum = geboorte.datum;
+    // Zonder geslacht rekent de maaltijdmodule met de laagste norm voor iedereen — de ondergrens van
+    // 1.800 kcal voor mannen was zo dode code. Leeg blijft een geldig antwoord.
+    if (geslacht) velden.geslacht = geslacht;
     if (Number.isFinite(gewicht) && gewicht > 25 && gewicht < 400) velden.gewicht_kg = Math.round(gewicht * 10) / 10;
     if (Number.isFinite(lengte) && lengte > 100 && lengte < 250) velden.height_cm = lengte;
     if (beperkingen) velden.coaching_beperkingen = beperkingen;
@@ -272,6 +276,30 @@ export async function zetPlanStatus(formData) {
   if (error) return { error: "Kon de status niet aanpassen." };
   revalidatePath("/coaching");
   return { ok: true, message: naar === "gepauzeerd" ? "Je plan staat op pauze." : naar === "gestopt" ? "Je plan is gestopt." : "Je plan loopt weer." };
+}
+
+/**
+ * De toestemming voor lichaamsgegevens aan- of uitzetten, ook terwijl er een plan loopt.
+ *
+ * Art. 7.3 AVG: intrekken moet even makkelijk zijn als geven. Tot nu kon de toestemming alleen via
+ * de intakewizard gewijzigd worden, en die verdwijnt zodra er een plan draait — waardoor er geen
+ * enkel scherm meer was dat deze kolom kon aanraken, terwijl drie plekken naar "je gegevens"
+ * verwezen om het te doen.
+ */
+export async function zetToestemming(formData) {
+  const mij = await ik();
+  if (!mij) return { error: "Deze functie is niet beschikbaar voor je account." };
+  const aan = String(formData.get("aan") || "") === "1";
+  const velden = aan
+    ? { coaching_toestemming_at: new Date().toISOString() }
+    // De gegevens zelf blijven staan — ze zijn van het lid en hij vulde ze zelf in. Wat stopt, is
+    // dat ze nog naar het model gaan; `bouwContext` kijkt uitsluitend naar deze stempel.
+    : { coaching_toestemming_at: null, coaching_beperkingen: null };
+
+  const { error } = await mij.admin.from("profiles").update(velden).eq("id", mij.user.id);
+  if (error) return { error: "Kon je keuze niet bewaren." };
+  revalidatePath("/coaching");
+  return { ok: true, message: aan ? "Toestemming aangezet ✓" : "Toestemming ingetrokken ✓" };
 }
 
 /** Het gewicht bijwerken — één veld, want gewicht wordt gevraagd, niet gemeten. */
