@@ -74,6 +74,52 @@ describe("de grenzen van de AI-coach", () => {
     expect(lees("lib/coaching/model.js")).toMatch(/COACH_AI_GATEWAY_KEY/);
   });
 
+  it("het maaltijdscherm sleept de servermodule niet naar de browser", () => {
+    // `maaltijd.js` importeert het model, het budget en de databank. Eén lijstje labels hoort dat
+    // niet mee de client-bundel in te trekken — daarvoor bestaat voeding-velden.js.
+    const c = lees("components/coaching/MaaltijdPaneel.jsx");
+    expect(c).toMatch(/from "@\/lib\/coaching\/voeding-velden\.js"/);
+    expect(c).not.toMatch(/from "@\/lib\/coaching\/maaltijd\.js"/);
+  });
+
+  it("het menu blijft weg uit wat een coach te zien krijgt", () => {
+    // 0158 geeft coaching_mealweeks bewust GEEN coachbeleid: voeding is gevoeliger dan een schema.
+    const p = lees("lib/coaching/plan.js");
+    const stuk = p.slice(p.indexOf("export async function dossierVoorCoach"));
+    expect(stuk).not.toMatch(/coaching_mealweeks/);
+  });
+
+  it("een menu kan nooit zonder toestemming vertrekken", () => {
+    // De poort staat in richtlijnVoor, en élke weg naar een menu loopt daarlangs — ook het
+    // goedkope pad dat het menu van vorige week meeneemt.
+    const m = lees("lib/coaching/maaltijd.js");
+    expect(m).toMatch(/export function richtlijnVoor[\s\S]{0,300}coaching_toestemming_at/);
+    const zorg = m.slice(m.indexOf("export async function zorgVoorMenu"));
+    expect(zorg).toMatch(/richtlijnVoor\(profiel\)/);
+  });
+
+  it("de dagrem geldt ook voor de maaltijdmodule", () => {
+    const maak = lees("lib/coaching/maaltijd.js");
+    const stuk = maak.slice(maak.indexOf("export async function maakWeekmenu"));
+    expect(stuk).toMatch(/magNog\(admin, gymId\)/);
+    expect(stuk).toMatch(/boekVerbruik\(/);
+  });
+
+  it("een mijlpaal wordt maar één keer gevierd", () => {
+    // Zonder de rij in coaching_mijlpalen viert een zondagcron elke zondag opnieuw "je eerste week".
+    const m = lees("lib/coaching/mijlpalen.js");
+    expect(m).toMatch(/coaching_mijlpalen/);
+    const cron = lees("app/api/cron/coaching/route.js");
+    expect(cron).toMatch(/markeerGemeld\(/);
+  });
+
+  it("een mislukt menu houdt de trainingsweek niet tegen", () => {
+    // De training is de ruggengraat; voeding is een module ernaast.
+    const cron = lees("app/api/cron/coaching/route.js");
+    const stuk = cron.slice(cron.indexOf("if (maaltijdenAan(lid))"));
+    expect(stuk.slice(0, 600)).toMatch(/try \{/);
+  });
+
   it("de privacyverklaring noemt het model als verwerker", () => {
     // Zonder deze vermelding is elke aanroep een doorgifte aan een niet-vermelde verwerker — dat
     // was precies de reden dat de vorige AI-generator uitgezet werd (audit G0-6).

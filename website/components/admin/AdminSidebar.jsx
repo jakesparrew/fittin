@@ -16,6 +16,7 @@ const groups = [
   ] },
   { title: "Coaching", items: [
     { href: "/beheer/programmas", label: "Programma's & oefeningen", icon: "✎" },
+    { href: "/beheer/coaching", label: "AI-coach", icon: "◉" },
   ] },
   { title: "Groei", items: [
     { href: "/beheer/nieuwsbrief", label: "Nieuwsbrief", icon: "➤" },

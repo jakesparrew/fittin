@@ -205,7 +205,14 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
   const huidige = [...(weken || [])].reverse().find((w) => w.unlocked_at);
   if (!huidige) return { error: "Er is nog geen week geopend." };
   const volgende = (weken || []).find((w) => w.weeknummer === huidige.weeknummer + 1);
-  if (!volgende) return { ok: true, klaar: true };
+  if (!volgende) {
+    // De laatste week. Zonder deze afsluiting blijft een plan eeuwig "lopend" en blijft de zondagcron
+    // er elke week over nadenken — en krijgt het lid nooit te horen dat het rond is.
+    const nu = new Date().toISOString();
+    if (!huidige.completed_at) await admin.from("coaching_weeks").update({ completed_at: nu }).eq("id", huidige.id);
+    await admin.from("coaching_plans").update({ status: "afgerond", afgerond_at: nu }).eq("id", planId);
+    return { ok: true, klaar: true };
+  }
   if (volgende.unlocked_at) return { ok: true, alGeopend: true };
 
   // Wat gebeurde er de afgelopen week?
@@ -249,7 +256,15 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
   }
   if (besluitEnz.besluit === "doorverwijzen") {
     await admin.from("coaching_weeks").update({ besluit: "doorverwijzen" }).eq("id", volgende.id);
-    return { ok: true, besluit: "doorverwijzen" };
+    // Eén keer stempelen, niet elke zondag opnieuw: dit is het moment waarop de coach zegt dat een
+    // mens beter meekijkt, en tegelijk het moment waarop er voor het beheer een lead ligt.
+    if (!plan.doorverwezen_at) {
+      await admin.from("coaching_plans").update({
+        doorverwezen_at: new Date().toISOString(),
+        doorverwijs_reden: besluitEnz.reden || "meerdere weken te zwaar",
+      }).eq("id", planId);
+    }
+    return { ok: true, besluit: "doorverwijzen", reden: besluitEnz.reden || null };
   }
 
   // Nieuwe week samenstellen: dezelfde structuur, met de aangepaste voorschriften. Bij "inkorten"
@@ -368,5 +383,45 @@ export async function dossierVoor(admin, memberId) {
     ? await admin.from("coaching_checkins").select("*").eq("week_id", open.id).maybeSingle()
     : { data: null };
 
-  return { plan, weken: weken || [], open, sessies, oefeningen, checkin: checkin || null };
+  // Het menu van deze week en de mijlpalen. Beide staan los van het trainingsplan: het menu omdat
+  // Meal plan een eigen module is, de mijlpalen omdat ze over het lid gaan en niet over dit plan.
+  const { data: menu } = open
+    ? await admin.from("coaching_mealweeks")
+        .select("id, weeknummer, menu, boodschappen, kcal_richtlijn, toelichting")
+        .eq("member_id", memberId).eq("weeknummer", open.weeknummer).maybeSingle()
+    : { data: null };
+  const { data: mijlpalen } = await admin.from("coaching_mijlpalen")
+    .select("soort, created_at").eq("member_id", memberId).order("created_at");
+
+  return {
+    plan, weken: weken || [], open, sessies, oefeningen,
+    checkin: checkin || null, menu: menu || null, mijlpalen: mijlpalen || [],
+  };
+}
+
+/**
+ * Wat een échte coach van het AI-dossier te zien krijgt. Bewust minder dan het lid zelf ziet:
+ * het plan, de weekanalyses en de check-ins — géén weekmenu. Voeding is gevoeliger dan een
+ * trainingsschema, en 0158 geeft er daarom bewust geen coachbeleid op. Wie wil dat zijn coach het
+ * menu ziet, stuurt het zelf door.
+ *
+ * De machtiging (een aanvaarde coach_clients-koppeling) hoort bij de aanroeper — deze functie
+ * controleert ze niet en mag dus nooit vanaf een pagina gebruikt worden die dat niet deed.
+ */
+export async function dossierVoorCoach(admin, memberId) {
+  const { data: plan } = await admin.from("coaching_plans")
+    .select("id, doel, weken, status, gestart_op, afgerond_at, doorverwezen_at, doorverwijs_reden, samenvatting")
+    .eq("member_id", memberId).order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (!plan) return { plan: null, weken: [], checkins: [] };
+
+  const { data: weken } = await admin.from("coaching_weeks")
+    .select("id, weeknummer, weekanalyse, besluit, is_rustweek, unlocked_at, completed_at")
+    .eq("plan_id", plan.id).order("weeknummer");
+  const ids = (weken || []).map((w) => w.id);
+  const { data: checkins } = ids.length
+    ? await admin.from("coaching_checkins")
+        .select("week_id, zwaarte, verloop, energie, pijn, pijn_waar, vrij, created_at").in("week_id", ids)
+    : { data: [] };
+
+  return { plan, weken: weken || [], checkins: checkins || [] };
 }

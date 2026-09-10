@@ -6,6 +6,8 @@ import ActionForm from "@/components/ui/ActionForm";
 import { DeleteUserButton } from "@/components/admin/MemberControls";
 import SearchSelect from "@/components/admin/SearchSelect";
 import { createAdminClient } from "@/lib/supabase/admin";
+import CoachDossier from "@/components/coaching/CoachDossier";
+import { dossierVoorCoach } from "@/lib/coaching/plan.js";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,9 @@ export default async function MemberDetail({ params }) {
   ]);
 
   if (!member) return <div className="px-4 py-6 md:px-8 md:py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
+
+  // Het AI-coachdossier. Faalt het, dan valt alleen dit blok weg — nooit de hele ledenpagina.
+  const aiDossier = await dossierVoorCoach(adminDb, id).catch(() => null);
 
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
   const credits = ledger || 0;
@@ -126,6 +131,9 @@ export default async function MemberDetail({ params }) {
           <Info label="Op leaderboard" value={member.leaderboard_opt_in === false ? "Nee" : "Ja"} />
         </div>
       </section>
+
+      {/* Wat de AI-coach met dit lid doet. 0157 geeft de beheerder hier expliciet leesrecht op. */}
+      {aiDossier?.plan && <CoachDossier dossier={aiDossier} />}
 
       {/* Coach */}
       <section className="mt-8 rounded-2xl border border-borderc bg-white p-6">

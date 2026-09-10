@@ -1341,12 +1341,15 @@ export async function sendSessionFeedback({ to, name, token, startsAt, uitschrij
 // Twee gedaanten in één functie, want het zijn twee momenten in hetzelfde ritme: eerst vragen hoe
 // het ging, daarna de nieuwe week. Ze apart houden zou betekenen dat een lid op zondag twee mails
 // krijgt van dezelfde afzender over hetzelfde onderwerp.
-export async function sendCoachingWeek({ to, name, soort, weekNr, totaalWeken, analyse, sessies = [], gedaan = 0, gepland = 0 }) {
+export async function sendCoachingWeek({ to, name, soort, weekNr, totaalWeken, analyse, sessies = [], gedaan = 0, gepland = 0, menu = null, mijlpaal = null }) {
   const checkin = soort === "checkin";
-  const titel = checkin ? "Hoe ging je week?" : `Week ${weekNr} staat klaar`;
-  const knop = checkin
-    ? { href: `${SITE}/coaching`, label: "Vertel het je coach" }
-    : { href: `${SITE}/coaching`, label: "Bekijk je week" };
+  const afgerond = soort === "afgerond";
+  const titel = afgerond ? "Je plan zit erop" : checkin ? "Hoe ging je week?" : `Week ${weekNr} staat klaar`;
+  const knop = afgerond
+    ? { href: `${SITE}/coaching`, label: "Begin een nieuw plan" }
+    : checkin
+      ? { href: `${SITE}/coaching`, label: "Vertel het je coach" }
+      : { href: `${SITE}/coaching`, label: "Bekijk je week" };
 
   const lijst = sessies.length
     ? `<div style="margin-top:14px;border-top:1px solid #ece9f5;padding-top:14px">
@@ -1358,22 +1361,40 @@ export async function sendCoachingWeek({ to, name, soort, weekNr, totaalWeken, a
        </div>`
     : "";
 
+  // De boodschappenlijst hoort in de mail en niet alleen in de app: die lees je op zondag, en op
+  // zondag ga je winkelen. Het menu zelf blijft in de app — zeven dagen tekst is geen e-mail.
+  const boodschappen = Array.isArray(menu?.boodschappen) && menu.boodschappen.length
+    ? `<div style="margin-top:14px;border-top:1px solid #ece9f5;padding-top:14px">
+         <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 8px">Je boodschappen voor deze week</p>
+         <p style="font-size:13px;color:#6b6685;margin:0 0 8px;line-height:1.7">${menu.boodschappen.map((r) => esc(r)).join(" &middot; ")}</p>
+         <p style="font-size:12px;color:#6b6685;margin:0">Het volledige weekmenu${menu.kcal_richtlijn ? ` (richtlijn &plusmn; ${menu.kcal_richtlijn} kcal per dag)` : ""} staat in de app.</p>
+       </div>`
+    : "";
+
+  // Eén mijlpaal per mail. Twee felicitaties in hetzelfde bericht is er één te veel.
+  const mijlpaalBlok = mijlpaal?.titel
+    ? `<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:14px;margin:0 0 12px">
+         <p style="margin:0;font-size:14px;font-weight:bold;color:#22194F">${esc(mijlpaal.titel)}</p>
+         <p style="margin:4px 0 0;font-size:13px;color:#6b6685;line-height:1.7">${esc(mijlpaal.tekst || "")}</p>
+       </div>`
+    : "";
+
   const stand = checkin && gepland
     ? `<p style="font-size:14px;color:#6b6685;margin:0 0 12px">Je deed <b style="color:#22194F">${gedaan} van de ${gepland}</b> sessies.</p>`
     : "";
 
   return send(
     to,
-    checkin ? "Even kort: hoe ging je week?" : `Je week ${weekNr} van ${totaalWeken} staat klaar`,
+    afgerond ? `Je plan van ${totaalWeken} weken zit erop` : checkin ? "Even kort: hoe ging je week?" : `Je week ${weekNr} van ${totaalWeken} staat klaar`,
     shell({
       title: titel,
       intro: `Hallo ${esc(name) || "daar"},`,
-      body: `${stand}${analyse ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin:0 0 12px">
+      body: `${mijlpaalBlok}${stand}${analyse ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin:0 0 12px">
           <p style="margin:0;font-size:14px;color:#22194F;line-height:1.7">${esc(analyse)}</p>
         </div>` : ""}${checkin ? `<p style="font-size:14px;color:#6b6685;margin:0;line-height:1.7">
           Vier tikken en je coach weet genoeg om je volgende week samen te stellen: hoe zwaar het voelde,
           hoe de week verliep, je energie, en of je ergens pijn had.
-        </p>` : ""}${lijst}`,
+        </p>` : ""}${lijst}${boodschappen}`,
       cta: knop,
     }),
     FROM_BOOKING

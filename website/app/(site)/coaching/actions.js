@@ -5,7 +5,10 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
 import { maakPlan, openVolgendeWeek } from "@/lib/coaching/plan.js";
 import { coachAan } from "@/lib/coaching/model.js";
+import { zorgVoorMenu, maakWeekmenu, maaltijdenAan, VOEDINGSVOORKEUREN } from "@/lib/coaching/maaltijd.js";
 import { keurGeboortedatum } from "@/lib/aanmelding-velden";
+
+const MODULES = ["workouts", "mealplan", "motivatie"];
 
 // Alle schrijfwegen van de AI-coach. Elke actie haalt zelf de gebruiker op — nooit een id uit het
 // formulier vertrouwen, want dat is de makkelijkste manier om in andermans dossier te schrijven.
@@ -42,12 +45,23 @@ export async function bewaarIntake(formData) {
   if (!(dagen >= 1 && dagen <= 7)) return { error: "Kies hoeveel keer per week je wil trainen." };
   if (![6, 8, 12].includes(weken)) return { error: "Kies de lengte van je plan." };
 
+  // Workouts is de ruggengraat en staat altijd aan; het weekritme komt uit het trainingsplan.
+  // Meal plan en Motivatie zijn keuzes daarbovenop.
+  const modules = ["workouts", ...formData.getAll("modules").map(String).filter((m) => m !== "workouts" && MODULES.includes(m))];
+
   const velden = {
     coaching_doel: doel,
     coaching_ervaring: ervaring,
     coaching_dagen: dagen,
     coaching_toon: toon === "scherp" ? "scherp" : "rustig",
+    coaching_modules: modules,
   };
+
+  if (modules.includes("mealplan")) {
+    const geldig = VOEDINGSVOORKEUREN.map((v) => v.v);
+    velden.coaching_voeding = formData.getAll("voeding").map(String).filter((v) => geldig.includes(v));
+    velden.coaching_voeding_vrij = String(formData.get("voeding_vrij") || "").trim().slice(0, 300) || null;
+  }
 
   if (toestemming) {
     velden.coaching_toestemming_at = new Date().toISOString();
@@ -70,16 +84,67 @@ export async function bewaarIntake(formData) {
   return { ok: true, weken };
 }
 
-/** Welke modules staan aan. */
+/** Welke modules staan aan. Workouts kan niet uit — daar hangt het weekritme aan. */
 export async function zetModules(formData) {
   const mij = await ik();
   if (!mij) return { error: "Je moet ingelogd zijn." };
-  const geldig = ["workouts", "mealplan", "motivatie"];
-  const gekozen = formData.getAll("modules").map(String).filter((m) => geldig.includes(m));
+  const gekozen = ["workouts", ...formData.getAll("modules").map(String).filter((m) => m !== "workouts" && MODULES.includes(m))];
   const { error } = await mij.admin.from("profiles").update({ coaching_modules: gekozen }).eq("id", mij.user.id);
   if (error) return { error: "Kon je keuze niet bewaren." };
   revalidatePath("/coaching");
   return { ok: true, message: "Bewaard ✓" };
+}
+
+/** De voedingsvoorkeuren. Apart van de intake omdat ze bijgesteld worden, niet één keer ingevuld. */
+export async function zetVoeding(formData) {
+  const mij = await ik();
+  if (!mij) return { error: "Je moet ingelogd zijn." };
+  const geldig = VOEDINGSVOORKEUREN.map((v) => v.v);
+  const { error } = await mij.admin.from("profiles").update({
+    coaching_voeding: formData.getAll("voeding").map(String).filter((v) => geldig.includes(v)),
+    coaching_voeding_vrij: String(formData.get("voeding_vrij") || "").trim().slice(0, 300) || null,
+  }).eq("id", mij.user.id);
+  if (error) return { error: "Kon je voorkeuren niet bewaren." };
+  revalidatePath("/coaching");
+  return { ok: true, message: "Bewaard ✓ — je volgende menu houdt er rekening mee." };
+}
+
+/**
+ * Het weekmenu van deze week. Het lid kan het zelf vragen; de zondagcron doet hetzelfde wanneer
+ * een nieuwe week opengaat. Beide wegen komen uit op dezelfde rij (uniek op lid + weeknummer).
+ */
+export async function maakMenu(formData) {
+  const mij = await ik();
+  if (!mij) return { error: "Je moet ingelogd zijn." };
+  if (!coachAan()) return { error: "De AI-coach staat momenteel uit." };
+  if (!maaltijdenAan(mij.profile)) return { error: "Zet eerst de maaltijdmodule aan." };
+
+  const { data: plan } = await mij.admin.from("coaching_plans")
+    .select("id, gym_id").eq("member_id", mij.user.id).eq("status", "lopend").maybeSingle();
+  if (!plan) return { error: "Je hebt geen lopend plan." };
+
+  const { data: weken } = await mij.admin.from("coaching_weeks")
+    .select("id, weeknummer, unlocked_at").eq("plan_id", plan.id).order("weeknummer");
+  const open = [...(weken || [])].reverse().find((w) => w.unlocked_at);
+  if (!open) return { error: "Er staat nog geen week open." };
+
+  // Opnieuw vragen mag, maar dan ook echt opnieuw: de knop "ander menu" hoort een ander menu te
+  // geven en niet stilletjes hetzelfde terug te zetten.
+  const opnieuw = String(formData?.get?.("opnieuw") || "") === "ja";
+  const { data: checkin } = await mij.admin.from("coaching_checkins")
+    .select("menu_gevolgd, honger").eq("week_id", open.id).maybeSingle();
+
+  const argumenten = {
+    gymId: plan.gym_id, memberId: mij.user.id, profiel: mij.profile,
+    weeknummer: open.weeknummer, planId: plan.id, checkin,
+  };
+  const uit = opnieuw
+    ? await maakWeekmenu(mij.admin, argumenten)
+    : await zorgVoorMenu(mij.admin, argumenten);
+  if (uit.error) return { error: uit.error };
+
+  revalidatePath("/coaching");
+  return { ok: true, message: uit.hergebruikt ? "Je menu van vorige week loopt door ✓" : "Je weekmenu staat klaar ✓" };
 }
 
 /** Het plan aanmaken. De enige plek waar het slimme model werk doet. */
@@ -160,6 +225,10 @@ export async function bewaarCheckin(formData) {
     pijn: String(formData.get("pijn") || "") === "ja",
     pijn_waar: String(formData.get("pijn_waar") || "").trim().slice(0, 200) || null,
     vrij: String(formData.get("vrij") || "").trim().slice(0, 1000) || null,
+    // Twee vragen voor wie een menu volgt. Ze sturen of het menu van volgende week hetzelfde blijft
+    // of opnieuw geschreven wordt — zie `moetVernieuwen`.
+    menu_gevolgd: een("menu_gevolgd", ["vlot", "deels", "niet"]),
+    honger: een("honger", ["nee", "soms", "vaak"]),
   };
 
   const { error } = await mij.admin.from("coaching_checkins").upsert(rij, { onConflict: "week_id" });

@@ -102,7 +102,15 @@ export default function Privacy() {
               <em>Grondslag: jouw uitdrukkelijke toestemming (art. 9.2.a AVG).</em> Die vraag staat apart
               in de intake, je kan ze op elk moment intrekken bij je gegevens, en zonder die toestemming
               werkt de coach gewoon verder — alleen algemener. Wat er naar het model gaat, staat in
-              punt 3 hieronder.
+              punt 3 hieronder.{" "}
+              <strong>Zet je de maaltijdmodule aan</strong>, dan verwerken we daarnaast je
+              voedingsvoorkeuren en het weekmenu dat daaruit volgt. Sommige van die voorkeuren kunnen
+              iets zeggen over je overtuiging of geloof; ze vallen daarom onder dezelfde uitdrukkelijke
+              toestemming, en zonder die toestemming maken we géén menu — ook geen algemener menu, want
+              een voedingsadvies zonder je lengte, gewicht en leeftijd is raden. Gaat het over een
+              aandoening, medicatie, zwangerschap of een eetstoornis, dan stopt de coach en verwijst hij
+              je door naar een diëtist. Zet je de motivatiemodule aan, dan houden we bij welke mijlpalen
+              je haalde, zodat je er maar één keer een bericht over krijgt.
             </li>
             <li>
               <strong>Communicatie</strong> — berichten met je coach of met ons, en je meldingen over

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { bewaarIntake, startPlan } from "@/app/(site)/coaching/actions";
+import { VOEDINGSVOORKEUREN } from "@/lib/coaching/voeding-velden.js";
 
 // Eén vraag per scherm, met bij elke vraag waarom we het vragen. Dat laatste is geen beleefdheid:
 // wie niet weet waarom je zijn gewicht vraagt, vult iets in of haakt af. En de gezondheidsvraag
@@ -21,6 +22,10 @@ const DOELEN = [
   { v: "conditie", l: "Conditie verbeteren", u: "Langer volhouden, sneller herstellen." },
   { v: "bewegen", l: "Gewoon regelmatig bewegen", u: "Geen doel, wel ritme." },
 ];
+const MODULEKEUZE = [
+  { v: "mealplan", l: "Meal plan", u: "Elke week een menu met boodschappenlijst, afgestemd op je doel." },
+  { v: "motivatie", l: "Motivatie", u: "Een bericht wanneer je een mijlpaal haalt. Geen dagelijkse duwtjes." },
+];
 const ERVARING = [
   { v: "nooit", l: "Nog nooit", u: "We beginnen bij de basis, met uitleg." },
   { v: "soms", l: "Af en toe", u: "Je kent de oefeningen, we bouwen op." },
@@ -37,13 +42,21 @@ export default function IntakeWizard({ profiel }) {
   const [dagen, setDagen] = useState(profiel?.coaching_dagen || 3);
   const [weken, setWeken] = useState(8);
   const [toon, setToon] = useState(profiel?.coaching_toon || "rustig");
+  // Workouts staat vast — daar hangt het weekritme aan. Meal plan en Motivatie zijn keuzes.
+  const [modules, setModules] = useState(
+    Array.isArray(profiel?.coaching_modules) && profiel.coaching_modules.length
+      ? profiel.coaching_modules.filter((m) => m !== "workouts")
+      : ["motivatie"]
+  );
+  const [voeding, setVoeding] = useState(profiel?.coaching_voeding || []);
+  const [voedingVrij, setVoedingVrij] = useState(profiel?.coaching_voeding_vrij || "");
   const [toestemming, setToestemming] = useState(!!profiel?.coaching_toestemming_at);
   const [geboortedatum, setGeboortedatum] = useState(profiel?.geboortedatum || "");
   const [gewicht, setGewicht] = useState(profiel?.gewicht_kg || "");
   const [lengte, setLengte] = useState(profiel?.height_cm || "");
   const [beperkingen, setBeperkingen] = useState(profiel?.coaching_beperkingen || "");
 
-  const LAATSTE = 6;
+  const LAATSTE = 7;
   const verder = () => { setFout(null); setStap((s) => Math.min(LAATSTE, s + 1)); };
   const terug = () => { setFout(null); setStap((s) => Math.max(1, s - 1)); };
 
@@ -56,6 +69,11 @@ export default function IntakeWizard({ profiel }) {
       fd.set("dagen", String(dagen));
       fd.set("weken", String(weken));
       fd.set("toon", toon);
+      for (const m of modules) fd.append("modules", m);
+      if (modules.includes("mealplan")) {
+        for (const v of voeding) fd.append("voeding", v);
+        fd.set("voeding_vrij", voedingVrij);
+      }
       fd.set("toestemming", toestemming ? "ja" : "nee");
       if (toestemming) {
         if (geboortedatum) fd.set("geboortedatum", geboortedatum);
@@ -98,6 +116,61 @@ export default function IntakeWizard({ profiel }) {
       )}
 
       {stap === 2 && (
+        <Vraag titel="Waarmee wil je hulp?" uitleg="Je trainingsplan krijg je sowieso. De rest zet je aan of uit — nu of later.">
+          <div className="space-y-2">
+            <div className={KNOP + AAN + " cursor-default"}>
+              Workouts
+              <span className="mt-0.5 block text-xs font-normal text-brand/50">
+                Je plan van week tot week, met je sessie in je deurcodemail. Dit is de basis en staat altijd aan.
+              </span>
+            </div>
+            {MODULEKEUZE.map((m) => {
+              const aan = modules.includes(m.v);
+              return (
+                <div key={m.v}>
+                  <button type="button" onClick={() => setModules((l) => (aan ? l.filter((x) => x !== m.v) : [...l, m.v]))}
+                    className={KNOP + (aan ? AAN : UIT)}>
+                    <span className="flex items-center gap-2">
+                      <span className={"flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 text-xs transition " + (aan ? "border-accent bg-accent text-brand" : "border-borderc text-transparent")}>&#10003;</span>
+                      {m.l}
+                    </span>
+                    <span className="mt-0.5 block text-xs font-normal text-brand/50">{m.u}</span>
+                  </button>
+
+                  {/* De voedingsvraag hoort bij de knop die ze oproept, niet op een eigen scherm. */}
+                  {m.v === "mealplan" && aan && (
+                    <div className="anim-in mt-2 rounded-2xl border-2 border-borderc p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Wat eet je niet?</p>
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        {VOEDINGSVOORKEUREN.map((v) => {
+                          const gekozen = voeding.includes(v.v);
+                          return (
+                            <button key={v.v} type="button"
+                              onClick={() => setVoeding((l) => (gekozen ? l.filter((x) => x !== v.v) : [...l, v.v]))}
+                              className={"rounded-full border-2 px-3.5 py-1.5 text-xs font-bold transition " + (gekozen ? "border-accent bg-accent/10 text-brand" : "border-borderc text-brand/60 hover:border-lav")}>
+                              {v.l}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <textarea rows={2} maxLength={300} value={voedingVrij} onChange={(e) => setVoedingVrij(e.target.value)}
+                        placeholder="Bv. geen paprika, ik kook 's avonds voor twee"
+                        className={VELD + " resize-none"} />
+                      <p className="mt-1.5 text-xs leading-relaxed text-brand/45">
+                        Een weekmenu heeft je gewicht, lengte en leeftijd nodig — die vraag komt straks.
+                        Gaat het over een aandoening, medicatie, zwangerschap of een eetstoornis, dan maakt je
+                        coach geen menu maar verwijst hij je door. Dat hoort bij een diëtist.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Vraag>
+      )}
+
+      {stap === 3 && (
         <Vraag titel="Hoe vaak train je nu al?" uitleg="Zo weten we of we bij de basis beginnen of meteen kunnen opbouwen.">
           <div className="space-y-2">
             {ERVARING.map((e) => (
@@ -110,7 +183,7 @@ export default function IntakeWizard({ profiel }) {
         </Vraag>
       )}
 
-      {stap === 3 && (
+      {stap === 4 && (
         <Vraag titel="Hoeveel keer per week wil je trainen?" uitleg="Je plan krijgt precies zoveel sessies per week. Liever eerlijk laag dan ambitieus hoog — je kan het altijd aanpassen.">
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
             {[1, 2, 3, 4, 5, 6, 7].map((n) => (
@@ -120,7 +193,7 @@ export default function IntakeWizard({ profiel }) {
         </Vraag>
       )}
 
-      {stap === 4 && (
+      {stap === 5 && (
         <Vraag titel="Hoe lang mag je plan duren?" uitleg="Elke vierde week is bewust lichter. Na afloop krijg je een overzicht en kan je opnieuw beginnen.">
           <div className="grid gap-2 sm:grid-cols-3">
             {[{ n: 6, l: "6 weken", u: "Kort en concreet" }, { n: 8, l: "8 weken", u: "De gulden middenweg" }, { n: 12, l: "12 weken", u: "Echt iets opbouwen" }].map((o) => (
@@ -133,7 +206,7 @@ export default function IntakeWizard({ profiel }) {
         </Vraag>
       )}
 
-      {stap === 5 && (
+      {stap === 6 && (
         <Vraag titel="Hoe wil je aangesproken worden?" uitleg="Dit bepaalt de toon van je wekelijkse bericht. Je kan het later wisselen.">
           <div className="grid gap-2 sm:grid-cols-2">
             <button type="button" onClick={() => setToon("rustig")} className={KNOP + (toon === "rustig" ? AAN : UIT)}>
@@ -148,7 +221,7 @@ export default function IntakeWizard({ profiel }) {
         </Vraag>
       )}
 
-      {stap === 6 && (
+      {stap === 7 && (
         <Vraag
           titel="Mag je coach je lichaamsgegevens gebruiken?"
           uitleg="Met je leeftijd, gewicht en eventuele beperkingen kan je coach het schema echt op jou afstemmen. Zonder is het algemener — en dat mag ook."
@@ -206,7 +279,7 @@ export default function IntakeWizard({ profiel }) {
         </button>
         {stap < LAATSTE ? (
           <button type="button" onClick={verder}
-            disabled={(stap === 1 && !doel) || (stap === 2 && !ervaring)}
+            disabled={(stap === 1 && !doel) || (stap === 3 && !ervaring)}
             className="rounded-full bg-brand px-6 py-3 text-sm font-bold text-white transition hover:opacity-90 disabled:opacity-40">
             Verder
           </button>

@@ -6,6 +6,9 @@ import { dossierVoor } from "@/lib/coaching/plan.js";
 import { coachAan } from "@/lib/coaching/model.js";
 import IntakeWizard from "@/components/coaching/IntakeWizard";
 import WeekPaneel from "@/components/coaching/WeekPaneel";
+import MaaltijdPaneel from "@/components/coaching/MaaltijdPaneel";
+import { maaltijdenAan, richtlijnVoor } from "@/lib/coaching/maaltijd.js";
+import { MIJLPALEN } from "@/lib/coaching/mijlpalen.js";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -43,14 +46,15 @@ export default async function CoachingPagina() {
           Start je Fittin&rsquo; AI Coaching hier
         </h1>
         <p className="mt-3 max-w-2xl text-lg leading-relaxed text-ink-soft">
-          Een paar vragen, en je krijgt een trainingsplan van meerdere weken dat bij jou past. Elke week
-          staat klaar wanneer je een sessie boekt, je vinkt af wat je deed, en je coach past de week
-          erna daarop aan.
+          Een paar vragen, en je krijgt een plan van meerdere weken dat bij jou past. Elke week staat
+          klaar wanneer je een sessie boekt, je vinkt af wat je deed, en je coach past de week erna
+          daarop aan. Wil je er een weekmenu bij, dan kies je dat straks zelf.
         </p>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kaartje titel="Workouts" tekst="Je sessie staat klaar in je deurcodemail, met oefeningen en gewichten." />
-          <Kaartje titel="Opvolging" tekst="Eén tik na je sessie stuurt je volgende week — geen logboek bijhouden." />
+          <Kaartje titel="Meal plan" tekst="Een weekmenu met boodschappenlijst, afgestemd op je doel." />
+          <Kaartje titel="Motivatie" tekst="Een bericht wanneer je een mijlpaal haalt. Geen dagelijkse duwtjes." />
           <Kaartje titel="Een echte coach" tekst="Loopt het vast, dan stuurt je coach je door naar een van onze acht coaches." />
         </div>
 
@@ -62,7 +66,9 @@ export default async function CoachingPagina() {
   }
 
   // ---------- Wél een plan: het dossier ----------
-  const { plan, weken, open, sessies, oefeningen, checkin } = dossier;
+  const { plan, weken, open, sessies, oefeningen, checkin, menu, mijlpalen } = dossier;
+  const eten = maaltijdenAan(profile);
+  const kanMenuMaken = eten && !richtlijnVoor(profile).error;
   const afgevinkt = sessies.filter((s) => s.gedaan_at).length;
   const alleAf = sessies.length > 0 && afgevinkt === sessies.length;
   const isLaatste = open?.weeknummer === plan.weken;
@@ -124,7 +130,43 @@ export default async function CoachingPagina() {
             <h2 className="font-display text-lg font-black text-brand">Deze week</h2>
             <span className="text-sm text-ink-soft">{afgevinkt} van {sessies.length} gedaan</span>
           </div>
-          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} isLaatsteWeek={isLaatste} />
+          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} isLaatsteWeek={isLaatste} maaltijden={eten} />
+        </div>
+      )}
+
+      {eten && open && (
+        <div className="mt-8">
+          <h2 className="mb-3 font-display text-lg font-black text-brand">Je eten deze week</h2>
+          <MaaltijdPaneel menu={menu} profiel={profile} kanMaken={kanMenuMaken} />
+        </div>
+      )}
+
+      {mijlpalen.length > 0 && (
+        <div className="mt-8">
+          <h2 className="mb-3 font-display text-lg font-black text-brand">Wat je al haalde</h2>
+          <ul className="flex flex-wrap gap-2">
+            {mijlpalen.filter((m) => MIJLPALEN[m.soort]).map((m) => (
+              <li key={m.soort} title={MIJLPALEN[m.soort].tekst}
+                className="rounded-full border-2 border-accent/40 bg-accent/5 px-4 py-2 text-xs font-bold text-brand">
+                {MIJLPALEN[m.soort].titel}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {plan.doorverwezen_at && (
+        <div className="anim-in mt-8 rounded-3xl border-2 border-amber-300 bg-amber-50 p-5">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-amber-700">Van je coach</p>
+          <p className="mt-1.5 text-sm leading-relaxed text-brand">
+            Hier loopt het vast op iets dat een schema niet oplost. Een van onze acht coaches kijkt
+            liever even met je mee — de intake en de proeftraining zijn gratis, en je hoeft niets te
+            beslissen voor je geweest bent.
+          </p>
+          <Link href="/personal-training#intake"
+            className="mt-4 inline-block rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">
+            Praat met een coach
+          </Link>
         </div>
       )}
 

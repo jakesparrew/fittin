@@ -16,7 +16,7 @@ const OORDELEN = [
   { v: "te_zwaar", l: "Te zwaar" },
 ];
 
-export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, isLaatsteWeek }) {
+export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, isLaatsteWeek, maaltijden = false }) {
   const [bezig, start] = useTransition();
   const [melding, setMelding] = useState(null);
   const [open, setOpen] = useState(sessies[0]?.id || null);
@@ -113,7 +113,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
 
       {/* De check-in verschijnt zodra de week rond is. Niet eerder: hem vooraf tonen maakt van een
           gesprek een formulier dat er altijd staat. */}
-      {alleSessiesAf && !checkin && <Checkin weekId={week.id} />}
+      {alleSessiesAf && !checkin && <Checkin weekId={week.id} maaltijden={maaltijden} />}
 
       {alleSessiesAf && checkin && !isLaatsteWeek && (
         <form action={openWeek}>
@@ -132,7 +132,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
   );
 }
 
-function Checkin({ weekId }) {
+function Checkin({ weekId, maaltijden }) {
   const [bezig, start] = useTransition();
   const [fout, setFout] = useState(null);
   const [pijn, setPijn] = useState(false);
@@ -152,11 +152,22 @@ function Checkin({ weekId }) {
   return (
     <form onSubmit={verstuur} className="anim-in rounded-3xl border-2 border-brand/15 bg-white p-6">
       <h3 className="font-display text-lg font-black text-brand">Je week zit erop — hoe ging het?</h3>
-      <p className="mt-1 text-sm text-ink-soft">Vier tikken. Je coach gebruikt dit om je volgende week samen te stellen.</p>
+      <p className="mt-1 text-sm text-ink-soft">
+        {maaltijden ? "Zes tikken" : "Vier tikken"}. Je coach gebruikt dit om je volgende week samen te stellen.
+      </p>
 
       <Rij naam="zwaarte" label="Hoe zwaar voelde het?" opties={[["te_licht", "Te licht"], ["goed", "Goed"], ["te_zwaar", "Te zwaar"]]} />
       <Rij naam="verloop" label="Hoe verliep de week?" opties={[["vlot", "Vlot"], ["wisselend", "Wisselend"], ["moeilijk", "Moeilijk"]]} />
       <Rij naam="energie" label="En je energie?" opties={[["goed", "Goed"], ["ok", "Oké"], ["laag", "Laag"]]} />
+
+      {/* Alleen voor wie een menu volgt. Deze twee antwoorden bepalen of het menu van volgende week
+          hetzelfde blijft of opnieuw geschreven wordt — zie `moetVernieuwen` in maaltijd.js. */}
+      {maaltijden && (
+        <>
+          <Rij naam="menu_gevolgd" label="Lukte het weekmenu?" opties={[["vlot", "Vlot"], ["deels", "Deels"], ["niet", "Niet"]]} />
+          <Rij naam="honger" label="Had je honger?" opties={[["nee", "Nee"], ["soms", "Soms"], ["vaak", "Vaak"]]} />
+        </>
+      )}
 
       <div className="mt-5">
         <label className="flex cursor-pointer items-center gap-2.5 text-sm font-bold text-brand">

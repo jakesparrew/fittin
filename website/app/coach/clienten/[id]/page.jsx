@@ -5,6 +5,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { sendCoachPaymentRequest, cancelCoachPaymentRequest, coachSaveClientNote, coachGiveFeedback } from "@/app/coach/actions";
 import ActionForm from "@/components/ui/ActionForm";
 import ProgressPanel from "@/components/progress/ProgressPanel";
+import CoachDossier from "@/components/coaching/CoachDossier";
+import { dossierVoorCoach } from "@/lib/coaching/plan.js";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +40,10 @@ export default async function CoachClientDetail({ params }) {
   ]);
   if (!client) notFound();
 
+  // Het AI-dossier van deze client. Gemachtigd door de aanvaarde koppeling hierboven — zonder die
+  // controle mag `dossierVoorCoach` niet aangeroepen worden.
+  const aiDossier = await dossierVoorCoach(admin, id).catch(() => null);
+
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
   const upcoming = confirmed.filter((b) => new Date(b.starts_at).getTime() >= now).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
   const past = confirmed.filter((b) => new Date(b.starts_at).getTime() < now);
@@ -69,6 +75,8 @@ export default async function CoachClientDetail({ params }) {
 
       {/* Client's training progress (same charts the member sees) — authorized by the accepted link above. */}
       <ProgressPanel userId={client.id} />
+
+      {aiDossier?.plan && <CoachDossier dossier={aiDossier} />}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {/* Sessions */}
