@@ -11,8 +11,24 @@
 
 import { kostMicro } from "./model.js";
 
+/** Puur en testbaar: een rommelige env-waarde mag de rem nooit openzetten. */
+export function leesDagbudget(ruw) {
+  const n = Number(ruw);
+  return Number.isFinite(n) && n > 0 ? n : 2_000_000;
+}
+
 /** Standaard 2 dollar per dag. Aan de gemeten prijzen zijn dat honderden weekzinnen. */
-export const DAGBUDGET_MICRO = Number(process.env.COACH_AI_DAGBUDGET_MICRO || 2_000_000);
+export const DAGBUDGET_MICRO = leesDagbudget(process.env.COACH_AI_DAGBUDGET_MICRO);
+
+/** Handmatig gezet op 10-09-2026. Bewust geen koersfeed: dit is een indicatie, geen boekhouding. */
+export const USD_EUR = 0.92;
+export const euroVan = (micro) => "€ " + ((micro || 0) / 1_000_000 * USD_EUR).toFixed(2).replace(".", ",");
+
+/**
+ * De uitkomsten die betekenen dat het lid er iets aan had. Alles daarbuiten is geld dat wegging
+ * zonder resultaat — zie 0161 voor waarom `ok` die vraag niet beantwoordt.
+ */
+export const GELEVERD = new Set(["plan_geschreven", "zin_geschreven", "menu_geschreven"]);
 
 /** Begin van vandaag in Brussel, als ISO — zodat de rem meeloopt met de kalenderdag van de gym. */
 export function beginVanVandaag(nu = new Date()) {
@@ -68,25 +84,77 @@ export async function boekVerbruik(admin, { gymId, memberId, soort, uitkomst }) 
     fout: uitkomst?.ok ? null : String(uitkomst?.fout || "").slice(0, 500),
   };
   try {
-    const { error } = await admin.from("coaching_verbruik").insert(rij);
+    const { data, error } = await admin.from("coaching_verbruik").insert(rij).select("id").single();
     if (error) console.error("coaching_verbruik insert:", error.message);
+    return { ...rij, id: data?.id || null };
   } catch (e) {
     console.error("coaching_verbruik insert:", e?.message || e);
+    return { ...rij, id: null };
   }
-  return rij;
+}
+
+/**
+ * Wat er uiteindelijk uit die aanroep kwam. Apart van boekVerbruik omdat dat VÓÓR het antwoord
+ * gebeurt: de tokens zijn dan al betaald, maar of er een bruikbaar plan uitrolde weet je pas na het
+ * lezen, het keuren en het opslaan. Zie 0161.
+ *
+ * Best-effort, net als het boeken zelf: een logboek mag nooit een lid tegenhouden.
+ */
+export async function boekResultaat(admin, id, resultaat) {
+  if (!id || !resultaat) return;
+  try {
+    const { error } = await admin.from("coaching_verbruik").update({ resultaat }).eq("id", id);
+    if (error) console.error("coaching_verbruik resultaat:", error.message);
+  } catch (e) {
+    console.error("coaching_verbruik resultaat:", e?.message || e);
+  }
+}
+
+/**
+ * Een aanroep die NIET doorging omdat de rem dichtstond. Kost nul, maar het is wel een gebeurtenis:
+ * het commentaar bovenaan dit bestand belooft sinds dag één "een melding in het logboek zodat de
+ * eigenaar weet dat hij hem moet verhogen", en die melding bestond niet — `magNog` staat vóór
+ * `boekVerbruik`, dus een geweigerde aanroep liet precies niets na.
+ */
+export async function boekWeigering(admin, { gymId, memberId, soort, reden }) {
+  try {
+    await admin.from("coaching_verbruik").insert({
+      gym_id: gymId, member_id: memberId || null, soort: "geweigerd", model: "geen",
+      in_tokens: 0, uit_tokens: 0, kost_micro: 0, ok: false,
+      fout: String(reden || "").slice(0, 500), resultaat: `geweigerd:${soort}`,
+    });
+  } catch (e) {
+    console.error("coaching_verbruik weigering:", e?.message || e);
+  }
+}
+
+/** magNog, maar dan met een spoor wanneer hij nee zegt. Gebruik deze, niet magNog. */
+export async function magNogOfBoek(admin, { gymId, memberId, soort }) {
+  const rem = await magNog(admin, gymId);
+  if (!rem.mag) await boekWeigering(admin, { gymId, memberId, soort, reden: rem.reden });
+  return rem;
 }
 
 /** Hulpje voor de beheerpagina: wat kostte de coach over een periode. */
 export function telOp(rijen) {
-  const uit = { aanroepen: 0, mislukt: 0, micro: 0, inTokens: 0, uitTokens: 0 };
+  const uit = {
+    aanroepen: 0, mislukt: 0, micro: 0, inTokens: 0, uitTokens: 0,
+    // Wat `ok` niet vertelt. Zie 0161: `ok` betekent alleen dat de gateway tekst teruggaf.
+    geleverd: 0, zonderResultaat: 0, zonderResultaatMicro: 0, onbekend: 0, geweigerd: 0,
+  };
   for (const r of rijen || []) {
+    // Een weigering is geen aanroep: hij kostte niets en er ging niets de deur uit.
+    if (r.soort === "geweigerd") { uit.geweigerd++; continue; }
     uit.aanroepen++;
     if (!r.ok) uit.mislukt++;
     uit.micro += r.kost_micro || 0;
     uit.inTokens += r.in_tokens || 0;
     uit.uitTokens += r.uit_tokens || 0;
+    if (r.resultaat == null) uit.onbekend++;
+    else if (GELEVERD.has(r.resultaat)) uit.geleverd++;
+    else { uit.zonderResultaat++; uit.zonderResultaatMicro += r.kost_micro || 0; }
   }
-  return { ...uit, euro: uit.micro / 1_000_000 * 0.92 }; // ruwe omrekening, enkel ter indicatie
+  return { ...uit, euro: uit.micro / 1_000_000 * USD_EUR };
 }
 
 export { kostMicro };

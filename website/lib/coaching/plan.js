@@ -14,7 +14,7 @@
 //   herplan()           — alleen bij pijn of drie weken te zwaar. Dat is een keuze, geen som.
 
 import { roepMetTerugval, MODELLEN } from "./model.js";
-import { magNog, boekVerbruik } from "./budget.js";
+import { magNogOfBoek, boekVerbruik, boekResultaat } from "./budget.js";
 import { bouwContext, planSysteem, planVraag, analyseSysteem, analyseVraag, herplanSysteem } from "./prompt.js";
 import { kiesOefeningen, verdeelFocus, keurVoorschriften } from "./keuze.js";
 import { wekenOpRij } from "./mijlpalen.js";
@@ -112,7 +112,7 @@ async function schrijfSessies(admin, { gymId, weekId, dagIds }) {
  * Een volledig nieuw plan. Dit is de enige plek waar het slimme model werk doet.
  */
 export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessiesPerWeek }) {
-  const rem = await magNog(admin, gymId);
+  const rem = await magNogOfBoek(admin, { gymId, memberId, soort: "plan" });
   if (!rem.mag) return { error: `De coach kan nu even geen plan maken (${rem.reden}). Probeer het morgen opnieuw.` };
 
   const context = bouwContext(profiel);
@@ -123,11 +123,20 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
     maxTokens: 4000,
     temperatuur: 0.4,
   });
-  await boekVerbruik(admin, { gymId, memberId, soort: "plan", uitkomst: uit });
-  if (!uit.ok) return { error: "De coach kon geen plan opstellen. Probeer het zo dadelijk opnieuw." };
+  // De tokens zijn nu betaald. Wat er UITKWAM weten we pas na lezen, keuren en opslaan — daarom
+  // krijgt elke uitgang hieronder zijn eigen `boekResultaat`. Zonder dat stond 72% van alles wat de
+  // coach ooit kostte als "geslaagd" in de boeken terwijl er niets uitkwam. Zie 0161.
+  const boeking = await boekVerbruik(admin, { gymId, memberId, soort: "plan", uitkomst: uit });
+  if (!uit.ok) {
+    await boekResultaat(admin, boeking.id, "gateway_faalde");
+    return { error: "De coach kon geen plan opstellen. Probeer het zo dadelijk opnieuw." };
+  }
 
   const json = leesJson(uit.tekst);
-  if (!json?.week1?.sessies?.length) return { error: "De coach gaf een onbruikbaar plan terug. Probeer het opnieuw." };
+  if (!json?.week1?.sessies?.length) {
+    await boekResultaat(admin, boeking.id, "json_onleesbaar");
+    return { error: "De coach gaf een onbruikbaar plan terug. Probeer het opnieuw." };
+  }
 
   const bibliotheek = await bibliotheekVan(admin, gymId);
   const geldigeIds = new Set(bibliotheek.map((b) => b.id));
@@ -152,10 +161,14 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
     return { naam: typeof s.naam === "string" ? s.naam.slice(0, 60) : `Sessie ${i + 1}`, oefeningen: gekozen };
   }).filter((s) => s.oefeningen.length);
 
-  if (!sessies.length) return { error: "Er konden geen oefeningen gevonden worden voor dit plan." };
+  if (!sessies.length) {
+    await boekResultaat(admin, boeking.id, "geen_oefeningen");
+    return { error: "Er konden geen oefeningen gevonden worden voor dit plan." };
+  }
   const keuring = keurVoorschriften(sessies.flatMap((s) => s.oefeningen), geldigeIds);
   if (!keuring.ok) {
     console.error("coaching: voorschriften afgekeurd", keuring.fout.slice(0, 3));
+    await boekResultaat(admin, boeking.id, "afgekeurd");
     return { error: "De coach kon het plan niet controleren. Probeer het opnieuw." };
   }
 
@@ -169,6 +182,7 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
     samenvatting: typeof json.samenvatting === "string" ? json.samenvatting.slice(0, 1200) : null,
   }).select("id").single();
   if (pe) {
+    await boekResultaat(admin, boeking.id, "opslag_faalde");
     if (pe.code === "23505") return { error: "Je hebt al een lopend plan." };
     return { error: `Het plan kon niet bewaard worden: ${pe.message}` };
   }
@@ -198,6 +212,7 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
   await admin.from("coaching_weeks").update({ program_id: programId, unlocked_at: new Date().toISOString() }).eq("id", week1.id);
   await schrijfSessies(admin, { gymId, weekId: week1.id, dagIds });
 
+  await boekResultaat(admin, boeking.id, "plan_geschreven");
   return { ok: true, planId: plan.id, weekId: week1.id, kostMicro: uit.kostMicro };
 }
 
@@ -468,7 +483,7 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
   // De zin. Faalt het model, dan schrijven we er zelf een — een week gaat nooit niet open omdat
   // een taalmodel stilviel.
   let analyse = null;
-  const rem = await magNog(admin, gymId);
+  const rem = await magNogOfBoek(admin, { gymId, memberId: plan.member_id, soort: "weekzin" });
   if (rem.mag) {
     const { data: profiel } = await admin.from("profiles").select("*").eq("id", plan.member_id).maybeSingle();
     const context = bouwContext(profiel || {});
@@ -486,8 +501,9 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
       maxTokens: 500,
       temperatuur: 0.5,
     });
-    await boekVerbruik(admin, { gymId, memberId: plan.member_id, soort: "weekzin", uitkomst: uit });
+    const boeking = await boekVerbruik(admin, { gymId, memberId: plan.member_id, soort: "weekzin", uitkomst: uit });
     if (uit.ok) analyse = uit.tekst.slice(0, 1200);
+    await boekResultaat(admin, boeking.id, uit.ok ? "zin_geschreven" : "gateway_faalde");
   }
   if (!analyse) analyse = zelfgeschrevenZin(besluitEnz, afgevinkt, gepland, volgende.is_rustweek);
 

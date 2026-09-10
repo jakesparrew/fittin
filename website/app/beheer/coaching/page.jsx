@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { telOp, DAGBUDGET_MICRO, beginVanVandaag } from "@/lib/coaching/budget.js";
+import { telOp, DAGBUDGET_MICRO, beginVanVandaag, euroVan } from "@/lib/coaching/budget.js";
 import { coachAan } from "@/lib/coaching/model.js";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtDay } from "@/lib/format";
+import CoachTesten from "@/components/admin/CoachTesten";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,6 @@ export const dynamic = "force-dynamic";
 //      een lid zijn van dat lid, en een beheerpagina is geen reden om erin te lezen.
 
 const KAART = "rounded-2xl border border-borderc bg-white p-5";
-const euro = (micro) => "€ " + (micro / 1_000_000 * 0.92).toFixed(2).replace(".", ",");
 
 export default async function BeheerCoaching() {
   const ctx = await getAdminContext();
@@ -27,14 +27,18 @@ export default async function BeheerCoaching() {
   const db = createAdminClient();
   const dertigDagen = new Date(Date.now() - 30 * 86400000).toISOString();
 
-  const [plannenR, verbruikR, menusR, mijlpalenR] = await Promise.all([
+  const [plannenR, verbruikR, menusR, mijlpalenR, cronR] = await Promise.all([
     db.from("coaching_plans")
       .select("id, member_id, doel, weken, status, gestart_op, afgerond_at, doorverwezen_at, doorverwijs_reden, updated_at")
       .eq("gym_id", gym.id).order("updated_at", { ascending: false }).limit(200),
-    db.from("coaching_verbruik").select("soort, model, kost_micro, in_tokens, uit_tokens, ok, created_at")
+    db.from("coaching_verbruik").select("soort, model, kost_micro, in_tokens, uit_tokens, ok, resultaat, created_at")
       .eq("gym_id", gym.id).gte("created_at", dertigDagen).limit(5000),
     db.from("coaching_mealweeks").select("id, created_at").eq("gym_id", gym.id).gte("created_at", dertigDagen),
     db.from("coaching_mijlpalen").select("soort").eq("gym_id", gym.id).gte("created_at", dertigDagen),
+    // cron_runs heeft GEEN gym_id (het is een systeemtabel, 26k rijen). Altijd op job filteren en
+    // nooit optellen — alleen de laatste beurt is hier interessant.
+    db.from("cron_runs").select("ok, detail, created_at").eq("job", "coaching_week")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
   const plannen = plannenR.data || [];
@@ -83,6 +87,26 @@ export default async function BeheerCoaching() {
         </span>
       </div>
 
+      {/* 0. Draait het? Zonder deze regel is "er gebeurt niets" niet te onderscheiden van "de cron
+             draait niet" — en dat was precies de vraag van de eigenaar. */}
+      {(() => {
+        const c = cronR?.data;
+        const kleur = !c ? "bg-paper text-ink-soft"
+          : c.detail?.status === "bezig" ? "bg-amber-50 text-amber-800"
+          : c.ok ? "bg-accent/10 text-brand" : "bg-amber-50 text-amber-800";
+        return (
+          <div className={"mt-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm " + kleur}>
+            <span>
+              {!c ? "Zondagcron: nog nooit gedraaid."
+                : c.detail?.status === "bezig" ? `Zondagrun van ${fmtDay(c.created_at)} is nooit afgerond — de functie werd afgekapt.`
+                : c.detail?.uit ? `Laatste zondagrun (${fmtDay(c.created_at)}): de coach stond uit.`
+                : `Zondagrun ${fmtDay(c.created_at)}: ${c.detail?.geopend || 0} weken geopend, ${c.detail?.gevraagd || 0} check-ins gevraagd, ${c.detail?.menus || 0} menu's${c.detail?.overgeslagen ? `, ${c.detail.overgeslagen} overgeslagen` : ""}${c.detail?.fouten?.length ? `, ${c.detail.fouten.length} fouten` : ""}.`}
+            </span>
+            <Link href="/beheer/coaching/logboek" className="shrink-0 text-xs font-bold underline">Logboek →</Link>
+          </div>
+        );
+      })()}
+
       {/* 1. Waar iemand iets mee moet doen. */}
       {leads.length > 0 && (
         <section className="mt-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
@@ -114,16 +138,19 @@ export default async function BeheerCoaching() {
       <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={KAART}>
           <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Vandaag</p>
-          <p className={"mt-1 font-display text-2xl font-black " + (remVol ? "text-red-600" : "text-brand")}>{euro(dag.micro)}</p>
+          <p className={"mt-1 font-display text-2xl font-black " + (remVol ? "text-red-600" : "text-brand")}>{euroVan(dag.micro)}</p>
           <p className="mt-1 text-xs text-brand/45">
-            {dag.aanroepen} aanroep{dag.aanroepen === 1 ? "" : "en"} · rem op {euro(DAGBUDGET_MICRO)}
+            {dag.aanroepen} aanroep{dag.aanroepen === 1 ? "" : "en"} · rem op {euroVan(DAGBUDGET_MICRO)}
           </p>
+          <p className="mt-0.5 text-xs text-brand/35">{dag.inTokens.toLocaleString("nl-BE")} tokens in · {dag.uitTokens.toLocaleString("nl-BE")} uit</p>
+          {dag.geweigerd > 0 && <p className="mt-1 text-xs font-bold text-amber-700">{dag.geweigerd}× geweigerd door de dagrem</p>}
           {remVol && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">Dagrem bereikt — de coach maakt vandaag niets meer.</p>}
         </div>
         <div className={KAART}>
           <p className="text-xs font-bold uppercase tracking-wide text-brand/45">30 dagen</p>
-          <p className="mt-1 font-display text-2xl font-black text-brand">{euro(maand.micro)}</p>
+          <p className="mt-1 font-display text-2xl font-black text-brand">{euroVan(maand.micro)}</p>
           <p className="mt-1 text-xs text-brand/45">{maand.aanroepen} aanroepen · {maand.mislukt} mislukt</p>
+          <p className="mt-0.5 text-xs text-brand/35">{maand.inTokens.toLocaleString("nl-BE")} tokens in · {maand.uitTokens.toLocaleString("nl-BE")} uit</p>
         </div>
         <div className={KAART}>
           <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Lopende plannen</p>
@@ -155,7 +182,7 @@ export default async function BeheerCoaching() {
                   <td className="py-2 font-bold text-brand">{soort}</td>
                   <td className="py-2 text-right text-brand/70">{s.aanroepen}</td>
                   <td className={"py-2 text-right " + (s.mislukt ? "font-bold text-red-600" : "text-brand/40")}>{s.mislukt}</td>
-                  <td className="py-2 text-right text-brand/70">{euro(s.micro)}</td>
+                  <td className="py-2 text-right text-brand/70">{euroVan(s.micro)}</td>
                 </tr>
               ))}
             </tbody>
@@ -165,6 +192,27 @@ export default async function BeheerCoaching() {
           </p>
         </section>
       )}
+
+      {/* 2b. Wat er wegging zonder resultaat. Alleen tonen als er iets te melden is — leeg is
+             onzichtbaar. Dit bestaat omdat `ok` alleen zegt dat de gateway antwoordde: op productie
+             stond 72% van alle uitgaven op "geslaagd" terwijl er geen plan uit kwam. Zie 0161. */}
+      {(maand.zonderResultaat > 0 || maand.onbekend > 0 || maand.geweigerd > 0) && (
+        <Link href="/beheer/coaching/logboek?filter=problemen"
+          className="mt-3 block rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 transition hover:border-amber-400">
+          <p className="text-sm font-black text-brand">
+            {maand.zonderResultaat > 0
+              ? `${euroVan(maand.zonderResultaatMicro)} aan aanroepen zonder resultaat (${maand.zonderResultaat} van ${maand.aanroepen})`
+              : "Aanroepen om na te kijken"}
+          </p>
+          <p className="mt-1 text-xs leading-relaxed text-amber-800">
+            {maand.onbekend > 0 && `${maand.onbekend} aanroep${maand.onbekend === 1 ? "" : "en"} van vóór dit logboek — resultaat onbekend. `}
+            {maand.geweigerd > 0 && `${maand.geweigerd}× geweigerd door de dagrem. `}
+            Bekijk ze in het logboek →
+          </p>
+        </Link>
+      )}
+
+      <CoachTesten email={ctx.profile?.email || ""} />
 
       {/* 3. Wie het gebruikt. */}
       <section className={"mt-6 " + KAART}>

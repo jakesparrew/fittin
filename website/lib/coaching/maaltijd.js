@@ -12,7 +12,7 @@
 //      menu maar een verwijzing naar een diëtist.
 
 import { roepMetTerugval, MODELLEN } from "./model.js";
-import { magNog, boekVerbruik } from "./budget.js";
+import { magNogOfBoek, boekVerbruik, boekResultaat } from "./budget.js";
 import { bouwContext, contextTekst } from "./prompt.js";
 import { leesJson } from "./plan.js";
 import { VOEDINGSVOORKEUREN } from "./voeding-velden.js";
@@ -168,7 +168,7 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
   if (grens.error) return grens;
   const richtlijn = grens.richtlijn;
 
-  const rem = await magNog(admin, gymId);
+  const rem = await magNogOfBoek(admin, { gymId, memberId, soort: "menu" });
   if (!rem.mag) return { error: `De coach kan nu even geen menu maken (${rem.reden}).` };
 
   // ---- 2. De vraag ----
@@ -193,12 +193,20 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
     maxTokens: 8000,
     temperatuur: 0.5,
   });
-  await boekVerbruik(admin, { gymId, memberId, soort: "menu", uitkomst: uit });
-  if (!uit.ok) return { error: "De coach kon geen menu opstellen. Probeer het zo dadelijk opnieuw." };
+  // Met afstand de duurste aanroep van het systeem (Sonnet, 8.000 tokens uitvoer). Juist hier moet
+  // zichtbaar zijn wanneer er betaald werd zonder dat er een menu uitrolde — zie 0161.
+  const boeking = await boekVerbruik(admin, { gymId, memberId, soort: "menu", uitkomst: uit });
+  if (!uit.ok) {
+    await boekResultaat(admin, boeking.id, "gateway_faalde");
+    return { error: "De coach kon geen menu opstellen. Probeer het zo dadelijk opnieuw." };
+  }
 
   const json = leesJson(uit.tekst);
   const menu = schoonMenu(json);
-  if (!menu) return { error: "Het menu kwam onvolledig terug. Probeer het opnieuw." };
+  if (!menu) {
+    await boekResultaat(admin, boeking.id, "json_onleesbaar");
+    return { error: "Het menu kwam onvolledig terug. Probeer het opnieuw." };
+  }
 
   const { data, error } = await admin.from("coaching_mealweeks").upsert({
     gym_id: gymId, member_id: memberId, plan_id: planId, weeknummer,
@@ -207,8 +215,12 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
     toelichting: typeof json?.toelichting === "string" ? json.toelichting.slice(0, 800) : null,
     toestemming_at: profiel.coaching_toestemming_at,
   }, { onConflict: "member_id,plan_id,weeknummer" }).select("id").single();
-  if (error) return { error: `Het menu kon niet bewaard worden: ${error.message}` };
+  if (error) {
+    await boekResultaat(admin, boeking.id, "opslag_faalde");
+    return { error: `Het menu kon niet bewaard worden: ${error.message}` };
+  }
 
+  await boekResultaat(admin, boeking.id, "menu_geschreven");
   return { ok: true, mealweekId: data.id, richtlijn, kostMicro: uit.kostMicro };
 }
 

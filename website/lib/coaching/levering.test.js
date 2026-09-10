@@ -98,11 +98,28 @@ describe("de grenzen van de AI-coach", () => {
     expect(zorg).toMatch(/richtlijnVoor\(profiel\)/);
   });
 
-  it("de dagrem geldt ook voor de maaltijdmodule", () => {
+  it("de dagrem geldt ook voor de maaltijdmodule, en een weigering laat een spoor na", () => {
     const maak = lees("lib/coaching/maaltijd.js");
     const stuk = maak.slice(maak.indexOf("export async function maakWeekmenu"));
-    expect(stuk).toMatch(/magNog\(admin, gymId\)/);
+    // `magNogOfBoek` in plaats van `magNog`: de rem werkte al, maar hij zweeg. Het commentaar
+    // bovenaan budget.js belooft sinds dag één "een melding in het logboek zodat de eigenaar weet
+    // dat hij hem moet verhogen" — en die melding bestond niet, want magNog staat vóór
+    // boekVerbruik en een geweigerde aanroep liet dus precies niets na.
+    expect(stuk).toMatch(/magNogOfBoek\(admin, \{ gymId, memberId, soort: "menu" \}\)/);
     expect(stuk).toMatch(/boekVerbruik\(/);
+    // En de duurste aanroep van het systeem moet vertellen of er iets uitkwam.
+    expect(stuk).toMatch(/boekResultaat\(admin, boeking\.id, "menu_geschreven"\)/);
+  });
+
+  it("elke modelaanroep boekt wat eruit KWAM, niet alleen dat de gateway antwoordde", () => {
+    // Op productie stonden drie plan-aanroepen op ok=true, samen 98.460 micro-USD, tegenover één
+    // plan. 72% van het geld ging naar niets, en de beheerpagina toonde "Mislukt: 0". `ok` betekent
+    // alleen "er kwam tekst terug" — het boeken gebeurt vóór lezen, keuren en opslaan. Zie 0161.
+    const p = lees("lib/coaching/plan.js");
+    for (const uitkomst of ["gateway_faalde", "json_onleesbaar", "geen_oefeningen", "afgekeurd", "opslag_faalde", "plan_geschreven", "zin_geschreven"]) {
+      expect(p).toContain(`"${uitkomst}"`);
+    }
+    expect(lees("lib/coaching/budget.js")).toMatch(/export async function boekResultaat/);
   });
 
   it("een mijlpaal wordt maar één keer gevierd", () => {

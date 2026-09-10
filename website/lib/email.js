@@ -472,7 +472,7 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
 }
 
 // ---- Member: access code, sent ~5 minutes before the session starts ----
-export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl, reportToken = null, zaalNotitie = null, workout = null }) {
+export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl, reportToken = null, zaalNotitie = null, workout = null, kind = null }) {
   // Persoonlijk vs reserve is geen detail: de eerste vervalt vanzelf na de sessie, de tweede is de
   // vaste code van de gym en blijft altijd geldig. Wie dat niet weet, stuurt hem gedachteloos door.
   const codeCaption = personal ? "Jouw persoonlijke code" : "Reservecode";
@@ -564,7 +564,9 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
         </div>`,
       cta: { href: `${SITE}/huisregels`, label: "Toegang & huisregels" },
     }),
-    FROM_BOOKING
+    FROM_BOOKING,
+    undefined,
+    kind || "toegangscode",
   );
 }
 
@@ -1361,7 +1363,7 @@ export async function sendSessionFeedback({ to, name, token, startsAt, uitschrij
 // Twee gedaanten in één functie, want het zijn twee momenten in hetzelfde ritme: eerst vragen hoe
 // het ging, daarna de nieuwe week. Ze apart houden zou betekenen dat een lid op zondag twee mails
 // krijgt van dezelfde afzender over hetzelfde onderwerp.
-export async function sendCoachingWeek({ to, name, soort, weekNr, totaalWeken, analyse, sessies = [], gedaan = 0, gepland = 0, menu = null, mijlpaal = null }) {
+export async function sendCoachingWeek({ to, name, soort, weekNr, totaalWeken, analyse, sessies = [], gedaan = 0, gepland = 0, menu = null, mijlpaal = null, kind = null }) {
   const checkin = soort === "checkin";
   const afgerond = soort === "afgerond";
   const titel = afgerond ? "Je plan zit erop" : checkin ? "Hoe ging je week?" : `Week ${weekNr} staat klaar`;
@@ -1417,6 +1419,11 @@ export async function sendCoachingWeek({ to, name, soort, weekNr, totaalWeken, a
         </p>` : ""}${lijst}${boodschappen}`,
       cta: knop,
     }),
-    FROM_BOOKING
+    FROM_BOOKING,
+    undefined,
+    // `kind` maakt de coach filterbaar in /beheer/inbox → Automatisch, en geeft de testknop een
+    // eigen etiket. GEEN bestaande waarde hergebruiken: vijf dedupe-remmen tellen rijen in
+    // email_log, en een testmail met de verkeerde kind onderdrukt de échte mail tot 60 dagen.
+    kind || (afgerond ? "coaching_afgerond" : checkin ? "coaching_checkin" : "coaching_week"),
   );
 }
