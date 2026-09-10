@@ -120,6 +120,27 @@ describe("de grenzen van de AI-coach", () => {
     expect(stuk.slice(0, 600)).toMatch(/try \{/);
   });
 
+  it("de proefgroep-poort staat op elke ingang", () => {
+    // Vijf plekken kunnen de AI-coach zichtbaar maken. Vergeet er één, en de functie lekt naar
+    // 86 leden terwijl ze voor twee bedoeld is.
+    for (const bestand of [
+      "app/(site)/coaching/page.jsx",
+      "app/(site)/coaching/actions.js",
+      "app/(site)/account/page.jsx",
+      "app/(site)/training/page.jsx",
+      "app/api/cron/coaching/route.js",
+    ]) {
+      expect(lees(bestand), `${bestand} mist de poort`).toMatch(/magCoaching\(/);
+    }
+  });
+
+  it("de poort zit in één plek voor alle server actions, niet per actie herhaald", () => {
+    // Per actie herhalen is hem ooit vergeten. De controle hoort in ik().
+    const a = lees("app/(site)/coaching/actions.js");
+    const inIk = /async function ik\(\)[\s\S]{0,400}?magCoaching\(profile\)/.test(a);
+    expect(inIk).toBe(true);
+  });
+
   it("de privacyverklaring noemt het model als verwerker", () => {
     // Zonder deze vermelding is elke aanroep een doorgifte aan een niet-vermelde verwerker — dat
     // was precies de reden dat de vorige AI-generator uitgezet werd (audit G0-6).

@@ -8,6 +8,7 @@ import ProgressPanel from "@/components/progress/ProgressPanel";
 import WorkoutPlayer from "./WorkoutPlayer";
 import VandaagKaart from "./VandaagKaart";
 import { bouwDagen, kiesDagId, schatMinuten } from "@/lib/training-dagen";
+import { magCoaching } from "@/lib/coaching/toegang.js";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn training | Fittin'" };
@@ -16,8 +17,9 @@ const EX_FIELDS = "id, name, slug, muscle, category, primary_muscles, secondary_
 
 export default async function Training() {
   if (!isSupabaseConfigured) redirect("/");
-  const { user } = await getSessionProfile();
+  const { user, profile: mijnProfiel } = await getSessionProfile();
   if (!user) redirect("/login?next=/training");
+  const coachOpen = magCoaching(mijnProfiel);
 
   const supabase = await createClient();
   const [{ data: program }, { data: logs }, { data: coachLink }, { data: feedback }, { data: aiPlan }] = await Promise.all([
@@ -44,7 +46,7 @@ export default async function Training() {
   // gewoon programma weggeschreven. Alleen: afvinken en lezen wat je coach schreef gebeurt op
   // /coaching, en zonder deze strook is dat nergens te zien vanaf hier.
   let coachWeek = null;
-  if (aiPlan?.id) {
+  if (coachOpen && aiPlan?.id) {
     const { data: w } = await supabase.from("coaching_weeks")
       .select("weeknummer, unlocked_at, completed_at").eq("plan_id", aiPlan.id).order("weeknummer");
     coachWeek = [...(w || [])].reverse().find((x) => x.unlocked_at && !x.completed_at) || null;
@@ -85,7 +87,7 @@ export default async function Training() {
         </div>
         {coachName && <p className="mt-2 text-sm text-brand/60">Samengesteld door {coachName}</p>}
 
-        {aiPlan && (
+        {coachOpen && aiPlan && (
           <Link href="/coaching"
             className="anim-in mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent/30 bg-accent/5 px-5 py-3.5 transition hover:border-accent">
             <span className="min-w-0">

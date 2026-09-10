@@ -6,6 +6,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { maakPlan, openVolgendeWeek } from "@/lib/coaching/plan.js";
 import { coachAan } from "@/lib/coaching/model.js";
 import { zorgVoorMenu, maakWeekmenu, maaltijdenAan, VOEDINGSVOORKEUREN } from "@/lib/coaching/maaltijd.js";
+import { magCoaching } from "@/lib/coaching/toegang.js";
 import { keurGeboortedatum } from "@/lib/aanmelding-velden";
 
 const MODULES = ["workouts", "mealplan", "motivatie"];
@@ -20,6 +21,8 @@ const MODULES = ["workouts", "mealplan", "motivatie"];
 async function ik() {
   const { user, profile } = await getSessionProfile();
   if (!user || !profile) return null;
+  // Één poort voor alle acties. Hem per actie herhalen is hem ooit vergeten.
+  if (!magCoaching(profile)) return null;
   return { user, profile, admin: createAdminClient() };
 }
 

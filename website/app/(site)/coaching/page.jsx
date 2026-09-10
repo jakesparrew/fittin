@@ -8,6 +8,7 @@ import IntakeWizard from "@/components/coaching/IntakeWizard";
 import WeekPaneel from "@/components/coaching/WeekPaneel";
 import MaaltijdPaneel from "@/components/coaching/MaaltijdPaneel";
 import { maaltijdenAan, richtlijnVoor } from "@/lib/coaching/maaltijd.js";
+import { magCoaching } from "@/lib/coaching/toegang.js";
 import { MIJLPALEN } from "@/lib/coaching/mijlpalen.js";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,9 @@ export default async function CoachingPagina() {
   const { user, profile } = await getSessionProfile();
   if (!user) redirect("/login?next=/coaching");
   if (profile?.role === "coach") redirect("/coach");
+  // De AI-coach draait voorlopig voor een proefgroep. Wie er niet in zit, hoort niet te weten dat
+  // deze pagina bestaat — vandaar een omleiding en geen "geen toegang"-scherm.
+  if (!magCoaching(profile)) redirect("/account");
 
   const admin = createAdminClient();
   const dossier = await dossierVoor(admin, user.id);

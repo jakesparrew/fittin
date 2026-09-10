@@ -5,6 +5,7 @@ import { openVolgendeWeek } from "@/lib/coaching/plan.js";
 import { coachAan } from "@/lib/coaching/model.js";
 import { zorgVoorMenu, menuVoorWeek, maaltijdenAan } from "@/lib/coaching/maaltijd.js";
 import { noteerMijlpalen, markeerGemeld, zwaarste, wekenOpRij } from "@/lib/coaching/mijlpalen.js";
+import { magCoaching } from "@/lib/coaching/toegang.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,7 +71,7 @@ export async function GET(req) {
 
   const admin = createAdminClient();
   const fouten = [];
-  let gevraagd = 0, geopend = 0, gepauzeerd = 0, afgerond = 0, menus = 0;
+  let gevraagd = 0, geopend = 0, gepauzeerd = 0, afgerond = 0, menus = 0, buitenGroep = 0;
 
   const { data: plannen, error } = await admin
     .from("coaching_plans").select("id, gym_id, member_id, weken").eq("status", "lopend");
@@ -96,6 +97,9 @@ export async function GET(req) {
 
       const { data: lid } = await admin.from("profiles").select("*").eq("id", plan.member_id).maybeSingle();
       if (!lid?.email) continue;
+      // Wie buiten de proefgroep valt, krijgt geen zondagmail — ook niet als hij ooit een plan
+      // maakte toen de lijst ruimer stond. De poort is de poort, in beide richtingen.
+      if (!magCoaching(lid)) { buitenGroep++; continue; }
 
       // ---- 1. Nog geen check-in en nog niet te lang bezig: vragen hoe het ging ----
       if (!checkin && dagenOpen < 10) {
@@ -202,12 +206,12 @@ export async function GET(req) {
   try {
     await admin.from("cron_runs").insert({
       job: "coaching_week", ok: fouten.length === 0,
-      detail: { gevraagd, geopend, gepauzeerd, afgerond, menus, ...(fouten.length ? { fouten } : {}) },
+      detail: { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, ...(fouten.length ? { fouten } : {}) },
     });
   } catch {}
 
   return NextResponse.json(
-    { gevraagd, geopend, gepauzeerd, afgerond, menus, ...(fouten.length ? { fouten } : {}) },
+    { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, ...(fouten.length ? { fouten } : {}) },
     { status: fouten.length ? 500 : 200 }
   );
 }
