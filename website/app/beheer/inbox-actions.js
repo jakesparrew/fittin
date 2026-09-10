@@ -46,6 +46,31 @@ export async function markRead(id, read = true) {
   await createAdminClient().from("inbound_emails").update({ read }).eq("id", id).eq("gym_id", profile.gym_id);
 }
 
+/**
+ * Alles in één keer op gelezen zetten.
+ *
+ * Waarom dit bestaat: de teller in de zijbalk telt ongelezen post, en post blijft binnenkomen —
+ * automatische antwoorden, reclame, bevestigingen. Zonder een knop om de stapel plat te slaan
+ * staat daar altijd een getal, en een melding die er altijd staat is geen melding meer.
+ *
+ * De zijbalk hoort bij de layout, niet bij de pagina. `revalidatePath` met "layout" is dus de
+ * enige manier waarop het getal ook echt naar 0 gaat zonder harde herlaadbeurt.
+ */
+export async function markAllRead() {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const { error: fout, count } = await createAdminClient()
+    .from("inbound_emails")
+    .update({ read: true }, { count: "exact" })
+    .eq("gym_id", profile.gym_id)
+    .eq("archived", false)
+    .eq("read", false);
+  if (fout) return { error: `Kon de post niet op gelezen zetten: ${fout.message}` };
+  revalidatePath("/beheer/inbox");
+  revalidatePath("/beheer", "layout");
+  return { ok: true, message: count ? `${count} bericht${count === 1 ? "" : "en"} op gelezen gezet ✓` : "Alles stond al op gelezen ✓" };
+}
+
 export async function archiveInbox(formData) {
   const { profile, error } = await requireStaff(true);
   if (error) return { error };
