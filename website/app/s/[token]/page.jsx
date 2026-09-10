@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { sessieVanToken, vinkAfViaToken } from "./actions";
+import { sessieVanToken, vinkAfViaToken, haalVinkjeWeg } from "./actions";
 import { AFVINK_OORDELEN, afvinkPad } from "@/lib/coaching/levering.js";
 
 // De landingspagina van de drie knoppen uit de deurcodemail. Eén tik = sessie afgevinkt, zonder
@@ -92,6 +92,15 @@ export default async function SessieAfvinken({ params, searchParams }) {
                 : `Nog ${d.gepland - d.gedaan} te gaan. Boek je volgende moment wanneer het je uitkomt.`}
           </p>
         </div>
+      )}
+
+      {gedaan && (
+        <form action={haalVinkjeWeg} className="mt-4">
+          <input type="hidden" name="token" value={token} />
+          <button type="submit" className="text-xs font-bold text-brand/45 underline transition hover:text-brand">
+            Toch niet getraind — vinkje weghalen
+          </button>
+        </form>
       )}
 
       <div className="mt-5 flex flex-wrap gap-2">

@@ -1,4 +1,5 @@
 "use server";
+import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { magCoaching } from "@/lib/coaching/toegang.js";
 
@@ -94,8 +95,15 @@ export async function vinkAfViaToken(token, oordeel) {
   return { ok: true };
 }
 
-/** Het vinkje weghalen. Wie per ongeluk tikte, moet dat kunnen terugdraaien zonder in te loggen. */
-export async function haalVinkjeWeg(token) {
+/**
+ * Het vinkje weghalen. Wie per ongeluk tikte, moet dat kunnen terugdraaien zonder in te loggen —
+ * anders staat er een sessie afgevinkt die niet gebeurd is, en die stuurt wél de volgende week.
+ *
+ * Bewust een formulier (POST) en geen link: terugdraaien via een URL zou door dezelfde
+ * vooruitlaadmechaniek geraakt worden die de afvinkknoppen `prefetch={false}` oplevert.
+ */
+export async function haalVinkjeWeg(formData) {
+  const token = String(formData?.get?.("token") || "");
   const d = await sessieVanToken(token);
   if (!d || d.status !== "ok") return { error: "Deze link werkt niet meer." };
 
@@ -103,5 +111,7 @@ export async function haalVinkjeWeg(token) {
   const { error } = await admin.from("coaching_sessions")
     .update({ gedaan_at: null, oordeel: null }).eq("id", d.sessie.id);
   if (error) return { error: "Bewaren lukte niet." };
+  revalidatePath(`/s/${token}`);
+  revalidatePath("/coaching");
   return { ok: true };
 }
