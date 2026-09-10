@@ -98,8 +98,32 @@ Nieuwe regel, klein gehouden: **`energie = laag` of `verloop = moeilijk` schrapt
 "Te licht" telt die week als "goed", en de reeks-teller gaat terug naar nul. Geen volumekorting,
 dus geen neerwaartse spiraal — de week blijft staan waar hij staat tot het lid weer bijkomt.
 
+> *Moet de check-in één moment zijn, of hoort een deel ervan bij de sessie zelf?*
+
+**Gesplitst, en dat is precies wat werkveld 2 al deed.** Het oordeel over de zwaarte hoort bij de
+sessie — je weet het op het moment dat je de zaal verlaat, niet vier dagen later. Dat is nu één tik
+in de deurcodemail. Wat overblijft in de check-in is wat je pas over een héle week kan zeggen:
+verliep het vlot, hoe was je energie, was er pijn. Dat blijft één moment.
+
+Praktisch gevolg: het per-sessie-oordeel wint van `checkin.zwaarte` in `openVolgendeWeek` — de
+specifieke waarneming verslaat de samenvatting achteraf. Zo stond het al, en nu klopt de weg
+erheen ook.
+
 Het vrije tekstveld blijft, ongewijzigd. Het is het enige plek waar iemand iets kan zeggen dat we
 niet voorzien hebben, en het kost een lid niets om het leeg te laten.
+
+## Klacht 6 — modules die je aanzette zijn onzichtbaar
+
+Nagekeken per module. **Meal plan** toont zich wel: `MaaltijdPaneel` heeft een eigen lege toestand
+met een knop. **Motivatie niet** — dat blok stond achter `mijlpalen.length > 0`, dus wie het aanzette
+zag er niets van tot er toevallig iets bereikt was. Een module die je koos en die onzichtbaar blijft,
+voelt als een module die niet werkt.
+
+Tegelijk staat er in "wat je niet mag breken": *geen nieuwe permanente UI zonder dat er iets te tonen
+is*. Die twee botsen alleen als je denkt dat het antwoord een leeg vak is. Het antwoord is een
+**doel**: `volgendeMijlpaal()` geeft de eerstvolgende die nog niet gehaald is, met de afstand erbij
+("Tien sessies · nog 7 sessies"). Dat is inhoud, geen behang, en het blok blijft volledig onzichtbaar
+voor wie de module niet koos.
 
 ## Werkveld 4 — de coach als aanwezigheid
 

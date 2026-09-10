@@ -10,7 +10,7 @@ import MaaltijdPaneel from "@/components/coaching/MaaltijdPaneel";
 import PlanBeheer from "@/components/coaching/PlanBeheer";
 import { maaltijdenAan, richtlijnVoor } from "@/lib/coaching/maaltijd.js";
 import { magCoaching } from "@/lib/coaching/toegang.js";
-import { MIJLPALEN } from "@/lib/coaching/mijlpalen.js";
+import { MIJLPALEN, volgendeMijlpaal } from "@/lib/coaching/mijlpalen.js";
 import { volgendeStap, dagenTeGaan } from "@/lib/coaching/volgendestap.js";
 import { fmt } from "@/lib/format";
 
@@ -73,7 +73,7 @@ export default async function CoachingPagina() {
   }
 
   // ---------- Wél een plan: het dossier ----------
-  const { plan, weken, open, sessies, oefeningen, checkin, menu, mijlpalen, boekingen, vorigVoorschrift } = dossier;
+  const { plan, weken, open, sessies, oefeningen, checkin, menu, mijlpalen, boekingen, vorigVoorschrift, stand } = dossier;
   const eten = maaltijdenAan(profile);
   const kanMenuMaken = eten && !richtlijnVoor(profile).error;
   const afgevinkt = sessies.filter((s) => s.gedaan_at).length;
@@ -96,6 +96,9 @@ export default async function CoachingPagina() {
   // Elke afgevinkte sessie draagt de boeking waaraan ze hing; die kunnen we terugvertalen naar een
   // datum zodat "sessie 2" een dag krijgt in plaats van een nummer te blijven.
   const boekingOp = Object.fromEntries((boekingen || []).map((b) => [b.id, b.starts_at]));
+  // De motivatiemodule is een keuze uit de intake; wie ze niet koos, hoort hier niets over te zien.
+  const motivatie = Array.isArray(profile?.coaching_modules) && profile.coaching_modules.includes("motivatie");
+  const volgende = motivatie && stand ? volgendeMijlpaal(stand) : null;
 
   return (
     <Kader>
@@ -204,9 +207,15 @@ export default async function CoachingPagina() {
         </div>
       )}
 
-      {mijlpalen.length > 0 && (
+      {/* Wie Motivatie aanzette, zag hier NIETS tot er toevallig iets bereikt was — een module die
+          je koos en die onzichtbaar blijft, voelt als een module die niet werkt. Tegelijk hoort lege
+          UI onzichtbaar te zijn, dus staat er geen leeg vak maar het eerstvolgende doel. Wie de
+          module niet koos, ziet dit blok nog steeds niet. */}
+      {motivatie && (mijlpalen.length > 0 || volgende) && (
         <div className="mt-8">
-          <h2 className="mb-3 font-display text-lg font-black text-brand">Wat je al haalde</h2>
+          <h2 className="mb-3 font-display text-lg font-black text-brand">
+            {mijlpalen.length > 0 ? "Wat je al haalde" : "Waar je naartoe werkt"}
+          </h2>
           <ul className="flex flex-wrap gap-2">
             {mijlpalen.filter((m) => MIJLPALEN[m.soort]).map((m) => (
               <li key={m.soort} title={MIJLPALEN[m.soort].tekst}
@@ -214,6 +223,11 @@ export default async function CoachingPagina() {
                 {MIJLPALEN[m.soort].titel}
               </li>
             ))}
+            {volgende && (
+              <li className="rounded-full border-2 border-dashed border-borderc px-4 py-2 text-xs font-bold text-brand/50">
+                {volgende.titel} · {volgende.nog}
+              </li>
+            )}
           </ul>
         </div>
       )}

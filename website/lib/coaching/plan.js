@@ -17,6 +17,7 @@ import { roepMetTerugval, MODELLEN } from "./model.js";
 import { magNog, boekVerbruik } from "./budget.js";
 import { bouwContext, planSysteem, planVraag, analyseSysteem, analyseVraag, herplanSysteem } from "./prompt.js";
 import { kiesOefeningen, verdeelFocus, keurVoorschriften } from "./keuze.js";
+import { wekenOpRij } from "./mijlpalen.js";
 import { volgendeWeek, isRustweek, RUSTWEEK_DEEL, reeksAanHetEind, raaktPijn, noemtEenPlek, dempOordeel, uitgeput } from "./progressie.js";
 
 /**
@@ -538,6 +539,24 @@ export async function dossierVoor(admin, memberId) {
   const { data: mijlpalen } = await admin.from("coaching_mijlpalen")
     .select("soort, created_at").eq("member_id", memberId).order("created_at");
 
+  // De stand van het HELE plan, voor de eerstvolgende mijlpaal. Wie Motivatie aanzette zag daar
+  // niets van tot er toevallig iets bereikt was — een gekozen module die onzichtbaar blijft, voelt
+  // als een module die niet werkt. Nu staat er een doel in plaats van een leeg vak.
+  const alleWeekIds = (weken || []).map((w) => w.id);
+  const { data: alleSessies } = alleWeekIds.length
+    ? await admin.from("coaching_sessions").select("week_id, gedaan_at").in("week_id", alleWeekIds)
+    : { data: [] };
+  const volledig = (weken || []).map((w) => {
+    const eigen = (alleSessies || []).filter((x) => x.week_id === w.id);
+    return eigen.length > 0 && eigen.every((x) => x.gedaan_at);
+  });
+  const stand = {
+    afgevinkt: (alleSessies || []).filter((x) => x.gedaan_at).length,
+    wekenAf: (weken || []).filter((w) => w.completed_at).length,
+    planWeken: plan.weken,
+    opRij: wekenOpRij(volledig),
+  };
+
   // De boekingen van dit lid. Zonder deze had het scherm geen enkele datum: "week 1 van 8, 0 van 3
   // gedaan" is een lijstje, geen plan. En zonder boeking gebeurt er niets — geen zaal, geen
   // deurcode, geen workout in de mail — dus het tekort aan boekingen is de belangrijkste stand op
@@ -566,7 +585,7 @@ export async function dossierVoor(admin, memberId) {
   return {
     plan, weken: weken || [], open, sessies, oefeningen,
     checkin: checkin || null, menu: menu || null, mijlpalen: mijlpalen || [],
-    boekingen: boekingen || [], vorigVoorschrift,
+    boekingen: boekingen || [], vorigVoorschrift, stand,
   };
 }
 

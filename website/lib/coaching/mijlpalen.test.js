@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { bepaalMijlpalen, zwaarste, wekenOpRij, MIJLPALEN } from "./mijlpalen.js";
+import fs from "node:fs";
+import path from "node:path";
+
+const ROOT = path.resolve(import.meta.dirname, "..", "..");
+const lees = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
+import { bepaalMijlpalen, zwaarste, wekenOpRij, MIJLPALEN, volgendeMijlpaal } from "./mijlpalen.js";
 
 describe("welke mijlpalen bereikt zijn", () => {
   it("geeft niets terug bij een leeg dossier", () => {
@@ -73,5 +78,60 @@ describe("weken op rij", () => {
     expect(wekenOpRij([true, true, false])).toBe(0);
     expect(wekenOpRij([])).toBe(0);
     expect(wekenOpRij(null)).toBe(0);
+  });
+});
+
+describe("waar je naartoe werkt", () => {
+  // Klacht 6 uit de brief: modules die je aanzette zijn onzichtbaar tot er toevallig iets bestaat.
+  // Wie Motivatie koos, zag NIETS tot er een mijlpaal gehaald was. Tegelijk geldt "leeg is
+  // onzichtbaar", dus het antwoord is geen leeg vak maar een doel.
+
+  it("wijst een kersvers plan naar de eerste sessie", () => {
+    expect(volgendeMijlpaal({ afgevinkt: 0, wekenAf: 0, planWeken: 8, opRij: 0 }))
+      .toMatchObject({ soort: "eerste_sessie", nog: "nog 1 sessie" });
+  });
+
+  it("schuift op zodra er iets gehaald is", () => {
+    expect(volgendeMijlpaal({ afgevinkt: 1, wekenAf: 0, planWeken: 8, opRij: 0 }).soort).toBe("eerste_week");
+    expect(volgendeMijlpaal({ afgevinkt: 3, wekenAf: 1, planWeken: 8, opRij: 1 }))
+      .toMatchObject({ soort: "tien_sessies", nog: "nog 7 sessies" });
+  });
+
+  it("gaat op rang, van licht naar zwaar — niet wat er over twee maanden komt", () => {
+    // Een doel dat buiten bereik ligt, motiveert niemand.
+    expect(volgendeMijlpaal({ afgevinkt: 0, wekenAf: 0, planWeken: 12, opRij: 0 }).soort).toBe("eerste_sessie");
+  });
+
+  it("slaat halfweg over bij een kort plan — net als bepaalMijlpalen", () => {
+    // Bij drie weken valt "halfweg" samen met "je eerste week is rond"; dat vier je niet twee keer.
+    const v = volgendeMijlpaal({ afgevinkt: 12, wekenAf: 1, planWeken: 3, opRij: 1 });
+    expect(v.soort).not.toBe("halfweg");
+  });
+
+  it("telt enkelvoud en meervoud correct — 'nog 1 sessies' leest als een bug", () => {
+    expect(volgendeMijlpaal({ afgevinkt: 9, wekenAf: 1, planWeken: 8, opRij: 1 }).nog).toBe("nog 1 sessie");
+    expect(volgendeMijlpaal({ afgevinkt: 0, wekenAf: 0, planWeken: 8, opRij: 0 }).nog).toBe("nog 1 sessie");
+  });
+
+  it("zwijgt wanneer alles gehaald is", () => {
+    expect(volgendeMijlpaal({ afgevinkt: 26, wekenAf: 8, planWeken: 8, opRij: 8 })).toBeNull();
+  });
+
+  it("noemt alleen mijlpalen die echt bestaan", () => {
+    for (const stand of [
+      { afgevinkt: 0, wekenAf: 0, planWeken: 6, opRij: 0 },
+      { afgevinkt: 11, wekenAf: 2, planWeken: 6, opRij: 2 },
+      { afgevinkt: 20, wekenAf: 5, planWeken: 6, opRij: 5 },
+    ]) {
+      const v = volgendeMijlpaal(stand);
+      if (v) expect(MIJLPALEN[v.soort]).toBeTruthy();
+    }
+  });
+
+  it("het blok hangt aan de motivatiemodule, niet aan het bestaan van een mijlpaal", () => {
+    // Anders is de module weer onzichtbaar voor precies wie er het meest aan heeft: de beginner.
+    const p = lees("app/(site)/coaching/page.jsx");
+    expect(p).toMatch(/\{motivatie && \(mijlpalen\.length > 0 \|\| volgende\)/);
+    expect(p).toMatch(/includes\("motivatie"\)/);
   });
 });

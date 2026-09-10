@@ -75,6 +75,40 @@ export function bepaalMijlpalen({ afgevinkt = 0, wekenAf = 0, planWeken = 0, opR
   return uit;
 }
 
+/**
+ * De eerstvolgende mijlpaal die nog niet gehaald is, met hoe ver het nog is.
+ *
+ * Waarom dit bestaat: wie Motivatie aanzette in de intake, zag daar op zijn scherm NIETS van tot er
+ * toevallig iets bereikt was. Een module die je koos en die onzichtbaar blijft, voelt als een module
+ * die niet werkt. Tegelijk geldt de regel dat lege UI onzichtbaar hoort te zijn — dus tonen we geen
+ * leeg vak maar een doel. Een doel is inhoud.
+ *
+ * Puur, net als de rest van dit bestand: geen databank, geen klok.
+ * @returns {null | {soort:string, titel:string, nog:string}}
+ */
+export function volgendeMijlpaal({ afgevinkt = 0, wekenAf = 0, planWeken = 0, opRij = 0 }) {
+  const sessies = (n) => `nog ${n} ${n === 1 ? "sessie" : "sessies"}`;
+  const weken = (n) => `nog ${n} ${n === 1 ? "week" : "weken"}`;
+  const halfwegBij = planWeken >= 4 ? Math.ceil(planWeken / 2) : null;
+
+  // Op rang, van licht naar zwaar: je hoort te zien wat er nú binnen bereik ligt, niet wat er over
+  // twee maanden komt.
+  const kandidaten = [
+    ["eerste_sessie", afgevinkt >= 1, () => sessies(1 - afgevinkt)],
+    ["eerste_week", wekenAf >= 1, () => weken(1 - wekenAf)],
+    ["tien_sessies", afgevinkt >= 10, () => sessies(10 - afgevinkt)],
+    ["drie_op_rij", opRij >= 3, () => `nog ${3 - opRij} ${3 - opRij === 1 ? "volle week" : "volle weken"} op rij`],
+    ["halfweg", halfwegBij === null || wekenAf >= halfwegBij, () => weken(halfwegBij - wekenAf)],
+    ["vijfentwintig_sessies", afgevinkt >= 25, () => sessies(25 - afgevinkt)],
+    ["plan_af", planWeken > 0 && wekenAf >= planWeken, () => weken(planWeken - wekenAf)],
+  ];
+
+  for (const [soort, gehaald, afstand] of kandidaten) {
+    if (!gehaald) return { soort, titel: MIJLPALEN[soort].titel, nog: afstand() };
+  }
+  return null;
+}
+
 /** Van een lijst soorten naar de zwaarste. Null wanneer de lijst leeg is. */
 export function zwaarste(soorten) {
   const geldig = (soorten || []).filter((s) => MIJLPALEN[s]);
