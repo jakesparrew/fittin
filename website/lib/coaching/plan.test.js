@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { leesJson, schoonBlokken, zelfgeschrevenZin } from "./plan.js";
+import { leesJson, schoonBlokken, zelfgeschrevenZin, eersteWeekZin } from "./plan.js";
 
 // De pure stukken van de orkestratie. Wat de databank raakt wordt hier niet getest — dat gebeurt
 // end-to-end op een testaccount. Wat hier staat is precies wat er misgaat zonder test: een model
@@ -88,5 +88,40 @@ describe("de zin die er staat als het model niets zegt", () => {
 
   it("legt een rustweek uit als bedoeld, niet als achterstand", () => {
     expect(zelfgeschrevenZin({ besluit: "door" }, 3, 3, true)).toMatch(/bewust een lichtere week/);
+  });
+});
+
+describe("de zin boven week 1", () => {
+  // Week 1 was de enige week zonder stem: `weekanalyse` wordt pas vanaf week 2 geschreven. Het
+  // eerste scherm dat iemand na de intake ziet — het scherm dat moet overtuigen — bevatte dus geen
+  // enkele zin die tegen hem ging.
+
+  it("noemt het aantal sessies in gewone taal", () => {
+    expect(eersteWeekZin({ sessiesPerWeek: 3, toon: "rustig" })).toMatch(/3 sessies/);
+    expect(eersteWeekZin({ sessiesPerWeek: 1, toon: "rustig" })).toMatch(/één sessie/);
+  });
+
+  it("zegt in beide tonen waarom week 1 licht is EN wat het afvinken doet", () => {
+    for (const toon of ["rustig", "scherp"]) {
+      const zin = eersteWeekZin({ sessiesPerWeek: 3, toon });
+      expect(zin).toMatch(/behapbaar/);
+      expect(zin).toMatch(/[Vv]ink/);
+    }
+  });
+
+  it("klinkt anders bij de scherpe toon — anders was die keuze in de intake decoratie", () => {
+    expect(eersteWeekZin({ sessiesPerWeek: 3, toon: "scherp" }))
+      .not.toBe(eersteWeekZin({ sessiesPerWeek: 3, toon: "rustig" }));
+  });
+
+  it("belooft geen resultaat en geen tijdlijn — dat is een harde grens van deze coach", () => {
+    for (const toon of ["rustig", "scherp"]) {
+      const zin = eersteWeekZin({ sessiesPerWeek: 4, toon });
+      expect(zin).not.toMatch(/\bkilo|\bkg\b|afvallen|resultaat|garandeer/i);
+    }
+  });
+
+  it("valt terug op een zinnig aantal wanneer er niets doorgegeven wordt", () => {
+    expect(eersteWeekZin({})).toMatch(/3 sessies/);
   });
 });

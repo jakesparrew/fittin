@@ -113,8 +113,11 @@ uitleg eromheen en zonder codeblok.
 
 Vorm:
 {
-  "samenvatting": "2 tot 3 zinnen die het lid als eerste leest: wat dit plan doet en waarom het bij
-                   zijn doel past. Spreek het lid aan, geen opsomming.",
+  "samenvatting": "2 tot 3 zinnen, gericht AAN het lid. Begin bij wat hij zelf antwoordde — zijn
+                   doel, zijn ervaring, hoe vaak hij traint — en zeg wat je daarom gekozen hebt.
+                   Begin NIET met 'Dit plan' of 'Het programma': dat leest als een
+                   productbeschrijving en niet als iemand die iets tegen jou zegt. Geen opsomming,
+                   geen belofte over resultaat of tijdlijn.",
   "weken": [ { "nr": 1, "focus": "korte omschrijving van maximaal 6 woorden" } ],
   "week1": {
     "sessies": [
@@ -144,7 +147,9 @@ Regels:
 - Verdeel de spiergroepen over de sessies; niet twee keer dezelfde categorie als hoofdoefening in
   dezelfde week, tenzij het lid maar één of twee keer per week traint.
 - "reps" is een getal. "rust" in seconden, tussen 45 en 180.
-- Voor een beginner: minder blokken, meer herhalingen, langere rust.`;
+- Voor een beginner: minder blokken, meer herhalingen, langere rust.
+- De samenvatting is het eerste wat dit lid van je leest. Ze moet klinken alsof je zijn antwoorden
+  gelezen hebt, niet alsof ze bij elk plan zou passen.`;
 }
 
 /** Prompt voor de wekelijkse zin. Klein en goedkoop; dit is het enige model-werk per week. */

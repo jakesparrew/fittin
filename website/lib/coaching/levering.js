@@ -8,6 +8,8 @@
 // deurcode vertrekt. Vooraf koppelen zou betekenen dat een verplaatste of geannuleerde boeking een
 // sessie meesleept, en dan klopt de volgorde van de week niet meer.
 
+import { magCoaching } from "./toegang.js";
+
 /**
  * Zoekt de sessie die bij deze boeking hoort en koppelt ze eraan vast.
  * Geeft null terug wanneer er niets te leveren valt — dan gaat de deurcodemail gewoon zonder blok.
@@ -16,6 +18,12 @@
  */
 export async function workoutVoorBoeking(admin, { bookingId, memberId }) {
   if (!bookingId || !memberId) return null;
+
+  // De proefgroep-poort geldt ook hier. Deze mail was de enige ingang die hem niet passeerde: wie
+  // ooit een plan maakte toen de lijst ruimer stond, kreeg zijn schema anders gewoon blijven
+  // toegestuurd. De poort is de poort, op alle vijf — nu zes — ingangen.
+  const { data: lid } = await admin.from("profiles").select("id, email, role").eq("id", memberId).maybeSingle();
+  if (!magCoaching(lid)) return null;
 
   const { data: plan } = await admin.from("coaching_plans")
     .select("id, weken, status").eq("member_id", memberId).eq("status", "lopend").maybeSingle();
@@ -82,4 +90,36 @@ export function oefeningRegel(o) {
 /** De kop boven het blok: "Week 3 · sessie 2 van 3 — Onderlichaam". */
 export function workoutKop(w) {
   return `Week ${w.weekNr} · sessie ${w.volgnummer} van ${w.totaal} — ${w.naam}`;
+}
+
+// ---------------------------------------------------------------------------
+// Afvinken vanuit de mail
+// ---------------------------------------------------------------------------
+//
+// Waarom hier en niet op /coaching: gemeten op 10-09-2026 stonden er 159 boekingen tegenover 20
+// rijen in `door_log` en zeven workout-logs ooit. De zaal kan het afvinken niet afleiden — wie zijn
+// keypadcode intypt laat geen spoor na — en de pagina waar het vinkje stond, wordt niet bezocht.
+//
+// Wat wél 100% dekking heeft is deze mail zelf. Dus verhuist de handeling naar waar het lid al is:
+// drie links onder zijn workout, één tik, geen login.
+//
+// De sleutel is `bookings.report_token` — hij zit al in deze mail (het meldpunt gebruikt hem) en is
+// al per boeking. Wat een gestolen link kan: één sessie van iemand anders afvinken. Geen gegevens,
+// geen geld, geen deur. Zie app/s/[token] voor het venster waarin hij geldig is.
+
+/** De drie tikken, in de volgorde waarin ze in de mail staan. */
+export const AFVINK_OORDELEN = [
+  { v: "te_licht", l: "Te licht" },
+  { v: "goed", l: "Goed" },
+  { v: "te_zwaar", l: "Te zwaar" },
+];
+
+/**
+ * Het pad van één afvinklink. Puur en zonder site-URL, zodat de mailtemplate en de tests dezelfde
+ * vorm gebruiken en dit bestand niets over hosting hoeft te weten.
+ */
+export function afvinkPad(token, oordeel) {
+  if (!token) return null;
+  const geldig = AFVINK_OORDELEN.some((o) => o.v === oordeel);
+  return `/s/${encodeURIComponent(token)}${geldig ? `?v=${oordeel}` : ""}`;
 }

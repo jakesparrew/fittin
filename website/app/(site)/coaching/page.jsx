@@ -11,6 +11,8 @@ import PlanBeheer from "@/components/coaching/PlanBeheer";
 import { maaltijdenAan, richtlijnVoor } from "@/lib/coaching/maaltijd.js";
 import { magCoaching } from "@/lib/coaching/toegang.js";
 import { MIJLPALEN } from "@/lib/coaching/mijlpalen.js";
+import { volgendeStap, dagenTeGaan } from "@/lib/coaching/volgendestap.js";
+import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -71,7 +73,7 @@ export default async function CoachingPagina() {
   }
 
   // ---------- Wél een plan: het dossier ----------
-  const { plan, weken, open, sessies, oefeningen, checkin, menu, mijlpalen } = dossier;
+  const { plan, weken, open, sessies, oefeningen, checkin, menu, mijlpalen, boekingen, vorigVoorschrift } = dossier;
   const eten = maaltijdenAan(profile);
   const kanMenuMaken = eten && !richtlijnVoor(profile).error;
   const afgevinkt = sessies.filter((s) => s.gedaan_at).length;
@@ -84,6 +86,17 @@ export default async function CoachingPagina() {
   const isLaatste = open?.weeknummer === plan.weken;
   const eerdere = weken.filter((w) => w.completed_at).reverse();
 
+  // De klok wordt hier één keer gelezen, in een servercomponent, en het RESULTAAT gaat naar
+  // beneden. Een client component die zelf `Date.now()` leest tijdens het renderen, levert een
+  // hydratatiefout op (#418) — dat is deze codebase al eens overkomen.
+  const nu = Date.now();
+  const stap = volgendeStap({ sessies, boekingen, checkin: !!checkin, magCheckin, laatsteWeek: isLaatste, nu });
+  const restDagen = dagenTeGaan(open?.unlocked_at, nu);
+  const komende = (boekingen || []).filter((b) => new Date(b.starts_at).getTime() > nu);
+  // Elke afgevinkte sessie draagt de boeking waaraan ze hing; die kunnen we terugvertalen naar een
+  // datum zodat "sessie 2" een dag krijgt in plaats van een nummer te blijven.
+  const boekingOp = Object.fromEntries((boekingen || []).map((b) => [b.id, b.starts_at]));
+
   return (
     <Kader>
       <div className="flex flex-wrap items-start justify-between gap-4">
@@ -92,6 +105,13 @@ export default async function CoachingPagina() {
           <h1 className="mt-1 font-display text-3xl font-black leading-tight text-brand">
             {open ? `Week ${open.weeknummer} van ${plan.weken}` : `Plan van ${plan.weken} weken`}
           </h1>
+          {/* Het scherm had geen enkele datum. "Week 1 van 8" zonder tijd is een lijstje. */}
+          {open && restDagen !== null && (
+            <p className="mt-1 text-sm text-ink-soft">
+              {restDagen === 0 ? "Deze week is rond — je coach kijkt zondag" : restDagen === 1 ? "Nog 1 dag deze week" : `Nog ${restDagen} dagen deze week`}
+              {open.is_rustweek ? " · lichtere week" : ""}
+            </p>
+          )}
         </div>
         {plan.status === "gepauzeerd" && (
           <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">Op pauze</span>
@@ -114,6 +134,39 @@ export default async function CoachingPagina() {
           );
         })}
       </div>
+
+      {/* Wat is het ENE ding dat nu moet gebeuren. Dit stond vroeger als tekstlink onder een
+          streep onderaan de pagina, terwijl er zonder boeking niets gebeurt. */}
+      {open && (
+        <div className={"anim-in mt-6 rounded-3xl p-5 " + (stap.stil ? "border border-borderc bg-white" : "border-2 border-accent bg-accent/5")}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-display text-lg font-black text-brand">{stap.titel}</p>
+              <p className="mt-1 max-w-xl text-sm leading-relaxed text-ink-soft">{stap.tekst}</p>
+              {stap.boeking && (
+                <p className="mt-2 text-sm font-bold text-brand">{fmt(stap.boeking.starts_at)}</p>
+              )}
+            </div>
+            {stap.knop && (
+              <Link href={stap.knop.href}
+                className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">
+                {stap.knop.label}
+              </Link>
+            )}
+          </div>
+
+          {/* De geboekte momenten zelf, want een datum is het enige wat een sessie echt maakt. */}
+          {komende.length > 0 && (
+            <ul className="mt-4 flex flex-wrap gap-2 border-t border-borderc pt-3">
+              {komende.slice(0, 4).map((b) => (
+                <li key={b.id} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand ring-1 ring-borderc">
+                  {fmt(b.starts_at)}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       {plan.samenvatting && (
         <div className="mt-6 rounded-3xl border border-borderc bg-white p-5">
@@ -140,7 +193,7 @@ export default async function CoachingPagina() {
             <h2 className="font-display text-lg font-black text-brand">Deze week</h2>
             <span className="text-sm text-ink-soft">{afgevinkt} van {sessies.length} gedaan</span>
           </div>
-          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} magCheckin={magCheckin} isLaatsteWeek={isLaatste} maaltijden={eten} />
+          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} magCheckin={magCheckin} isLaatsteWeek={isLaatste} maaltijden={eten} boekingOp={boekingOp} vorigVoorschrift={vorigVoorschrift} nu={nu} />
         </div>
       )}
 
@@ -185,10 +238,6 @@ export default async function CoachingPagina() {
           Je eerste week wordt klaargezet. Ververs deze pagina zo dadelijk.
         </p>
       )}
-
-      <p className="mt-6 text-sm text-ink-soft">
-        Nog geen moment geboekt? <Link href="/boeken" className="font-bold text-accentdark hover:underline">Boek je sessie</Link> — je workout gaat mee in je deurcodemail.
-      </p>
 
       {eerdere.length > 0 && (
         <details className="mt-8 rounded-3xl border border-borderc bg-white p-5">

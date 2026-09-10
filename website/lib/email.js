@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { workoutKop, oefeningRegel } from "@/lib/coaching/levering.js";
+import { workoutKop, oefeningRegel, afvinkPad, AFVINK_OORDELEN } from "@/lib/coaching/levering.js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { statGrid, barChart, sectionTitle, actionItem, calloutBox, delta, eur } from "@/lib/email-visuals";
 import { icsAttachment } from "@/lib/ics";
@@ -482,13 +482,29 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
   // De workout van de AI-coach reist mee in DEZE mail, en niet in een eigen bericht. Reden: dit is
   // de enige mail die iedereen opent — zonder de code raakt niemand binnen. Een tweede mail met
   // "je schema staat klaar" zou de helft van de tijd ongelezen blijven.
+  // Afvinken gebeurt HIER, in de mail, en niet op een pagina. Gemeten op 10-09-2026: 159 boekingen
+  // in dertig dagen tegenover zeven workout-logs ooit. De handeling moet staan waar het lid al is.
+  //
+  // Deze drie knoppen zitten bewust BINNEN workoutHtml. De coach krijgt bij een coach-sessie
+  // dezelfde deurcodemail mét reportToken maar ZONDER workout — daardoor kan hij per constructie de
+  // sessie van zijn client niet afvinken. Er staat een test op dat maar één van de twee
+  // sendAccessCode-aanroepen een workout meegeeft; die bewaakt hiermee ook deze knoppen.
+  const afvinkHtml = workout && reportToken
+    ? `<p style="margin:12px 0 6px;font-size:12px;color:#6b6685">Klaar met trainen? Eén tik, meer moet het niet zijn:</p>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:6px 0;margin:0 -6px">
+        <tr>${AFVINK_OORDELEN.map((o) => `<td style="background:#ffffff;border:1px solid #bbf7d0;border-radius:999px"><a href="${SITE}${afvinkPad(reportToken, o.v)}" style="display:block;padding:9px 14px;font-size:13px;font-weight:bold;color:#1a7d34;text-decoration:none;white-space:nowrap">${o.l}</a></td>`).join("")}</tr>
+      </table>
+      <p style="margin:8px 0 0;font-size:11px;color:#8b86a3">Dat stuurt je volgende week — zwaarder, gelijk of lichter.</p>`
+    : workout
+      ? `<p style="margin:10px 0 0;font-size:12px;color:#6b6685">Na je sessie vink je ze af op <a href="${SITE}/coaching" style="color:#1a7d34;font-weight:bold">je coachingpagina</a> — dat stuurt je volgende week.</p>`
+      : "";
   const workoutHtml = workout ? `<div style="margin:0 0 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px">
       <p style="margin:0 0 2px;font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#1a7d34">Je workout voor vandaag</p>
       <p style="margin:0 0 10px;font-size:14px;font-weight:bold;color:#22194F">${esc(workoutKop(workout))}</p>
       <ol style="margin:0;padding-left:18px;font-size:13px;color:#22194F;line-height:1.7">
         ${workout.oefeningen.map((o) => `<li>${esc(oefeningRegel(o))}</li>`).join("")}
       </ol>
-      <p style="margin:10px 0 0;font-size:12px;color:#6b6685">Na je sessie vink je ze af op <a href="${SITE}/coaching" style="color:#1a7d34;font-weight:bold">je coachingpagina</a> — dat stuurt je volgende week.</p>
+      ${afvinkHtml}
     </div>` : "";
   const codeHtml = accessCode
     ? `<div style="margin:6px 0 4px;text-align:center"><div style="font-size:12px;color:#6b6685;letter-spacing:.08em;text-transform:uppercase">${codeCaption}</div><div style="font-size:34px;font-weight:800;letter-spacing:.18em;color:#22194F;background:#f0effa;border-radius:14px;padding:14px 0;margin-top:6px">${accessCode}</div>${codeNote}</div>`

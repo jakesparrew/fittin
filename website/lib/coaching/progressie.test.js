@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   stapVoor, volgendGewicht, volgendeHerhalingen, schuifOefening,
   weekBesluit, isRustweek, reeksAanHetEind, volgendeWeek, RUSTWEEK_DEEL, raaktPijn, noemtEenPlek,
+  dempOordeel, uitgeput,
 } from "./progressie.js";
 
 // Dit bestand is de garantie dat de opvolging zonder AI klopt. Elke test legt een keuze vast die
@@ -283,5 +284,41 @@ describe("aanhoudende pijn gaat naar een mens", () => {
     // reeksAanHetEind telt vanaf het einde, dus dit hangt aan de aanroeper; hier bewaken we alleen
     // dat een nul-reeks niet doorverwijst.
     expect(weekBesluit({ ...basis, pijn: false, pijnWeken: 0 }).besluit).toBe("door");
+  });
+});
+
+describe("uitputting: het duwtje vervalt, het volume niet", () => {
+  // Het gat dat dit dicht: de ENIGE manier om een lichtere week te krijgen was niet komen opdagen.
+  // Wie alles afwerkte en "energie: laag" aankruiste, kreeg de week erna gewoon meer — want die
+  // twee antwoorden werden bewaard en door niets gelezen.
+
+  it("herkent een lege week aan energie of verloop", () => {
+    expect(uitgeput({ energie: "laag" })).toBe(true);
+    expect(uitgeput({ verloop: "moeilijk" })).toBe(true);
+    expect(uitgeput({ energie: "goed", verloop: "vlot" })).toBe(false);
+    expect(uitgeput(null)).toBe(false);
+  });
+
+  it("laat 'te licht' die week gelden als 'goed' — geen extra herhalingen op een lege batterij", () => {
+    expect(dempOordeel("te_licht", { energie: "laag" })).toBe("goed");
+    expect(dempOordeel("te_licht", { verloop: "moeilijk" })).toBe("goed");
+  });
+
+  it("laat 'te zwaar' staan — dat is een STERKER signaal dan uitputting en moet blijven werken", () => {
+    expect(dempOordeel("te_zwaar", { energie: "laag" })).toBe("te_zwaar");
+  });
+
+  it("verandert niets aan een gewone week", () => {
+    expect(dempOordeel("te_licht", { energie: "goed", verloop: "vlot" })).toBe("te_licht");
+    expect(dempOordeel("goed", {})).toBe("goed");
+  });
+
+  it("neemt het volume NIET af — dat zou zich elke week herhalen en naar nul spiralen", () => {
+    // Elke week wordt uit de vorige gebouwd. Wie hier een factor invoert, moet eerst uitrekenen
+    // waar iemand na zes moeilijke weken staat.
+    const licht = schuifOefening({ sets: 3, reps: 10, target_weight_kg: null, start_reps: 10 },
+      { oordeel: dempOordeel("te_licht", { energie: "laag" }), reeksGoed: 0 });
+    expect(licht.sets).toBe(3);
+    expect(licht.reps).toBe(10);
   });
 });

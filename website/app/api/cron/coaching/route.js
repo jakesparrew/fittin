@@ -9,7 +9,16 @@ import { magCoaching } from "@/lib/coaching/toegang.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Eén modelaanroep mag tot 90 seconden duren (zie model.js) en deze lus loopt sequentieel over alle
+// plannen. Op 60 seconden werd de cron dus afgekapt midden in het werk van een lid — prima zolang er
+// twee plannen zijn, onhoudbaar bij tachtig. Vercel Pro staat 300 toe; de lus houdt daarnaast zelf
+// een budget bij en stopt netjes vóór die grens in plaats van eraan te sterven.
+export const maxDuration = 300;
+
+// Wanneer stoppen we met een nieuw plan beginnen? Ruim vóór de harde grens, want het plan dat we
+// nog wél starten mag zijn volle modeltijd nemen. Wat niet aan de beurt kwam, komt volgende zondag —
+// en staat tot dan in `cron_runs` als `overgeslagen`, zodat het zichtbaar is en niet stil.
+const BUDGET_MS = 220000;
 
 // De zondagcron van de AI-coach. Draait één keer per week (vercel.json: zondag 17:00 UTC — 19:00 in België, 18:00 in de winter).
 //
@@ -67,17 +76,22 @@ export async function GET(req) {
   if (req.headers.get("authorization") !== `Bearer ${secret}`) {
     return new NextResponse("unauthorized", { status: 401 });
   }
-  if (!coachAan()) return NextResponse.json({ overgeslagen: "coach staat uit" });
+  if (!coachAan()) return NextResponse.json({ uit: "coach staat uit" });
 
   const admin = createAdminClient();
   const fouten = [];
   let gevraagd = 0, geopend = 0, gepauzeerd = 0, afgerond = 0, menus = 0, buitenGroep = 0;
+  const gestart = Date.now();
+  let overgeslagen = 0;
 
   const { data: plannen, error } = await admin
     .from("coaching_plans").select("id, gym_id, member_id, weken").eq("status", "lopend");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   for (const plan of plannen || []) {
+    // Op is op. Afbreken vóór de grens is beter dan halverwege een lid afgekapt worden: dan staat
+    // er een week open zonder mail, en de zondag erna denkt de cron dat die al verwerkt is.
+    if (Date.now() - gestart > BUDGET_MS) { overgeslagen++; continue; }
     try {
       const { data: weken } = await admin.from("coaching_weeks")
         .select("id, weeknummer, unlocked_at, completed_at").eq("plan_id", plan.id).order("weeknummer");
@@ -180,7 +194,7 @@ export async function GET(req) {
             weeknummer: weekNr, planId: plan.id, checkin,
           });
           if (m.ok) {
-            menu = await menuVoorWeek(admin, plan.member_id, weekNr);
+            menu = await menuVoorWeek(admin, plan.member_id, weekNr, plan.id);
             if (!m.hergebruikt && !m.alBestond) menus++;
           } else if (m.error && !m.dietist && !m.ontbreekt) {
             fouten.push(`menu ${plan.id}: ${m.error}`);
@@ -212,13 +226,13 @@ export async function GET(req) {
 
   try {
     await admin.from("cron_runs").insert({
-      job: "coaching_week", ok: fouten.length === 0,
-      detail: { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, ...(fouten.length ? { fouten } : {}) },
+      job: "coaching_week", ok: fouten.length === 0 && overgeslagen === 0,
+      detail: { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, overgeslagen, ...(fouten.length ? { fouten } : {}) },
     });
   } catch {}
 
   return NextResponse.json(
-    { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, ...(fouten.length ? { fouten } : {}) },
+    { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, overgeslagen, ...(fouten.length ? { fouten } : {}) },
     { status: fouten.length ? 500 : 200 }
   );
 }

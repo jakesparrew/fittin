@@ -206,7 +206,7 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
     kcal_richtlijn: richtlijn,
     toelichting: typeof json?.toelichting === "string" ? json.toelichting.slice(0, 800) : null,
     toestemming_at: profiel.coaching_toestemming_at,
-  }, { onConflict: "member_id,weeknummer" }).select("id").single();
+  }, { onConflict: "member_id,plan_id,weeknummer" }).select("id").single();
   if (error) return { error: `Het menu kon niet bewaard worden: ${error.message}` };
 
   return { ok: true, mealweekId: data.id, richtlijn, kostMicro: uit.kostMicro };
@@ -243,7 +243,7 @@ export async function zorgVoorMenu(admin, { gymId, memberId, profiel, weeknummer
       menu: vorige.menu, boodschappen: vorige.boodschappen,
       kcal_richtlijn: vorige.kcal_richtlijn, toelichting: vorige.toelichting,
       toestemming_at: profiel.coaching_toestemming_at,
-    }, { onConflict: "member_id,weeknummer" }).select("id").single();
+    }, { onConflict: "member_id,plan_id,weeknummer" }).select("id").single();
     if (error) return { error: `Het menu kon niet meegenomen worden: ${error.message}` };
     return { ok: true, mealweekId: data.id, hergebruikt: true, richtlijn: vorige.kcal_richtlijn };
   }
@@ -253,10 +253,15 @@ export async function zorgVoorMenu(admin, { gymId, memberId, profiel, weeknummer
 }
 
 /** Het menu van één week, voor de pagina en de mail. */
-export async function menuVoorWeek(admin, memberId, weeknummer) {
-  const { data } = await admin.from("coaching_mealweeks")
+export async function menuVoorWeek(admin, memberId, weeknummer, planId = null) {
+  // `weeknummer` telt binnen een PLAN en begint bij elk nieuw plan opnieuw bij 1. Sinds 0159 mogen
+  // twee plannen dus allebei een week 3 hebben — en dan is `maybeSingle()` op (lid, week) geen
+  // ontdubbeling meer maar een fout. Vandaar de begrenzing op het plan én de limiet.
+  let vraag = admin.from("coaching_mealweeks")
     .select("id, weeknummer, menu, boodschappen, kcal_richtlijn, toelichting")
-    .eq("member_id", memberId).eq("weeknummer", weeknummer).maybeSingle();
+    .eq("member_id", memberId).eq("weeknummer", weeknummer);
+  if (planId) vraag = vraag.eq("plan_id", planId);
+  const { data } = await vraag.order("created_at", { ascending: false }).limit(1).maybeSingle();
   return data || null;
 }
 

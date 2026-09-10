@@ -169,6 +169,36 @@ export function noemtEenPlek(pijnWaar) {
 }
 
 // ---------------------------------------------------------------------------
+// Uitputting
+// ---------------------------------------------------------------------------
+
+/**
+ * Dempt het oordeel wanneer het lid aangaf dat de week hem opgebruikt heeft.
+ *
+ * Dit dicht een gat dat lang open stond: de ENIGE manier om een lichtere week te krijgen, was niet
+ * komen opdagen. Wie alles afwerkte en in de check-in "energie: laag" of "verloop: moeilijk"
+ * aankruiste, kreeg de week erna gewoon meer — want die twee antwoorden werden bewaard en door
+ * niets gelezen. Dat is de omgekeerde wereld voor een coach.
+ *
+ * Bewust klein gehouden: het duwtje vervalt, het volume niet. Volume afnemen op een AFGEWERKTE week
+ * zou zich elke week opnieuw toepassen (elke week wordt uit de vorige gebouwd) en zo een neerwaartse
+ * spiraal starten. Vlak blijven staan tot iemand weer bijkomt, is genoeg.
+ *
+ * @param {string} oordeel  wat het lid na de sessie tikte
+ * @param {{energie?:string, verloop?:string}} checkin
+ */
+export function dempOordeel(oordeel, checkin) {
+  if (!uitgeput(checkin)) return oordeel;
+  // "Te zwaar" blijft staan: dat is een sterker signaal dan uitputting en hoort te blijven werken.
+  return oordeel === "te_licht" ? "goed" : oordeel;
+}
+
+/** Zei het lid dat de week hem opgebruikt heeft? */
+export function uitgeput(checkin) {
+  return checkin?.energie === "laag" || checkin?.verloop === "moeilijk";
+}
+
+// ---------------------------------------------------------------------------
 // Het besluit over een hele week
 // ---------------------------------------------------------------------------
 

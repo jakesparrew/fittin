@@ -17,7 +17,7 @@ import { roepMetTerugval, MODELLEN } from "./model.js";
 import { magNog, boekVerbruik } from "./budget.js";
 import { bouwContext, planSysteem, planVraag, analyseSysteem, analyseVraag, herplanSysteem } from "./prompt.js";
 import { kiesOefeningen, verdeelFocus, keurVoorschriften } from "./keuze.js";
-import { volgendeWeek, isRustweek, RUSTWEEK_DEEL, reeksAanHetEind, raaktPijn, noemtEenPlek } from "./progressie.js";
+import { volgendeWeek, isRustweek, RUSTWEEK_DEEL, reeksAanHetEind, raaktPijn, noemtEenPlek, dempOordeel, uitgeput } from "./progressie.js";
 
 /**
  * JSON uit een modelantwoord halen. Modellen zetten er soms een codeblok of een zin omheen, ook
@@ -179,7 +179,11 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
     gym_id: gymId,
     plan_id: plan.id,
     weeknummer: i + 1,
-    weekanalyse: i === 0 ? null : (schets.find((w) => Number(w?.nr) === i + 1)?.focus || null),
+    // Week 1 krijgt de geschreven zin; de latere weken de focus uit de schets van het model, tot
+    // ze opengaan en een echte analyse krijgen.
+    weekanalyse: i === 0
+      ? eersteWeekZin({ sessiesPerWeek, toon: profiel.coaching_toon })
+      : (schets.find((w) => Number(w?.nr) === i + 1)?.focus || null),
     is_rustweek: isRustweek(i + 1, weken),
   }));
   const { data: weken1, error: we } = await admin.from("coaching_weeks").insert(weekRijen).select("id, weeknummer");
@@ -191,6 +195,68 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
   await schrijfSessies(admin, { gymId, weekId: week1.id, dagIds });
 
   return { ok: true, planId: plan.id, weekId: week1.id, kostMicro: uit.kostMicro };
+}
+
+/**
+ * De geschiedenis van dit plan, per oefening. Twee dingen die de opvolging nodig heeft en die tot
+ * nu ontbraken — beide stonden als bekend gat in de review van 10-09.
+ *
+ *   reeksGoed  — hoe vaak op rij het lid "goed" tikte voor de sessie waar deze oefening in zat.
+ *                Stond hard op 0, waardoor de regel "drie keer goed = toch een duwtje" nooit vuurde
+ *                en iemand die het altijd goed vond, acht weken lang exact hetzelfde deed.
+ *   startReps  — de herhalingen waarmee het plan begon. Werd ingevuld met de reps van de LOPENDE
+ *                week, waardoor de bovengrens (start + 4) elke week mee opschoof en de band die
+ *                kracht van uithouding scheidt, niet bestond.
+ *
+ * Vier batchvragen voor het hele plan, niet per week — een plan van twaalf weken zou anders
+ * zesendertig heen-en-weers kosten in een cron met een tijdsbudget.
+ *
+ * @param {object[]} weken   alle weekrijen van het plan, op weeknummer gesorteerd
+ * @param {number} totEnMet  weeknummer van de laatst afgelopen week
+ */
+export async function geschiedenisVanPlan(admin, { weken, totEnMet }) {
+  const leeg = { reeksGoedPer: new Map(), startRepsPer: new Map() };
+  const relevant = (weken || []).filter((w) => w.program_id && w.weeknummer <= totEnMet);
+  if (!relevant.length) return leeg;
+
+  const progIds = relevant.map((w) => w.program_id);
+  const { data: dagen } = await admin.from("program_days")
+    .select("id, program_id").in("program_id", progIds);
+  const dagIds = (dagen || []).map((d) => d.id);
+  if (!dagIds.length) return leeg;
+
+  const [{ data: oefeningen }, { data: sessies }] = await Promise.all([
+    admin.from("program_exercises").select("program_day_id, exercise_id, reps").in("program_day_id", dagIds),
+    admin.from("coaching_sessions").select("week_id, program_day_id, oordeel")
+      .in("week_id", relevant.map((w) => w.id)),
+  ]);
+
+  // Het oordeel hangt aan de SESSIE (een trainingsdag), de progressie aan de OEFENING. De brug is
+  // program_day_id: elke oefening van die dag erft het oordeel dat het lid voor die dag gaf.
+  const oordeelPerDag = new Map((sessies || []).map((s) => [s.program_day_id, s.oordeel]));
+  const weekVanProgram = new Map(relevant.map((w) => [w.program_id, w.weeknummer]));
+  const dagNaarWeek = new Map((dagen || []).map((d) => [d.id, weekVanProgram.get(d.program_id)]));
+
+  // Per oefening: het oordeel per weeknummer, oudste eerst. Weken zonder oordeel (niet afgevinkt)
+  // breken de reeks — en dat hoort: wie niet kwam opdagen, zei niet "goed".
+  const perOefening = new Map();
+  const startReps = new Map();
+  for (const o of oefeningen || []) {
+    const week = dagNaarWeek.get(o.program_day_id);
+    if (!week) continue;
+    if (week === 1 && !startReps.has(o.exercise_id) && Number.isFinite(o.reps)) {
+      startReps.set(o.exercise_id, o.reps);
+    }
+    if (!perOefening.has(o.exercise_id)) perOefening.set(o.exercise_id, new Map());
+    perOefening.get(o.exercise_id).set(week, oordeelPerDag.get(o.program_day_id) || null);
+  }
+
+  const reeksGoedPer = new Map();
+  for (const [exerciseId, perWeek] of perOefening) {
+    const opVolgorde = [...perWeek.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => v);
+    reeksGoedPer.set(exerciseId, reeksAanHetEind(opVolgorde, "goed"));
+  }
+  return { reeksGoedPer, startRepsPer: startReps };
 }
 
 /**
@@ -253,18 +319,28 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
   // we niet kunnen plaatsen — dan blijft het schema staan en wordt de week enkel lichter.
   const pijnPlek = checkin?.pijn && noemtEenPlek(checkin?.pijn_waar) ? String(checkin.pijn_waar) : null;
 
+  // De geschiedenis van dit plan: hoe vaak op rij "goed" per oefening, en met hoeveel herhalingen
+  // het plan begon. Beide stonden hier ooit hard op een waarde die nooit klopte (0 en "de reps van
+  // deze week"), waardoor twee regels uit progressie.js in de praktijk niet bestonden.
+  const { reeksGoedPer, startRepsPer } = await geschiedenisVanPlan(admin, { weken: weken || [], totEnMet: huidige.weeknummer });
+
+  // Zei het lid dat de week hem opgebruikt heeft? Dan vervalt het duwtje deze week. Zonder deze
+  // regel was niet komen opdagen de enige manier om een lichtere week te krijgen.
+  const op = uitgeput(checkin);
+
   const oordeelPerSessie = new Map((sessies || []).map((s) => [s.program_day_id, s.oordeel]));
   const seinen = {};
   for (const o of oefeningen || []) {
+    const rauw = oordeelPerSessie.get(o.program_day_id) || checkin?.zwaarte || "goed";
     seinen[o.id] = {
-      oordeel: oordeelPerSessie.get(o.program_day_id) || checkin?.zwaarte || "goed",
-      reeksGoed: 0,
+      oordeel: dempOordeel(rauw, checkin),
+      reeksGoed: op ? 0 : (reeksGoedPer.get(o.exercise_id) || 0),
       pijn: !!pijnPlek && raaktPijn(bibOp.get(o.exercise_id)?.category, pijnPlek),
     };
   }
 
   const besluitEnz = volgendeWeek(
-    (oefeningen || []).map((o) => ({ ...o, start_reps: o.reps })),
+    (oefeningen || []).map((o) => ({ ...o, start_reps: startRepsPer.get(o.exercise_id) ?? o.reps })),
     seinen,
     { gepland, afgevinkt, checkinIngevuld: !!checkin, pijn: !!checkin?.pijn, teZwaarWeken, pijnWeken }
   );
@@ -392,6 +468,26 @@ export async function openVolgendeWeek(admin, { gymId, planId }) {
   return { ok: true, weekId: volgende.id, besluit: besluitEnz.besluit, analyse };
 }
 
+/**
+ * De zin die boven week 1 staat. Geschreven, niet gegenereerd.
+ *
+ * Week 1 was de enige week zonder stem: `weekanalyse` wordt pas vanaf week 2 geschreven, want pas
+ * dan is er iets gebeurd om over te schrijven. Het gevolg was dat het allereerste scherm dat iemand
+ * na de intake ziet — het scherm dat moet overtuigen — geen enkele zin bevatte die tegen hém ging.
+ *
+ * Waarom geen modelaanroep: deze zin is elke keer hetzelfde soort zin en hangt van niets af behalve
+ * het aantal sessies. Een model zou hier alleen kosten, wachttijd en de kans op een slechte dag
+ * toevoegen. De enige variatie die telt is de toon die het lid zelf koos.
+ */
+export function eersteWeekZin({ sessiesPerWeek, toon }) {
+  const n = Math.max(1, Number(sessiesPerWeek) || 3);
+  const keer = n === 1 ? "één sessie" : `${n} sessies`;
+  if (toon === "scherp") {
+    return `Week 1 is een meting, geen test. Ik weet nog niet wat voor jou licht of zwaar is, dus dit is bewust behapbaar: ${keer}. Vink na elke sessie af hoe het voelde — dat is wat week 2 bepaalt. Doe je dat niet, dan blijft alles staan waar het staat.`;
+  }
+  return `Welkom. Week 1 is je vertrekpunt: ${keer}, bewust behapbaar, want ik weet nog niet wat voor jou licht of zwaar aanvoelt. Vink na elke sessie af hoe het ging — dat ene tikje is waar ik je volgende week op bouw. Er staat geen tempo op; beginnen is genoeg.`;
+}
+
 /** Wanneer het model niets kon zeggen. Geen excuus, gewoon de feiten. */
 export function zelfgeschrevenZin(besluitEnz, afgevinkt, gepland, rustweek) {
   const start = afgevinkt >= gepland
@@ -436,14 +532,41 @@ export async function dossierVoor(admin, memberId) {
   const { data: menu } = open
     ? await admin.from("coaching_mealweeks")
         .select("id, weeknummer, menu, boodschappen, kcal_richtlijn, toelichting")
-        .eq("member_id", memberId).eq("weeknummer", open.weeknummer).maybeSingle()
+        .eq("member_id", memberId).eq("weeknummer", open.weeknummer).eq("plan_id", plan.id)
+        .order("created_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
   const { data: mijlpalen } = await admin.from("coaching_mijlpalen")
     .select("soort, created_at").eq("member_id", memberId).order("created_at");
 
+  // De boekingen van dit lid. Zonder deze had het scherm geen enkele datum: "week 1 van 8, 0 van 3
+  // gedaan" is een lijstje, geen plan. En zonder boeking gebeurt er niets — geen zaal, geen
+  // deurcode, geen workout in de mail — dus het tekort aan boekingen is de belangrijkste stand op
+  // dit scherm.
+  const vanaf = new Date(Date.now() - 8 * 86400000).toISOString();
+  const { data: boekingen } = await admin.from("bookings")
+    .select("id, starts_at, ends_at, services(name)")
+    .eq("user_id", memberId).eq("status", "bevestigd")
+    .gte("starts_at", vanaf).order("starts_at").limit(20);
+
+  // Wat er veranderde ten opzichte van vorige week. Dit is het antwoord op "wat deed mijn vinkje
+  // eigenlijk?" — tot nu veranderde de week zichtbaar niets en was afvinken dus een handeling
+  // zonder gevolg.
+  const vorige = open ? (weken || []).find((w) => w.weeknummer === open.weeknummer - 1) : null;
+  let vorigVoorschrift = {};
+  if (vorige?.program_id) {
+    const { data: vd } = await admin.from("program_days").select("id").eq("program_id", vorige.program_id);
+    const vIds = (vd || []).map((d) => d.id);
+    if (vIds.length) {
+      const { data: vo } = await admin.from("program_exercises")
+        .select("exercise_id, sets, reps, target_weight_kg").in("program_day_id", vIds);
+      for (const o of vo || []) vorigVoorschrift[o.exercise_id] = { sets: o.sets, reps: o.reps, kg: o.target_weight_kg };
+    }
+  }
+
   return {
     plan, weken: weken || [], open, sessies, oefeningen,
     checkin: checkin || null, menu: menu || null, mijlpalen: mijlpalen || [],
+    boekingen: boekingen || [], vorigVoorschrift,
   };
 }
 

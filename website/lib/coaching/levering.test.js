@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { oefeningRegel, workoutKop } from "./levering.js";
+import { oefeningRegel, workoutKop, afvinkPad, AFVINK_OORDELEN } from "./levering.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const lees = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -226,5 +226,94 @@ describe("de grenzen van de AI-coach", () => {
     expect(p).toMatch(/Anthropic/);
     expect(p).toMatch(/Fittin&rsquo; Coaching/);
     expect(p).toMatch(/art\. 9\.2\.a AVG/);
+  });
+});
+
+describe("afvinken vanuit de deurcodemail", () => {
+  // De verhuizing van deze ronde. Gemeten op 10-09-2026: 159 boekingen in dertig dagen tegenover
+  // 20 rijen in `door_log` en zeven workout-logs ooit. De zaal kan niet afleiden dat je er was —
+  // wie zijn keypadcode intypt laat geen spoor na — en de pagina met het vinkje wordt niet bezocht.
+  // Deze mail heeft als enige 100% dekking, want zonder de code raak je niet binnen.
+
+  it("bouwt een pad per oordeel", () => {
+    expect(afvinkPad("abc123xyz", "goed")).toBe("/s/abc123xyz?v=goed");
+    expect(afvinkPad("abc123xyz", "te_zwaar")).toBe("/s/abc123xyz?v=te_zwaar");
+  });
+
+  it("laat een onbekend oordeel niet in de URL komen", () => {
+    // Anders is het pad een open schrijfopdracht met vrije invoer erin.
+    expect(afvinkPad("abc123xyz", "prima")).toBe("/s/abc123xyz");
+    expect(afvinkPad("abc123xyz", "<script>")).toBe("/s/abc123xyz");
+  });
+
+  it("ontsnapt de token, zodat een rare token de URL niet openbreekt", () => {
+    expect(afvinkPad("a b&c", "goed")).toBe("/s/a%20b%26c?v=goed");
+  });
+
+  it("geeft niets terug zonder token", () => {
+    expect(afvinkPad(null, "goed")).toBeNull();
+    expect(afvinkPad("", "goed")).toBeNull();
+  });
+
+  it("de drie knoppen zijn precies de drie oordelen die de databank kent", () => {
+    // coaching_sessions.oordeel heeft een check-constraint op deze drie (migratie 0157). Een vierde
+    // knop zou een schrijfactie zijn die stilletjes faalt.
+    expect(AFVINK_OORDELEN.map((o) => o.v)).toEqual(["te_licht", "goed", "te_zwaar"]);
+  });
+
+  it("de knoppen zitten BINNEN het workoutblok van de mail", () => {
+    // Dit is de veiligheidseigenschap, geen opmaakkeuze: de coach krijgt bij een coach-sessie
+    // dezelfde deurcodemail mét reportToken maar ZONDER workout. Staan de knoppen buiten dat blok,
+    // dan kan een coach de sessie van zijn client afvinken.
+    const mail = lees("lib/email.js");
+    expect(mail).toMatch(/const afvinkHtml = workout && reportToken/);
+    expect(mail).toMatch(/\$\{afvinkHtml\}[\s\S]{0,40}<\/div>` : "";/);
+  });
+
+  it("de mail valt terug op de pagina wanneer er geen token is", () => {
+    // Geen token = geen link die werkt. Dan hoort er nog steeds iets te staan, geen dood blok.
+    expect(lees("lib/email.js")).toMatch(/: workout\s*\?\s*`<p[^`]*\/coaching/);
+  });
+
+  it("de workout passeert de proefgroep-poort", () => {
+    // Deze mail was de enige ingang die `magCoaching` niet passeerde. Wie ooit een plan maakte toen
+    // de lijst ruimer stond, kreeg zijn schema anders gewoon blijven toegestuurd.
+    const l = lees("lib/coaching/levering.js");
+    expect(l).toMatch(/import \{ magCoaching \}/);
+    expect(l).toMatch(/if \(!magCoaching\(lid\)\) return null;/);
+  });
+});
+
+describe("de landingspagina van het afvinken", () => {
+  it("weigert alles vóór de sessie begonnen is", () => {
+    // Dit is óók de verdediging tegen linkscanners die elke URL in een mail ophalen: die mail
+    // vertrekt vijf minuten VÓÓR de start, dus een automatische fetch botst altijd op deze grens.
+    const a = lees("app/s/[token]/actions.js");
+    expect(a).toMatch(/if \(!d\.begonnen\) return \{ error/);
+    expect(a).toMatch(/begonnen: Date\.now\(\) >= new Date\(boeking\.starts_at\)/);
+  });
+
+  it("de link sterft 96 uur na de sessie — zelfde venster als /f en het meldpunt", () => {
+    expect(lees("app/s/[token]/actions.js")).toMatch(/VENSTER_NA = 96 \* 3600000/);
+  });
+
+  it("controleert dat de boeking bevestigd is en van dit lid", () => {
+    const a = lees("app/s/[token]/actions.js");
+    expect(a).toMatch(/boeking\.status !== "bevestigd"/);
+    expect(a).toMatch(/eq\("booking_id", boeking\.id\)/);
+  });
+
+  it("laat de proefgroep-poort ook hier gelden", () => {
+    expect(lees("app/s/[token]/actions.js")).toMatch(/magCoaching\(lid\)/);
+  });
+
+  it("de knoppen op die pagina worden NIET voorgeladen", () => {
+    // Next haalt een link op zodra hij in beeld komt. Deze URL schrijft, dus dan koos de browser
+    // het oordeel in plaats van het lid.
+    expect(lees("app/s/[token]/page.jsx")).toMatch(/prefetch=\{false\}/);
+  });
+
+  it("de pagina staat niet in Google", () => {
+    expect(lees("app/s/[token]/page.jsx")).toMatch(/robots:\s*\{\s*index:\s*false/);
   });
 });

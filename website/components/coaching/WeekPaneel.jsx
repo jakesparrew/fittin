@@ -2,6 +2,8 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { vinkSessieAf, bewaarCheckin, openWeek } from "@/app/(site)/coaching/actions";
+import { fmt } from "@/lib/format";
+import { verschilTekst } from "@/lib/coaching/volgendestap.js";
 
 // De week van het lid: de sessies met hun oefeningen, één knop per sessie om af te vinken, en de
 // check-in zodra de week rond is.
@@ -16,10 +18,16 @@ const OORDELEN = [
   { v: "te_zwaar", l: "Te zwaar" },
 ];
 
-export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, magCheckin = false, isLaatsteWeek, maaltijden = false }) {
+export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, magCheckin = false, isLaatsteWeek, maaltijden = false, boekingOp = {}, vorigVoorschrift = {}, nu = 0 }) {
   const [bezig, start] = useTransition();
   const [melding, setMelding] = useState(null);
   const [open, setOpen] = useState(sessies[0]?.id || null);
+
+  // Het verschil met dezelfde oefening in de vorige week, als er een vorige week is.
+  function verschil(o) {
+    const vorig = vorigVoorschrift?.[o.exercises?.id];
+    return verschilTekst({ sets: o.sets, reps: o.reps, kg: o.target_weight_kg }, vorig);
+  }
 
   function tik(sessieId, oordeel) {
     setMelding(null);
@@ -38,6 +46,10 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
         const eigen = oefeningen.filter((o) => o.program_day_id === s.program_day_id);
         const gedaan = !!s.gedaan_at;
         const uitgeklapt = open === s.id;
+        // De boeking waaraan deze sessie hangt. Ze wordt lui gekoppeld op het moment dat de
+        // deurcode vertrekt, dus ze bestaat pas vanaf vijf minuten voor de training.
+        const wanneer = s.booking_id ? boekingOp[s.booking_id] : null;
+        const nogTeGaan = wanneer ? new Date(wanneer).getTime() > nu : false;
         return (
           <div key={s.id} className={"overflow-hidden rounded-3xl border-2 bg-white transition " + (gedaan ? "border-accent/40" : "border-borderc")}>
             <button type="button" onClick={() => setOpen(uitgeklapt ? null : s.id)}
@@ -48,6 +60,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
               <span className="min-w-0 flex-1">
                 <span className="block font-black text-brand">{eigen[0]?.dag?.name || `Sessie ${s.volgnummer}`}</span>
                 <span className="block text-xs text-ink-soft">
+                  {wanneer ? `${fmt(wanneer)} · ` : ""}
                   {eigen.length} oefening{eigen.length === 1 ? "" : "en"}
                   {gedaan && s.oordeel ? ` · ${OORDELEN.find((o) => o.v === s.oordeel)?.l.toLowerCase()}` : ""}
                 </span>
@@ -77,6 +90,11 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
                           {o.rest_sec ? ` · ${o.rest_sec}s rust` : ""}
                           {o.section && o.section !== "Hoofdoefening" ? ` · ${o.section.toLowerCase()}` : ""}
                         </span>
+                        {/* Wat je vinkje van vorige week deed. Zonder deze regel zag de nieuwe week
+                            er identiek uit en was afvinken een handeling zonder merkbaar gevolg. */}
+                        {verschil(o) && (
+                          <span className="mt-0.5 block text-xs font-bold text-accentdark">{verschil(o)}</span>
+                        )}
                       </span>
                     </li>
                   ))}
@@ -85,8 +103,20 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
                 <div className="mt-5 border-t border-borderc pt-4">
                   {!gedaan ? (
                     <>
-                      <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Klaar? Hoe voelde het?</p>
-                      <div className="mt-2 grid grid-cols-3 gap-2">
+                      {/* De vraag stond er ook vóór je getraind had, en betekende daardoor niets.
+                          Nu hangt de kop aan wat we écht weten: is er een moment geboekt, en ligt
+                          dat achter ons? Afvinken blijft altijd mogelijk — iemand kan elders
+                          getraind hebben, of de koppeling kan gemist zijn. */}
+                      {nogTeGaan ? (
+                        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Je traint {fmt(wanneer)} — vink daarna af</p>
+                      ) : wanneer ? (
+                        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Hoe voelde het?</p>
+                      ) : (
+                        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">
+                          Nog geen moment geboekt · <Link href="/boeken" className="text-accentdark underline">kies er een</Link>
+                        </p>
+                      )}
+                      <div className={"mt-2 grid grid-cols-3 gap-2 " + (nogTeGaan ? "opacity-60" : "")}>
                         {OORDELEN.map((o) => (
                           <button key={o.v} type="button" disabled={bezig} onClick={() => tik(s.id, o.v)}
                             className="rounded-xl border-2 border-borderc px-3 py-2.5 text-sm font-bold text-brand transition hover:border-accent hover:bg-accent/10 disabled:opacity-50">
@@ -94,7 +124,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
                           </button>
                         ))}
                       </div>
-                      <p className="mt-2 text-xs text-brand/40">Dit stuurt het gewicht van je volgende week.</p>
+                      <p className="mt-2 text-xs text-brand/40">Eén tik stuurt je volgende week. Het kan ook met één tik in je deurcodemail.</p>
                     </>
                   ) : (
                     <button type="button" disabled={bezig} onClick={() => tik(s.id, null)}
@@ -113,7 +143,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
 
       {/* De check-in verschijnt zodra de week rond is. Niet eerder: hem vooraf tonen maakt van een
           gesprek een formulier dat er altijd staat. */}
-      {magCheckin && !checkin && <Checkin weekId={week.id} maaltijden={maaltijden} alleAf={alleSessiesAf} />}
+      {magCheckin && !checkin && <div id="checkin" className="scroll-mt-6"><Checkin weekId={week.id} maaltijden={maaltijden} alleAf={alleSessiesAf} /></div>}
 
       {alleSessiesAf && checkin && !isLaatsteWeek && (
         <form action={openWeek}>
