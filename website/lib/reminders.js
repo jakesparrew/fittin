@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSessionReminder, sendGuestSessionReminder, sendAccessCode, sendCreditsExpiring, sendCreditsEmpty, sendFirstSessionFollowup, sendGuestFollowup, sendAboSuggestion } from "@/lib/email";
+import { workoutVoorBoeking } from "@/lib/coaching/levering.js";
 import { teltVoorAbo } from "@/lib/insight-mails";
 import { zorgVoorToken, openMeldingNotitie } from "@/lib/meldpunt";
 import { getNukiConfig, ensureBookingKeypadCode, getLockHealth } from "@/lib/nuki";
@@ -398,6 +399,11 @@ export async function sendDueAccessCodes() {
           personal,
           address,
           mapsUrl,
+          // De workout van de AI-coach, als dit lid er een lopen heeft. Enkel naar het LID: een
+          // coach die dezelfde deurcode krijgt, hoeft het schema van zijn client niet in zijn mail.
+          // Best-effort — een fout in de coaching mag nooit een deurcode tegenhouden.
+          workout: await workoutVoorBoeking(admin, { bookingId: b.id, memberId: b.user_id })
+            .catch((e) => { console.error("coaching: workout ophalen mislukt:", e?.message); return null; }),
           // Melden vanuit DEZE mail: het is de enige die 100% van de sessies bereikt en die
           // iedereen opent, want de code staat erin. Dat is precies waarom de meldknop hier hoort
           // en niet dichtgeklapt op een accountpagina.

@@ -37,7 +37,7 @@ export default function Privacy() {
       <div className="mx-auto max-w-3xl px-5 py-16">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Privacy</p>
         <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Privacybeleid</h1>
-        <p className="mt-3 text-sm text-brand/50">Versie 3 — laatst bijgewerkt: 8 september 2026</p>
+        <p className="mt-3 text-sm text-brand/50">Versie 4 — laatst bijgewerkt: 10 september 2026</p>
 
         <p className="mt-6 leading-relaxed text-brand/70">
           Fittin&rsquo; verwerkt je persoonsgegevens volgens de Algemene Verordening
@@ -93,6 +93,18 @@ export default function Privacy() {
               overeenkomst (art. 6.1.b AVG).</em>
             </li>
             <li>
+              <strong>Fittin&rsquo; Coaching</strong> — gebruik je onze AI-coach, dan verwerken we wat je
+              in de intake invult: je doel, hoe vaak je traint, hoe lang je plan mag duren en welke toon
+              je wil. Daarnaast je plan zelf, welke sessies je afvinkt, je wekelijkse antwoorden en de
+              tekst die je coach daarover schrijft. <em>Grondslag: uitvoering van de overeenkomst.</em>{" "}
+              <strong>Kies je ervoor om je lichaamsgegevens mee te geven</strong> — je geboortedatum,
+              gewicht, lengte en wat je wil vermijden — dan zijn dat bijzondere categorieën van gegevens.{" "}
+              <em>Grondslag: jouw uitdrukkelijke toestemming (art. 9.2.a AVG).</em> Die vraag staat apart
+              in de intake, je kan ze op elk moment intrekken bij je gegevens, en zonder die toestemming
+              werkt de coach gewoon verder — alleen algemener. Wat er naar het model gaat, staat in
+              punt 3 hieronder.
+            </li>
+            <li>
               <strong>Communicatie</strong> — berichten met je coach of met ons, en je meldingen over
               defecten. <em>Grondslag: uitvoering van de overeenkomst.</em>
             </li>
@@ -137,6 +149,7 @@ export default function Privacy() {
                 <Row wat="Betalingen en facturen" hoelang="7 jaar, wettelijke bewaartermijn voor de boekhouding. Deze gegevens verdwijnen dus niet bij het verwijderen van je account." />
                 <Row wat="Toegangscodes en deurlogs" hoelang="Codes worden na je sessie meteen ingetrokken. Logs bewaren we 12 maanden voor de veiligheid van een onbemande zaal; daarna worden ze automatisch verwijderd." />
                 <Row wat="Lichaamsmetingen en trainingslogs" hoelang="Zolang je toestemming loopt. Trek je ze in, dan wissen we ze." />
+                <Row wat="Fittin&rsquo; Coaching" hoelang="Zolang je een plan hebt lopen, en daarna zolang je account bestaat — je kan je dossier teruglezen. Stop je met coaching, dan kan je het laten wissen via Mijn account. Trek je je toestemming voor lichaamsgegevens in, dan gaan die velden meteen niet meer mee naar het model." />
                 <Row wat="Aanvragen en aanmeldingen" hoelang="Zolang we je aanvraag opvolgen, en daarna hoogstens twee jaar — zodat we een eerdere vraag nog kunnen terugvinden als je later opnieuw contact opneemt. Een sollicitatie als coach, inclusief cv en foto, verwijderen we uiterlijk een jaar na de procedure." />
                 <Row wat="Nieuwsbrief" hoelang="Tot je uitschrijft. Je uitschrijving zelf houden we bij zodat we je niet opnieuw aanschrijven." />
                 <Row wat="Bezoekstatistieken" hoelang="14 maanden, daarna automatisch verwijderd door een dagelijkse opruimtaak." />
@@ -158,6 +171,12 @@ export default function Privacy() {
             <li><strong>Resend</strong> — verzending van e-mails.</li>
             <li><strong>Vercel</strong> — hosting van de website.</li>
             <li><strong>Nuki</strong> — het slimme deurslot en de toegangscodes.</li>
+            <li>
+              <strong>Anthropic</strong> (via Vercel AI Gateway) — het taalmodel achter Fittin&rsquo; Coaching,
+              <strong> alleen als je die functie gebruikt</strong>. Je naam, e-mailadres, telefoonnummer
+              en adres gaan daar nooit heen; je leeftijdsklasse, gewicht en wat je wil vermijden alleen
+              met jouw uitdrukkelijke toestemming. Je gegevens worden niet gebruikt om modellen te trainen.
+            </li>
           </ul>
           <p>
             <strong>Doorgifte buiten de Europese Economische Ruimte.</strong> Stripe, Resend en Vercel

@@ -451,6 +451,26 @@ export default async function AccountPage({ searchParams }) {
           </div>
         )}
 
+        {/* De AI-coach. Bewust hier, onder je coach en boven het leaderboard: het is een
+            begeleidingsfunctie, geen spelletje. De tekst verschilt naargelang je al bezig bent —
+            wie een plan heeft, wil ernaartoe; wie er geen heeft, moet weten waarom hij zou. */}
+        <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border-2 border-accent/30 bg-accent/5 p-6">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-accentdark">Fittin&rsquo; coaching</p>
+            <p className="mt-1 text-lg font-black text-brand">
+              {profile?.coaching_doel ? "Je plan en je week" : "Start je AI Coaching"}
+            </p>
+            <p className="mt-0.5 text-sm text-brand/60">
+              {profile?.coaching_doel
+                ? "Bekijk je week, vink je sessies af en lees wat je coach schreef."
+                : "Een paar vragen en je krijgt een trainingsplan op maat, week per week."}
+            </p>
+          </div>
+          <Link href="/coaching" className="shrink-0 rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">
+            {profile?.coaching_doel ? "Naar je coach →" : "Beginnen →"}
+          </Link>
+        </section>
+
         {/* Leaderboard + share */}
         <section className="mt-6 rounded-3xl border border-borderc bg-white p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">

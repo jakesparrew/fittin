@@ -16,6 +16,10 @@
     {
       "path": "/api/cron/weekreport",
       "schedule": "0 6 * * 1"
+    },
+    {
+      "path": "/api/cron/coaching",
+      "schedule": "0 17 * * 0"
     }
   ]
 }

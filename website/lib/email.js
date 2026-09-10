@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { workoutKop, oefeningRegel } from "@/lib/coaching/levering.js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { statGrid, barChart, sectionTitle, actionItem, calloutBox, delta, eur } from "@/lib/email-visuals";
 import { icsAttachment } from "@/lib/ics";
@@ -471,13 +472,24 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
 }
 
 // ---- Member: access code, sent ~5 minutes before the session starts ----
-export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl, reportToken = null, zaalNotitie = null }) {
+export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl, reportToken = null, zaalNotitie = null, workout = null }) {
   // Persoonlijk vs reserve is geen detail: de eerste vervalt vanzelf na de sessie, de tweede is de
   // vaste code van de gym en blijft altijd geldig. Wie dat niet weet, stuurt hem gedachteloos door.
   const codeCaption = personal ? "Jouw persoonlijke code" : "Reservecode";
   const codeNote = personal
     ? `<div style="font-size:11px;color:#6b6685;margin-top:8px">Deze code is voor jou en werkt enkel tijdens je sessie.</div>`
     : `<div style="font-size:11px;color:#b45309;margin-top:8px;font-weight:bold">Je persoonlijke code raakte niet aangemaakt, dus dit is de reservecode van de gym. Die blijft altijd geldig — hou hem voor jezelf en deel hem met niemand.</div>`;
+  // De workout van de AI-coach reist mee in DEZE mail, en niet in een eigen bericht. Reden: dit is
+  // de enige mail die iedereen opent — zonder de code raakt niemand binnen. Een tweede mail met
+  // "je schema staat klaar" zou de helft van de tijd ongelezen blijven.
+  const workoutHtml = workout ? `<div style="margin:0 0 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px">
+      <p style="margin:0 0 2px;font-size:11px;font-weight:bold;letter-spacing:.06em;text-transform:uppercase;color:#1a7d34">Je workout voor vandaag</p>
+      <p style="margin:0 0 10px;font-size:14px;font-weight:bold;color:#22194F">${esc(workoutKop(workout))}</p>
+      <ol style="margin:0;padding-left:18px;font-size:13px;color:#22194F;line-height:1.7">
+        ${workout.oefeningen.map((o) => `<li>${esc(oefeningRegel(o))}</li>`).join("")}
+      </ol>
+      <p style="margin:10px 0 0;font-size:12px;color:#6b6685">Na je sessie vink je ze af op <a href="${SITE}/coaching" style="color:#1a7d34;font-weight:bold">je coachingpagina</a> — dat stuurt je volgende week.</p>
+    </div>` : "";
   const codeHtml = accessCode
     ? `<div style="margin:6px 0 4px;text-align:center"><div style="font-size:12px;color:#6b6685;letter-spacing:.08em;text-transform:uppercase">${codeCaption}</div><div style="font-size:34px;font-weight:800;letter-spacing:.18em;color:#22194F;background:#f0effa;border-radius:14px;padding:14px 0;margin-top:6px">${accessCode}</div>${codeNote}</div>`
     : `<p style="font-size:14px;color:#6b6685">Open de deur met de knop in je account zodra je sessie begint.</p>`;
@@ -502,7 +514,7 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
       // of een verwijt bevatten.
       body: `${zaalNotitie ? `<div style="margin:0 0 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px 14px">
           <p style="margin:0;font-size:13px;color:#9a3412;line-height:1.6"><b>Let op:</b> ${esc(zaalNotitie)}</p>
-        </div>` : ""}${codeHtml}${navHtml}
+        </div>` : ""}${workoutHtml}${codeHtml}${navHtml}
         <div style="margin-top:16px;border-top:1px solid #ece9f5;padding-top:14px">
           <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo kom je binnen</p>
           <ol style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.6">
@@ -1322,5 +1334,48 @@ export async function sendSessionFeedback({ to, name, token, startsAt, uitschrij
     FROM,
     REPLY_TO,
     "sessie_feedback"
+  );
+}
+
+// ---- Lid: de wekelijkse coachingmail ----
+// Twee gedaanten in één functie, want het zijn twee momenten in hetzelfde ritme: eerst vragen hoe
+// het ging, daarna de nieuwe week. Ze apart houden zou betekenen dat een lid op zondag twee mails
+// krijgt van dezelfde afzender over hetzelfde onderwerp.
+export async function sendCoachingWeek({ to, name, soort, weekNr, totaalWeken, analyse, sessies = [], gedaan = 0, gepland = 0 }) {
+  const checkin = soort === "checkin";
+  const titel = checkin ? "Hoe ging je week?" : `Week ${weekNr} staat klaar`;
+  const knop = checkin
+    ? { href: `${SITE}/coaching`, label: "Vertel het je coach" }
+    : { href: `${SITE}/coaching`, label: "Bekijk je week" };
+
+  const lijst = sessies.length
+    ? `<div style="margin-top:14px;border-top:1px solid #ece9f5;padding-top:14px">
+         <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 8px">Wat er deze week op het programma staat</p>
+         <ol style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.8">
+           ${sessies.map((s) => `<li><b style="color:#22194F">${esc(s.naam)}</b> — ${s.aantal} oefening${s.aantal === 1 ? "" : "en"}</li>`).join("")}
+         </ol>
+         <p style="font-size:12px;color:#6b6685;margin:10px 0 0">Je krijgt ze één voor één in je deurcodemail, telkens wanneer je een sessie boekt.</p>
+       </div>`
+    : "";
+
+  const stand = checkin && gepland
+    ? `<p style="font-size:14px;color:#6b6685;margin:0 0 12px">Je deed <b style="color:#22194F">${gedaan} van de ${gepland}</b> sessies.</p>`
+    : "";
+
+  return send(
+    to,
+    checkin ? "Even kort: hoe ging je week?" : `Je week ${weekNr} van ${totaalWeken} staat klaar`,
+    shell({
+      title: titel,
+      intro: `Hallo ${esc(name) || "daar"},`,
+      body: `${stand}${analyse ? `<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:14px;margin:0 0 12px">
+          <p style="margin:0;font-size:14px;color:#22194F;line-height:1.7">${esc(analyse)}</p>
+        </div>` : ""}${checkin ? `<p style="font-size:14px;color:#6b6685;margin:0;line-height:1.7">
+          Vier tikken en je coach weet genoeg om je volgende week samen te stellen: hoe zwaar het voelde,
+          hoe de week verliep, je energie, en of je ergens pijn had.
+        </p>` : ""}${lijst}`,
+      cta: knop,
+    }),
+    FROM_BOOKING
   );
 }
