@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// De zondagcron van de AI-coach. Draait één keer per week (vercel.json: zondag 18:00 UTC).
+// De zondagcron van de AI-coach. Draait één keer per week (vercel.json: zondag 17:00 UTC — 19:00 in België, 18:00 in de winter).
 //
 // Twee momenten in hetzelfde ritme, en bewust in DEZE volgorde:
 //   1. Is de week rond maar de check-in nog niet ingevuld? Dan eerst vragen hoe het ging. De
