@@ -183,7 +183,10 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
     // Week 1 krijgt de geschreven zin; de latere weken de focus uit de schets van het model, tot
     // ze opengaan en een echte analyse krijgen.
     weekanalyse: i === 0
-      ? eersteWeekZin({ sessiesPerWeek, toon: profiel.coaching_toon })
+      // `sessies.length`, niet `sessiesPerWeek`. Het model kan voor een dag niets bruikbaars geven
+      // en dan valt die sessie weg (zie de filter hierboven). De eerste zin die het lid van zijn
+      // coach leest, hoort het aantal te noemen dat er ook echt staat.
+      ? eersteWeekZin({ sessiesPerWeek: sessies.length, toon: profiel.coaching_toon })
       : (schets.find((w) => Number(w?.nr) === i + 1)?.focus || null),
     is_rustweek: isRustweek(i + 1, weken),
   }));
@@ -205,9 +208,9 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
  *   reeksGoed  — hoe vaak op rij het lid "goed" tikte voor de sessie waar deze oefening in zat.
  *                Stond hard op 0, waardoor de regel "drie keer goed = toch een duwtje" nooit vuurde
  *                en iemand die het altijd goed vond, acht weken lang exact hetzelfde deed.
- *   startReps  — de herhalingen waarmee het plan begon. Werd ingevuld met de reps van de LOPENDE
- *                week, waardoor de bovengrens (start + 4) elke week mee opschoof en de band die
- *                kracht van uithouding scheidt, niet bestond.
+ *   startReps  — de herhalingen waarmee DEZE OEFENING begon: de eerste week waarin ze voorkomt.
+ *                Werd ingevuld met de reps van de LOPENDE week, waardoor de bovengrens (start + 4)
+ *                elke week mee opschoof en de band die kracht van uithouding scheidt, niet bestond.
  *
  * Vier batchvragen voor het hele plan, niet per week — een plan van twaalf weken zou anders
  * zesendertig heen-en-weers kosten in een cron met een tijdsbudget.
@@ -222,12 +225,15 @@ export async function geschiedenisVanPlan(admin, { weken, totEnMet }) {
 
   const progIds = relevant.map((w) => w.program_id);
   const { data: dagen } = await admin.from("program_days")
-    .select("id, program_id").in("program_id", progIds);
+    .select("id, program_id, day_no").in("program_id", progIds).order("day_no");
   const dagIds = (dagen || []).map((d) => d.id);
   if (!dagIds.length) return leeg;
 
   const [{ data: oefeningen }, { data: sessies }] = await Promise.all([
-    admin.from("program_exercises").select("program_day_id, exercise_id, reps").in("program_day_id", dagIds),
+    // De volgorde staat vast. Zonder `.order()` bepaalt Postgres de rijvolgorde, en die verschuift
+    // zodra rijen bijgewerkt worden — dan gaf dezelfde databank op twee momenten een ander schema.
+    admin.from("program_exercises").select("id, program_day_id, exercise_id, reps")
+      .in("program_day_id", dagIds).order("program_day_id").order("position"),
     admin.from("coaching_sessions").select("week_id, program_day_id, oordeel")
       .in("week_id", relevant.map((w) => w.id)),
   ]);
@@ -238,26 +244,52 @@ export async function geschiedenisVanPlan(admin, { weken, totEnMet }) {
   const weekVanProgram = new Map(relevant.map((w) => [w.program_id, w.weeknummer]));
   const dagNaarWeek = new Map((dagen || []).map((d) => [d.id, weekVanProgram.get(d.program_id)]));
 
-  // Per oefening: het oordeel per weeknummer, oudste eerst. Weken zonder oordeel (niet afgevinkt)
-  // breken de reeks — en dat hoort: wie niet kwam opdagen, zei niet "goed".
+  // Dezelfde oefening kan twee keer in één week staan — het lid mag zelf oefeningen aan het actieve
+  // programma toevoegen, en dat programma IS de coachingweek. Dan botsen twee oordelen op één
+  // (oefening, week). Het STRENGSTE wint: wie ergens die week "te zwaar" tikte, hoort volgende week
+  // niet zwaarder te krijgen omdat dezelfde oefening elders "goed" was.
+  const STRENGHEID = { te_zwaar: 0, goed: 1, te_licht: 2 };
+  const strengste = (a, b) => {
+    if (a === undefined) return b;
+    if (b === undefined || b === null) return a;
+    if (a === null) return b;
+    return STRENGHEID[b] < STRENGHEID[a] ? b : a;
+  };
+
   const perOefening = new Map();
-  const startReps = new Map();
+  const startReps = new Map();   // exercise_id -> { week, reps }
   for (const o of oefeningen || []) {
     const week = dagNaarWeek.get(o.program_day_id);
     if (!week) continue;
-    if (week === 1 && !startReps.has(o.exercise_id) && Number.isFinite(o.reps)) {
-      startReps.set(o.exercise_id, o.reps);
+
+    // Het startpunt is de EERSTE week waarin deze oefening voorkomt, niet week 1. Een oefening die
+    // pas later verschijnt — na een pijn-vervanging, of omdat het lid ze zelf toevoegde — had
+    // anders geen anker, en dan viel de band terug op "de reps van deze week" en schoof het
+    // repplafond alsnog elke week mee. Precies de bug die deze functie moest dichten.
+    const huidig = startReps.get(o.exercise_id);
+    if (Number.isFinite(o.reps) && (!huidig || week < huidig.week || (week === huidig.week && o.reps < huidig.reps))) {
+      startReps.set(o.exercise_id, { week, reps: o.reps });
     }
+
     if (!perOefening.has(o.exercise_id)) perOefening.set(o.exercise_id, new Map());
-    perOefening.get(o.exercise_id).set(week, oordeelPerDag.get(o.program_day_id) || null);
+    const perWeek = perOefening.get(o.exercise_id);
+    perWeek.set(week, strengste(perWeek.get(week), oordeelPerDag.get(o.program_day_id) ?? null));
   }
 
+  // De reeks telt over ALLE weken van het plan tot nu, niet alleen over de weken waarin de oefening
+  // toevallig voorkwam. Een week waarin ze er niet was, is geen "goed" — hij breekt de reeks.
+  // Zonder deze stap plakte de teller de weken ervoor en erna aan elkaar, en kreeg iemand die zijn
+  // squat een week uit zijn schema haalde toch het duwtje voor drie weken op rij.
+  const weeknummers = relevant.map((w) => w.weeknummer).sort((a, b) => a - b);
   const reeksGoedPer = new Map();
   for (const [exerciseId, perWeek] of perOefening) {
-    const opVolgorde = [...perWeek.entries()].sort((a, b) => a[0] - b[0]).map(([, v]) => v);
+    const opVolgorde = weeknummers.map((n) => (perWeek.has(n) ? perWeek.get(n) : null));
     reeksGoedPer.set(exerciseId, reeksAanHetEind(opVolgorde, "goed"));
   }
-  return { reeksGoedPer, startRepsPer: startReps };
+  return {
+    reeksGoedPer,
+    startRepsPer: new Map([...startReps].map(([id, v]) => [id, v.reps])),
+  };
 }
 
 /**
@@ -504,8 +536,13 @@ export function zelfgeschrevenZin(besluitEnz, afgevinkt, gepland, rustweek) {
 
 /** Het volledige dossier voor /coaching. */
 export async function dossierVoor(admin, memberId) {
-  const { data: plan } = await admin.from("coaching_plans")
-    .select("*").eq("member_id", memberId).eq("status", "lopend").maybeSingle();
+  // Ook een GEPAUZEERD plan hoort hier. Filterde dit op status 'lopend', dan verdween het hele
+  // dossier zodra de cron zelf pauzeerde (twee stille weken) — inclusief de knop om te hervatten,
+  // die op precies dat scherm staat. Het lid zag dan de intakewizard alsof hij nooit begonnen was.
+  const { data: plannen } = await admin.from("coaching_plans")
+    .select("*").eq("member_id", memberId).in("status", ["lopend", "gepauzeerd"])
+    .order("created_at", { ascending: false }).limit(1);
+  const plan = (plannen || [])[0] || null;
   if (!plan) return { plan: null };
 
   const { data: weken } = await admin.from("coaching_weeks").select("*").eq("plan_id", plan.id).order("weeknummer");
@@ -546,7 +583,12 @@ export async function dossierVoor(admin, memberId) {
   const { data: alleSessies } = alleWeekIds.length
     ? await admin.from("coaching_sessions").select("week_id, gedaan_at").in("week_id", alleWeekIds)
     : { data: [] };
-  const volledig = (weken || []).map((w) => {
+  // ALLEEN de weken die voorbij zijn. Een nog niet geopende week heeft geen sessierijen en zou als
+  // "niet volledig" lezen; omdat wekenOpRij vanaf het einde telt, maakte dat de uitkomst altijd 0
+  // en kon "drie volle weken op rij" nooit gehaald worden — het doel op het scherm bleef dan eeuwig
+  // op dezelfde afstand staan.
+  const voorbij = (weken || []).filter((w) => w.completed_at);
+  const volledig = voorbij.map((w) => {
     const eigen = (alleSessies || []).filter((x) => x.week_id === w.id);
     return eigen.length > 0 && eigen.every((x) => x.gedaan_at);
   });
@@ -561,7 +603,11 @@ export async function dossierVoor(admin, memberId) {
   // gedaan" is een lijstje, geen plan. En zonder boeking gebeurt er niets — geen zaal, geen
   // deurcode, geen workout in de mail — dus het tekort aan boekingen is de belangrijkste stand op
   // dit scherm.
-  const vanaf = new Date(Date.now() - 8 * 86400000).toISOString();
+  // Ver genoeg terug om de HELE open week te dekken. Een vaste acht dagen was te kort: een week
+  // blijft open tot de zondagcron hem afwerkt, en die kan langer wegblijven (pauze_vragen,
+  // doorverwijzen, of een overgeslagen beurt). Dan viel de boeking van dag één buiten beeld.
+  const weekStart = open?.unlocked_at ? new Date(open.unlocked_at).getTime() - 86400000 : Date.now() - 8 * 86400000;
+  const vanaf = new Date(Math.min(weekStart, Date.now() - 8 * 86400000)).toISOString();
   const { data: boekingen } = await admin.from("bookings")
     .select("id, starts_at, ends_at, services(name)")
     .eq("user_id", memberId).eq("status", "bevestigd")

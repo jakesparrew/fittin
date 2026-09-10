@@ -9,6 +9,7 @@
 // sessie meesleept, en dan klopt de volgorde van de week niet meer.
 
 import { magCoaching } from "./toegang.js";
+import { nieuwToken } from "@/lib/meldpunt";
 
 /**
  * Zoekt de sessie die bij deze boeking hoort en koppelt ze eraan vast.
@@ -36,7 +37,7 @@ export async function workoutVoorBoeking(admin, { bookingId, memberId }) {
   if (!week?.program_id) return null;
 
   const { data: sessies } = await admin.from("coaching_sessions")
-    .select("id, volgnummer, program_day_id, booking_id, gedaan_at")
+    .select("id, volgnummer, program_day_id, booking_id, gedaan_at, afvink_token")
     .eq("week_id", week.id).order("volgnummer");
   if (!sessies?.length) return null;
 
@@ -46,8 +47,17 @@ export async function workoutVoorBoeking(admin, { bookingId, memberId }) {
     || sessies.find((s) => !s.gedaan_at && !s.booking_id);
   if (!sessie) return null;
 
-  if (sessie.booking_id !== bookingId) {
-    const { error } = await admin.from("coaching_sessions").update({ booking_id: bookingId }).eq("id", sessie.id);
+  // De sleutel voor het afvinken. Lui gemunt op precies dit moment, samen met de koppeling, want
+  // dit is het enige moment waarop hij nodig is. Zie 0160 voor waarom dit NIET het meldtoken van de
+  // boeking mag zijn: dat token staat ook in de mail van de COACH (in de meldpuntlink), en die zou
+  // er dan de sessie van zijn client mee kunnen afvinken.
+  const afvinkToken = sessie.afvink_token || nieuwToken();
+  const velden = {};
+  if (sessie.booking_id !== bookingId) velden.booking_id = bookingId;
+  if (!sessie.afvink_token) velden.afvink_token = afvinkToken;
+  if (Object.keys(velden).length) {
+    const { error } = await admin.from("coaching_sessions").update(velden).eq("id", sessie.id);
+    // Zonder token geen afvinklinks — maar de deurcode moet hoe dan ook vertrekken.
     if (error) console.error("coaching: sessie koppelen mislukt:", error.message);
   }
 
@@ -62,6 +72,8 @@ export async function workoutVoorBoeking(admin, { bookingId, memberId }) {
   return {
     weekNr: week.weeknummer,
     totaalWeken: plan.weken,
+    // Reist mee IN het workoutblok en nergens anders. Dat is de hele veiligheidsconstructie.
+    afvinkToken,
     volgnummer: sessie.volgnummer,
     totaal: sessies.length,
     naam: dag?.name || `Sessie ${sessie.volgnummer}`,
@@ -115,11 +127,20 @@ export const AFVINK_OORDELEN = [
 ];
 
 /**
- * Het pad van één afvinklink. Puur en zonder site-URL, zodat de mailtemplate en de tests dezelfde
+ * Het pad van de afvinkpagina. Puur en zonder site-URL, zodat de mailtemplate en de tests dezelfde
  * vorm gebruiken en dit bestand niets over hosting hoeft te weten.
+ *
+ * GEEN `?v=` MEER, en dat is een correctheidseis. De eerste versie liet de mail rechtstreeks een
+ * oordeel wegschrijven via een GET. De verdediging daarvoor was dat de mail vijf minuten vóór de
+ * sessie vertrekt en de actie alles vóór `starts_at` weigert — maar `sendDueAccessCodes` verstuurt
+ * in een venster dat tot zestien minuten NA de start loopt (lib/reminders.js), en bij een
+ * verplaatste boeking gaat de mail opnieuw uit. Een linkscanner die elke URL in een mail ophaalt,
+ * kan dus wel degelijk binnen het venster vallen en het oordeel voor het lid kiezen.
+ *
+ * Nu opent de mail alleen de pagina; het oordeel gaat er met een formulier (POST) uit. Dat kost
+ * één tik meer op een scherm dat toch al open staat, en het haalt de schrijfactie uit de GET.
  */
-export function afvinkPad(token, oordeel) {
+export function afvinkPad(token) {
   if (!token) return null;
-  const geldig = AFVINK_OORDELEN.some((o) => o.v === oordeel);
-  return `/s/${encodeURIComponent(token)}${geldig ? `?v=${oordeel}` : ""}`;
+  return `/s/${encodeURIComponent(token)}`;
 }

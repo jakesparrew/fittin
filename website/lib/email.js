@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { workoutKop, oefeningRegel, afvinkPad, AFVINK_OORDELEN } from "@/lib/coaching/levering.js";
+import { workoutKop, oefeningRegel, afvinkPad } from "@/lib/coaching/levering.js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { statGrid, barChart, sectionTitle, actionItem, calloutBox, delta, eur } from "@/lib/email-visuals";
 import { icsAttachment } from "@/lib/ics";
@@ -482,19 +482,23 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
   // De workout van de AI-coach reist mee in DEZE mail, en niet in een eigen bericht. Reden: dit is
   // de enige mail die iedereen opent — zonder de code raakt niemand binnen. Een tweede mail met
   // "je schema staat klaar" zou de helft van de tijd ongelezen blijven.
-  // Afvinken gebeurt HIER, in de mail, en niet op een pagina. Gemeten op 10-09-2026: 159 boekingen
-  // in dertig dagen tegenover zeven workout-logs ooit. De handeling moet staan waar het lid al is.
+  // De weg naar het afvinken begint HIER, in de mail, en niet op een pagina die niemand bezoekt.
+  // Gemeten op 10-09-2026: 159 boekingen in dertig dagen tegenover zeven workout-logs ooit.
   //
-  // Deze drie knoppen zitten bewust BINNEN workoutHtml. De coach krijgt bij een coach-sessie
-  // dezelfde deurcodemail mét reportToken maar ZONDER workout — daardoor kan hij per constructie de
-  // sessie van zijn client niet afvinken. Er staat een test op dat maar één van de twee
-  // sendAccessCode-aanroepen een workout meegeeft; die bewaakt hiermee ook deze knoppen.
-  const afvinkHtml = workout && reportToken
-    ? `<p style="margin:12px 0 6px;font-size:12px;color:#6b6685">Klaar met trainen? Eén tik, meer moet het niet zijn:</p>
-      <table role="presentation" cellpadding="0" cellspacing="0" style="border-collapse:separate;border-spacing:6px 0;margin:0 -6px">
-        <tr>${AFVINK_OORDELEN.map((o) => `<td style="background:#ffffff;border:1px solid #bbf7d0;border-radius:999px"><a href="${SITE}${afvinkPad(reportToken, o.v)}" style="display:block;padding:9px 14px;font-size:13px;font-weight:bold;color:#1a7d34;text-decoration:none;white-space:nowrap">${o.l}</a></td>`).join("")}</tr>
-      </table>
-      <p style="margin:8px 0 0;font-size:11px;color:#8b86a3">Dat stuurt je volgende week — zwaarder, gelijk of lichter.</p>`
+  // De sleutel is `workout.afvinkToken`: een token op de SESSIE, niet op de boeking. De eerste
+  // versie gebruikte hier `reportToken` en verdedigde dat met "de coach krijgt geen workoutblok,
+  // dus hij heeft de links niet". Dat was opmaak, geen veiligheid: diezelfde reportToken staat óók
+  // in de meldpuntlink `/m/{token}` onderaan de mail van de COACH, en `/m/` door `/s/` vervangen
+  // volstond om de sessie van zijn client af te vinken. Zie 0160.
+  //
+  // De knop schrijft niets. Hij opent een pagina waar het oordeel met een formulier verstuurd
+  // wordt — zie afvinkPad() voor waarom een schrijvende GET hier niet houdbaar was.
+  const afvinkHtml = workout?.afvinkToken
+    ? `<p style="margin:12px 0 6px;font-size:12px;color:#6b6685">Klaar met trainen?</p>
+      <table role="presentation" cellpadding="0" cellspacing="0"><tr><td style="background:#ffffff;border:1px solid #bbf7d0;border-radius:999px">
+        <a href="${SITE}${afvinkPad(workout.afvinkToken)}" style="display:block;padding:10px 18px;font-size:14px;font-weight:bold;color:#1a7d34;text-decoration:none;white-space:nowrap">Vink deze sessie af &rarr;</a>
+      </td></tr></table>
+      <p style="margin:8px 0 0;font-size:11px;color:#8b86a3">Eén tik hier, één op het scherm: te licht, goed of te zwaar. Dat stuurt je volgende week.</p>`
     : workout
       ? `<p style="margin:10px 0 0;font-size:12px;color:#6b6685">Na je sessie vink je ze af op <a href="${SITE}/coaching" style="color:#1a7d34;font-weight:bold">je coachingpagina</a> — dat stuurt je volgende week.</p>`
       : "";

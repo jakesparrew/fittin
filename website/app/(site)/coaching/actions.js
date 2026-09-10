@@ -268,8 +268,13 @@ export async function zetPlanStatus(formData) {
   const naar = String(formData.get("status") || "");
   if (!["lopend", "gepauzeerd", "gestopt"].includes(naar)) return { error: "Onbekende status." };
 
-  const { data: plan } = await mij.admin.from("coaching_plans")
-    .select("id").eq("member_id", mij.user.id).in("status", ["lopend", "gepauzeerd"]).maybeSingle();
+  // `.in(...)` op twee statussen is geen unieke sleutel: heeft een lid ooit een lopend én een
+  // gepauzeerd plan, dan geeft maybeSingle een fout in plaats van een plan, en werkt de pauzeknop
+  // niet meer. Het jongste plan is het plan dat het lid bedoelt.
+  const { data: plannen } = await mij.admin.from("coaching_plans")
+    .select("id").eq("member_id", mij.user.id).in("status", ["lopend", "gepauzeerd"])
+    .order("created_at", { ascending: false }).limit(1);
+  const plan = (plannen || [])[0];
   if (!plan) return { error: "Je hebt geen plan." };
 
   const { error } = await mij.admin.from("coaching_plans").update({ status: naar }).eq("id", plan.id);

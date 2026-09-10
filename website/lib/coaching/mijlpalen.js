@@ -117,7 +117,16 @@ export function zwaarste(soorten) {
   return { soort, ...MIJLPALEN[soort] };
 }
 
-/** Hoeveel volledige weken op rij, geteld vanaf het einde. */
+/**
+ * Hoeveel volledige weken op rij, geteld vanaf het einde.
+ *
+ * LET OP wat je erin stopt. Geef ALLEEN weken mee die voorbij zijn. Een plan van acht weken heeft
+ * vanaf dag één acht rijen in `coaching_weeks`, maar `coaching_sessions` ontstaan pas wanneer een
+ * week opengaat — een nog niet geopende week leest dus als "niet volledig". Wie de hele planlengte
+ * meegeeft, eindigt daardoor altijd op `false`, en omdat deze functie vanaf het EINDE telt is het
+ * antwoord dan structureel 0. De mijlpaal "drie volle weken op rij" heeft daardoor maandenlang
+ * nooit kunnen vuren.
+ */
 export function wekenOpRij(volledig) {
   let n = 0;
   for (let i = (volledig || []).length - 1; i >= 0; i--) {

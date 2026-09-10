@@ -235,24 +235,29 @@ describe("afvinken vanuit de deurcodemail", () => {
   // wie zijn keypadcode intypt laat geen spoor na — en de pagina met het vinkje wordt niet bezocht.
   // Deze mail heeft als enige 100% dekking, want zonder de code raak je niet binnen.
 
-  it("bouwt een pad per oordeel", () => {
-    expect(afvinkPad("abc123xyz", "goed")).toBe("/s/abc123xyz?v=goed");
-    expect(afvinkPad("abc123xyz", "te_zwaar")).toBe("/s/abc123xyz?v=te_zwaar");
-  });
-
-  it("laat een onbekend oordeel niet in de URL komen", () => {
-    // Anders is het pad een open schrijfopdracht met vrije invoer erin.
-    expect(afvinkPad("abc123xyz", "prima")).toBe("/s/abc123xyz");
-    expect(afvinkPad("abc123xyz", "<script>")).toBe("/s/abc123xyz");
+  it("bouwt het pad naar de afvinkpagina", () => {
+    expect(afvinkPad("sessietoken0123")).toBe("/s/sessietoken0123");
   });
 
   it("ontsnapt de token, zodat een rare token de URL niet openbreekt", () => {
-    expect(afvinkPad("a b&c", "goed")).toBe("/s/a%20b%26c?v=goed");
+    expect(afvinkPad("a b&c")).toBe("/s/a%20b%26c");
   });
 
   it("geeft niets terug zonder token", () => {
-    expect(afvinkPad(null, "goed")).toBeNull();
-    expect(afvinkPad("", "goed")).toBeNull();
+    expect(afvinkPad(null)).toBeNull();
+    expect(afvinkPad("")).toBeNull();
+  });
+
+  it("zet GEEN oordeel in de URL — de mail mag niet schrijven", () => {
+    // De eerste versie droeg drie links `?v=goed|te_licht|te_zwaar` die tijdens het renderen
+    // schreven. De verdediging was dat de mail vijf minuten vóór de sessie vertrekt en de actie
+    // alles vóór `starts_at` weigert, dus dat een linkscanner altijd op die grens zou botsen.
+    // Dat klopt niet: sendDueAccessCodes verstuurt in een venster dat tot zestien minuten NA de
+    // start loopt, en bij een verplaatste boeking gaat de mail opnieuw uit.
+    for (const o of AFVINK_OORDELEN) {
+      expect(afvinkPad("sessietoken0123")).not.toContain(o.v);
+    }
+    expect(afvinkPad("sessietoken0123")).not.toContain("?");
   });
 
   it("de drie knoppen zijn precies de drie oordelen die de databank kent", () => {
@@ -261,18 +266,17 @@ describe("afvinken vanuit de deurcodemail", () => {
     expect(AFVINK_OORDELEN.map((o) => o.v)).toEqual(["te_licht", "goed", "te_zwaar"]);
   });
 
-  it("de knoppen zitten BINNEN het workoutblok van de mail", () => {
-    // Dit is de veiligheidseigenschap, geen opmaakkeuze: de coach krijgt bij een coach-sessie
-    // dezelfde deurcodemail mét reportToken maar ZONDER workout. Staan de knoppen buiten dat blok,
-    // dan kan een coach de sessie van zijn client afvinken.
-    const mail = lees("lib/email.js");
-    expect(mail).toMatch(/const afvinkHtml = workout && reportToken/);
-    expect(mail).toMatch(/\$\{afvinkHtml\}[\s\S]{0,40}<\/div>` : "";/);
-  });
-
-  it("de mail valt terug op de pagina wanneer er geen token is", () => {
-    // Geen token = geen link die werkt. Dan hoort er nog steeds iets te staan, geen dood blok.
-    expect(lees("lib/email.js")).toMatch(/: workout\s*\?\s*`<p[^`]*\/coaching/);
+  it("de sleutel hangt aan de SESSIE en niet aan de boeking", () => {
+    // Dit is de veiligheidseigenschap. Ze werd eerder verdedigd met "de knoppen staan binnen het
+    // workoutblok en de coach krijgt geen workout" — een opmaakargument. Het echte lek zat elders:
+    // coach en lid deelden `bookings.report_token`, dat óók in de meldpuntlink /m/{token} van de
+    // coach staat. /m/ vervangen door /s/ volstond om de sessie van zijn client af te vinken.
+    const l = lees("lib/coaching/levering.js");
+    expect(l).toMatch(/afvink_token/);
+    expect(l).toMatch(/afvinkToken,/);
+    // en de mail leest hem uit de workout, niet uit het meldtoken
+    expect(lees("lib/email.js")).toMatch(/workout\?\.afvinkToken/);
+    expect(lees("lib/email.js")).not.toMatch(/afvinkPad\(reportToken/);
   });
 
   it("de workout passeert de proefgroep-poort", () => {
@@ -285,9 +289,15 @@ describe("afvinken vanuit de deurcodemail", () => {
 });
 
 describe("de landingspagina van het afvinken", () => {
+  it("schrijft niets tijdens het renderen", () => {
+    // De GET mag geen zij-effect hebben: een linkscanner of een prefetcher zou anders het oordeel
+    // kiezen, en `?v=` bleef in de adresbalk staan zodat "vinkje weghalen" zichzelf terugzette.
+    const pg = lees("app/s/[token]/page.jsx");
+    expect(pg).not.toMatch(/vinkAfViaToken/);
+    expect(pg).not.toMatch(/searchParams/);
+  });
+
   it("weigert alles vóór de sessie begonnen is", () => {
-    // Dit is óók de verdediging tegen linkscanners die elke URL in een mail ophalen: die mail
-    // vertrekt vijf minuten VÓÓR de start, dus een automatische fetch botst altijd op deze grens.
     const a = lees("app/s/[token]/actions.js");
     expect(a).toMatch(/if \(!d\.begonnen\) return \{ error/);
     expect(a).toMatch(/begonnen: Date\.now\(\) >= new Date\(boeking\.starts_at\)/);
@@ -297,20 +307,18 @@ describe("de landingspagina van het afvinken", () => {
     expect(lees("app/s/[token]/actions.js")).toMatch(/VENSTER_NA = 96 \* 3600000/);
   });
 
-  it("controleert dat de boeking bevestigd is en van dit lid", () => {
+  it("resolvet op het sessietoken, niet op het meldtoken van de boeking", () => {
     const a = lees("app/s/[token]/actions.js");
-    expect(a).toMatch(/boeking\.status !== "bevestigd"/);
-    expect(a).toMatch(/eq\("booking_id", boeking\.id\)/);
+    expect(a).toMatch(/eq\("afvink_token", t\)/);
+    expect(a).not.toMatch(/eq\("report_token"/);
+  });
+
+  it("controleert dat de boeking bevestigd is", () => {
+    expect(lees("app/s/[token]/actions.js")).toMatch(/boeking\.status !== "bevestigd"/);
   });
 
   it("laat de proefgroep-poort ook hier gelden", () => {
     expect(lees("app/s/[token]/actions.js")).toMatch(/magCoaching\(lid\)/);
-  });
-
-  it("de knoppen op die pagina worden NIET voorgeladen", () => {
-    // Next haalt een link op zodra hij in beeld komt. Deze URL schrijft, dus dan koos de browser
-    // het oordeel in plaats van het lid.
-    expect(lees("app/s/[token]/page.jsx")).toMatch(/prefetch=\{false\}/);
   });
 
   it("de pagina staat niet in Google", () => {

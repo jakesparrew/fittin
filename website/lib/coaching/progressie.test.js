@@ -322,3 +322,37 @@ describe("uitputting: het duwtje vervalt, het volume niet", () => {
     expect(licht.reps).toBe(10);
   });
 });
+
+describe("het duwtje na drie keer 'goed' blijft eenmalig", () => {
+  // Toen reeksGoed nog hard op 0 stond, deed `>= 3` niets. Zodra de teller uit de echte historiek
+  // kwam, bleef hij ná het duwtje doortellen — en dan is `>= 3` elke week waar. Wat als eenmalige
+  // doorbreking van stilstand bedoeld was, werd een permanente wekelijkse verhoging: "goed" zou
+  // vanaf week vier precies hetzelfde betekenen als "te licht".
+
+  it("duwt bij 3, 6 en 9 — en houdt vast bij 4, 5, 7 en 8", () => {
+    const geduwd = [];
+    for (let n = 1; n <= 9; n++) {
+      if (volgendeHerhalingen(10, "goed", 10, n) > 10) geduwd.push(n);
+    }
+    expect(geduwd).toEqual([3, 6, 9]);
+  });
+
+  it("doet hetzelfde voor gewicht", () => {
+    const geduwd = [];
+    for (let n = 1; n <= 7; n++) {
+      if (volgendGewicht(60, "goed", n) > 60) geduwd.push(n);
+    }
+    expect(geduwd).toEqual([3, 6]);
+  });
+
+  it("negen weken 'goed' geeft drie verhogingen, geen negen", () => {
+    let reps = 10;
+    for (let w = 1; w <= 9; w++) reps = volgendeHerhalingen(reps, "goed", 10, w);
+    expect(reps).toBe(13);
+  });
+
+  it("'te licht' duwt nog steeds elke week — dat is het verschil", () => {
+    expect(volgendeHerhalingen(10, "te_licht", 10, 0)).toBe(11);
+    expect(volgendeHerhalingen(11, "te_licht", 10, 0)).toBe(12);
+  });
+});

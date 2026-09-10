@@ -26,7 +26,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 
 process.env.RESEND_API_KEY = "re_test";
 
-const { sendBookingRescheduled, sendSessionReminder, sendBookingConfirmation, sendErrorAlert } = await import("@/lib/email");
+const { sendBookingRescheduled, sendSessionReminder, sendBookingConfirmation, sendErrorAlert, sendAccessCode } = await import("@/lib/email");
 
 const B = {
   to: "coach@fittin.be",
@@ -76,5 +76,81 @@ describe("mailsjablonen met bijlage of belofte", () => {
     expect(verstuurd.at(-1).html).toContain("Sinds kort");
     await sendErrorAlert({ to: "x@y.be", message: "boem", firstSeen: "2026-08-19T07:05:00.000Z" });
     expect(verstuurd.at(-1).html).not.toContain("Sinds kort");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// De deurcodemail en het afvinken
+// ---------------------------------------------------------------------------
+//
+// Deze groep bestaat omdat de vorige versie van dit stuk zijn veiligheid op een HANDMATIGE meting
+// zette ("op de gerenderde HTML nagemeten: lid 3 links, coach 0") en op drie regexen over de
+// BRONTEKST van email.js. Die meten opmaak, niet uitvoer: elke herstructurering die het gedrag niet
+// raakt, breekt ze of laat ze vals slagen. Hieronder wordt de echte payload geïnspecteerd.
+
+const WORKOUT = {
+  weekNr: 2, totaalWeken: 8, volgnummer: 1, totaal: 3, naam: "Onderlichaam",
+  afvinkToken: "sessietoken0123456789",
+  oefeningen: [{ naam: "Barbell Lunge", sets: 4, reps: 8, kg: null, rust: 120, sectie: "Hoofdoefening" }],
+};
+const DEUR = {
+  serviceName: "Gymsessie", startsAt: "2026-09-11T17:00:00.000Z", endsAt: "2026-09-11T18:00:00.000Z",
+  accessCode: "482913", personal: true, address: "Aannemersstraat 186", mapsUrl: "https://maps.example",
+};
+
+describe("de deurcodemail draagt het afvinken", () => {
+  it("het LID krijgt een afvinkknop die naar zijn sessietoken wijst", async () => {
+    await sendAccessCode({ ...DEUR, to: "lid@x.be", name: "Lid", reportToken: "meldtoken0123456789", workout: WORKOUT });
+    const html = verstuurd.at(-1).html;
+    expect(html).toContain("/s/sessietoken0123456789");
+    expect(html).toContain("Barbell Lunge");
+  });
+
+  it("de COACH krijgt dezelfde code maar GEEN enkele afvinklink", async () => {
+    // Dit is de eigenschap die er echt toe doet. Ze werd eerder verdedigd met "de knoppen staan
+    // binnen het workoutblok" — een opmaakargument. Het echte lek zat elders: coach en lid deelden
+    // hetzelfde `report_token`, dat óók in de meldpuntlink /m/{token} van de coach staat. Vervang
+    // /m/ door /s/ en de coach vinkt de sessie van zijn client af. Sinds 0160 draagt het afvinken
+    // een eigen sleutel op de SESSIE, die alleen in de mail van het lid terechtkomt.
+    await sendAccessCode({ ...DEUR, to: "coach@x.be", name: "Coach", reportToken: "meldtoken0123456789" });
+    const html = verstuurd.at(-1).html;
+    expect(html).toContain("482913");                    // de deurcode moet hij wél hebben
+    expect(html).not.toContain("/s/");                   // geen enkele afvinkweg
+    expect(html).not.toContain("Barbell Lunge");         // en geen schema van zijn client
+  });
+
+  it("het meldtoken van de coach opent geen afvinkpagina meer", async () => {
+    // De regressie in één test: als /s/ ooit weer op report_token zou resolven, staat de sleutel
+    // van de coach opnieuw in zijn eigen mail.
+    await sendAccessCode({ ...DEUR, to: "coach@x.be", name: "Coach", reportToken: "meldtoken0123456789" });
+    const html = verstuurd.at(-1).html;
+    expect(html).toContain("/m/meldtoken0123456789");    // het meldpunt hoort hij wél te krijgen
+    expect(html).not.toContain("/s/meldtoken0123456789");
+  });
+
+  it("zonder afvinktoken valt de mail terug op de coachingpagina, niet op een dode link", async () => {
+    const { afvinkToken, ...zonder } = WORKOUT;
+    await sendAccessCode({ ...DEUR, to: "lid@x.be", name: "Lid", reportToken: "meldtoken0123456789", workout: zonder });
+    const html = verstuurd.at(-1).html;
+    expect(html).not.toContain("/s/");
+    expect(html).toContain("/coaching");
+  });
+
+  it("de afvinkknop schrijft niets: geen oordeel in de URL", async () => {
+    // De eerste versie zette `?v=goed` in de mail. Een linkscanner die elke URL ophaalt, koos dan
+    // het oordeel voor het lid — en de verdediging ("de mail vertrekt vóór de sessie") klopte niet,
+    // want sendDueAccessCodes verstuurt tot zestien minuten NA de start.
+    await sendAccessCode({ ...DEUR, to: "lid@x.be", name: "Lid", reportToken: "meldtoken0123456789", workout: WORKOUT });
+    const html = verstuurd.at(-1).html;
+    expect(html).not.toMatch(/\?v=(goed|te_licht|te_zwaar)/);
+  });
+
+  it("een lid zonder coaching krijgt exact dezelfde mail als voorheen", async () => {
+    // Dit bestand raakt alle 86 leden. Zonder workout mag er niets veranderd zijn.
+    await sendAccessCode({ ...DEUR, to: "lid@x.be", name: "Lid", reportToken: "meldtoken0123456789" });
+    const zonderCoaching = verstuurd.at(-1).html;
+    expect(zonderCoaching).not.toContain("/s/");
+    expect(zonderCoaching).not.toContain("workout");
+    expect(zonderCoaching).toContain("482913");
   });
 });

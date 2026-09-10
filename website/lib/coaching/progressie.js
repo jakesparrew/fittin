@@ -55,9 +55,14 @@ export function volgendGewicht(kg, oordeel, reeksGoed = 0) {
     const nieuw = halveKilo(kg - terug);
     return kg > 20 ? Math.max(20, nieuw) : Math.max(1, nieuw);
   }
-  // "goed": vasthouden. Behalve na drie keer dezelfde "goed" — dan is het niet meer goed maar
-  // gewoon te makkelijk geworden, en drie weken stilstand voelt als niets bereiken.
-  if (oordeel === "goed" && reeksGoed >= 3) return halveKilo(kg + stap);
+  // "goed": vasthouden. Behalve bij elke DERDE keer op rij — dan is het niet meer goed maar gewoon
+  // te makkelijk geworden, en drie weken stilstand voelt als niets bereiken.
+  //
+  // Let op de modulo. Toen `reeksGoed` nog hard op 0 stond, deed `>= 3` niets. Zodra de teller uit
+  // de echte historiek kwam, bleef hij ná het duwtje gewoon doortellen — en dan is `>= 3` elke week
+  // waar. Wat als eenmalige doorbreking van stilstand bedoeld was, werd zo een permanente wekelijkse
+  // verhoging: "goed" zou vanaf week vier hetzelfde betekenen als "te licht".
+  if (oordeel === "goed" && reeksGoed >= 3 && reeksGoed % 3 === 0) return halveKilo(kg + stap);
   return halveKilo(kg);
 }
 
@@ -78,7 +83,8 @@ export function volgendeHerhalingen(reps, oordeel, start = reps, reeksGoed = 0) 
   const ondergrens = Math.max(4, Math.round(start * 0.6));
   if (oordeel === "te_licht") return Math.min(bovengrens, reps + 1);
   if (oordeel === "te_zwaar") return Math.max(ondergrens, reps - 2);
-  if (oordeel === "goed" && reeksGoed >= 3) return Math.min(bovengrens, reps + 1);
+  // Zelfde modulo als in volgendGewicht: elke derde "goed", niet elke week vanaf de derde.
+  if (oordeel === "goed" && reeksGoed >= 3 && reeksGoed % 3 === 0) return Math.min(bovengrens, reps + 1);
   return reps;
 }
 

@@ -110,3 +110,28 @@ describe("wat je vinkje deed", () => {
     expect(verschilTekst({ sets: 3, reps: 10, kg: null }, { sets: 3, reps: 10, kg: null })).toBeNull();
   });
 });
+
+describe("randgevallen die eerder door de takken vielen", () => {
+  it("een week zonder sessies krijgt een eigen tak, niet 'alles staat geboekt'", () => {
+    // Viel eerder door naar tak 3: `teDoen` is 0, dus tekort <= 0. Het scherm zei dan "je volgende
+    // sessie staat geboekt" bij nul sessies en nul boekingen — de rustigste zin op het drukste
+    // moment, met een lege kaart eronder.
+    const s = volgendeStap({ sessies: [], boekingen: [], nu: NU });
+    expect(s.soort).toBe("leeg");
+    expect(s.knop).toBeTruthy();
+    expect(s.stil).toBeFalsy();
+  });
+
+  it("een lege week wordt niet als afgewerkte week gelezen", () => {
+    const s = volgendeStap({ sessies: [], boekingen: [], checkin: false, magCheckin: true, nu: NU });
+    expect(s.soort).not.toBe("checkin");
+    expect(s.soort).not.toBe("klaar");
+  });
+
+  it("belooft nooit meer dagen dan het venster, ook niet vlak na het openen", () => {
+    // Een week die net openging kreeg "nog 7 dagen", maar de cron werkt hem pas af als hij zes
+    // dagen loopt en draait alleen op zondag.
+    expect(dagenTeGaan(new Date(NU + 3600000).toISOString(), NU)).toBeLessThanOrEqual(7);
+    expect(dagenTeGaan(new Date(NU).toISOString(), NU)).toBe(7);
+  });
+});

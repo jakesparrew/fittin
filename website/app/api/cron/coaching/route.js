@@ -15,10 +15,17 @@ export const dynamic = "force-dynamic";
 // een budget bij en stopt netjes vóór die grens in plaats van eraan te sterven.
 export const maxDuration = 300;
 
-// Wanneer stoppen we met een nieuw plan beginnen? Ruim vóór de harde grens, want het plan dat we
-// nog wél starten mag zijn volle modeltijd nemen. Wat niet aan de beurt kwam, komt volgende zondag —
-// en staat tot dan in `cron_runs` als `overgeslagen`, zodat het zichtbaar is en niet stil.
-const BUDGET_MS = 220000;
+// Wanneer stoppen we met een nieuw plan beginnen?
+//
+// Nagerekend: één iteratie kan TWEE modelaanroepen doen die elk tot 90 seconden mogen duren — de
+// weekzin in openVolgendeWeek en het weekmenu in zorgVoorMenu. De poort staat aan het BEGIN van een
+// iteratie, dus wie hier doorglipt mag daarna nog 180 seconden werken. Met een budget van 220 op een
+// grens van 300 kon een plan dat op 219 seconden begon dus tot ver over de grens doorlopen, en werd
+// het precies afgekapt in het werk van één lid — de toestand die het commentaar hierboven zegt te
+// vermijden.
+const MODELTIJD_MS = 180000;   // twee aanroepen van 90s (zie roepModel in model.js)
+const MARGE_MS = 20000;        // opstarten, databank, de slotschrijfactie
+const BUDGET_MS = 300000 - MODELTIJD_MS - MARGE_MS;   // 100 seconden om aan een plan te BEGINNEN
 
 // De zondagcron van de AI-coach. Draait één keer per week (vercel.json: zondag 17:00 UTC — 19:00 in België, 18:00 in de winter).
 //
@@ -46,7 +53,12 @@ async function standVanHetPlan(admin, { planId, planWeken }) {
   const { data: sessies } = await admin.from("coaching_sessions")
     .select("week_id, gedaan_at").in("week_id", ids.length ? ids : [LEEG]);
 
-  const volledig = (weken || []).map((w) => {
+  // ALLEEN de weken die voorbij zijn. Een plan van acht weken heeft vanaf dag één acht weekrijen,
+  // maar coaching_sessions ontstaan pas wanneer een week opengaat — een nog niet geopende week
+  // leest dus als "niet volledig". Omdat wekenOpRij vanaf het EINDE telt, was `opRij` daardoor
+  // structureel 0 en kon de mijlpaal "drie volle weken op rij" nooit gemaild worden.
+  const voorbij = (weken || []).filter((w) => w.completed_at);
+  const volledig = voorbij.map((w) => {
     const eigen = (sessies || []).filter((s) => s.week_id === w.id);
     return eigen.length > 0 && eigen.every((s) => s.gedaan_at);
   });
@@ -79,19 +91,35 @@ export async function GET(req) {
   if (!coachAan()) return NextResponse.json({ uit: "coach staat uit" });
 
   const admin = createAdminClient();
+
+  // Eerst een spoor achterlaten, dan pas werken. De slotschrijfactie staat NA de lus, dus juist de
+  // beurt die door Vercel afgekapt wordt — de enige die echt fout gaat — liet helemaal geen rij na.
+  // Deze rij blijft op status "bezig" staan als dat gebeurt, en dat is precies het signaal.
+  let runId = null;
+  try {
+    const { data } = await admin.from("cron_runs")
+      .insert({ job: "coaching_week", ok: false, detail: { status: "bezig" } }).select("id").maybeSingle();
+    runId = data?.id || null;
+  } catch {}
+
   const fouten = [];
   let gevraagd = 0, geopend = 0, gepauzeerd = 0, afgerond = 0, menus = 0, buitenGroep = 0;
   const gestart = Date.now();
-  let overgeslagen = 0;
+  const overgeslagenIds = [];
 
+  // Vaste volgorde, oudste plan eerst. Zonder `.order()` kiest Postgres de volgorde en is "wat niet
+  // aan de beurt kwam, komt volgende zondag" een aanname die nergens vastligt: de verzameling
+  // krimpt niet tussen twee zondagen, dus wie achteraan staat wordt structureel overgeslagen.
+  // Met een vaste volgorde is dat tenminste voorspelbaar, en de overgeslagen ids staan in cron_runs.
   const { data: plannen, error } = await admin
-    .from("coaching_plans").select("id, gym_id, member_id, weken").eq("status", "lopend");
+    .from("coaching_plans").select("id, gym_id, member_id, weken").eq("status", "lopend")
+    .order("created_at", { ascending: true });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   for (const plan of plannen || []) {
     // Op is op. Afbreken vóór de grens is beter dan halverwege een lid afgekapt worden: dan staat
     // er een week open zonder mail, en de zondag erna denkt de cron dat die al verwerkt is.
-    if (Date.now() - gestart > BUDGET_MS) { overgeslagen++; continue; }
+    if (Date.now() - gestart > BUDGET_MS) { overgeslagenIds.push(plan.id); continue; }
     try {
       const { data: weken } = await admin.from("coaching_weeks")
         .select("id, weeknummer, unlocked_at, completed_at").eq("plan_id", plan.id).order("weeknummer");
@@ -225,14 +253,16 @@ export async function GET(req) {
   }
 
   try {
-    await admin.from("cron_runs").insert({
-      job: "coaching_week", ok: fouten.length === 0 && overgeslagen === 0,
-      detail: { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, overgeslagen, ...(fouten.length ? { fouten } : {}) },
-    });
+    const rij = {
+      job: "coaching_week", ok: fouten.length === 0 && overgeslagenIds.length === 0,
+      detail: { status: "af", gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, overgeslagen: overgeslagenIds.length, ...(overgeslagenIds.length ? { overgeslagenIds } : {}), ...(fouten.length ? { fouten } : {}) },
+    };
+    if (runId) await admin.from("cron_runs").update(rij).eq("id", runId);
+    else await admin.from("cron_runs").insert(rij);
   } catch {}
 
   return NextResponse.json(
-    { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, overgeslagen, ...(fouten.length ? { fouten } : {}) },
+    { gevraagd, geopend, gepauzeerd, afgerond, menus, buitenGroep, overgeslagen: overgeslagenIds.length, ...(fouten.length ? { fouten } : {}) },
     { status: fouten.length ? 500 : 200 }
   );
 }

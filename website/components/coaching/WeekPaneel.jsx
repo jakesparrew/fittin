@@ -18,7 +18,7 @@ const OORDELEN = [
   { v: "te_zwaar", l: "Te zwaar" },
 ];
 
-export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, magCheckin = false, isLaatsteWeek, maaltijden = false, boekingOp = {}, vorigVoorschrift = {}, nu = 0 }) {
+export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, magCheckin = false, isLaatsteWeek, maaltijden = false, sessieDatum = {}, vorigVoorschrift = {}, nu = 0 }) {
   const [bezig, start] = useTransition();
   const [melding, setMelding] = useState(null);
   const [open, setOpen] = useState(sessies[0]?.id || null);
@@ -46,9 +46,10 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
         const eigen = oefeningen.filter((o) => o.program_day_id === s.program_day_id);
         const gedaan = !!s.gedaan_at;
         const uitgeklapt = open === s.id;
-        // De boeking waaraan deze sessie hangt. Ze wordt lui gekoppeld op het moment dat de
-        // deurcode vertrekt, dus ze bestaat pas vanaf vijf minuten voor de training.
-        const wanneer = s.booking_id ? boekingOp[s.booking_id] : null;
+        // De datum bij deze sessie. Komt uit page.jsx, die de geboekte momenten op volgorde over de
+        // openstaande sessies verdeelt — `s.booking_id` alleen zou niet werken, want die kolom
+        // wordt pas gezet als de deurcodemail vertrekt, vijf minuten voor aanvang.
+        const wanneer = sessieDatum[s.id] || null;
         const nogTeGaan = wanneer ? new Date(wanneer).getTime() > nu : false;
         return (
           <div key={s.id} className={"overflow-hidden rounded-3xl border-2 bg-white transition " + (gedaan ? "border-accent/40" : "border-borderc")}>

@@ -23,8 +23,21 @@ export function volgendeStap({ sessies = [], boekingen = [], checkin = false, ma
   const komend = boekingen.filter((b) => new Date(b.starts_at).getTime() > nu);
   const eerstvolgend = komend[0] || null;
 
+  // 0. Een week zonder sessies. Zeldzaam, maar niet onmogelijk: het model kan voor elke dag een
+  //    onbruikbare sessie teruggeven, of een week gaat open terwijl het programma leeg bleef.
+  //    Zonder deze tak viel die toestand door naar tak 3 en stond er "je volgende sessie staat
+  //    geboekt" bij nul sessies en nul boekingen — de rustigste zin op het drukste moment.
+  if (!sessies.length) {
+    return {
+      soort: "leeg",
+      titel: "Deze week staat nog leeg",
+      tekst: "Er staan geen sessies klaar. Ververs de pagina; blijft het leeg, laat het dan even weten.",
+      knop: { label: "Mail ons", href: "mailto:info@fittin.be" },
+    };
+  }
+
   // 1. De week is afgewerkt. Dan is de check-in het enige dat de volgende week nog tegenhoudt.
-  if (teDoen === 0 && sessies.length > 0) {
+  if (teDoen === 0) {
     if (!checkin && magCheckin) {
       return {
         soort: "checkin",
@@ -79,7 +92,10 @@ export function volgendeStap({ sessies = [], boekingen = [], checkin = false, ma
 export function dagenTeGaan(unlockedAt, nu, venster = 7) {
   if (!unlockedAt) return null;
   const verstreken = (nu - new Date(unlockedAt).getTime()) / 86400000;
-  return Math.max(0, Math.ceil(venster - verstreken));
+  // Nooit méér dan het venster beloven, ook niet als de week net openging: de cron werkt een week
+  // pas af als hij zes dagen loopt, en hij draait alleen op zondag. "Nog 7 dagen" op een week die
+  // vrijdag openging, is dus een belofte die de cron niet nakomt.
+  return Math.max(0, Math.min(venster, Math.ceil(venster - verstreken)));
 }
 
 /**

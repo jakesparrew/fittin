@@ -93,12 +93,34 @@ export default async function CoachingPagina() {
   const stap = volgendeStap({ sessies, boekingen, checkin: !!checkin, magCheckin, laatsteWeek: isLaatste, nu });
   const restDagen = dagenTeGaan(open?.unlocked_at, nu);
   const komende = (boekingen || []).filter((b) => new Date(b.starts_at).getTime() > nu);
-  // Elke afgevinkte sessie draagt de boeking waaraan ze hing; die kunnen we terugvertalen naar een
-  // datum zodat "sessie 2" een dag krijgt in plaats van een nummer te blijven.
-  const boekingOp = Object.fromEntries((boekingen || []).map((b) => [b.id, b.starts_at]));
+  // Welke datum hoort bij welke sessie.
+  //
+  // `coaching_sessions.booking_id` is hier NIET voldoende. Die kolom wordt op precies één moment
+  // geschreven: wanneer de deurcodemail vertrekt, vijf minuten voor aanvang. Wie drie weken geleden
+  // boekte, had dus tot vlak voor zijn training een sessiekaart die "nog geen moment geboekt" zei —
+  // terwijl bovenaan hetzelfde scherm de geboekte datum stond. Twee tegengestelde beweringen, en de
+  // onderste stuurde het lid naar een tweede boeking.
+  //
+  // Dus: een sessie met een boeking gebruikt die, en de overige sessies krijgen op volgorde de
+  // eerstvolgende nog niet toegewezen boeking. Dat is een vermoeden, geen feit — maar het is het
+  // vermoeden dat het lid zelf ook maakt, en het is nooit zichtbaar fout.
+  const opDatum = Object.fromEntries((boekingen || []).map((b) => [b.id, b.starts_at]));
+  const vrij = (boekingen || [])
+    .filter((b) => new Date(b.starts_at).getTime() > nu && !sessies.some((s) => s.booking_id === b.id))
+    .map((b) => b.starts_at);
+  const sessieDatum = {};
+  for (const s of sessies) {
+    if (s.booking_id && opDatum[s.booking_id]) sessieDatum[s.id] = opDatum[s.booking_id];
+    else if (!s.gedaan_at && vrij.length) sessieDatum[s.id] = vrij.shift();
+  }
   // De motivatiemodule is een keuze uit de intake; wie ze niet koos, hoort hier niets over te zien.
   const motivatie = Array.isArray(profile?.coaching_modules) && profile.coaching_modules.includes("motivatie");
-  const volgende = motivatie && stand ? volgendeMijlpaal(stand) : null;
+  const behaald = new Set((mijlpalen || []).map((m) => m.soort));
+  // Een mijlpaal die al als chip staat, hoort er niet ook nog eens als doel naast te staan. Dat kan
+  // gebeuren omdat de chips uit `coaching_mijlpalen` komen (weggeschreven door de zondagcron) en het
+  // doel uit de LIVE stand — de cron loopt dus een week achter op de werkelijkheid, of vooruit.
+  const volgendRuw = motivatie && stand ? volgendeMijlpaal(stand) : null;
+  const volgende = volgendRuw && !behaald.has(volgendRuw.soort) ? volgendRuw : null;
 
   return (
     <Kader>
@@ -196,7 +218,7 @@ export default async function CoachingPagina() {
             <h2 className="font-display text-lg font-black text-brand">Deze week</h2>
             <span className="text-sm text-ink-soft">{afgevinkt} van {sessies.length} gedaan</span>
           </div>
-          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} magCheckin={magCheckin} isLaatsteWeek={isLaatste} maaltijden={eten} boekingOp={boekingOp} vorigVoorschrift={vorigVoorschrift} nu={nu} />
+          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} magCheckin={magCheckin} isLaatsteWeek={isLaatste} maaltijden={eten} sessieDatum={sessieDatum} vorigVoorschrift={vorigVoorschrift} nu={nu} />
         </div>
       )}
 

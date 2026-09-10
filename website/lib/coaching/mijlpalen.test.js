@@ -135,3 +135,29 @@ describe("waar je naartoe werkt", () => {
     expect(p).toMatch(/includes\("motivatie"\)/);
   });
 });
+
+describe("de reeks volle weken telt alleen weken die voorbij zijn", () => {
+  // De fout die dit dicht: een plan van acht weken heeft vanaf dag één acht weekrijen, maar
+  // coaching_sessions ontstaan pas als een week opengaat. Wie de hele planlengte in `volledig`
+  // stopte, kreeg [T,T,T,F,F,F,F,F] — en omdat wekenOpRij vanaf het EINDE telt, was het antwoord
+  // altijd 0. De mijlpaal "drie volle weken op rij" heeft daardoor nooit kunnen vuren.
+
+  it("toont de fout: nog niet geopende weken maken de reeks 0", () => {
+    expect(wekenOpRij([true, true, true, false, false, false, false, false])).toBe(0);
+  });
+
+  it("en telt wél correct wanneer je alleen de afgeronde weken meegeeft", () => {
+    expect(wekenOpRij([true, true, true])).toBe(3);
+    expect(bepaalMijlpalen({ afgevinkt: 9, wekenAf: 3, planWeken: 8, opRij: 3 })).toContain("drie_op_rij");
+  });
+
+  it("dossierVoor geeft alleen afgeronde weken door", () => {
+    // De plek waar het misging. Zonder deze filter stond er op /coaching een doel dat nooit
+    // dichterbij kwam, wat erger is dan het blok helemaal niet tonen.
+    expect(lees("lib/coaching/plan.js")).toMatch(/const voorbij = \(weken \|\| \[\]\)\.filter\(\(w\) => w\.completed_at\)/);
+  });
+
+  it("de cron doet hetzelfde, anders wordt de mijlpaal nooit gemaild", () => {
+    expect(lees("app/api/cron/coaching/route.js")).toMatch(/completed_at/);
+  });
+});

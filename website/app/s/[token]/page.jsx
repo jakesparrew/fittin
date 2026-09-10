@@ -1,40 +1,26 @@
 import Link from "next/link";
-import { sessieVanToken, vinkAfViaToken, haalVinkjeWeg } from "./actions";
-import { AFVINK_OORDELEN, afvinkPad } from "@/lib/coaching/levering.js";
+import { sessieVanToken } from "./actions";
+import { AFVINK_OORDELEN } from "@/lib/coaching/levering.js";
+import AfvinkKnoppen from "@/components/coaching/AfvinkKnoppen";
 
-// De landingspagina van de drie knoppen uit de deurcodemail. Eén tik = sessie afgevinkt, zonder
-// login en zonder formulier. Zelfde vorm als /f/{token}, en om dezelfde reden: de handeling hoort
-// te gebeuren waar het lid al is.
+// De landingspagina van de afvinkknop uit de deurcodemail. Zelfde vorm als /f/{token}, en om
+// dezelfde reden: de handeling hoort te gebeuren waar het lid al is.
 //
-// WAAROM EEN GET MAG SCHRIJVEN. Normaal is dat fout — een linkscanner of een prefetcher haalt de
-// URL op en de handeling gebeurt zonder mens. Hier valt dat weg door het venster: de mail vertrekt
-// vijf minuten VÓÓR de sessie begint, en `vinkAfViaToken` weigert alles vóór `starts_at`. Een
-// automatische fetch komt binnen seconden na verzending en botst dus altijd op die grens. Een mens
-// tikt na zijn training. Dat is geen toeval maar de reden dat de ondergrens van het venster er staat.
+// DEZE PAGINA SCHRIJFT NIETS TIJDENS HET RENDEREN. Dat is een correctie op de eerste versie, waarin
+// de mail drie links `?v=…` droeg die het oordeel al vastlegden bij het openen. Twee dingen braken
+// daarop: een linkscanner die elke URL in een mail ophaalt koos dan het oordeel voor het lid, en
+// `?v=` bleef in de adresbalk staan zodat "vinkje weghalen" zichzelf meteen terugzette. Schrijven
+// gebeurt nu uitsluitend via een POST uit AfvinkKnoppen.
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Afgevinkt | Fittin'", robots: { index: false, follow: false } };
+export const metadata = { title: "Afvinken | Fittin'", robots: { index: false, follow: false } };
 
-export default async function SessieAfvinken({ params, searchParams }) {
+export default async function SessieAfvinken({ params }) {
   const { token } = await params;
-  const sp = (await searchParams) || {};
-  const gevraagd = String(Array.isArray(sp.v) ? sp.v[0] : sp.v || "");
-
-  // Eerst schrijven, dan pas lezen: anders toont het scherm de stand van vóór de tik.
-  let fout = null;
-  if (AFVINK_OORDELEN.some((o) => o.v === gevraagd)) {
-    const r = await vinkAfViaToken(token, gevraagd);
-    if (r?.error) fout = r.error;
-  }
   const d = await sessieVanToken(token);
 
   if (!d) return <Kaart emoji="🕓" titel="Deze link werkt niet meer">
     <p>Links uit je deurcodemail blijven vier dagen geldig. Afvinken kan altijd nog op je coachingpagina.</p>
-    <Knop href="/coaching">Naar mijn coaching</Knop>
-  </Kaart>;
-
-  if (d.status === "geen_sessie") return <Kaart emoji="👋" titel="Er hangt geen sessie aan deze boeking">
-    <p>Misschien was dit een losse training, of stond je plan op pauze toen je boekte.</p>
     <Knop href="/coaching">Naar mijn coaching</Knop>
   </Kaart>;
 
@@ -45,8 +31,7 @@ export default async function SessieAfvinken({ params, searchParams }) {
 
   const gedaan = !!d.sessie.gedaan_at;
   const alleAf = d.gepland > 0 && d.gedaan >= d.gepland;
-  const gekozen = d.sessie.oordeel;
-  const label = AFVINK_OORDELEN.find((o) => o.v === gekozen)?.l;
+  const label = AFVINK_OORDELEN.find((o) => o.v === d.sessie.oordeel)?.l;
 
   return (
     <Kaart emoji={gedaan ? "✅" : "💪"} titel={gedaan ? "Afgevinkt" : "Hoe voelde het?"}>
@@ -55,26 +40,7 @@ export default async function SessieAfvinken({ params, searchParams }) {
         {gedaan && label ? <> — je gaf aan dat het <b>{label.toLowerCase()}</b> was.</> : null}
       </p>
 
-      {/* De knoppen blijven staan, ook na een tik: wie zich vergist, corrigeert met één tik meer.
-          `prefetch={false}` is hier geen optimalisatie maar een correctheidseis: deze URL schrijft,
-          en Next zou hem anders vooraf ophalen zodra hij in beeld komt — dan koos de browser het
-          oordeel in plaats van het lid. */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {AFVINK_OORDELEN.map((o) => (
-          <Link key={o.v} href={afvinkPad(token, o.v)} replace prefetch={false}
-            className={"rounded-xl border-2 px-2 py-3 text-center text-sm font-bold transition " +
-              (gekozen === o.v ? "border-accent bg-accent/10 text-brand" : "border-borderc text-brand/70 hover:border-accent")}>
-            {o.l}
-          </Link>
-        ))}
-      </div>
-      <p className="mt-2 text-xs text-brand/45">
-        {gedaan
-          ? "Dit stuurt je volgende week: zwaarder, gelijk of lichter. Vergist? Tik gewoon een andere."
-          : "Eén tik is genoeg. Meer vragen we niet."}
-      </p>
-
-      {fout && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{fout}</p>}
+      <AfvinkKnoppen token={token} gedaan={gedaan} oordeel={d.sessie.oordeel} />
 
       {gedaan && (
         <div className="mt-6 rounded-2xl bg-paper px-4 py-3">
@@ -86,21 +52,12 @@ export default async function SessieAfvinken({ params, searchParams }) {
           </div>
           <p className="mt-2.5 text-xs leading-relaxed text-ink-soft">
             {alleAf && !d.checkinIngevuld
-              ? "Je week zit erop. Nog vier tikken op je coachingpagina en je volgende week wordt daarop gebouwd."
+              ? "Je week zit erop. Nog een paar tikken op je coachingpagina en je volgende week wordt daarop gebouwd."
               : alleAf
                 ? "Je week zit erop en je check-in staat er. Zondag zet je coach de volgende week klaar."
                 : `Nog ${d.gepland - d.gedaan} te gaan. Boek je volgende moment wanneer het je uitkomt.`}
           </p>
         </div>
-      )}
-
-      {gedaan && (
-        <form action={haalVinkjeWeg} className="mt-4">
-          <input type="hidden" name="token" value={token} />
-          <button type="submit" className="text-xs font-bold text-brand/45 underline transition hover:text-brand">
-            Toch niet getraind — vinkje weghalen
-          </button>
-        </form>
       )}
 
       <div className="mt-5 flex flex-wrap gap-2">
