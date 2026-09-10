@@ -35,7 +35,7 @@ describe("kostberekening", () => {
   it("rekent in hele micro-USD, niet in floats", () => {
     // Bij $1 per miljoen tokens kost één token één micro-USD. Dus 1.000 in + 1.000 uit op Haiku
     // ($1/$5) = 1.000 + 5.000 = 6.000 micro-USD, oftewel $0,006.
-    expect(kostMicro("anthropic/claude-haiku-4-5", 1000, 1000)).toBe(6000);
+    expect(kostMicro("anthropic/claude-haiku-4.5", 1000, 1000)).toBe(6000);
     expect(Number.isInteger(kostMicro("anthropic/claude-sonnet-5", 1234, 5678))).toBe(true);
   });
 

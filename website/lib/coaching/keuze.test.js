@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { score, kiesOefeningen, verdeelFocus, keurVoorschriften, zaadUit, CATEGORIEEN } from "./keuze.js";
+import { score, kiesOefeningen, verdeelFocus, keurVoorschriften, zaadUit, CATEGORIEEN, KERNOEFENINGEN } from "./keuze.js";
 
 // De bibliotheek zoals ze er in productie uitziet: 886 rijen, categorieën benen/armen/schouders/
 // rug/core/borst, difficulty beginner/intermediate/gevorderd, en een flink deel zonder `mechanic`.
@@ -38,9 +38,25 @@ describe("score", () => {
   });
 
   it("beloont een demo — het lid staat alleen in de zaal", () => {
-    const metVideo = score(BIB[1], { categorie: "benen" });   // image_url
-    const zonder = score(BIB[2], { categorie: "benen" });     // niets
-    expect(metVideo).toBeGreaterThan(zonder);
+    // Twee oefeningen die in alles gelijk zijn behalve de demo. Vergelijk je twee verschillende
+    // oefeningen, dan meet je de herkenbaarheidsbonus mee en zegt de uitkomst niets over media.
+    const zelfde = { category: "benen", difficulty: "beginner", mechanic: "compound", equipment: "Machine" };
+    const metVideo = score({ ...zelfde, id: "a", name: "Leg Press", animation_url: "x.mp4" }, { categorie: "benen" });
+    const metFoto = score({ ...zelfde, id: "b", name: "Leg Press", image_url: "x.jpg" }, { categorie: "benen" });
+    const zonder = score({ ...zelfde, id: "c", name: "Leg Press" }, { categorie: "benen" });
+    expect(metVideo).toBeGreaterThan(metFoto);
+    expect(metFoto).toBeGreaterThan(zonder);
+  });
+
+  it("herkent een basisoefening ongeacht spatie of streepje", () => {
+    // De bibliotheek is deels met de hand gevuld en deels geïmporteerd; beide schrijfwijzen staan
+    // erin. "Legpress" hoort even herkenbaar te zijn als "Leg Press".
+    const basis = { category: "benen", difficulty: "beginner", mechanic: "compound", equipment: "Machine" };
+    const a = score({ ...basis, id: "a", name: "Leg Press" }, { categorie: "benen" });
+    const b = score({ ...basis, id: "b", name: "Legpress" }, { categorie: "benen" });
+    const c = score({ ...basis, id: "c", name: "Leg-Press" }, { categorie: "benen" });
+    expect(a).toBe(b);
+    expect(a).toBe(c);
   });
 
   it("laat een oefening zonder mechanic niet wegvallen", () => {
@@ -147,5 +163,93 @@ describe("zaad", () => {
     expect(zaadUit("abc")).toBe(zaadUit("abc"));
     expect(zaadUit("abc")).toBeGreaterThanOrEqual(0);
     expect(zaadUit("abc")).not.toBe(zaadUit("abd"));
+  });
+});
+
+// Toegevoegd na de EERSTE echte generatie (10-09-2026). Die leverde "Double Leg Butt Kick" als
+// hoofdoefening benen op 4×6 met 120s rust, "Clean and Press" als opwarming en "Elbows Back" —
+// een rekoefening — als borstaccessoire. De machinerie klopte; de scoring was te grof. Deze tests
+// leggen vast wat er sindsdien zwaarder weegt.
+describe("herkenbaarheid en plaats in de sessie", () => {
+  const basis = { id: "sq", name: "Barbell Squat", category: "benen", difficulty: "intermediate", mechanic: "compound", equipment: "Barbell" };
+  const obscuur = { id: "ob", name: "Seated One-Arm Dumbbell Palms-Up Wrist Curl", category: "benen", difficulty: "beginner", mechanic: "compound", equipment: "Dumbbell" };
+  const explosief = { id: "ck", name: "Double Leg Butt Kick", category: "benen", difficulty: "beginner", mechanic: "compound", equipment: "Lichaamsgewicht" };
+
+  it("een basisoefening wint van een obscure variant", () => {
+    const blok = { categorie: "benen", mechanic: "compound", sectie: "Hoofdoefening" };
+    expect(score(basis, blok, { niveau: "soms" })).toBeGreaterThan(score(obscuur, blok, { niveau: "soms" }));
+  });
+
+  it("explosief werk kan nooit een opwarming zijn", () => {
+    expect(score(explosief, { categorie: "benen", sectie: "Warming-up" }, { niveau: "vaak" })).toBe(-1);
+    const clean = { id: "cp", name: "Clean and Press", category: "schouders", difficulty: "gevorderd", mechanic: "compound", equipment: "Barbell" };
+    expect(score(clean, { categorie: "schouders", sectie: "Warming-up" }, { niveau: "vaak" })).toBe(-1);
+  });
+
+  it("explosief werk krijgt een beginner nooit", () => {
+    expect(score(explosief, { categorie: "benen", sectie: "Hoofdoefening" }, { niveau: "nooit" })).toBe(-1);
+  });
+
+  it("een opwarming is licht en zonder stang", () => {
+    const blok = { categorie: "benen", sectie: "Warming-up" };
+    const licht = { id: "a", name: "Bodyweight Squat", category: "benen", difficulty: "beginner", equipment: "Lichaamsgewicht" };
+    const zwaar = { id: "b", name: "Barbell Squat", category: "benen", difficulty: "intermediate", equipment: "Barbell" };
+    expect(score(licht, blok)).toBeGreaterThan(score(zwaar, blok));
+  });
+
+  it("een hoofdoefening is samengesteld, geen isolatie", () => {
+    const blok = { categorie: "benen", sectie: "Hoofdoefening" };
+    const samengesteld = { id: "a", name: "Leg Press", category: "benen", difficulty: "beginner", mechanic: "compound", equipment: "Machine" };
+    const isolatie = { id: "b", name: "Leg Extension", category: "benen", difficulty: "beginner", mechanic: "isolation", equipment: "Machine" };
+    expect(score(samengesteld, blok)).toBeGreaterThan(score(isolatie, blok));
+  });
+
+  it("randmateriaal zakt naar achteren", () => {
+    const blok = { categorie: "core", sectie: "Accessoire" };
+    const gewoon = { id: "a", name: "Cable Crunch", category: "core", difficulty: "beginner", equipment: "Cable" };
+    const rand = { id: "b", name: "Foam Roller Crunch", category: "core", difficulty: "beginner", equipment: "Foam roller" };
+    expect(score(gewoon, blok)).toBeGreaterThan(score(rand, blok));
+  });
+});
+
+describe("een opwarming is nooit een hoofdbeweging", () => {
+  it("pull-ups komen niet als opwarming, ook al staan ze als beginner in de bibliotheek", () => {
+    // Echt geval uit de eerste generatie: "Pullups" staat in de bibliotheek op difficulty
+    // 'beginner', dus alle lichte-oefening-bonussen pakten hem op. Een opwarming van twaalf
+    // pull-ups is geen opwarming.
+    const blok = { categorie: "rug", sectie: "Warming-up" };
+    const pullup = { id: "a", name: "Pullups", category: "rug", difficulty: "beginner", equipment: "Lichaamsgewicht" };
+    const licht = { id: "b", name: "Arm Circles", category: "rug", difficulty: "beginner", equipment: "Lichaamsgewicht" };
+    expect(score(licht, blok)).toBeGreaterThan(score(pullup, blok));
+  });
+
+  it("diezelfde pull-up is wél een goede hoofdoefening", () => {
+    const blok = { categorie: "rug", sectie: "Hoofdoefening" };
+    const pullup = { id: "a", name: "Pullups", category: "rug", difficulty: "beginner", equipment: "Lichaamsgewicht" };
+    const licht = { id: "b", name: "Arm Circles", category: "rug", difficulty: "beginner", equipment: "Lichaamsgewicht" };
+    expect(score(pullup, blok)).toBeGreaterThan(score(licht, blok));
+  });
+});
+
+describe("de kernoefeningen", () => {
+  it("de lijst loopt niet leeg", () => {
+    // Verdwijnt deze lijst, dan kiest de coach weer niche varianten en merkt niemand het —
+    // behalve het lid dat "Jefferson Squats" in zijn week ziet staan.
+    expect(KERNOEFENINGEN.length).toBeGreaterThan(35);
+  });
+
+  it("een kernoefening wint van een variant met dezelfde trefwoorden", () => {
+    const zelfde = { category: "benen", difficulty: "intermediate", mechanic: "compound", equipment: "Barbell" };
+    const kern = score({ ...zelfde, id: "a", name: "Barbell Squat" }, { categorie: "benen", sectie: "Hoofdoefening" });
+    const variant = score({ ...zelfde, id: "b", name: "Jefferson Squats" }, { categorie: "benen", sectie: "Hoofdoefening" });
+    expect(kern).toBeGreaterThan(variant);
+  });
+
+  it("werkt ook als de bibliotheek er iets achter plakt", () => {
+    // "Barbell Bench Press - Medium Grip" is hoe het er echt in staat.
+    const zelfde = { category: "borst", difficulty: "intermediate", mechanic: "compound", equipment: "Barbell" };
+    const echt = score({ ...zelfde, id: "a", name: "Barbell Bench Press - Medium Grip" }, { categorie: "borst", sectie: "Hoofdoefening" });
+    const variant = score({ ...zelfde, id: "b", name: "Floor Press with Chains" }, { categorie: "borst", sectie: "Hoofdoefening" });
+    expect(echt).toBeGreaterThan(variant);
   });
 });

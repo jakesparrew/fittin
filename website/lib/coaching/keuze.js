@@ -39,6 +39,74 @@ export function zaadUit(tekst) {
   return Math.abs(h);
 }
 
+// De basisoefeningen. Van de 886 rijen in de bibliotheek is het merendeel een obscure variant —
+// "Seated One-Arm Dumbbell Palms-Up Wrist Curl" staat er even goed in als "Squat". Zonder deze lijst
+// wint de obscure variant even vaak, want bij gelijke score besliste enkel het zaad. Dat is precies
+// wat er bij de eerste echte generatie gebeurde: een plyometrische warming-up ("Double Leg Butt
+// Kick") kwam als hoofdoefening benen op 4×6 met twee minuten rust te staan.
+//
+// Geen ranglijst van "beste" oefeningen, wel een herkenbaarheidsfilter: een lid dat alleen in de
+// zaal staat, moet de naam kennen of minstens meteen begrijpen wat er van hem gevraagd wordt.
+// Twee lijsten, want de rol van een oefening bepaalt of ze past. Eén gezamenlijke lijst gaf
+// "Incline Dumbbell Flyes" als hoofdoefening borst op 4×6 — flyes zijn geen zware
+// zesherhalingenoefening, maar "fly" stond tussen de basisbewegingen en kreeg dezelfde bonus als
+// "bench press".
+const ZWAARWERK = [
+  "squat", "deadlift", "bench press", "bankdruk", "overhead press", "shoulder press", "row",
+  "pull-up", "pullup", "chin-up", "pulldown", "lunge", "leg press", "hip thrust", "romanian",
+  "push-up", "pushup", "dip", "press",
+];
+const BIJWERK = [
+  "curl", "triceps", "calf raise", "lateral raise", "face pull", "plank", "crunch", "fly",
+  "pullover", "shrug", "hyperextension", "leg extension", "leg curl", "raise", "extension",
+];
+
+// De kern. Trefwoorden alleen volstonden niet: "squat" gaf evenveel bonus aan "Jefferson Squats"
+// als aan "Barbell Squat", en "press" aan "Floor Press with Chains". Van de 886 rijen is het
+// merendeel een variant van een variant; dit zijn de oefeningen die een lid herkent en die een
+// coach effectief voorschrijft.
+//
+// Alle 43 zijn op 10-09-2026 tegen de echte bibliotheek gecontroleerd en bestaan daar. Ze staan
+// hier als NAAM en niet als id: ids verschillen per gym, en dit project is multi-tenant bedoeld.
+// Verdwijnt er ooit een, dan zakt hij gewoon terug naar de gewone score — geen crash, alleen een
+// iets minder herkenbare keuze. `lib/coaching/keuze.test.js` bewaakt dat de lijst niet leegloopt.
+export const KERNOEFENINGEN = [
+  // benen
+  "barbell squat", "front squat", "leg press", "barbell lunge", "romanian deadlift", "leg extensions",
+  "leg curl", "standing calf raises", "bodyweight squat", "glute bridge", "mountain climbers",
+  // borst
+  "barbell bench press", "dumbbell bench press", "incline dumbbell press", "pushups", "butterfly",
+  "cable crossover", "dips - chest version",
+  // rug
+  "barbell deadlift", "pullups", "wide-grip lat pulldown", "bent over barbell row", "seated cable rows",
+  "one-arm dumbbell row", "hyperextensions", "dumbbell shrug",
+  // schouders
+  "barbell shoulder press", "dumbbell shoulder press", "side lateral raise", "front dumbbell raise",
+  "face pull", "upright row",
+  // armen
+  "barbell curl", "dumbbell bicep curl", "hammer curls", "triceps pushdown", "lying triceps press",
+  "dips - triceps version",
+  // core
+  "crunches", "plank", "russian twist", "hanging leg raise", "cable crunch",
+];
+
+// Bewegingen die per definitie explosief of technisch zijn. Prima voor wie ervaring heeft, maar
+// nooit als opwarming en nooit voor een beginner.
+const EXPLOSIEF = ["clean", "snatch", "jerk", "jump", "butt kick", "burpee", "box jump", "kip", "swing"];
+
+// Materiaal dat een gewone krachtsessie draagt. "Overig", foam roller en fitnessbal zijn nuttig,
+// maar horen niet als hoofdoefening.
+const HOOFDMATERIAAL = ["Barbell", "Dumbbell", "Machine", "Cable", "EZ-bar", "Lichaamsgewicht", "Kettlebells"];
+
+// Naam en zoekwoord allebei terugbrengen tot enkel letters. Zo matcht "Leg Press" ook op
+// "Legpress", "Leg-Press" en "LEG PRESS" — de bibliotheek is met de hand en uit een import
+// gevuld, en die schrijfwijzen staan er allemaal in.
+const kaal = (s) => String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+const bevat = (naam, lijst) => {
+  const n = kaal(naam);
+  return lijst.some((w) => n.includes(kaal(w)));
+};
+
 /**
  * Hoe goed past deze oefening bij dit blok? Hoger is beter. Geen willekeur in de score zelf —
  * die komt pas bij gelijkspel, en dan uit het zaad.
@@ -70,6 +138,63 @@ export function score(oef, blok, { niveau = "soms", materiaal = null } = {}) {
   // Een beginner heeft meer aan een beginneroefening dan aan de zwaarste die hij mag doen.
   if (niveau === "nooit" && oef.difficulty === "beginner") s += 3;
   if (niveau === "vaak" && oef.difficulty === "gevorderd") s += 1;
+
+  // ---- Herkenbaarheid, en of de beweging bij de ROL van dit blok past ----
+  // Zonder dit wint een obscure variant even vaak als een basisoefening, en komt bijwerk op de
+  // plaats van zwaar werk terecht.
+  // Een kernoefening wint van elke variant. Dit is de zwaarste bonus in de hele score, en met
+  // opzet: liever tien keer "Barbell Squat" dan één keer "Jefferson Squats".
+  //
+  // Behalve in de opwarming. Daar zegt "dit is een kernoefening" niets over of ze past — "Pullups"
+  // is een uitstekende hoofdoefening en een belabberde opwarming. Anders wint de kernbonus het van
+  // de opwarmingsregel en staat er weer twaalf pull-ups als eerste blok.
+  if (bevat(oef.name, KERNOEFENINGEN)) s += blok.sectie === "Warming-up" ? 6 : 25;
+
+  const zwaar = bevat(oef.name, ZWAARWERK);
+  const bij = bevat(oef.name, BIJWERK);
+  const hoofd = blok.sectie === "Hoofdoefening";
+  const opwarming = blok.sectie === "Warming-up";
+  // Zwaar werk hoort in de hoofdoefening, mag als accessoire, en NOOIT als opwarming — ook niet
+  // als de bibliotheek het als "beginner" bestempelt. Zo stond "Pullups" hier als opwarming van
+  // twaalf herhalingen, puur omdat die rij op beginner staat.
+  if (zwaar) s += hoofd ? 14 : opwarming ? -10 : 8;
+  if (bij) s += hoofd ? -6 : 12;
+
+  // Een lange naam is bijna altijd een variant van een variant ("Seated One-Arm Dumbbell Palms-Up
+  // Wrist Curl"). Niet verbieden, wel achteraan zetten.
+  const lengte = String(oef.name || "").length;
+  if (lengte > 34) s -= 6;
+  else if (lengte > 26) s -= 2;
+
+  if (oef.equipment && !HOOFDMATERIAAL.includes(oef.equipment)) s -= 4;
+
+  // ---- Explosief werk hoort niet overal ----
+  const isExplosief = bevat(oef.name, EXPLOSIEF);
+  if (isExplosief) {
+    // Nooit als opwarming: dat is precies omgekeerd aan waarvoor een opwarming dient.
+    if (blok.sectie === "Warming-up") return -1;
+    if (niveau === "nooit") return -1;
+    if (niveau === "soms") s -= 8;
+  }
+
+  // ---- De opwarming zelf ----
+  if (blok.sectie === "Warming-up") {
+    // Licht en zonder stang. Een opwarming met een barbell is geen opwarming.
+    if (oef.equipment === "Lichaamsgewicht") s += 8;
+    if (oef.equipment === "Barbell") s -= 8;
+    // En vooral: makkelijk. "Pullups" is eigen lichaamsgewicht maar geen opwarming — daar begin
+    // je een sessie niet mee, zeker niet met twaalf herhalingen.
+    if (oef.difficulty === "beginner") s += 8;
+    if (oef.difficulty === "intermediate") s -= 4;
+    if (oef.difficulty === "gevorderd") s -= 12;
+  }
+
+  // ---- De hoofdoefening ----
+  if (blok.sectie === "Hoofdoefening") {
+    // Hier hoort het zware werk: samengesteld, met materiaal dat je kan verzwaren.
+    if (oef.mechanic === "isolation") s -= 6;
+    if (oef.equipment === "Barbell" || oef.equipment === "Dumbbell" || oef.equipment === "Machine") s += 4;
+  }
 
   return s;
 }

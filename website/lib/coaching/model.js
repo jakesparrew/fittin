@@ -22,14 +22,14 @@ const GATEWAY = "https://ai-gateway.vercel.sh/v1/messages";
 /**
  * Prijzen in micro-USD per miljoen tokens. Eén micro-USD per token bij $1/MTok.
  *
- * ⚠️ Deze twee komen uit de geverifieerde prijslijst van het zusterproject (17-08-2026): Haiku 4.5
- * $1/$5, Sonnet 5 $2/$10 per miljoen tokens. Ze zijn NIET opnieuw nagekeken tegen de catalogus van
- * de nieuwe gateway-aansluiting, want die sleutel bestaat nog niet. Doe dat vóór de eerste echte
- * aanroep — de kostberekening en de dagrem hangen er allebei aan.
+ * GEVERIFIEERD op 10-09-2026 tegen /v1/models van de gateway zelf: Sonnet 5 kost $2 per miljoen
+ * invoertokens en $10 per miljoen uitvoertokens, Haiku 4.5 $1 en $5. Dezelfde controle bracht aan
+ * het licht dat de gateway `claude-haiku-4.5` schrijft met een PUNT — met het streepje dat hier
+ * eerst stond, was elke weekzin stilletjes mislukt.
  */
 export const PRIJZEN = {
   "anthropic/claude-sonnet-5": { in: 2_000_000, uit: 10_000_000 },
-  "anthropic/claude-haiku-4-5": { in: 1_000_000, uit: 5_000_000 },
+  "anthropic/claude-haiku-4.5": { in: 1_000_000, uit: 5_000_000 },
 };
 
 /**
@@ -40,11 +40,11 @@ export const PRIJZEN = {
 export const MODELLEN = {
   plan: process.env.COACH_AI_MODEL_PLAN || "anthropic/claude-sonnet-5",
   herplan: process.env.COACH_AI_MODEL_PLAN || "anthropic/claude-sonnet-5",
-  tekst: process.env.COACH_AI_MODEL_TEKST || "anthropic/claude-haiku-4-5",
+  tekst: process.env.COACH_AI_MODEL_TEKST || "anthropic/claude-haiku-4.5",
 };
 
 /** Terugval als het eerste model weigert. Bewust binnen dezelfde prijstabel. */
-const TERUGVAL = ["anthropic/claude-sonnet-5", "anthropic/claude-haiku-4-5"];
+const TERUGVAL = ["anthropic/claude-sonnet-5", "anthropic/claude-haiku-4.5"];
 
 export const isGeprijsd = (model) => Object.prototype.hasOwnProperty.call(PRIJZEN, model);
 
