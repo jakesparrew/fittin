@@ -3,6 +3,8 @@ import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import ActionForm from "@/components/ui/ActionForm";
 import SearchSelect from "@/components/admin/SearchSelect";
+import AanbrengDoorgaven from "@/components/admin/AanbrengDoorgaven";
+import AanbrengCoaches from "@/components/admin/AanbrengCoaches";
 import { fmt, fmtDate } from "@/lib/format";
 import { brusselsDateStr, slotInstant } from "@/lib/time";
 import {
@@ -143,6 +145,20 @@ export default async function Aanbreng() {
   const beschikbaar = coaches.filter((c) => c.coach_accepting_clients);
   const maandNaam = new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", month: "long" }).format(nu);
 
+  // Alles wat het scherm van een doorgave nodig heeft, in één platte rij. Het filteren gebeurt in
+  // de browser, dus de component mag geen databankvormen meer kennen.
+  const doorgaveRijen = referrals.map((r) => {
+    const o = perDoorgave.get(r.id);
+    return {
+      id: r.id, client_name: r.client_name, client_email: r.client_email, client_id: r.client_id,
+      coachNaam: naamVan.get(r.coach_id) || "Coach", source: r.source, status: r.status,
+      fee_cents: r.fee_cents, sessions_cap: r.sessions_cap, months_cap: r.months_cap,
+      note: r.note, accepted_at: r.accepted_at, ended_reason: r.ended_reason, referred_at: r.referred_at,
+      sessies: Number(o?.sessies || 0), beurten: Number(o?.beurten || 0),
+    };
+  });
+  const nooitGebruikt = referrals.length === 0;
+
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <h1 className="text-3xl font-black text-brand">Aanbreng</h1>
@@ -153,6 +169,8 @@ export default async function Aanbreng() {
       </p>
 
       {/* ── 1. Kopcijfers ─────────────────────────────────────────────────────── */}
+      {/* Vier tegels op nul zijn geen informatie maar ruis. Ze verschijnen zodra er iets te tellen valt. */}
+      {!nooitGebruikt && (
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Tegel label="Lopende doorgaven" value={lopend.length} sub="aanvaard door de coach" />
         <Tegel label="Wacht op aanvaarding" value={wachtend.length} sub="zolang wordt niets aangerekend" />
@@ -164,8 +182,12 @@ export default async function Aanbreng() {
         />
         <Tegel label="Te controleren" value={controle.length} sub="sessies zonder client" alarm={controle.length > 0} />
       </div>
+      )}
 
       {/* ── 2. Te controleren ─────────────────────────────────────────────────── */}
+      {/* Zolang er nooit iemand doorgegeven is, kan hier per definitie niets staan. Dan is
+          "Niets open" geen geruststelling maar het eerste wat je leest, en dat verwart. */}
+      {!nooitGebruikt && (
       <section className="mt-8">
         <h2 className="text-xl font-black text-brand">Te controleren</h2>
         <p className="mt-1 max-w-3xl text-sm leading-relaxed text-brand/55">
@@ -271,18 +293,41 @@ export default async function Aanbreng() {
           </div>
         )}
       </section>
+      )}
 
       {/* ── 3. Doorgaven ──────────────────────────────────────────────────────── */}
       <section className="mt-8">
         <h2 className="text-xl font-black text-brand">Doorgaven</h2>
 
+        {/* Nog nooit iemand doorgegeven? Dan is de vraag niet "welke filter" maar "wat doe ik hier".
+            Drie zinnen en één knop — de rest van het scherm heeft dan nog niets te zeggen. */}
+        {nooitGebruikt ? (
+          <div className="mt-3 rounded-2xl border border-borderc bg-white p-6">
+            <p className="text-sm font-black text-brand">Je hebt nog niemand doorgegeven.</p>
+            <ol className="mt-3 max-w-2xl space-y-2.5 text-sm leading-relaxed text-brand/65">
+              <li><b className="text-brand">1.</b> Je geeft een klant door aan een coach — naam en e-mailadres volstaan.</li>
+              <li><b className="text-brand">2.</b> Die coach krijgt een mail en een melding, en moet zelf aanvaarden. Tot dan kost het hem niets.</li>
+              <li><b className="text-brand">3.</b> Vanaf de aanvaarding kost elke boeking die hij met dít lid maakt {feeZin(standaardCents)} extra, automatisch van zijn tegoed. Het lid betaalt hetzelfde als anders.</li>
+            </ol>
+          </div>
+        ) : (
+          <div className="mt-4">
+            <AanbrengDoorgaven rijen={doorgaveRijen} />
+          </div>
+        )}
+
+        {/* Het formulier. Stond hier eerder als een grijze "+ Klant handmatig doorgeven"-regel die
+            eruitzag als uitgeschakelde tekst; het is de enige knop op deze pagina die iets begint. */}
         {beschikbaar.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-borderc bg-white p-4 text-sm text-brand/60">
+          <p className="mt-4 rounded-2xl border border-borderc bg-white p-4 text-sm text-brand/60">
             Geen enkele coach staat op &ldquo;neemt nieuwe klanten aan&rdquo;. Zolang dat zo is, kan je niemand doorgeven.
           </p>
         ) : (
-          <details className="mt-3 rounded-2xl border border-borderc bg-white">
-            <summary className="cursor-pointer px-5 py-3 text-sm font-bold text-brand/60">+ Klant handmatig doorgeven</summary>
+          <details className="group mt-4 overflow-hidden rounded-2xl border-2 border-dashed border-borderc bg-white transition hover:border-accent">
+            <summary className="cursor-pointer list-none px-5 py-4 text-center text-sm font-black text-accentdark [&::-webkit-details-marker]:hidden">
+              <span className="group-open:hidden">+ Klant doorgeven aan een coach</span>
+              <span className="hidden text-brand/50 group-open:inline">Sluiten</span>
+            </summary>
             <ActionForm action={geefDoorAanCoach} success="Doorgegeven ✓" className="border-t border-borderc p-5">
               <input type="hidden" name="source" value="manueel" />
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -330,195 +375,39 @@ export default async function Aanbreng() {
             </ActionForm>
           </details>
         )}
-
-        {referrals.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/60">Nog geen enkele klant doorgegeven.</p>
-        ) : (
-          <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-white">
-            <table className="w-full min-w-[940px] text-sm">
-              <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
-                <tr>
-                  <th className="px-5 py-3">Klant</th>
-                  <th className="px-5 py-3">Coach</th>
-                  <th className="px-5 py-3">Bron</th>
-                  <th className="px-5 py-3">Status</th>
-                  <th className="px-5 py-3">Tarief</th>
-                  <th className="px-5 py-3 text-right" title="Aantal boekingen waarvoor de aanbreng effectief is aangerekend">Sessies</th>
-                  <th className="px-5 py-3 text-right">Opbrengst</th>
-                  <th className="px-5 py-3">Doorgegeven</th>
-                </tr>
-              </thead>
-              <tbody>
-                {referrals.map((r) => {
-                  const o = perDoorgave.get(r.id);
-                  const sessies = Number(o?.sessies || 0);
-                  const beurten = Number(o?.beurten || 0);
-                  const actief = r.status === "voorgesteld" || r.status === "aanvaard";
-                  return (
-                    <Fragment key={r.id}>
-                      <tr className="border-t border-borderc align-top">
-                        <td className="px-5 py-4">
-                          <p className="font-bold text-brand">{r.client_name || r.client_email}</p>
-                          {r.client_name && <p className="text-xs text-brand/50">{r.client_email}</p>}
-                          <p className="mt-0.5 text-[11px] font-semibold text-brand/40">
-                            {r.client_id ? "account gekoppeld" : "nog geen account"}
-                          </p>
-                        </td>
-                        <td className="px-5 py-4 font-semibold text-brand/75">{naamVan.get(r.coach_id) || "Coach"}</td>
-                        <td className="px-5 py-4 text-xs text-brand/55">{BRON_LABEL[r.source] || r.source}</td>
-                        <td className="px-5 py-4">
-                          <span className={"inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold " + (STATUS_TOON[r.status] || "bg-paper text-brand/50")}>
-                            {STATUS_LABEL[r.status] || r.status}
-                          </span>
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap">
-                          <span className="font-bold text-brand">{euroTekst(r.fee_cents)}</span>
-                          <span className="ml-1 text-[11px] text-brand/40">{beurtTekst(beurtenVoor(r.fee_cents))} beurt</span>
-                        </td>
-                        <td className="px-5 py-4 text-right tabular-nums text-brand/70">{sessies}</td>
-                        <td className="px-5 py-4 text-right font-bold tabular-nums text-accentdark">{euroTekst(centsVoor(beurten))}</td>
-                        <td className="px-5 py-4 whitespace-nowrap text-xs text-brand/55">{fmtDate(r.referred_at)}</td>
-                      </tr>
-                      <tr>
-                        <td colSpan={8} className="px-5 pb-4">
-                          <details>
-                            <summary className="cursor-pointer text-xs font-bold text-brand/40">Beheren</summary>
-                            <div className="mt-3 grid gap-5 rounded-xl bg-paper/70 p-4 lg:grid-cols-3">
-                              {(r.accepted_at || r.note || r.ended_reason || r.sessions_cap || r.months_cap) && (
-                                <div className="space-y-0.5 text-xs leading-relaxed text-brand/60 lg:col-span-3">
-                                  {r.accepted_at && <p>Aanvaard op {fmtDate(r.accepted_at)}.</p>}
-                                  {r.sessions_cap && <p>Plafond: {r.sessions_cap} sessies.</p>}
-                                  {r.months_cap && <p>Plafond: {r.months_cap} maanden.</p>}
-                                  {r.note && <p>Nota: {r.note}</p>}
-                                  {r.ended_reason && <p>Gestopt: {r.ended_reason}</p>}
-                                </div>
-                              )}
-
-                              {actief && (
-                                <ActionForm action={wijzigDoorgave} success="Doorgave bijgewerkt ✓">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-lav">Tarief en plafonds</p>
-                                  <input type="hidden" name="referralId" value={r.id} />
-                                  <div className="mt-2 flex flex-wrap items-end gap-2">
-                                    <label className="block">
-                                      <span className="mb-1 block text-[11px] font-semibold text-brand/55">€ per sessie</span>
-                                      <input name="feeEur" inputMode="decimal" defaultValue={komma(r.fee_cents)} className={invoer + " w-20"} />
-                                    </label>
-                                    <label className="block">
-                                      <span className="mb-1 block text-[11px] font-semibold text-brand/55">Max sessies</span>
-                                      <input name="sessionsCap" inputMode="numeric" defaultValue={r.sessions_cap ?? ""} placeholder="∞" className={invoer + " w-20"} />
-                                    </label>
-                                    <label className="block">
-                                      <span className="mb-1 block text-[11px] font-semibold text-brand/55">Max maanden</span>
-                                      <input name="monthsCap" inputMode="numeric" defaultValue={r.months_cap ?? ""} placeholder="∞" className={invoer + " w-20"} />
-                                    </label>
-                                    <button className={knopGroen}>Bewaren</button>
-                                  </div>
-                                  <p className="mt-1.5 text-[11px] text-brand/45">Geldt vanaf nu — al aangerekende beurten blijven staan.</p>
-                                </ActionForm>
-                              )}
-
-                              {actief && (
-                                <ActionForm action={beeindigDoorgave} success="Doorgave beëindigd ✓">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-lav">Stoppen</p>
-                                  <input type="hidden" name="referralId" value={r.id} />
-                                  <div className="mt-2 flex flex-wrap items-end gap-2">
-                                    <label className="block">
-                                      <span className="mb-1 block text-[11px] font-semibold text-brand/55">Reden</span>
-                                      <input name="reason" placeholder="Klant traint niet meer" className={invoer + " w-52"} />
-                                    </label>
-                                    <button className={knopWit}>Beëindigen</button>
-                                  </div>
-                                  <p className="mt-1.5 text-[11px] text-brand/45">Nieuwe sessies met deze klant kosten de coach dan niets extra meer.</p>
-                                </ActionForm>
-                              )}
-
-                              {beurten > 0 && (
-                                <ActionForm action={scheldAanbrengKwijt} success="Kwijtgescholden ✓">
-                                  <p className="text-xs font-bold uppercase tracking-wide text-lav">Kwijtschelden</p>
-                                  <input type="hidden" name="referralId" value={r.id} />
-                                  <div className="mt-2 flex flex-wrap items-end gap-2">
-                                    <label className="block">
-                                      <span className="mb-1 block text-[11px] font-semibold text-brand/55">Beurten terug</span>
-                                      <input name="beurten" inputMode="decimal" placeholder="0,5" className={invoer + " w-20"} />
-                                    </label>
-                                    <button className={knopWit}>Terugzetten</button>
-                                  </div>
-                                  <p className="mt-1.5 text-[11px] text-brand/45">
-                                    Tot nu aangerekend: {beurtTekst(beurten)} beurt. De aanrekening zelf blijft staan, zodat je later nog ziet wat er gebeurde.
-                                  </p>
-                                </ActionForm>
-                              )}
-                            </div>
-                          </details>
-                        </td>
-                      </tr>
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
       </section>
 
       {/* ── 4. Instellingen ───────────────────────────────────────────────────── */}
-      <section className="mt-8">
-        <h2 className="text-xl font-black text-brand">Instellingen</h2>
+      {/* Ingeklapt: twee bedragen en een schakelaar per coach, drie keer per jaar aangeraakt. Ze
+          stonden opengeklapt onderaan en vulden zo het halve scherm van een lege pagina. */}
+      <details className="mt-8 overflow-hidden rounded-2xl border border-borderc bg-white">
+        <summary className="cursor-pointer px-5 py-4 text-xl font-black text-brand">Instellingen</summary>
 
-        <ActionForm action={bewaarAanbrengInstellingen} success="Instellingen opgeslagen ✓" className="mt-3 max-w-2xl rounded-2xl border border-borderc bg-white p-6">
-          <div className="grid gap-5 sm:grid-cols-2">
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold text-brand">Standaardtarief (€ per sessie)</span>
-              <input name="feeEur" inputMode="decimal" defaultValue={komma(standaardCents)} className={invoer + " w-full"} />
-              <span className="mt-1 block text-xs text-brand/50">Fittin&rsquo; zoekt de klant én kiest de coach.</span>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-sm font-bold text-brand">Klant koos zelf een coach (€ per sessie)</span>
-              <input name="feeVoorkeurEur" inputMode="decimal" defaultValue={komma(voorkeurCents)} className={invoer + " w-full"} />
-              <span className="mt-1 block text-xs text-brand/50">Bij een intake met een voorkeurcoach levert Fittin&rsquo; wel de klant, niet de match.</span>
-            </label>
-          </div>
-          <button className="mt-5 rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">Opslaan</button>
-          <p className="mt-2 text-xs text-brand/45">
-            Geldt voor nieuwe doorgaven. Lopende afspraken houden het tarief dat de coach aanvaardde. Maximum € {maxEur}.
-          </p>
-        </ActionForm>
-
-        <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-white">
-          <div className="border-b border-borderc px-5 py-3">
-            <p className="text-sm font-black text-brand">Client verplicht bij elke boeking</p>
-            <p className="mt-0.5 max-w-3xl text-xs leading-relaxed text-brand/55">
-              Deze verplichting gaat vanzelf aan zodra een coach zijn eerste aangebrachte klant aanvaardt — zonder naam
-              bij een sessie valt de vergoeding niet te controleren. Je kan ze hier per coach weer uitzetten.
-            </p>
-          </div>
-          {coaches.map((c) => (
-            <div key={c.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-borderc px-5 py-3 last:border-0">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-bold text-brand">{c.full_name || c.email}</p>
-                <p className="text-xs text-brand/45">
-                  {c.coach_accepting_clients ? "neemt nieuwe klanten aan" : "neemt geen nieuwe klanten aan"}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                <span
-                  className={
-                    "rounded-full px-2.5 py-0.5 text-[11px] font-bold " +
-                    (c.coach_require_client ? "bg-accent/15 text-accentdark" : "bg-paper text-brand/45")
-                  }
-                >
-                  {c.coach_require_client ? "verplicht" : "vrij"}
-                </span>
-                <ActionForm action={zetVerplichteClient} success="Aangepast ✓">
-                  <input type="hidden" name="coachId" value={c.id} />
-                  <input type="hidden" name="aan" value={c.coach_require_client ? "0" : "1"} />
-                  <button className={knopWit}>{c.coach_require_client ? "Uitzetten" : "Aanzetten"}</button>
-                </ActionForm>
-              </div>
+        <div className="border-t border-borderc p-5">
+          <ActionForm action={bewaarAanbrengInstellingen} success="Instellingen opgeslagen ✓" className="max-w-2xl">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold text-brand">Standaardtarief (€ per sessie)</span>
+                <input name="feeEur" inputMode="decimal" defaultValue={komma(standaardCents)} className={invoer + " w-full"} />
+                <span className="mt-1 block text-xs text-brand/50">Fittin&rsquo; zoekt de klant én kiest de coach.</span>
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-sm font-bold text-brand">Klant koos zelf een coach (€ per sessie)</span>
+                <input name="feeVoorkeurEur" inputMode="decimal" defaultValue={komma(voorkeurCents)} className={invoer + " w-full"} />
+                <span className="mt-1 block text-xs text-brand/50">Bij een intake met een voorkeurcoach levert Fittin&rsquo; wel de klant, niet de match.</span>
+              </label>
             </div>
-          ))}
+            <button className="mt-5 rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">Opslaan</button>
+            <p className="mt-2 text-xs text-brand/45">
+              Geldt voor nieuwe doorgaven. Lopende afspraken houden het tarief dat de coach aanvaardde. Maximum € {maxEur}.
+            </p>
+          </ActionForm>
+
+          <div className="mt-6">
+            <AanbrengCoaches coaches={coaches} />
+          </div>
         </div>
-      </section>
+      </details>
     </div>
   );
 }
