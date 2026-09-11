@@ -197,8 +197,12 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
   // zichtbaar zijn wanneer er betaald werd zonder dat er een menu uitrolde — zie 0161.
   const boeking = await boekVerbruik(admin, { gymId, memberId, soort: "menu", uitkomst: uit });
   if (!uit.ok) {
-    await boekResultaat(admin, boeking.id, "gateway_faalde");
-    return { error: "De coach kon geen menu opstellen. Probeer het zo dadelijk opnieuw." };
+    await boekResultaat(admin, boeking.id, uit.configuratieFout ? "sleutel_ongeldig" : "gateway_faalde");
+    return {
+      error: uit.configuratieFout
+        ? "Je coach is tijdelijk onbereikbaar. Dit ligt aan ons, niet aan jou — we zijn verwittigd."
+        : "De coach kon geen menu opstellen. Probeer het zo dadelijk opnieuw.",
+    };
   }
 
   const json = leesJson(uit.tekst);

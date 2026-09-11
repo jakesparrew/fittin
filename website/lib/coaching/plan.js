@@ -128,8 +128,13 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
   // coach ooit kostte als "geslaagd" in de boeken terwijl er niets uitkwam. Zie 0161.
   const boeking = await boekVerbruik(admin, { gymId, memberId, soort: "plan", uitkomst: uit });
   if (!uit.ok) {
-    await boekResultaat(admin, boeking.id, "gateway_faalde");
-    return { error: "De coach kon geen plan opstellen. Probeer het zo dadelijk opnieuw." };
+    await boekResultaat(admin, boeking.id, uit.configuratieFout ? "sleutel_ongeldig" : "gateway_faalde");
+    // Eerlijk blijven over wat het lid kan doen. Bij een sleutelprobleem helpt opnieuw proberen niet.
+    return {
+      error: uit.configuratieFout
+        ? "Je coach is tijdelijk onbereikbaar. Dit ligt aan ons, niet aan jou — we zijn verwittigd en zetten het zo recht."
+        : "De coach kon geen plan opstellen. Probeer het zo dadelijk opnieuw.",
+    };
   }
 
   const json = leesJson(uit.tekst);

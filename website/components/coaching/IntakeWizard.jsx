@@ -3,6 +3,7 @@ import { useState, useTransition } from "react";
 import { bewaarIntake, startPlan } from "@/app/(site)/coaching/actions";
 import { VOEDINGSVOORKEUREN } from "@/lib/coaching/voeding-velden.js";
 import { GESLACHTEN } from "@/lib/aanmelding-velden";
+import PlanBezig from "./PlanBezig";
 
 // Eén vraag per scherm, met bij elke vraag waarom we het vragen. Dat laatste is geen beleefdheid:
 // wie niet weet waarom je zijn gewicht vraagt, vult iets in of haakt af. En de gezondheidsvraag
@@ -37,6 +38,10 @@ export default function IntakeWizard({ profiel }) {
   const [stap, setStap] = useState(1);
   const [bezig, start] = useTransition();
   const [fout, setFout] = useState(null);
+  // Hoe ver het wachtscherm ECHT staat. Alleen stap 1 kennen we met zekerheid (bewaarIntake is een
+  // aparte serveractie); de rest schat PlanBezig. Zie daar waarom we geen percentage verzinnen.
+  const [maken, setMaken] = useState(false);
+  const [stapAf, setStapAf] = useState(0);
 
   const [doel, setDoel] = useState(profiel?.coaching_doel || "");
   const [ervaring, setErvaring] = useState(profiel?.coaching_ervaring || "");
@@ -64,6 +69,8 @@ export default function IntakeWizard({ profiel }) {
 
   function afronden() {
     setFout(null);
+    setStapAf(0);
+    setMaken(true);
     start(async () => {
       const fd = new FormData();
       fd.set("doel", doel);
@@ -85,16 +92,24 @@ export default function IntakeWizard({ profiel }) {
         if (beperkingen) fd.set("beperkingen", beperkingen);
       }
       const bewaard = await bewaarIntake(fd);
-      if (bewaard?.error) { setFout(bewaard.error); return; }
+      if (bewaard?.error) { setFout(bewaard.error); setMaken(false); return; }
+      // De enige grens die we echt kennen: de antwoorden staan opgeslagen.
+      setStapAf(1);
 
       const planFd = new FormData();
       planFd.set("weken", String(weken));
       const gemaakt = await startPlan(planFd);
-      if (gemaakt?.error) { setFout(gemaakt.error); return; }
+      // Terug naar het formulier bij een fout: het wachtscherm laten staan met een rode balk eronder
+      // zou suggereren dat er nog iets loopt.
+      if (gemaakt?.error) { setFout(gemaakt.error); setMaken(false); return; }
       // De pagina herlaadt zichzelf via revalidatePath; hier hoeft niets meer te gebeuren.
       window.location.href = "/coaching";
     });
   }
+
+  // Tijdens het maken verdwijnt de wizard. Een knop met "bezig…" onder zeven ingevulde stappen leest
+  // als "er gebeurt niets", en dan klikt iemand opnieuw.
+  if (maken) return <PlanBezig stapAf={stapAf} />;
 
   return (
     <div className="anim-in rounded-3xl border border-borderc bg-surface p-6 sm:p-8">
@@ -308,9 +323,6 @@ export default function IntakeWizard({ profiel }) {
         )}
       </div>
 
-      {bezig && (
-        <p className="mt-3 text-right text-xs text-ink/45">Dit duurt een tiental seconden — je coach stelt je weken samen.</p>
-      )}
     </div>
   );
 }

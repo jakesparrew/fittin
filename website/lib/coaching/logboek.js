@@ -50,6 +50,7 @@ export function resultaatTekst(resultaat) {
     zin_geschreven: "weekzin geschreven",
     menu_geschreven: "menu geschreven",
     gateway_faalde: "de gateway antwoordde niet",
+    sleutel_ongeldig: "de gateway weigerde de sleutel (401) — zet COACH_AI_GATEWAY_KEY goed op Vercel",
     json_onleesbaar: "antwoord was onleesbaar",
     geen_oefeningen: "geen oefeningen gevonden",
     afgekeurd: "voorschriften afgekeurd",

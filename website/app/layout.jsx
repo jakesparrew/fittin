@@ -63,12 +63,10 @@ export const metadata = {
 };
 
 export const viewport = {
-  // Twee waarden: de browserbalk op mobiel hoort mee te lopen met het thema. Eén vaste indigo
-  // bovenaan een bijna-zwarte pagina leest als een strook die er niet bij hoort.
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#22194f" },
-    { media: "(prefers-color-scheme: dark)", color: "#0f0e17" },
-  ],
+  // Eén waarde, want de site is standaard licht. Een meta-tag kan niet meebewegen met `data-theme`,
+  // dus twee waarden op prefers-color-scheme zouden de balk donker maken voor iemand die de site
+  // wél licht ziet — precies verkeerd om.
+  themeColor: "#22194f",
   width: "device-width",
   initialScale: 1,
 };
@@ -101,7 +99,7 @@ export default function RootLayout({ children }) {
             geblokkeerd), dan blijft `prefers-color-scheme` gelden. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("fittin-thema");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("fittin-thema");if(t==="dark"||t==="light"||t==="system")document.documentElement.dataset.theme=t}catch(e){}`,
           }}
         />
         <PWARegister />

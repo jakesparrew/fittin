@@ -101,7 +101,11 @@ export async function roepModel({ model, system, messages, tools, maxTokens = 40
 
     const tekstBody = await res.text();
     if (!res.ok) {
-      return { ok: false, fout: `gateway ${res.status}: ${tekstBody.slice(0, 300)}`, status: res.status };
+      // 401/403 is GEEN tijdelijke storing. De sleutel klopt niet, en opnieuw proberen lost dat
+      // nooit op — het lid kreeg tot nu "probeer het zo dadelijk opnieuw", wat hem een kwartier
+      // laat klikken aan iets dat pas werkt als iemand een omgevingsvariabele bijzet.
+      const configuratieFout = res.status === 401 || res.status === 403;
+      return { ok: false, fout: `gateway ${res.status}: ${tekstBody.slice(0, 300)}`, status: res.status, configuratieFout };
     }
 
     let data;

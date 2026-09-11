@@ -59,8 +59,13 @@ export default function Nav() {
     <header className="sticky top-0 z-50 border-b border-borderc/70 bg-surface/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="group flex items-center" aria-label="Fittin' — home">
+          {/* Twee versies, CSS kiest. Het wordmark is donkerindigo, dus in het donkere thema stond
+              het onzichtbaar in een donkere balk. Een `src` omwisselen kan CSS niet; met JS zou je
+              tot de hydratatie het verkeerde logo zien staan. Zie .bij-licht/.bij-donker. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Fittin'" width={150} height={40} className="h-8 w-auto transition group-hover:opacity-80" />
+          <img src="/logo.png" alt="Fittin'" width={150} height={40} className="bij-licht h-8 w-auto transition group-hover:opacity-80" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-white.png" alt="" aria-hidden="true" width={170} height={45} className="bij-donker h-8 w-auto transition group-hover:opacity-80" />
         </Link>
         <nav className="hidden items-center gap-7 text-sm font-semibold text-ink/70 md:flex">
           {navLinks.map((l) => (

@@ -48,7 +48,7 @@ export default function PlanBeheer({ status, toestemming }) {
         <p className="mt-1 text-sm leading-relaxed text-ink-soft">
           {status === "gepauzeerd"
             ? "Je plan staat op pauze. Er gaat niets meer open en je krijgt geen zondagmail tot je hervat."
-            : "Even geen tijd? Zet je plan op pauze — het blijft staan waar het staat en je krijgt geen mails meer."}
+            : "Even geen tijd? Zet je plan op pauze — het blijft staan waar het staat en je krijgt geen mails meer. Wil je een heel ander plan, stop dit dan; daarna staan de vragen weer klaar met je antwoorden erin."}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {status === "gepauzeerd" ? (
@@ -63,14 +63,20 @@ export default function PlanBeheer({ status, toestemming }) {
           )}
           {!stoppen ? (
             <button type="button" disabled={bezig} onClick={() => setStoppen(true)} className={knop}>
-              Stoppen
+              Stoppen &amp; opnieuw beginnen
             </button>
           ) : (
             <span className="anim-in flex flex-wrap items-center gap-2 rounded-2xl bg-paper px-3 py-2">
-              <span className="text-xs text-ink/70">Stoppen kan niet ongedaan gemaakt worden.</span>
+              {/* Wat er écht gebeurt, in plaats van alleen een waarschuwing. Dit stond er eerst als
+                  "Stoppen kan niet ongedaan gemaakt worden" — waar, maar het verzweeg juist het
+                  antwoord op de vraag die mensen hier hebben: kan ik daarna opnieuw beginnen? */}
+              <span className="text-xs text-ink/70">
+                Dit plan stopt en je begint meteen aan een nieuw. Je afgelopen weken blijven in je
+                dossier staan; hervatten kan niet meer.
+              </span>
               <button type="button" disabled={bezig} onClick={() => zet("gestopt")}
                 className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50">
-                Ja, stop mijn plan
+                Ja, en start opnieuw
               </button>
               <button type="button" disabled={bezig} onClick={() => setStoppen(false)}
                 className="text-xs font-bold text-ink/50 underline transition hover:text-ink">

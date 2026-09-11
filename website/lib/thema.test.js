@@ -182,9 +182,22 @@ describe("de constructie waar dark mode op leunt", () => {
     expect(css).not.toMatch(/@theme\s+inline/);
   });
 
-  it("een bewuste keuze voor licht wint van het systeem", () => {
-    // Zonder de :not() zou wie 's avonds bewust licht kiest, alsnog donker krijgen.
-    expect(css).toMatch(/:root:not\(\[data-theme="light"\]\)/);
+  it("LICHT is de standaard — het systeem volgen is een expliciete keuze", () => {
+    // Dit hing eerst aan `:not([data-theme="light"])`, dus aan de AFWEZIGHEID van een keuze. Gevolg:
+    // iedereen met een donker toestel kreeg de hele site donker, ook de marketingpagina's, ook wie
+    // er nooit om vroeg. Het merk is fel groen op wit; dat ongevraagd omkeren is een
+    // productbeslissing en geen technische standaard.
+    expect(css).toMatch(/:root\[data-theme="system"\]/);
+    expect(css).not.toMatch(/:root:not\(\[data-theme="light"\]\)/);
+  });
+
+  it("het logo wisselt mee, want een <img src> kan CSS niet omzetten", () => {
+    // Het wordmark is donkerindigo op transparant en stond dus onzichtbaar in een donkere balk.
+    expect(css).toMatch(/\.bij-donker \{ display: none; \}/);
+    expect(css).toMatch(/:root\[data-theme="dark"\] \.bij-licht \{ display: none; \}/);
+    const nav = fs.readFileSync(path.join(ROOT, "components/Nav.jsx"), "utf8");
+    expect(nav).toMatch(/bij-licht[^"]*"[\s\S]{0,400}bij-donker/);
+    expect(nav).toMatch(/logo-white\.png/);
   });
 
   it("de body krijgt een achtergrond die MEEFLIPT", () => {

@@ -109,10 +109,13 @@
     --dm-red-600: #fca5a5;   --dm-red-700: #fecaca;
   }
 
-  /* Wat het systeem vraagt — tenzij het lid uitdrukkelijk LICHT koos. Zonder die `:not()` wordt een
-     bewuste keuze 's avonds alsnog overruled door de telefoon. */
+  /* Alleen voor wie UITDRUKKELIJK "systeem" koos.
+     Dit hing eerst aan `:not([data-theme="light"])`, dus aan de afwezigheid van een keuze. Gevolg:
+     iedereen met een donker toestel kreeg de hele site donker — ook de marketingpagina's, ook wie
+     nooit om dark mode gevraagd had. Het merk is fel groen op wit; dat ongevraagd omkeren voor elke
+     bezoeker is een productbeslissing, geen technische standaard. Licht is nu de standaard. */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
+    :root[data-theme="system"] {
       color-scheme: dark;
       --color-paper: var(--dm-paper);
       --color-surface: var(--dm-surface);
@@ -158,10 +161,27 @@
     --color-red-700: var(--dm-red-700);
   }
 
+  /* ---------- Beeld dat niet met een variabele meekan ----------
+     Een `<img src>` kan CSS niet omwisselen. Het wordmark is donkerindigo op transparant, dus in
+     het donkere thema stond het onzichtbaar in een donkere balk. Beide versies staan nu in de HTML
+     en CSS verbergt er één. Twee kleine PNG's, en geen flikkering bij het laden — een JS-oplossing
+     zou het verkeerde logo tonen tot de hydratatie klaar is.
+
+     Gebruik: <img class="bij-licht" src="/logo.png"> naast <img class="bij-donker" src="/logo-white.png">.
+     Alleen nodig op vlakken die MEEFLIPPEN. De footer is altijd `bg-brand` en houdt dus gewoon het
+     witte logo. */
+  .bij-donker { display: none; }
+  :root[data-theme="dark"] .bij-licht { display: none; }
+  :root[data-theme="dark"] .bij-donker { display: block; }
+  @media (prefers-color-scheme: dark) {
+    :root[data-theme="system"] .bij-licht { display: none; }
+    :root[data-theme="system"] .bij-donker { display: block; }
+  }
+
   /* Een schaduw is lichtval op een lichte ondergrond. Op donker doet hij niets zichtbaars behalve
      de randen vervuilen — daar neemt de haarlijn het over. */
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) [class*="shadow-"] { --tw-shadow-color: transparent; }
+    :root[data-theme="system"] [class*="shadow-"] { --tw-shadow-color: transparent; }
   }
   :root[data-theme="dark"] [class*="shadow-"] { --tw-shadow-color: transparent; }
 }

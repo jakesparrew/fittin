@@ -3,8 +3,10 @@ import { useEffect, useState } from "react";
 
 // De themaschakelaar: systeem, licht, donker.
 //
-// Waarom "systeem" de standaard is en niet "licht": wie zijn telefoon 's avonds op donker zet, doet
-// dat voor alles. Een app die dan als enige wit blijft, is de app die je 's avonds niet opent.
+// Waarom LICHT de standaard is en niet "systeem": het merk is fel groen op wit, en de site is ook
+// een etalage. Elke bezoeker met een donker toestel ongevraagd een donkere marketingpagina geven,
+// is een productbeslissing en geen technische standaard. Wie het donker wil, kiest het hier — en
+// "Systeem" blijft bestaan voor wie zijn toestel wél wil laten beslissen.
 //
 // Waarom de knoppen pas ná de hydratatie de actieve stand tonen: de keuze staat in localStorage en
 // die bestaat op de server niet. Meteen renderen zou betekenen dat de server "systeem" tekent en de
@@ -12,9 +14,9 @@ import { useEffect, useState } from "react";
 // Het THEMA zelf staat al goed vóór de eerste verf; dat doet het scriptje in app/layout.jsx.
 
 const STANDEN = [
-  { v: "system", l: "Systeem", u: "Volgt je telefoon of laptop" },
-  { v: "light", l: "Licht", u: "Altijd het lichte thema" },
+  { v: "light", l: "Licht", u: "Het standaardthema" },
   { v: "dark", l: "Donker", u: "Altijd het donkere thema" },
+  { v: "system", l: "Volg mijn toestel", u: "Donker zodra je telefoon of laptop dat is" },
 ];
 
 export default function ThemaKeuze() {
@@ -23,19 +25,21 @@ export default function ThemaKeuze() {
   useEffect(() => {
     try {
       const t = localStorage.getItem("fittin-thema");
-      setStand(t === "dark" || t === "light" ? t : "system");
-    } catch { setStand("system"); }
+      setStand(["dark", "light", "system"].includes(t) ? t : "light");
+    } catch { setStand("light"); }
   }, []);
 
   function kies(v) {
     setStand(v);
     try {
-      if (v === "system") localStorage.removeItem("fittin-thema");
+      // "light" is de standaard, dus die hoeft niet bewaard te worden — behalve als iemand
+      // terugschakelt vanaf een andere keuze; dan moet de oude waarde weg.
+      if (v === "light") localStorage.removeItem("fittin-thema");
       else localStorage.setItem("fittin-thema", v);
     } catch { /* privémodus: de keuze geldt dan alleen voor deze pagina */ }
-    // `delete` en niet `= "system"`: zonder het attribuut valt de CSS terug op
-    // prefers-color-scheme, en dat is precies wat "systeem" betekent.
-    if (v === "system") delete document.documentElement.dataset.theme;
+    // Het attribuut STAAT er nu ook voor "system": de mediaquery hangt daaraan, zodat het volgen
+    // van het toestel een keuze is en niet de afwezigheid van een keuze.
+    if (v === "light") delete document.documentElement.dataset.theme;
     else document.documentElement.dataset.theme = v;
   }
 
