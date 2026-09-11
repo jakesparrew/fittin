@@ -15,6 +15,12 @@ import { volgendeStap, dagenTeGaan } from "@/lib/coaching/volgendestap.js";
 import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
+// De serveracties van deze pagina draaien in DEZE functie, en `startPlan` doet een modelaanroep van
+// gemeten 27-41 seconden (bij een terugval naar het tweede model tot 180). Zonder deze regel hangt
+// dat aan een platformstandaard die nergens in de code te zien is — en als die onder de 41 seconden
+// ligt, wordt het plan halverwege afgekapt en houdt het lid een dossier over dat vastzit.
+// De cron die dezelfde aanroep doet, kreeg om die reden al 300.
+export const maxDuration = 300;
 export const metadata = {
   title: "Je AI-coach | Fittin'",
   description: "Een trainingsplan op maat, week per week, met opvolging.",
@@ -218,7 +224,7 @@ export default async function CoachingPagina() {
             <h2 className="font-display text-lg font-black text-ink">Deze week</h2>
             <span className="text-sm text-ink-soft">{afgevinkt} van {sessies.length} gedaan</span>
           </div>
-          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} magCheckin={magCheckin} isLaatsteWeek={isLaatste} maaltijden={eten} sessieDatum={sessieDatum} vorigVoorschrift={vorigVoorschrift} nu={nu} />
+          <WeekPaneel week={open} sessies={sessies} oefeningen={oefeningen} checkin={checkin} alleSessiesAf={alleAf} magCheckin={magCheckin} isLaatsteWeek={isLaatste} maaltijden={eten} sessieDatum={sessieDatum} vorigVoorschrift={vorigVoorschrift} nu={nu} ervaring={profile?.coaching_ervaring} />
         </div>
       )}
 
@@ -269,10 +275,22 @@ export default async function CoachingPagina() {
         </div>
       )}
 
+      {/* Een plan zonder geopende week. Dit is de toestand die overblijft wanneer het maken
+          halverwege stilviel: de zes schrijfacties van maakPlan staan niet in één transactie, dus
+          er kan een plan bestaan waarvan week 1 nooit opengezet werd.
+          Hier stond eerst "Ververs deze pagina zo dadelijk" — maar verversen helpt niet: de
+          zondagcron slaat zo'n plan over (`if (!open) continue`) en een nieuw plan wordt geweigerd
+          zolang dit op 'lopend' staat. Dat is een doodlopende straat, en die hoort een uitgang te
+          hebben die het lid zelf kan nemen. */}
       {!open && (
-        <p className="mt-6 rounded-2xl bg-paper px-4 py-3 text-sm text-ink-soft">
-          Je eerste week wordt klaargezet. Ververs deze pagina zo dadelijk.
-        </p>
+        <div className="anim-in mt-6 rounded-3xl border-2 border-amber-300 bg-amber-50 p-5">
+          <p className="font-display text-lg font-black text-ink">Je plan is halverwege blijven steken</p>
+          <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-amber-800">
+            Er staat een plan klaar, maar de eerste week is nooit opengezet. Dat gebeurt wanneer het
+            maken onderbroken werd. Stop dit plan hieronder bij &ldquo;Je plan en je gegevens&rdquo; —
+            daarna staan de vragen weer klaar en kan je het in één keer opnieuw laten maken.
+          </p>
+        </div>
       )}
 
       {eerdere.length > 0 && (

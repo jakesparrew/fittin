@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { oefeningRegel, workoutKop, afvinkPad, AFVINK_OORDELEN } from "./levering.js";
+import { toonLaadhint, laadhint } from "./voorschrift.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..", "..");
 const lees = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -348,5 +349,97 @@ describe("de landingspagina van het afvinken", () => {
 
   it("de pagina staat niet in Google", () => {
     expect(lees("app/s/[token]/page.jsx")).toMatch(/robots:\s*\{\s*index:\s*false/);
+  });
+});
+
+describe("wachten op de coach", () => {
+  // Gemeten op productie: de modelaanroep voor een plan duurt 27 tot 41 seconden, en bij een
+  // terugval naar het tweede model tot 180. Alles wat maakPlan daarnaast doet — bibliotheek
+  // ophalen, oefeningen kiezen, vijftien schrijfrondes — is samen ongeveer één seconde.
+  // Er is dus precies ÉÉN echte grens te tonen, en die valt in de laatste seconde.
+
+  it("het wachtscherm verzint geen percentage", () => {
+    // De eerste versie telde uit tot 10,2 seconden en bleef daarna op 88% staan, met stap 4 aan het
+    // draaien terwijl in werkelijkheid het model nog schreef. Een balk die stilstaat leest als
+    // "het hangt", en een stap die draait terwijl een andere bezig is, is gewoon onwaar.
+    const b = lees("components/coaching/PlanBezig.jsx");
+    expect(b).not.toMatch(/const DUUR/);
+    expect(b).not.toMatch(/%`/);
+    expect(b).toMatch(/shimmer/);
+  });
+
+  it("toont het enige getal dat wél waar is: de verstreken tijd", () => {
+    const b = lees("components/coaching/PlanBezig.jsx");
+    expect(b).toMatch(/\{seconden\}s bezig/);
+    // En de teller start ná de hydratatie — de klok tijdens het renderen gaf hier ooit fout #418.
+    expect(b).toMatch(/useEffect\(\(\) => \{[\s\S]{0,120}setInterval/);
+  });
+
+  it("belooft niet langer dat je plan afgemaakt wordt als je wegklikt", () => {
+    // Dat was onwaar: de wizard doet twee serveracties na elkaar, dus wie tijdens de eerste sluit,
+    // verstuurt `startPlan` nooit. Er is geen after(), geen wachtrij en geen cron die overneemt.
+    const b = lees("components/coaching/PlanBezig.jsx");
+    expect(b).not.toMatch(/alsnog afgemaakt/);
+    expect(b).toMatch(/Laat dit scherm openstaan/);
+  });
+
+  it("het menu heeft dezelfde terugkoppeling — het is de traagste aanroep van allemaal", () => {
+    const m = lees("components/coaching/MaaltijdPaneel.jsx");
+    expect(m).toMatch(/<Bezig/);
+    // De knop verdwijnt tijdens het wachten in plaats van "bezig…" te tonen.
+    expect(m).not.toMatch(/Je menu wordt samengesteld/);
+  });
+
+  it("de coachingroute verklaart hoe lang ze mag duren", () => {
+    // Zonder maxDuration hangt een aanroep van 27-41 seconden aan een platformstandaard die nergens
+    // in de code te zien is. Is die korter, dan wordt het plan halverwege afgekapt — en dan blijft
+    // er een plan zonder geopende week achter.
+    expect(lees("app/(site)/coaching/page.jsx")).toMatch(/export const maxDuration = 300;/);
+  });
+
+  it("een half geschreven plan heeft een uitweg", () => {
+    // De zes schrijfacties van maakPlan staan niet in één transactie. Valt het ertussenin stil, dan
+    // bestaat er een plan zonder geopende week: de cron slaat het over (`if (!open) continue`) en
+    // een nieuw plan wordt geweigerd. Daar stond "Ververs deze pagina zo dadelijk", wat niet helpt.
+    // Commentaar eruit: dit bestand legt in proza uit wat er eerst stond, en een test die daarop
+    // aanslaat toetst de uitleg in plaats van de code. Zelfde les als bij de CSS-test.
+    const p = lees("app/(site)/coaching/page.jsx")
+      .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    expect(p).toMatch(/halverwege blijven steken/);
+    expect(p).not.toMatch(/Ververs deze pagina zo dadelijk/);
+  });
+
+  it("een exceptie tijdens het maken laat het scherm niet eeuwig draaien", () => {
+    // maakPlan gooit op vier plekken en niets ving dat op.
+    const w = lees("components/coaching/IntakeWizard.jsx");
+    expect(w).toMatch(/catch \(e\) \{[\s\S]{0,300}setMaken\(false\)/);
+  });
+});
+
+describe("hoe zwaar moet dit zijn", () => {
+  // Een AI-plan heeft geen streefgewichten: het model weet niet hoe sterk dit lid is, en het lid
+  // vult nergens een getal in (bewust — zeven workout-logs ooit over 86 leden). Het lid las dus
+  // "Barbell Squat — 4×8" zonder te weten wat er op de stang moest.
+
+  it("alleen bij de hoofdoefening, en alleen zonder gewicht", () => {
+    expect(toonLaadhint("Hoofdoefening", null)).toBe(true);
+    expect(toonLaadhint("Hoofdoefening", 60)).toBe(false);   // staat er al een gewicht
+    expect(toonLaadhint("Accessoire", null)).toBe(false);    // anders wordt het behang
+    expect(toonLaadhint("Warming-up", null)).toBe(false);
+  });
+
+  it("wie nog nooit trainde, krijgt ook een vertrekpunt", () => {
+    expect(laadhint("nooit")).toMatch(/begin licht/i);
+    expect(laadhint("vaak")).not.toMatch(/begin licht/i);
+    // Maar allebei zeggen ze hetzelfde over hoe je het gewicht kiest.
+    for (const e of ["nooit", "soms", "vaak"]) {
+      expect(laadhint(e)).toMatch(/laatste twee herhalingen/);
+    }
+  });
+
+  it("de app en de mail zeggen exact hetzelfde", () => {
+    // Eén bron, anders lopen ze uit elkaar zodra iemand er één bijstelt.
+    expect(lees("components/coaching/WeekPaneel.jsx")).toMatch(/laadhint\(ervaring\)/);
+    expect(lees("lib/email.js")).toMatch(/laadhint\(workout\.ervaring\)/);
   });
 });

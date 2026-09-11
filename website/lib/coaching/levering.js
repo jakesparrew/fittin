@@ -23,7 +23,7 @@ export async function workoutVoorBoeking(admin, { bookingId, memberId }) {
   // De proefgroep-poort geldt ook hier. Deze mail was de enige ingang die hem niet passeerde: wie
   // ooit een plan maakte toen de lijst ruimer stond, kreeg zijn schema anders gewoon blijven
   // toegestuurd. De poort is de poort, op alle vijf — nu zes — ingangen.
-  const { data: lid } = await admin.from("profiles").select("id, email, role").eq("id", memberId).maybeSingle();
+  const { data: lid } = await admin.from("profiles").select("id, email, role, coaching_ervaring").eq("id", memberId).maybeSingle();
   if (!magCoaching(lid)) return null;
 
   const { data: plan } = await admin.from("coaching_plans")
@@ -74,6 +74,8 @@ export async function workoutVoorBoeking(admin, { bookingId, memberId }) {
     totaalWeken: plan.weken,
     // Reist mee IN het workoutblok en nergens anders. Dat is de hele veiligheidsconstructie.
     afvinkToken,
+    // Bepaalt welke laadhint eronder komt: wie nog nooit trainde, heeft ook een vertrekpunt nodig.
+    ervaring: lid?.coaching_ervaring || null,
     volgnummer: sessie.volgnummer,
     totaal: sessies.length,
     naam: dag?.name || `Sessie ${sessie.volgnummer}`,

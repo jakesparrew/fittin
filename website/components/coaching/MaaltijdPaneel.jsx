@@ -2,6 +2,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { maakMenu, zetVoeding } from "@/app/(site)/coaching/actions";
 import { VOEDINGSVOORKEUREN } from "@/lib/coaching/voeding-velden.js";
+import Bezig from "./Bezig";
 
 // Het weekmenu. Één week, zeven dagen, vier momenten — en een boodschappenlijst die je meeneemt
 // naar de winkel.
@@ -62,10 +63,20 @@ export default function MaaltijdPaneel({ menu, profiel, kanMaken }) {
             boodschappenlijst erbij. Elke zondag loopt het mee met je nieuwe week.
           </p>
           {kanMaken ? (
-            <button type="button" disabled={bezig} onClick={() => vraagMenu(false)}
-              className="mt-4 rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90 disabled:opacity-60">
-              {bezig ? "Je menu wordt samengesteld…" : "Stel mijn weekmenu samen"}
-            </button>
+            // Tijdens het wachten verdwijnt de knop. Een knop met "bezig…" die verder niets doet, is
+            // niet te onderscheiden van een knop die vastzit — en dit is met afstand de traagste
+            // aanroep van het systeem.
+            bezig ? (
+              <div className="mx-auto mt-4 max-w-md">
+                <Bezig titel="Je coach stelt je weekmenu samen"
+                  uitleg="Zeven dagen, vier momenten en een boodschappenlijst. Dit duurt meestal een halve minuut — laat dit scherm openstaan." />
+              </div>
+            ) : (
+              <button type="button" onClick={() => vraagMenu(false)}
+                className="mt-4 rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">
+                Stel mijn weekmenu samen
+              </button>
+            )
           ) : (
             <p className="mt-4 rounded-2xl bg-paper px-4 py-3 text-sm text-ink-soft">
               Vul eerst je gewicht, lengte en geboortedatum in bij je gegevens — zonder die drie kan

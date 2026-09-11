@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { workoutKop, oefeningRegel, afvinkPad } from "@/lib/coaching/levering.js";
+import { toonLaadhint, laadhint } from "@/lib/coaching/voorschrift.js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { statGrid, barChart, sectionTitle, actionItem, calloutBox, delta, eur } from "@/lib/email-visuals";
 import { icsAttachment } from "@/lib/ics";
@@ -508,6 +509,9 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
       <ol style="margin:0;padding-left:18px;font-size:13px;color:#22194F;line-height:1.7">
         ${workout.oefeningen.map((o) => `<li>${esc(oefeningRegel(o))}</li>`).join("")}
       </ol>
+      ${workout.oefeningen.some((o) => toonLaadhint(o.sectie, o.kg))
+        ? `<p style="margin:8px 0 0;font-size:12px;color:#6b6685">${esc(laadhint(workout.ervaring))}</p>`
+        : ""}
       ${afvinkHtml}
     </div>` : "";
   const codeHtml = accessCode

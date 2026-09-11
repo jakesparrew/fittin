@@ -74,7 +74,8 @@ async function standVanHetPlan(admin, { planId, planWeken }) {
 async function mijlpaalVoor(admin, { gymId, memberId, planId, planWeken }) {
   try {
     const stand = await standVanHetPlan(admin, { planId, planWeken });
-    const { nieuwe } = await noteerMijlpalen(admin, { gymId, memberId, stand });
+    // planId erbij: mijlpalen horen bij een plan, niet bij een leven (zie 0162).
+    const { nieuwe } = await noteerMijlpalen(admin, { gymId, memberId, planId, stand });
     return zwaarste(nieuwe);
   } catch (e) {
     console.error("coaching mijlpaal:", e?.message || e);
@@ -168,7 +169,7 @@ export async function GET(req) {
           weekNr: open.weeknummer, totaalWeken: plan.weken, mijlpaal,
           analyse: "Alle weken zitten erop. Wat je nu hebt is geen resultaat van één zware week maar van een reeks gewone — dat is precies hoe het hoort. Een nieuw plan begint van waar je nu staat, niet van nul.",
         });
-        if (mijlpaal) await markeerGemeld(admin, { memberId: plan.member_id, soort: mijlpaal.soort });
+        if (mijlpaal) await markeerGemeld(admin, { memberId: plan.member_id, planId: plan.id, soort: mijlpaal.soort });
         afgerond++;
         continue;
       }
@@ -244,7 +245,7 @@ export async function GET(req) {
         weekNr, totaalWeken: plan.weken,
         analyse: nieuweWeek?.weekanalyse, sessies: sessieLijst, menu, mijlpaal,
       });
-      if (mijlpaal) await markeerGemeld(admin, { memberId: plan.member_id, soort: mijlpaal.soort });
+      if (mijlpaal) await markeerGemeld(admin, { memberId: plan.member_id, planId: plan.id, soort: mijlpaal.soort });
       geopend++;
     } catch (e) {
       fouten.push(`plan ${plan.id}: ${e?.message || e}`);

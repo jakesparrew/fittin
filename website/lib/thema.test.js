@@ -252,7 +252,11 @@ describe("de sweep die betekenis van kleur scheidde", () => {
   // Een vlak dat niet meeflipt: het merkgroen `bg-accent`, of een lichte palettint (`bg-amber-50`),
   // allebei ZONDER opacity-modifier — met modifier ligt het op de kaart eronder en flipt het dus
   // effectief wel mee.
-  const VAST_LICHT = /\bbg-(accent|amber|red|green|blue|yellow|orange|emerald|sky|rose|lime|teal|indigo|violet|purple|pink|cyan|slate|gray|zinc|neutral|stone)(-(50|100|200))?(?![-\d/])/;
+  // AMBER en ROOD staan hier NIET meer bij. Die hebben sinds de statuskleuren-ronde een donkere
+  // tegenhanger (--dm-amber-50, --dm-red-50), dus ze flippen wél mee — en dan hoort de tekst erop
+  // juist `ink` te zijn en niet `brand`. De rest van het Tailwind-palet heeft geen donkere variant
+  // en blijft dus licht; zet je er een bij in globals.css, haal hem dan ook hier weg.
+  const VAST_LICHT = /\bbg-(accent|green|blue|yellow|orange|emerald|sky|rose|lime|teal|indigo|violet|purple|pink|cyan|slate|gray|zinc|neutral|stone)(-(50|100|200))?(?![-\d/])/;
   const klassenStrings = (bron) => [...bron.matchAll(/"([^"\n]*)"|`([^`]*)`/g)].map((m) => m[1] ?? m[2] ?? "");
 
   it("text-brand staat alleen op vlakken die NIET meeflippen", () => {

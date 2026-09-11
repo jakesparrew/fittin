@@ -91,17 +91,27 @@ export default function IntakeWizard({ profiel }) {
         if (lengte) fd.set("lengte", String(lengte));
         if (beperkingen) fd.set("beperkingen", beperkingen);
       }
-      const bewaard = await bewaarIntake(fd);
-      if (bewaard?.error) { setFout(bewaard.error); setMaken(false); return; }
-      // De enige grens die we echt kennen: de antwoorden staan opgeslagen.
-      setStapAf(1);
+      // ALLES in een try: `maakPlan` gooit op vier plekken (de bibliotheek, het wegschrijven van
+      // een week, van de dagen en van de sessies). Niets ving dat op, en dan bleef het wachtscherm
+      // eeuwig draaien — een tweede, volledig onafhankelijke oorzaak van "het blijft laden" die
+      // geen enkele voortgangsweergave oplost.
+      try {
+        const bewaard = await bewaarIntake(fd);
+        if (bewaard?.error) { setFout(bewaard.error); setMaken(false); return; }
+        // De enige grens die we echt kennen: de antwoorden staan opgeslagen.
+        setStapAf(1);
 
-      const planFd = new FormData();
-      planFd.set("weken", String(weken));
-      const gemaakt = await startPlan(planFd);
-      // Terug naar het formulier bij een fout: het wachtscherm laten staan met een rode balk eronder
-      // zou suggereren dat er nog iets loopt.
-      if (gemaakt?.error) { setFout(gemaakt.error); setMaken(false); return; }
+        const planFd = new FormData();
+        planFd.set("weken", String(weken));
+        const gemaakt = await startPlan(planFd);
+        // Terug naar het formulier bij een fout: het wachtscherm laten staan met een rode balk
+        // eronder zou suggereren dat er nog iets loopt.
+        if (gemaakt?.error) { setFout(gemaakt.error); setMaken(false); return; }
+      } catch (e) {
+        setFout(`Er liep iets mis bij het maken van je plan: ${e?.message || "onbekende fout"}. Probeer het opnieuw — is je plan half aangemaakt, dan kan je het stoppen bij "Je plan en je gegevens".`);
+        setMaken(false);
+        return;
+      }
       // De pagina herlaadt zichzelf via revalidatePath; hier hoeft niets meer te gebeuren.
       window.location.href = "/coaching";
     });

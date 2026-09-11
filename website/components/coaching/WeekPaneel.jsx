@@ -4,6 +4,7 @@ import Link from "next/link";
 import { vinkSessieAf, bewaarCheckin, openWeek } from "@/app/(site)/coaching/actions";
 import { fmt } from "@/lib/format";
 import { verschilTekst } from "@/lib/coaching/volgendestap.js";
+import { toonLaadhint, laadhint } from "@/lib/coaching/voorschrift.js";
 
 // De week van het lid: de sessies met hun oefeningen, één knop per sessie om af te vinken, en de
 // check-in zodra de week rond is.
@@ -18,7 +19,7 @@ const OORDELEN = [
   { v: "te_zwaar", l: "Te zwaar" },
 ];
 
-export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, magCheckin = false, isLaatsteWeek, maaltijden = false, sessieDatum = {}, vorigVoorschrift = {}, nu = 0 }) {
+export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSessiesAf, magCheckin = false, isLaatsteWeek, maaltijden = false, sessieDatum = {}, vorigVoorschrift = {}, nu = 0, ervaring = null }) {
   const [bezig, start] = useTransition();
   const [melding, setMelding] = useState(null);
   const [open, setOpen] = useState(sessies[0]?.id || null);
@@ -95,6 +96,12 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
                             er identiek uit en was afvinken een handeling zonder merkbaar gevolg. */}
                         {verschil(o) && (
                           <span className="mt-0.5 block text-xs font-bold text-accentdark">{verschil(o)}</span>
+                        )}
+                        {/* Hoe zwaar? Een AI-plan heeft geen streefgewichten, en zonder deze zin
+                            las het lid "4×8" zonder te weten wat er op de stang moest. Eén zin,
+                            alleen bij de hoofdoefening, en alleen als er geen gewicht staat. */}
+                        {toonLaadhint(o.section, o.target_weight_kg) && (
+                          <span className="mt-1 block text-xs leading-relaxed text-ink-soft">{laadhint(ervaring)}</span>
                         )}
                       </span>
                     </li>

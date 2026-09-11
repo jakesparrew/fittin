@@ -603,8 +603,11 @@ export async function dossierVoor(admin, memberId) {
         .eq("member_id", memberId).eq("weeknummer", open.weeknummer).eq("plan_id", plan.id)
         .order("created_at", { ascending: false }).limit(1).maybeSingle()
     : { data: null };
+  // Alleen de mijlpalen van DIT plan. Toonden we ze allemaal, dan stond er op dag één van een
+  // tweede plan al "Je eerste sessie zit erop" — een felicitatie voor iets dat maanden geleden
+  // gebeurde, boven een week waarin nog niets afgevinkt is. Zie 0162.
   const { data: mijlpalen } = await admin.from("coaching_mijlpalen")
-    .select("soort, created_at").eq("member_id", memberId).order("created_at");
+    .select("soort, created_at").eq("member_id", memberId).eq("plan_id", plan.id).order("created_at");
 
   // De stand van het HELE plan, voor de eerstvolgende mijlpaal. Wie Motivatie aanzette zag daar
   // niets van tot er toevallig iets bereikt was — een gekozen module die onzichtbaar blijft, voelt

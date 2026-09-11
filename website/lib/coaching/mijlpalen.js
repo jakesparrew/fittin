@@ -141,18 +141,21 @@ export function wekenOpRij(volledig) {
  * aangemaakt zodra de mijlpaal bereikt is; `gemeld_at` wordt pas gezet wanneer de mail effectief
  * vertrok — anders verliest een lid zijn felicitatie aan een mail die niet aankwam.
  */
-export async function noteerMijlpalen(admin, { gymId, memberId, stand }) {
+export async function noteerMijlpalen(admin, { gymId, memberId, planId = null, stand }) {
   const bereikt = bepaalMijlpalen(stand);
   if (!bereikt.length) return { nieuwe: [], alles: [] };
 
+  // Per PLAN, niet per lid. Stond de sleutel op (lid, soort), dan had wie zijn tweede plan begon
+  // "eerste sessie", "eerste week" en "halfweg" al op zijn naam staan en zweeg de motivatiemodule
+  // voorgoed — terwijl de tweede keer beginnen net moeilijker is dan de eerste. Zie 0162.
   const { data: bestaande } = await admin.from("coaching_mijlpalen")
-    .select("soort, gemeld_at").eq("member_id", memberId);
+    .select("soort, gemeld_at").eq("member_id", memberId).eq("plan_id", planId);
   const gekend = new Map((bestaande || []).map((r) => [r.soort, r]));
 
   const toeTeVoegen = bereikt.filter((s) => !gekend.has(s));
   if (toeTeVoegen.length) {
     const { error } = await admin.from("coaching_mijlpalen").insert(
-      toeTeVoegen.map((soort) => ({ gym_id: gymId, member_id: memberId, soort }))
+      toeTeVoegen.map((soort) => ({ gym_id: gymId, member_id: memberId, plan_id: planId, soort }))
     );
     // Een dubbele rij is geen fout maar een race — twee zondagen die elkaar overlappen. Doorgaan.
     if (error && !String(error.message || "").includes("duplicate")) {
@@ -165,8 +168,8 @@ export async function noteerMijlpalen(admin, { gymId, memberId, stand }) {
 }
 
 /** Markeert één mijlpaal als gemeld. */
-export async function markeerGemeld(admin, { memberId, soort }) {
+export async function markeerGemeld(admin, { memberId, planId = null, soort }) {
   await admin.from("coaching_mijlpalen")
     .update({ gemeld_at: new Date().toISOString() })
-    .eq("member_id", memberId).eq("soort", soort);
+    .eq("member_id", memberId).eq("plan_id", planId).eq("soort", soort);
 }

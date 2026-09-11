@@ -817,14 +817,14 @@ function WaitlistSlot({ date, hour, label, compact = false, isLoggedIn }) {
   if (compact) {
     return (
       <button type="button" onClick={toggle} title={on ? "Je staat op de wachtlijst — tik om te verwijderen" : "Vol — zet me op de wachtlijst"}
-        className={"flex h-7 items-center justify-center rounded-md text-[9px] font-bold transition " + (on ? "bg-accent/25 text-accentdark" : "bg-borderc/40 text-brand/30 hover:bg-amber-100 hover:text-amber-700")}>
+        className={"flex h-7 items-center justify-center rounded-md text-[9px] font-bold transition " + (on ? "bg-accent/25 text-accentdark" : "bg-borderc/40 text-ink/30 hover:bg-amber-100 hover:text-amber-700")}>
         {state === "busy" ? "…" : on ? "🔔" : "vol"}
       </button>
     );
   }
   return (
     <button type="button" onClick={toggle} title={on ? "Je staat op de wachtlijst — tik om te verwijderen" : "Vol — zet me op de wachtlijst"}
-      className={"rounded-xl py-3 text-center text-[10px] font-bold leading-tight transition " + (on ? "bg-accent/20 text-accentdark" : "bg-borderc/40 text-brand/35 hover:bg-amber-100 hover:text-amber-700")}>
+      className={"rounded-xl py-3 text-center text-[10px] font-bold leading-tight transition " + (on ? "bg-accent/20 text-accentdark" : "bg-borderc/40 text-ink/35 hover:bg-amber-100 hover:text-amber-700")}>
       {label}<br />{state === "busy" ? "…" : on ? "🔔 wachtlijst" : "vol · wachtlijst?"}
     </button>
   );
