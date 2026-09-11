@@ -1,6 +1,7 @@
 import Link from "next/link";
 import GymFotos from "@/components/GymFotos";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import Reveal from "@/components/anim/Reveal";
 import { getSessionProfile, roleHome } from "@/lib/auth";
 import { getGymCached, getPublicCoachesCached } from "@/lib/cache";
@@ -138,6 +139,10 @@ export default async function Home() {
   // Al ingelogd? Sla de marketing-homepage over en ga meteen naar je dashboard.
   const { user, profile } = await getSessionProfile();
   if (user) redirect(roleHome(profile?.role));
+  // In de app is dit niet de plek voor een gast: die hoort op het welkomstscherm (/app), niet op
+  // de verkoopspagina van de website. Deze pagina is al per verzoek gerenderd (de sessiecheck
+  // hierboven leest cookies), dus de user agent lezen kost niets extra.
+  if ((await headers()).get("user-agent")?.includes("FittinApp/")) redirect("/app");
   // Het meervoud "onze coaches" moet volgen wat er publiek staat — /coaches en /personal-training
   // doen dat al. Beide queries zitten in de Data Cache, dus dit kost geen extra DB-tik per bezoek.
   const gym = await getGymCached();

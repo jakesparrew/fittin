@@ -4,6 +4,7 @@ import SubmitButton from "@/components/ui/SubmitButton";
 import { requestAccountDeletion, cancelAccountDeletion, withdrawHealthConsent } from "@/app/(site)/account/actions";
 import { setNewsletterOptIn } from "@/app/(site)/account/mail-actions";
 import { setTrainingVisibility } from "@/app/(site)/oefeningen/loop-actions";
+import { bevestigSubmit } from "@/lib/native/dialogs";
 
 // Rechten van betrokkenen, uitvoerbaar door het lid zelf (art. 15, 17, 20 en 7.3 AVG).
 // Het privacybeleid beloofde dit al; zonder knoppen was dat een loze belofte.
@@ -13,7 +14,8 @@ import { setTrainingVisibility } from "@/app/(site)/oefeningen/loop-actions";
 // wegvegen is geen zorgvuldigheid maar roekeloosheid — de beheerder voert het uit binnen de maand.
 export default function PrivacyControls({ healthConsent, deletionRequestedAt, newsletterOptIn = true, trainingVisible = false }) {
   return (
-    <section className="mt-12 rounded-3xl border border-borderc bg-surface p-6">
+    // id="gegevens": het anker waar /account-verwijderen (en de Play-store) naartoe verwijst.
+    <section id="gegevens" className="mt-12 scroll-mt-24 rounded-3xl border border-borderc bg-surface p-6">
       <h2 className="text-xl font-black text-ink">Je gegevens</h2>
       <p className="mt-1 text-sm text-ink/55">
         Je bepaalt zelf wat we van je bijhouden. Hoe we met je gegevens omgaan staat in ons{" "}
@@ -88,7 +90,7 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
               action={withdrawHealthConsent}
               success="Gewist ✓"
               className="shrink-0"
-              onSubmit={(e) => { if (!confirm("Je gewichtshistoriek, lengte en streefgewicht worden definitief gewist. Doorgaan?")) e.preventDefault(); }}
+              onSubmit={(e) => bevestigSubmit(e, "Je gewichtshistoriek, lengte en streefgewicht worden definitief gewist. Doorgaan?", { ok: "Wissen" })}
             >
               <SubmitButton className="rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink transition hover:border-red-400 hover:text-red-600">
                 Wissen
@@ -124,7 +126,7 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
               action={requestAccountDeletion}
               success="Aanvraag geregistreerd ✓"
               className="shrink-0"
-              onSubmit={(e) => { if (!confirm("Je vraagt om je account en je persoonsgegevens te laten verwijderen. We behandelen dit binnen 30 dagen. Doorgaan?")) e.preventDefault(); }}
+              onSubmit={(e) => bevestigSubmit(e, "Je vraagt om je account en je persoonsgegevens te laten verwijderen. We behandelen dit binnen 30 dagen. Doorgaan?", { title: "Account verwijderen?", ok: "Verwijdering aanvragen" })}
             >
               <SubmitButton className="rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink/70 transition hover:border-red-400 hover:text-red-600">
                 Verwijdering aanvragen

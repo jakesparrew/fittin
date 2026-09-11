@@ -1,0 +1,4 @@
+# The native projects are built on a Mac, never on Vercel. Keep them out of every web deploy.
+ios
+android
+native-shell

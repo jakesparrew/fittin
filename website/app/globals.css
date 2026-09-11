@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+/* ---------- De app (Capacitor-schil, zie docs/native/01-decision.md) ----------
+   Het inline script in app/layout.jsx zet vóór de eerste verf `app` + `ios|android` op <html>
+   wanneer de pagina in de Fittin'-app draait. Daardoor kan ALLES wat er in de app anders uitziet
+   gewoon CSS zijn — geen JS-flits, en de site hoeft niet dynamisch te renderen om het te weten.
+     app:hidden          weg in de app          (bv. de marketingvoet)
+     app:pt-[var(--sat)] ruimte voor de statusbalk
+     nativebar:…         alleen zolang de native iOS-tabbalk live is (components/native/NativeTabBarSync) */
+@custom-variant app (&:where(.app, .app *));
+@custom-variant ios (&:where(.ios, .ios *));
+@custom-variant android (&:where(.android, .android *));
+@custom-variant nativebar (&:where(.nativebar, .nativebar *));
+
 @theme {
   --color-brand: #22194f;
   --color-branddeep: #1a1440;
@@ -81,6 +93,17 @@
 @layer base {
   :root {
     color-scheme: light;
+
+    /* Veilige zones. De ENIGE plek waar env() staat: componenten gebruiken deze vier tokens.
+       Android (Capacitor 8.3+) injecteert --safe-area-inset-*, omdat WebView < 140 env() fout
+       meldt; iOS en de website vallen terug op env(). Buiten de app is viewport-fit niet `cover`,
+       dus zijn ze daar 0 en verandert er op de website niets. */
+    --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+    --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+    --sal: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+    --sar: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+    /* Hoogte van de native iOS-tabbalk zolang hij zichtbaar is (gezet door NativeTabBarSync). */
+    --native-tabbar-h: 0px;
 
     /* Het donkere palet, één keer. Wijzig HIER, nergens anders. */
     --dm-paper: #0f0e17;
@@ -188,6 +211,47 @@
 
 html {
   scroll-behavior: smooth;
+}
+
+/* Website in landschap op een iPhone met notch: sinds viewport-fit=cover (app/layout.jsx) mag de
+   pagina onder de notch doorlopen. Achtergronden mogen dat, tekst niet — dus zijmarges ter grootte
+   van de notch. In portret zijn ze 0. Niet in de app: die draait enkel in portret. */
+html:not(.app) body {
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+/* ---------- In de app: geen webpagina-verraders ----------
+   Een grijze flits bij elke tik, een vergrootglas bij lang drukken, tekst die blauw oplicht als je
+   over een knop veegt, een zoom als je een veld aantikt: vier dingen waaraan je meteen ziet dat een
+   "app" een website is. Alleen onder html.app — de website zelf blijft precies zoals ze was. */
+html.app {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  touch-action: manipulation;
+}
+html.app body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+/* Velden en wat je bewust wil kunnen kopiëren (deurcode, berichten) blijven selecteerbaar. */
+html.app :is(input, textarea, select, [contenteditable], .select-text, .select-text *) {
+  -webkit-user-select: text;
+  user-select: text;
+}
+/* iOS zoomt in op elk veld met een tekst kleiner dan 16px en zoomt daarna niet terug. */
+html.app :is(input, textarea, select) {
+  font-size: max(16px, 1em);
+}
+/* Het Next.js-ontwikkelbolletje ("N" linksonder) bestaat alleen bij `next dev` — nooit in een
+   productiebuild. In de app hoort het ook tijdens het ontwikkelen niet: het zit over de tabbalk en
+   verwart wie de app test. De website-dev houdt het. Het element is de host van zijn shadow DOM. */
+html.app nextjs-portal {
+  display: none !important;
+}
+/* Een app heeft geen hover; hij heeft een ingedrukt-toestand. */
+html.app :is(button, a, [role="button"]):not(:disabled):active {
+  opacity: 0.72;
 }
 
 /* Vangnet tegen horizontaal scrollen op mobiel.
@@ -333,6 +397,18 @@ h1, h2, h3, .font-display {
 /* Een lade die van de rechterrand inschuift (boekingsdetails, ledenfiche). Komt uit de richting
    waar hij vandaan hoort te komen, zodat je begrijpt waar hij straks weer heen gaat. */
 .anim-zij { animation: anim-zij 220ms var(--ease-uit) both; }
+
+/* ---------- Het welkomstscherm van de app (/app) ----------
+   Begint EXACT waar het opstartscherm eindigt: het logo in het midden, op dezelfde breedte. Pas
+   daarna schuift het omhoog en komen de keuzes erbij — zo leest de koude start als één scherm. */
+/* Alleen de glijbeweging. Het centreren doet Tailwind's -translate-*-1/2, en dat is in v4 de
+   CSS-eigenschap `translate`, niet `transform`: een translate(-50%) hier telde er nog eens bij op
+   en schoof het logo een halve breedte naar links (gezien in de simulator, 2026-09-11). */
+@keyframes welkom-logo { to { transform: translateY(-22dvh) scale(0.84); } }
+@keyframes welkom-foto { from { opacity: 0; } to { opacity: 0.35; } }
+.welkom-logo { animation: welkom-logo 720ms var(--ease-uit) 260ms both; }
+.welkom-foto { opacity: 0; animation: welkom-foto 900ms var(--ease-uit) 450ms both; }
+.welkom-in { animation: anim-sheet 520ms var(--ease-uit) both; }
 
 /* ---------- Minder beweging ----------
    Tot 2026-09-07 dekte dit blok vijf decoratieve klassen. De ~500 `transition`-klassen, de spinner,

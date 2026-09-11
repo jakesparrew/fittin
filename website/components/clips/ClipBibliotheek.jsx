@@ -3,6 +3,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ClipEmbed from "./ClipEmbed";
 import BewaarSheet from "./BewaarSheet";
+import { bevestig } from "@/lib/native/dialogs";
 import { hernoemClip, verplaatsClip, verwijderClip, hernoemMap, verwijderMap } from "@/app/(site)/bewaard/actions";
 
 // De plank: mappen bovenaan, kaarten eronder, en één tik naar de video.
@@ -168,8 +169,8 @@ function MapBalk({ map, aantal, na }) {
     setFout(null);
   });
 
-  const wissen = () => {
-    if (!window.confirm(`Map “${map.name}” verwijderen? De ${aantal} ${aantal === 1 ? "video blijft" : "video's blijven"} bewaard onder “Zonder map”.`)) return;
+  const wissen = async () => {
+    if (!(await bevestig(`Map “${map.name}” verwijderen? De ${aantal} ${aantal === 1 ? "video blijft" : "video's blijven"} bewaard onder “Zonder map”.`, { ok: "Verwijder" }))) return;
     start(async () => {
       const r = await verwijderMap(map.id);
       if (r?.error) return setFout(r.error);
@@ -272,8 +273,8 @@ function ClipSheet({ clip, folders, sluit, na, onNaarOefening }) {
           <button
             type="button"
             disabled={pending}
-            onClick={() => {
-              if (!window.confirm(`“${clip.title}” uit je bibliotheek verwijderen?`)) return;
+            onClick={async () => {
+              if (!(await bevestig(`“${clip.title}” uit je bibliotheek verwijderen?`, { ok: "Verwijder" }))) return;
               doe(() => verwijderClip(clip.id), na);
             }}
             className="mt-8 w-full rounded-full border-2 border-borderc py-3 text-sm font-bold text-red-500 transition hover:border-red-200 hover:bg-red-50 disabled:opacity-50"

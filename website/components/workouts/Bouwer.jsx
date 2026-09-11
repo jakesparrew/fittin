@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import ExerciseMedia from "@/components/exercises/ExerciseMedia";
 import ExerciseDetail from "@/components/exercises/ExerciseDetail";
+import { bevestig } from "@/lib/native/dialogs";
 import {
   coachBewaarDag,
   coachZoekOefeningen,
@@ -169,7 +170,7 @@ export default function Bouwer({ program }) {
             <button type="button" onClick={() => dagActie(() => coachDupliceerDag(program.id, dag.id))} className="shrink-0 rounded-full px-3 py-2 text-xs font-bold text-ink-soft transition hover:bg-paper hover:text-ink" title="Dag dupliceren">⧉</button>
             <button
               type="button"
-              onClick={() => { if (confirm(`"${dag.naam}" en alle oefeningen erin verwijderen?`)) dagActie(() => coachVerwijderDagNieuw(program.id, dag.id)); }}
+              onClick={async () => { if (await bevestig(`"${dag.naam}" en alle oefeningen erin verwijderen?`, { ok: "Verwijder" })) dagActie(() => coachVerwijderDagNieuw(program.id, dag.id)); }}
               className="shrink-0 rounded-full px-3 py-2 text-xs font-bold text-red-400 transition hover:bg-red-50 hover:text-red-600"
               title="Dag verwijderen"
             >✕</button>

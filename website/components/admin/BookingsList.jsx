@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { adminCancelBooking, adminAssignCoach, adminMarkBookingPaid } from "@/app/beheer/actions";
 import ActionForm from "@/components/ui/ActionForm";
+import { bevestigSubmit } from "@/lib/native/dialogs";
 import BookingDetail from "@/components/BookingDetail";
 import { isSettled, sourceLabel } from "@/lib/booking-status";
 import { slotInstant, brusselsDateStr } from "@/lib/time";
@@ -187,14 +188,14 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                       ) : (
                         <>
                           <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-600" title="Nog niet betaald">€ open</span>
-                          <ActionForm action={adminMarkBookingPaid} success="Gemarkeerd als betaald ✓" className="inline" onSubmit={(e) => { if (!confirm("Markeer als betaald (cash/overschrijving aan de balie)?")) e.preventDefault(); }}>
+                          <ActionForm action={adminMarkBookingPaid} success="Gemarkeerd als betaald ✓" className="inline" onSubmit={(e) => bevestigSubmit(e, "Markeer als betaald (cash/overschrijving aan de balie)?", { ok: "Betaald" })}>
                             <input type="hidden" name="bookingId" value={b.id} />
                             <button className="rounded-full border border-borderc px-1.5 py-0.5 text-[10px] font-bold text-ink/60 transition hover:border-accent hover:text-ink" title="Cash/overschrijving ontvangen aan de balie">✓ cash</button>
                           </ActionForm>
                         </>
                       )}
                       {upcoming && b.status === "bevestigd" && (
-                        <form action={adminCancelBooking} className="inline" onSubmit={(e) => { if (!confirm("Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.")) e.preventDefault(); }}>
+                        <form action={adminCancelBooking} className="inline" onSubmit={(e) => bevestigSubmit(e, "Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.", { ok: "Annuleer boeking", cancel: "Terug" })}>
                           <input type="hidden" name="bookingId" value={b.id} />
                           <button className="rounded-full px-1.5 py-0.5 text-xs font-bold text-ink/30 transition hover:bg-red-50 hover:text-red-600" title="Annuleer deze boeking">✕</button>
                         </form>

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { deel } from "@/lib/native/share";
 
 // Coaches trainen vaak mensen die géén Fittin-account hebben (de naam staat enkel in
 // bookings.notes). Die client kreeg dus nooit een bevestiging: de coach typte datum, uur en
@@ -13,17 +14,11 @@ export default function ShareSession({ text, className = "" }) {
   const [copied, setCopied] = useState(false);
   if (!text) return null;
 
+  // Deelvenster weggeklikt of clipboard geweigerd: geen melding — de WhatsApp-knop werkt altijd nog.
   async function copy() {
-    try {
-      if (navigator.share) {
-        await navigator.share({ text });
-      } else {
-        await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      }
-    } catch {
-      /* deelvenster weggeklikt of clipboard geweigerd — de WhatsApp-knop werkt altijd nog */
+    if ((await deel({ text })) === "copied") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
     }
   }
 

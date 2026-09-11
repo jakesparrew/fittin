@@ -33,7 +33,7 @@ export default async function CoachLayout({ children }) {
   return (
     <div className="flex min-h-screen flex-col bg-paper md:flex-row">
       <CoachSidebar name={shown.full_name || "Coach"} role={shown.role || "coach"} />
-      <main className="min-w-0 flex-1">
+      <main className="min-w-0 flex-1 nativebar:pb-[var(--native-tabbar-h)]">
         {(viewCoach || owed > 0) && (
           <div className="z-30 md:sticky md:top-0">
             {viewCoach && (

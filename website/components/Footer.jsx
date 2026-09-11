@@ -4,7 +4,9 @@ import ThemaKeuze from "./ThemaKeuze";
 
 export default function Footer() {
   return (
-    <footer className="bg-brand text-white">
+    // In de app weg: marketing, nieuwsbrief en sitemap horen bij de website. Hulp, privacy en
+    // voorwaarden blijven bereikbaar via het menu (Nav) en je account.
+    <footer className="bg-brand text-white app:hidden">
       <div className="mx-auto grid max-w-6xl gap-10 px-5 py-14 md:grid-cols-3">
         <div>
           {/* eslint-disable-next-line @next/next/no-img-element */}

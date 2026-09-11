@@ -59,17 +59,25 @@ export default function AdminSidebar({ name, role, badges = {} }) {
     "flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-bold transition " +
     (isActive(href) ? "bg-accent text-brand" : "text-lav hover:bg-surface/10 hover:text-white");
 
+  // Android-terugknop in de app: eerst de open lade dicht, pas daarna terug (NativeBoot).
+  useEffect(() => {
+    if (!open) return;
+    const onBack = (e) => { e.preventDefault(); setOpen(false); };
+    window.addEventListener("fittin:back", onBack);
+    return () => window.removeEventListener("fittin:back", onBack);
+  }, [open]);
+
   return (
     <>
-      {/* Mobile top bar */}
-      <div className="sticky top-0 z-30 flex items-center justify-between bg-brand px-4 py-3 text-white md:hidden">
+      {/* Mobile top bar. In de app loopt het indigo door onder de statusbalk (witte statustekst). */}
+      <div data-statusbar="light" className="sticky top-0 z-30 flex items-center justify-between bg-brand px-4 py-3 text-white md:hidden app:pt-[calc(var(--sat)+0.75rem)]">
         <Link href="/" className="text-xl font-black">Fittin<span className="text-accent">&rsquo;</span> <span className="ml-1 text-xs font-semibold uppercase tracking-widest text-lav">Beheer</span></Link>
         <button onClick={() => setOpen(true)} aria-label="Menu openen" className="rounded-lg px-3 py-1.5 text-2xl leading-none hover:bg-surface/10">☰</button>
       </div>
       {/* Backdrop (mobile, when drawer open) */}
       {open && <div onClick={() => setOpen(false)} className="anim-fade fixed inset-0 z-40 bg-black/50 md:hidden" aria-hidden />}
       {/* Sidebar: static column on desktop, slide-in drawer on mobile. Only the <nav> scrolls. */}
-      <aside className={"fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col bg-brand text-white transition-transform md:sticky md:top-0 md:h-screen md:z-auto md:w-60 md:translate-x-0 " + (open ? "translate-x-0" : "-translate-x-full")}>
+      <aside className={"fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col bg-brand text-white transition-transform md:sticky md:top-0 md:h-screen md:z-auto md:w-60 md:translate-x-0 app:pt-(--sat) app:pb-(--sab) " + (open ? "translate-x-0" : "-translate-x-full")}>
         <div className="flex items-center justify-between px-6 pb-3 pt-5">
           <div>
             <Link href="/" className="text-2xl font-black">Fittin<span className="text-accent">&rsquo;</span></Link>

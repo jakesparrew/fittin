@@ -6,6 +6,7 @@ import IosReloginNudge from "../components/IosReloginNudge";
 import PageView from "../components/analytics/PageView";
 import ErrorLogger from "../components/ErrorLogger";
 import ChunkErrorRecovery from "../components/ChunkErrorRecovery";
+import NativeGate from "../components/native/NativeGate";
 
 const lato = Lato({
   subsets: ["latin"],
@@ -69,6 +70,14 @@ export const viewport = {
   themeColor: "#22194f",
   width: "device-width",
   initialScale: 1,
+  // `cover` MOET in de statische meta staan. Zonder is env(safe-area-inset-*) altijd 0 en schuift
+  // de app-kopbalk onder de statusbalk. Het inline script hieronder zette het eerst pas in de app,
+  // maar WebKit negeert een viewport-fit die ná het parsen van <head> verandert — in de simulator
+  // gemeten: meta "viewport-fit=cover", env() toch 0px (2026-09-11).
+  // Op de website verandert er bewust weinig: in portret is de bovenmarge 0, en onderaan krijgt
+  // de tabbalk eindelijk de ruimte voor de home-indicator waar hij al om vroeg. Landschap: zie
+  // globals.css (zijmarges voor de notch, alleen buiten de app).
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }) {
@@ -102,6 +111,21 @@ export default function RootLayout({ children }) {
             __html: `try{var t=localStorage.getItem("fittin-thema");if(t==="dark"||t==="light"||t==="system")document.documentElement.dataset.theme=t}catch(e){}`,
           }}
         />
+        {/* DE APP HERKENNEN, OOK VÓÓR DE EERSTE VERF — om dezelfde reden als het thema hierboven.
+            De native schil (capacitor.config.js) zet "FittinApp/1" achter de user agent. Hier
+            worden daaruit klassen op <html> (`app`, `ios`|`android`) waar de CSS-varianten `app:`,
+            `ios:` en `android:` op hangen: de website verandert niet, de app ziet er meteen goed uit.
+            De UA lezen met headers() in deze layout zou élke pagina dynamisch maken — ook de
+            gecachete marketingpagina's. Daarom hier, in de browser.
+            In de app gaat ook de knijpzoom uit (een app zoomt niet; op de website blijft zoomen
+            gewoon kunnen, dat is toegankelijkheid). `viewport-fit=cover` staat al in de statische
+            meta (zie `viewport` hierboven): hier zetten kan niet, WebKit negeert die late wijziging. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var u=navigator.userAgent;if(/FittinApp\\//.test(u)){var d=document.documentElement;d.classList.add("app",/Android/i.test(u)?"android":"ios");var m=document.querySelector('meta[name="viewport"]');if(m)m.setAttribute("content","width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover")}}catch(e){}`,
+          }}
+        />
+        <NativeGate />
         <PWARegister />
         <ChunkErrorRecovery />
         {children}

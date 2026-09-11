@@ -17,7 +17,11 @@ export default [
   // verwijzen naar kolommen en functies die intussen kunnen zijn hernoemd. Omdat `eslint .` de
   // prebuild-poort is, zou zo'n verlopen script de deploy tegenhouden voor iets wat niemand nog
   // draait. Bewaard (ze documenteren wat er ooit gebeurde), maar buiten de poort.
-  { ignores: ["scripts/archief/**"] },
+  // ios/, android/, native-shell/ = de native app. Daar belanden door `cap sync` en Gradle
+  // gegenereerde kopieën van Capacitors eigen JS (native-bridge.js), met eslint-commentaar voor
+  // regels die hier niet bestaan — dat liet `eslint .` (de prebuild-poort) falen op code die niet
+  // van ons is.
+  { ignores: ["scripts/archief/**", "ios/**", "android/**", "native-shell/**"] },
   {
     files: ["app/**/*.{js,jsx}", "components/**/*.{js,jsx}", "lib/**/*.{js,jsx}", "scripts/**/*.mjs"],
     plugins: { react, "react-hooks": reactHooks, "@next/next": next },

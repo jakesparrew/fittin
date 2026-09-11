@@ -1,7 +1,10 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { useMe } from "@/components/useMe";
+import { isTabRoot } from "@/components/tabs";
+import useIsApp from "@/components/native/useIsApp";
 
 // Marketing nav — shown to logged-out visitors.
 const links = [
@@ -35,6 +38,9 @@ const staffLinks = [
 
 export default function Nav() {
   const [open, setOpen] = useState(false);
+  const pathname = usePathname() || "/";
+  const router = useRouter();
+  const app = useIsApp();
   // Gedeeld met BottomTabBar — samen nog één /api/me-oproep per pagina i.p.v. twee (zie useMe.js).
   const me = useMe();
   // Optimistic logged-in hint from a visible Supabase cookie so the nav doesn't flash "Inloggen".
@@ -44,6 +50,14 @@ export default function Nav() {
   useEffect(() => {
     setSbCookie(document.cookie.split(";").some((c) => c.trim().startsWith("sb-")));
   }, []);
+
+  // Android-terugknop in de app: eerst het open menu dicht, pas daarna terug (NativeBoot).
+  useEffect(() => {
+    if (!open) return;
+    const onBack = (e) => { e.preventDefault(); setOpen(false); };
+    window.addEventListener("fittin:back", onBack);
+    return () => window.removeEventListener("fittin:back", onBack);
+  }, [open]);
 
   const account = me
     ? (me.loggedIn ? { name: me.name, role: me.role, home: me.home, unread: me.unread || 0 } : null)
@@ -55,18 +69,36 @@ export default function Nav() {
   // Logged-out → marketing links; member → member app links; staff → a useful subset (+ dashboard button).
   const navLinks = !account ? links : isStaff ? staffLinks : memberLinks;
 
+  // In de app: een pagina die geen tabblad is, krijgt een terugpijl (zoals elk native scherm). Het
+  // logo leidt er naar je eigen startpunt, niet naar de verkoopspagina.
+  const showBack = app && !isTabRoot(pathname);
+  const logoHref = app ? (account ? home : "/app") : "/";
+
   return (
-    <header className="sticky top-0 z-50 border-b border-borderc/70 bg-surface/80 backdrop-blur-xl">
+    // app:pt-(--sat): de kopbalk zelf loopt door onder de statusbalk, de inhoud begint eronder.
+    <header className="sticky top-0 z-50 border-b border-borderc/70 bg-surface/80 backdrop-blur-xl app:pt-(--sat)">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
-        <Link href="/" className="group flex items-center" aria-label="Fittin' — home">
-          {/* Twee versies, CSS kiest. Het wordmark is donkerindigo, dus in het donkere thema stond
-              het onzichtbaar in een donkere balk. Een `src` omwisselen kan CSS niet; met JS zou je
-              tot de hydratatie het verkeerde logo zien staan. Zie .bij-licht/.bij-donker. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.png" alt="Fittin'" width={150} height={40} className="bij-licht h-8 w-auto transition group-hover:opacity-80" />
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-white.png" alt="" aria-hidden="true" width={170} height={45} className="bij-donker h-8 w-auto transition group-hover:opacity-80" />
-        </Link>
+        <div className="flex min-w-0 items-center gap-1">
+          {showBack && (
+            <button
+              type="button"
+              onClick={() => (window.history.length > 1 ? router.back() : router.push(logoHref))}
+              aria-label="Terug"
+              className="-ml-3 grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6" /></svg>
+            </button>
+          )}
+          <Link href={logoHref} className="group flex items-center" aria-label="Fittin' — home">
+            {/* Twee versies, CSS kiest. Het wordmark is donkerindigo, dus in het donkere thema stond
+                het onzichtbaar in een donkere balk. Een `src` omwisselen kan CSS niet; met JS zou je
+                tot de hydratatie het verkeerde logo zien staan. Zie .bij-licht/.bij-donker. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Fittin'" width={150} height={40} className="bij-licht h-8 w-auto transition group-hover:opacity-80" />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-white.png" alt="" aria-hidden="true" width={170} height={45} className="bij-donker h-8 w-auto transition group-hover:opacity-80" />
+          </Link>
+        </div>
         <nav className="hidden items-center gap-7 text-sm font-semibold text-ink/70 md:flex">
           {navLinks.map((l) => (
             <Link key={l.href} href={l.href} className="relative transition hover:text-ink">
@@ -84,7 +116,8 @@ export default function Nav() {
             </>
           )}
           {account && (
-            <Link href="/notificaties" className="relative hidden rounded-full p-2 text-ink/70 transition hover:bg-paper hover:text-ink sm:block" aria-label="Notificaties">
+            // In de app altijd zichtbaar: een bel hoort in een app-kopbalk, niet verstopt in een menu.
+            <Link href="/notificaties" className="relative hidden rounded-full p-2 text-ink/70 transition hover:bg-paper hover:text-ink sm:block app:block" aria-label="Notificaties">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
               {account.unread > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-black text-brand">{account.unread > 9 ? "9+" : account.unread}</span>
@@ -122,7 +155,7 @@ export default function Nav() {
         </div>
       </div>
       {open && (
-        <nav id="mobile-menu" className="border-t border-borderc bg-surface px-5 py-4 md:hidden">
+        <nav id="mobile-menu" className="anim-in max-h-[calc(100dvh-4rem-var(--sat))] overflow-y-auto border-t border-borderc bg-surface px-5 py-4 md:hidden">
           {navLinks.map((l) => (
             <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2 font-semibold text-ink">{l.label}</Link>
           ))}
@@ -144,6 +177,14 @@ export default function Nav() {
                 {account ? "Mijn account" : "Inloggen / word lid"}
               </Link>
             )}
+          </div>
+          {/* In de app is er geen voetbalk: de juridische pagina's moeten ergens bereikbaar blijven
+              (App Review controleert dat de privacyverklaring in de app te vinden is). */}
+          <div className="mt-3 hidden flex-wrap gap-x-4 gap-y-1 border-t border-borderc pt-3 text-xs font-semibold text-ink/55 app:flex">
+            <Link href="/privacy" onClick={() => setOpen(false)}>Privacy</Link>
+            <Link href="/voorwaarden" onClick={() => setOpen(false)}>Voorwaarden</Link>
+            <Link href="/huisregels" onClick={() => setOpen(false)}>Huisregels</Link>
+            <Link href="/account-verwijderen" onClick={() => setOpen(false)}>Account verwijderen</Link>
           </div>
         </nav>
       )}

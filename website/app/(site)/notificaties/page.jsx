@@ -4,6 +4,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { markAllRead } from "./actions";
 import NotifItem from "@/components/notifications/NotifItem";
+import PushOptIn from "@/components/native/PushOptIn";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Notificaties | Fittin'" };
@@ -34,6 +35,9 @@ export default async function Notificaties() {
             </form>
           )}
         </div>
+
+        {/* Enkel in de app, en enkel zolang meldingen nog niet aan staan. */}
+        <PushOptIn className="mt-6" />
 
         <div className="mt-6 space-y-2">
           {(notifs || []).map((n) => <NotifItem key={n.id} n={n} />)}

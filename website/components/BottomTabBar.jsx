@@ -2,32 +2,22 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMe } from "@/components/useMe";
+import { TAB_ICONS, tabsFor, isTabActive, APP_NO_TABBAR } from "@/components/tabs";
+import useIsApp from "@/components/native/useIsApp";
 
 // App-like mobile bottom tab bar (hidden on md+, where the top nav takes over). Role-aware: tabs
 // adapt to logged-out / lid / coach / beheerder. Role comes from /api/me (same source as Nav).
-const ICONS = {
-  home: "M3 11l9-8 9 8M5 10v10h14V10",
-  cal: "M3 9h18M7 3v4M17 3v4M5 5h14v16H5z",
-  dumbbell: "M6.5 6.5l11 11M4 9l2-2 3 3-2 2zM15 18l2-2 3 3-2 2zM2 11l2 2M20 11l2 2",
-  list: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
-  play: "M6 4l14 8-14 8z",
-  user: "M12 12a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0",
-  shield: "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z",
-  whistle: "M14 11a5 5 0 11-9.9-1H14zM14 9l6-3M12 16v3",
-};
+// The tab list is shared with the native iOS bar (components/tabs.js).
+//
+// In the iOS app a real UITabBar replaces this one (`nativebar:hidden`); on Android it stays, with
+// the gesture/3-button navigation inset under it.
 function Icon({ d }) {
   return <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>;
 }
 
-const TABS = {
-  guest: [["/", "Home", "home"], ["/boeken", "Boeken", "cal"], ["/workouts", "Workouts", "dumbbell"], ["/oefeningen", "Oefeningen", "list"], ["/login", "Inloggen", "user"]],
-  lid: [["/boeken", "Boeken", "cal"], ["/workouts", "Workouts", "dumbbell"], ["/training", "Training", "play"], ["/oefeningen", "Oefeningen", "list"], ["/account", "Account", "user"]],
-  coach: [["/boeken", "Boeken", "cal"], ["/workouts", "Workouts", "dumbbell"], ["/oefeningen", "Oefeningen", "list"], ["/coach", "Coach", "whistle"], ["/account", "Account", "user"]],
-  beheerder: [["/boeken", "Boeken", "cal"], ["/workouts", "Workouts", "dumbbell"], ["/oefeningen", "Oefeningen", "list"], ["/beheer", "Beheer", "shield"], ["/account", "Account", "user"]],
-};
-
 export default function BottomTabBar() {
   const pathname = usePathname() || "/";
+  const app = useIsApp();
   // Dezelfde /api/me-oproep als Nav (zie useMe.js): één antwoord voor beide balken, en niet langer
   // opnieuw ophalen bij elke paginawissel — rol en teller veranderen daar niet van.
   const me = useMe();
@@ -37,24 +27,33 @@ export default function BottomTabBar() {
   // Tijdens een trainingssessie verdwijnt de balk. Dat scherm heeft een eigen ✕ met bevestiging;
   // een tabbalk eronder nodigt uit om er middenin weg te tikken, en dekt bovendien de rusttimer af.
   if (pathname.startsWith("/training/sessie")) return null;
+  // In de app zijn inloggen en het welkomstscherm schermvullend.
+  if (app && APP_NO_TABBAR.some((p) => pathname.startsWith(p))) return null;
 
-  const tabs = !role ? TABS.guest : TABS[role] || TABS.lid;
-  const isActive = (href) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
+  const tabs = tabsFor(role, { app });
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-borderc bg-surface/95 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-borderc bg-surface/95 backdrop-blur md:hidden nativebar:hidden" style={{ paddingBottom: "var(--sab)" }}>
       {/* min-w-0 op elk tabblad is hier geen detail: een flex-item krimpt standaard niet onder de
           breedte van zijn langste woord, en "Oefeningen" past met vijf tabs niet op een smal
           scherm — op 320px liep de balk 23px over en werd de laatste tab afgeknipt. Zelfde valkuil
           als bij de sets-grid. Het label mag nu afbreken met puntjes; het icoon blijft heel. */}
       <ul className="mx-auto flex max-w-lg items-stretch justify-around">
-        {tabs.map(([href, label, icon]) => {
-          const act = isActive(href);
+        {tabs.map(({ href, label, icon }) => {
+          const act = isTabActive(href, pathname);
           return (
             <li key={href} className="min-w-0 flex-1">
-              <Link href={href} className={"relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition " + (act ? "text-accentdark" : "text-ink/55 hover:text-ink")}>
+              <Link
+                href={href}
+                onClick={() => {
+                  if (!app) return;
+                  if (act) window.scrollTo({ top: 0, behavior: "smooth" }); // native: tap the active tab → top
+                  import("@/lib/native/haptics").then((h) => h.hapticSelect()).catch(() => {});
+                }}
+                className={"relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition " + (act ? "text-accentdark" : "text-ink/55 hover:text-ink")}
+              >
                 <span className="relative">
-                  <Icon d={ICONS[icon]} />
+                  <Icon d={TAB_ICONS[icon]} />
                   {href === "/account" && unread > 0 && (
                     <span className="absolute -right-2 -top-1 min-w-[15px] rounded-full bg-red-500 px-1 text-center text-[9px] font-black leading-[15px] text-white">{unread > 9 ? "9+" : unread}</span>
                   )}

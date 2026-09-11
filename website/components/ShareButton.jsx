@@ -1,20 +1,18 @@
 "use client";
 import { useState } from "react";
+import { deel } from "@/lib/native/share";
 
-// Generic Web Share / copy-link button. Native share sheet on mobile, clipboard fallback on desktop.
+// Generic share / copy-link button. Native share sheet in the app and on mobile, clipboard fallback
+// on desktop. Always shares the public fittin.be URL, also inside the app.
 export default function ShareButton({ title, text, path, label = "Deel", className = "" }) {
   const [copied, setCopied] = useState(false);
   const onClick = async () => {
-    const url = (typeof window !== "undefined" ? window.location.origin : "https://fittin.be") + (path || (typeof window !== "undefined" ? window.location.pathname : ""));
-    try {
-      if (navigator.share) {
-        await navigator.share({ title, text, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      }
-    } catch { /* dismissed — no-op */ }
+    const url = "https://fittin.be" + (path || (typeof window !== "undefined" ? window.location.pathname : ""));
+    const r = await deel({ title, text, url });
+    if (r === "copied") {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
   return (
     <button

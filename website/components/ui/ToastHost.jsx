@@ -10,6 +10,10 @@ export default function ToastHost() {
     const onToast = (e) => {
       const t = { id: ++n + Math.round(performance.now()), type: e.detail?.type || "success", msg: e.detail?.msg || "" };
       if (!t.msg) return;
+      // In de app voel je het resultaat ook (lazy: de website laadt de haptiek nooit).
+      if (document.documentElement.classList.contains("app") && t.type !== "info") {
+        import("@/lib/native/haptics").then((h) => (t.type === "error" ? h.hapticError() : h.hapticSuccess())).catch(() => {});
+      }
       setToasts((ts) => [...ts, t]);
       setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== t.id)), 4200);
     };
@@ -22,7 +26,7 @@ export default function ToastHost() {
        (tabbalk, de bevestigbalk van het boeken, de knoppenbalk van de workout-speler); een toast
        van 4,2 seconden legde zich daar bovenop en dekte de tabbladen af. Boven de vouw is er
        onder de sticky kopbalk (h-16) wél vrije ruimte. */
-    <div className="pointer-events-none fixed left-4 right-4 top-20 z-[100] flex flex-col items-end gap-2 md:bottom-4 md:left-auto md:right-4 md:top-auto">
+    <div className="pointer-events-none fixed left-4 right-4 top-[calc(var(--sat)_+_5rem)] z-[100] flex flex-col items-end gap-2 md:bottom-4 md:left-auto md:right-4 md:top-auto">
       {toasts.map((t) => (
         <div
           key={t.id}

@@ -4,3 +4,14 @@ out/
 .env*
 
 .vercel
+
+# Native signing material — never in git (see NATIVE-OWNER-TODO.md). ios/ and android/ carry
+# their own .gitignore for build output and the copied web assets.
+.secrets/
+# Written by capacitor.config.js on every cap sync (dev vs production start URL).
+native-shell/start-url.js
+*.p8
+*.keystore
+*.jks
+keystore.properties
+.env*.local

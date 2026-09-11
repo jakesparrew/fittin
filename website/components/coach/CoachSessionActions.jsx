@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { bevestig } from "@/lib/native/dialogs";
 import { coachRescheduleBooking, cancelCoachBooking, cancelCoachSeries, coachDayAvailability, coachAssignClient } from "@/app/coach/actions";
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -91,7 +92,7 @@ export default function CoachSessionActions({ bookingId, startsAt, endsAt = null
   }
 
   async function doCancel() {
-    if (!window.confirm("Deze sessie annuleren? De client krijgt een mail.")) return;
+    if (!(await bevestig("Deze sessie annuleren? De client krijgt een mail.", { ok: "Annuleer sessie", cancel: "Terug" }))) return;
     setBusy(true);
     const fd = new FormData(); fd.set("bookingId", bookingId);
     const res = await cancelCoachBooking(fd);
@@ -102,7 +103,7 @@ export default function CoachSessionActions({ bookingId, startsAt, endsAt = null
   }
 
   async function doCancelSeries() {
-    if (!window.confirm("De hele reeks annuleren? Alle toekomstige sessies in deze reeks (>6u weg) worden afgezegd en de clients krijgen een mail.")) return;
+    if (!(await bevestig("De hele reeks annuleren? Alle toekomstige sessies in deze reeks (>6u weg) worden afgezegd en de clients krijgen een mail.", { ok: "Annuleer reeks", cancel: "Terug" }))) return;
     setBusy(true);
     const fd = new FormData(); fd.set("seriesId", seriesId);
     const res = await cancelCoachSeries(fd);

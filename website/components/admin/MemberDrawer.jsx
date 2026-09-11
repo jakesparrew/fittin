@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { bevestig } from "@/lib/native/dialogs";
 import { adminUpdateMember, resendInviteMail, adminSetRole, adminSetTestAccount, adminAdjustCredits, assignCoachClient, unassignCoachClient, deleteUser } from "@/app/beheer/actions";
 
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
@@ -147,7 +148,7 @@ export default function MemberDrawer() {
                 <Link href={`/beheer/leden/${id}`} className="text-xs font-bold text-accentdark hover:underline">Volledige pagina →</Link>
                 <button
                   disabled={busy}
-                  onClick={() => { if (confirm(`${p.full_name || "dit lid"} definitief verwijderen?`)) { const fd = new FormData(); fd.set("userId", id); run(deleteUser, fd, { close: true, refresh: true }); } }}
+                  onClick={async () => { if (await bevestig(`${p.full_name || "dit lid"} definitief verwijderen?`, { ok: "Verwijder" })) { const fd = new FormData(); fd.set("userId", id); run(deleteUser, fd, { close: true, refresh: true }); } }}
                   className="text-xs font-bold text-red-500 hover:underline"
                 >Lid verwijderen</button>
               </div>

@@ -19,6 +19,10 @@ export default function DoorButton() {
       setTimeout(() => setState("idle"), 8000);
       return;
     }
+    // In de app voel je het slot opengaan (of weigeren). Lazy: de website laadt dit nooit.
+    if (document.documentElement.classList.contains("app")) {
+      import("@/lib/native/haptics").then((h) => (res?.error ? h.hapticError() : h.hapticHeavy())).catch(() => {});
+    }
     if (res?.error) {
       setState("error");
       setMsg(res.error);

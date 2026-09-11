@@ -32,7 +32,7 @@ export default async function BeheerLayout({ children }) {
   return (
     <div className="flex min-h-screen flex-col bg-paper md:flex-row">
       <AdminSidebar name={profile.full_name || "Beheerder"} role={profile.role} badges={badges} />
-      <main className="min-w-0 flex-1">{children}</main>
+      <main className="min-w-0 flex-1 nativebar:pb-[var(--native-tabbar-h)]">{children}</main>
       <ToastHost />
     </div>
   );

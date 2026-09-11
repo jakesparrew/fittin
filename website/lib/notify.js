@@ -1,4 +1,14 @@
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { pushToUsers, pushConfigured } from "@/lib/push";
+
+// Also send it as a native push (lib/push.js) — AFTER the response, so an APNs/FCM round-trip
+// never slows down the action that caused it. Outside a request (a script) it just runs.
+function alsoPush(userIds, { title, body, link }) {
+  if (!pushConfigured()) return;
+  const run = () => pushToUsers(userIds, { title, body, link });
+  try { after(run); } catch { run().catch(() => {}); }
+}
 
 // Create an in-app notification (the 'bell'). Service-role so it works from any action.
 // Fails silently — a missing notification must never break the underlying action.
@@ -6,6 +16,7 @@ export async function notify({ gymId, userId, actorId = null, type, title, body 
   if (!gymId || !userId || !type || !title) return;
   try {
     await createAdminClient().from("notifications").insert({ gym_id: gymId, user_id: userId, actor_id: actorId, type, title, body, link });
+    alsoPush([userId], { title, body, link });
   } catch {}
 }
 
@@ -17,6 +28,7 @@ export async function notifyAdmins({ gymId, type, title, body = null, link = nul
     const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", gymId).eq("role", "beheerder");
     if (!admins?.length) return;
     await admin.from("notifications").insert(admins.map((a) => ({ gym_id: gymId, user_id: a.id, actor_id: actorId, type, title, body, link })));
+    alsoPush(admins.map((a) => a.id), { title, body, link });
   } catch {}
 }
 
@@ -28,5 +40,6 @@ export async function notifyMany(userIds, base) {
     await createAdminClient().from("notifications").insert(
       ids.map((uid) => ({ gym_id: base.gymId, user_id: uid, actor_id: base.actorId || null, type: base.type, title: base.title, body: base.body || null, link: base.link || null }))
     );
+    alsoPush(ids, { title: base.title, body: base.body || null, link: base.link || null });
   } catch {}
 }

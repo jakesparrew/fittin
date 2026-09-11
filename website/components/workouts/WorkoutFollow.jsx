@@ -224,11 +224,21 @@ function ExerciseCard({ pe, last, done, isLoggedIn, onToggleDone, onRest }) {
   );
 }
 
+// Einde van de rust voelen, niet enkel zien. iOS kent navigator.vibrate niet, dus in de app is het
+// een echte haptische tik (lazy: de website laadt die module nooit); elders de oude buzz.
+function rustKlaar() {
+  if (document.documentElement.classList.contains("app")) {
+    import("@/lib/native/haptics").then((h) => h.hapticWarning()).catch(() => {});
+    return;
+  }
+  try { navigator.vibrate?.(200); } catch { /* niet ondersteund */ }
+}
+
 function RestPill({ rest, onClose }) {
   const [left, setLeft] = useState(rest.sec);
   useEffect(() => { setLeft(rest.sec); }, [rest]);
   useEffect(() => {
-    if (left <= 0) { try { navigator.vibrate?.(200); } catch {} const t = setTimeout(onClose, 900); return () => clearTimeout(t); }
+    if (left <= 0) { rustKlaar(); const t = setTimeout(onClose, 900); return () => clearTimeout(t); }
     const id = setTimeout(() => setLeft((l) => l - 1), 1000);
     return () => clearTimeout(id);
   }, [left, onClose]);

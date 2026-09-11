@@ -12,6 +12,10 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  // Enkel voor `npm run dev`: de Android-emulator bereikt de laptop als 10.0.2.2 (npm run
+  // android:dev). Next waarschuwt nu voor zo'n cross-origin dev-verzoek en blokkeert het in een
+  // volgende major. Geen effect op productie.
+  allowedDevOrigins: ["10.0.2.2"],
   // Allow next/image to optimise Supabase-hosted media (coach photos, event/feed images).
   // jsdelivr staat erbij zolang de oefeningstills daar staan: zo kan ExerciseMedia nú al via
   // next/image (72 KB-origineel → ~64 px-variant) in plaats van te wachten op de spiegeling.
@@ -33,6 +37,15 @@ const nextConfig = {
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
+  },
+  // De native app (docs/native): Apple en Google halen deze twee bestanden op om te bewijzen dat
+  // fittin.be-links in de app mogen openen. Een rewrite en geen redirect — Apple volgt geen
+  // redirects. De route handlers vullen Team ID en vingerafdrukken in uit env.
+  async rewrites() {
+    return [
+      { source: "/.well-known/apple-app-site-association", destination: "/api/well-known/aasa" },
+      { source: "/.well-known/assetlinks.json", destination: "/api/well-known/assetlinks" },
+    ];
   },
   async redirects() {
     return [

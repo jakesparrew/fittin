@@ -1,6 +1,7 @@
 "use client";
 import { useActionState } from "react";
 import { adminAddUser, deleteUser } from "@/app/beheer/actions";
+import { bevestigSubmit } from "@/lib/native/dialogs";
 
 const ROLES = [
   { v: "lid", l: "Lid" },
@@ -40,9 +41,7 @@ export function DeleteUserButton({ userId, name }) {
   return (
     <form
       action={action}
-      onSubmit={(e) => {
-        if (!confirm(`"${name}" definitief verwijderen? Dit verwijdert het account en alle gekoppelde data. Betaalgeschiedenis blijft bewaard.`)) e.preventDefault();
-      }}
+      onSubmit={(e) => bevestigSubmit(e, `"${name}" definitief verwijderen? Dit verwijdert het account en alle gekoppelde data. Betaalgeschiedenis blijft bewaard.`, { ok: "Verwijder" })}
     >
       <input type="hidden" name="userId" value={userId} />
       <button disabled={pending} className="rounded-full border-2 border-red-200 bg-red-50 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-60">

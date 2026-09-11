@@ -1,0 +1,71 @@
+<!doctype html>
+<!-- Bundled offline screen (capacitor.config server.errorPath). Shown when the app cannot reach
+     fittin.be — above all on a cold start without network, which would otherwise be a blank page.
+     Fully self-contained: no network, no fonts, no framework. Keeps the door fallback up front,
+     because "no signal at the gym door" is the moment this screen matters most. -->
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <title>Geen verbinding · Fittin’</title>
+    <style>
+      :root { --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px)); }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; background: #22194f; color: #fff;
+        font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+      main { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        padding: calc(var(--sat) + 32px) 28px calc(var(--sab) + 32px); text-align: center; }
+      img { width: 168px; height: auto; margin-bottom: 40px; }
+      h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+      p { margin: 10px 0 0; color: #b2adc2; font-size: 15px; }
+      .door { margin-top: 28px; width: 100%; max-width: 360px; padding: 16px 18px; border-radius: 20px;
+        background: rgba(255,255,255,0.07); text-align: left; }
+      .door strong { display: block; color: #fff; font-size: 15px; }
+      .door span { display: block; margin-top: 4px; color: #b2adc2; font-size: 14px; }
+      button { margin-top: 32px; min-height: 52px; padding: 0 34px; border: 0; border-radius: 999px;
+        background: #5fda6b; color: #22194f; font: inherit; font-weight: 800; font-size: 16px; }
+      button:active { transform: scale(0.97); }
+      small { display: block; margin-top: 18px; color: rgba(178,173,194,0.7); font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="logo-white.svg" alt="Fittin’" />
+      <h1>Geen verbinding</h1>
+      <p>We konden Fittin’ niet bereiken. Controleer je wifi of mobiele data.</p>
+      <div class="door">
+        <strong>Sta je aan de deur?</strong>
+        <span>Je deurcode staat ook in de e-mail die je ± 5 minuten voor je sessie kreeg. Toets die in op het paneel naast de voordeur.</span>
+      </div>
+      <button type="button" id="retry">Opnieuw proberen</button>
+      <small>Nood? Bel altijd eerst 112 · info@fittin.be</small>
+    </main>
+    <script src="start-url.js"></script>
+    <script>
+      // The launch splash would otherwise stay up for its full ceiling. The bridge is injected into
+      // this local page on iOS; on Android errorPath pages cannot reach plugins, so guard it.
+      try { window.Capacitor && window.Capacitor.Plugins.SplashScreen && window.Capacitor.Plugins.SplashScreen.hide(); } catch (e) {}
+      // Retry the server THIS binary was built for, not a fixed address: a dev build must go back
+      // to the laptop, a store build to fittin.be. start-url.js is written by capacitor.config.js
+      // at sync time (Capacitor's getServerUrl() is useless here: on this bundled page it returns
+      // the app's own local origin). Missing file → production.
+      var START = (typeof window.FITTIN_START === "string" && /^https?:/.test(window.FITTIN_START)) ? window.FITTIN_START : "https://fittin.be/app";
+      // A dev build whose laptop server is down: say so, instead of blaming the member's wifi.
+      if (/\/\/(localhost|127\.0\.0\.1|10\.0\.2\.2|192\.168\.)/.test(START)) {
+        document.querySelector("h1").textContent = "Dev-server niet bereikbaar";
+        document.querySelector("p").textContent = "Deze testbuild laadt " + START + ". Start de server met ‘npm run dev’ (of gebruik ‘npm run ios:dev’) en tik op opnieuw proberen.";
+        document.querySelector(".door").style.display = "none";
+      }
+      function retry() { location.replace(START); }
+      document.getElementById("retry").addEventListener("click", retry);
+      // Come back by itself as soon as the network does — but ONLY after a real offline → online
+      // change. A bare "online" listener also fires while this page loads, and when the server
+      // (not the network) is the problem, that retried → failed → reloaded this page in a loop,
+      // which shows as a blank indigo screen.
+      var wasOffline = !navigator.onLine;
+      window.addEventListener("offline", function () { wasOffline = true; });
+      window.addEventListener("online", function () { if (wasOffline) retry(); });
+    </script>
+  </body>
+</html>

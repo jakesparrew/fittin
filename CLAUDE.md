@@ -23,6 +23,20 @@ Sidestream OÜ (sidestream.be).
   client component).
 - Componenten: `components/Nav.jsx` (client, mobiel menu), `components/Footer.jsx`.
 
+## Native app (iOS + Android, Capacitor 8) — in `website/`
+- Architectuur: **remote shell** — de binary laadt `https://fittin.be/app`; de site is app-bewust.
+  Waarom en hoe: `docs/native/01-decision.md`. Wat de eigenaar nog moet leveren: `NATIVE-OWNER-TODO.md`.
+- De site herkent de app aan de user agent `FittinApp/1` (inline script in `app/layout.jsx`) en zet
+  `app ios|android` op `<html>`. Visuele verschillen = CSS-varianten `app:`, `ios:`, `android:`,
+  `nativebar:` — **nooit** een `headers()`-check (dat maakt elke pagina dynamisch).
+- Alle native code via `lib/native/*`; elke plugin-aanroep achter `has(name)` / `capabilities()`
+  (site en binary deployen los van elkaar). Nooit `window.confirm` → `bevestig` / `bevestigSubmit`
+  (`lib/native/dialogs.js`); delen via `deel()`; insets enkel met `--sat/--sab/--sal/--sar`.
+- Tabs: één lijst in `components/tabs.js` (web/Android-balk + native iOS-`UITabBar`).
+- Iconen/splash: bron `assets/brand/*.svg` → `npm run native:assets`. Versie: `npm run native:version`.
+- Draaien: `npm run dev` + `npm run ios:dev` / `android:dev` (JDK 21: Android Studio's JBR).
+  Release: `docs/native/release-runbook.md`.
+
 ## Brand / design system
 Kleuren (Tailwind-tokens in `app/globals.css` onder `@theme`):
 - `brand` #22194F (indigo, primaire tekst/donkere vlakken)

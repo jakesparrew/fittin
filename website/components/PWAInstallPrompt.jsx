@@ -58,6 +58,8 @@ export default function PWAInstallPrompt() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // "Zet Fittin' op je telefoon" in de Fittin'-app zelf zou een grap zijn.
+    if (document.documentElement.classList.contains("app")) return;
     if (isStandalone() || !isMobile() || isInAppBrowser() || recentlyDismissed()) return;
 
     const onBIP = (e) => {

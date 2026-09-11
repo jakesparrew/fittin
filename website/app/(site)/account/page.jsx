@@ -32,6 +32,7 @@ import { euro } from "@/lib/format";
 import TrackBookingCompleted from "./TrackBookingCompleted";
 import TrackSignup from "@/components/TrackSignup";
 import ThemaKeuze from "@/components/ThemaKeuze";
+import PushOptIn from "@/components/native/PushOptIn";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -326,6 +327,9 @@ export default async function AccountPage({ searchParams }) {
             </button>
           </form>
         </div>
+
+        {/* App: meldingen aanzetten, op het scherm waar een lid het vaakst komt. Niets op de website. */}
+        <PushOptIn className="mt-6" />
 
         {/* Primary CTA — drive bookings */}
         <section className="mt-8 rounded-3xl bg-brand p-7 text-white md:p-8">

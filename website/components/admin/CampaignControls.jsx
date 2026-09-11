@@ -3,6 +3,7 @@ import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { sendNewsletter } from "@/app/beheer/newsletter-actions";
 import { runActivationNow } from "@/app/beheer/activation-actions";
+import { bevestigSubmit } from "@/lib/native/dialogs";
 
 // Live send-progress bar — polls while the queue drains.
 export function SendProgress({ id, initial }) {
@@ -51,7 +52,7 @@ export function SendProgress({ id, initial }) {
 export function RunActivationButton({ id, matches }) {
   const [state, action, pending] = useActionState(async (_p, fd) => runActivationNow(fd), null);
   return (
-    <form action={action} onSubmit={(e) => { if (!confirm(`Nu versturen naar de leden die matchen (max ${matches})?`)) e.preventDefault(); }}>
+    <form action={action} onSubmit={(e) => bevestigSubmit(e, `Nu versturen naar de leden die matchen (max ${matches})?`, { ok: "Versturen" })}>
       <input type="hidden" name="id" value={id} />
       <button disabled={pending} className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-60">
         {pending ? "Versturen…" : "Nu versturen"}
@@ -73,7 +74,7 @@ export function SendNewsletterButton({ id, count }) {
   return (
     <form
       action={action}
-      onSubmit={(e) => { if (!confirm(`Nieuwsbrief verzenden naar ${count} abonnees? Hij wordt in de achtergrond verstuurd.`)) e.preventDefault(); }}
+      onSubmit={(e) => bevestigSubmit(e, `Nieuwsbrief verzenden naar ${count} abonnees? Hij wordt in de achtergrond verstuurd.`, { ok: "Verzenden" })}
       className="mt-4"
     >
       <input type="hidden" name="id" value={id} />
@@ -90,7 +91,7 @@ export function SendNewsletterButton({ id, count }) {
 export function ConfirmSubmit({ action, id, confirm: msg, label, danger }) {
   const [, formAction, pending] = useActionState(async (_p, fd) => action(fd), null);
   return (
-    <form action={formAction} onSubmit={(e) => { if (!confirm(msg)) e.preventDefault(); }}>
+    <form action={formAction} onSubmit={(e) => bevestigSubmit(e, msg)}>
       <input type="hidden" name="id" value={id} />
       <button
         disabled={pending}

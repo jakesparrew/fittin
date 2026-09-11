@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { slotInstant, fmtHour } from "@/lib/time";
 import { adminCreateBooking, adminBlockSlot, adminBlockRange, adminCancelBooking, adminUnblock, adminRescheduleBooking, adminDayAvailability } from "@/app/beheer/actions";
 import SearchSelect from "@/components/admin/SearchSelect";
+import { bevestigSubmit } from "@/lib/native/dialogs";
 import BookingDetail from "@/components/BookingDetail";
 import PayModePicker from "@/components/admin/PayModePicker";
 
@@ -151,7 +152,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                         </span>
                         <div className="flex items-center gap-2 leading-none">
                           <button type="button" onClick={() => setMoveModal({ bk, date: d.dateStr })} className="text-[10px] font-bold text-accentdark hover:underline">verplaats</button>
-                          <form action={adminCancelBooking} className="leading-none" onSubmit={(e) => { if (!confirm("Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.")) e.preventDefault(); }}>
+                          <form action={adminCancelBooking} className="leading-none" onSubmit={(e) => bevestigSubmit(e, "Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.", { ok: "Annuleer boeking", cancel: "Terug" })}>
                             <input type="hidden" name="bookingId" value={bk.id} />
                             <button className="text-[10px] font-bold text-red-500 hover:underline">annuleer</button>
                           </form>

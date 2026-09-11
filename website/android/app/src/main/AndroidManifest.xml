@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <!-- singleTask: an opened link or the OAuth return reuses the running app instead of
+             stacking a second instance. configChanges: rotation/dark-mode never reload the webview.
+             Portrait only: every screen is a phone-portrait layout. -->
+        <activity
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode|navigation|density"
+            android:name=".MainActivity"
+            android:label="@string/title_activity_main"
+            android:theme="@style/AppTheme.NoActionBarLaunch"
+            android:launchMode="singleTask"
+            android:screenOrientation="portrait"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- App links: fittin.be pages open in the app (verified via
+                 https://fittin.be/.well-known/assetlinks.json). Only app pages — never /auth
+                 (a PKCE code started in the browser can't be finished in the app) or /api. Keep in
+                 sync with app/api/well-known/aasa/route.js. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="fittin.be" />
+                <data android:pathPrefix="/boeken" />
+                <data android:pathPrefix="/account" />
+                <data android:pathPrefix="/training" />
+                <data android:pathPrefix="/plannen" />
+                <data android:pathPrefix="/workouts" />
+                <data android:pathPrefix="/oefeningen" />
+                <data android:pathPrefix="/community" />
+                <data android:pathPrefix="/notificaties" />
+                <data android:pathPrefix="/coaching" />
+                <data android:pathPrefix="/events" />
+                <data android:pathPrefix="/coach" />
+                <data android:pathPrefix="/beheer" />
+                <data android:pathPrefix="/uitnodiging/" />
+                <data android:pathPrefix="/w/" />
+                <data android:pathPrefix="/f/" />
+                <data android:pathPrefix="/app" />
+            </intent-filter>
+
+            <!-- OAuth return only (Google sign-in via a Custom Tab). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/custom_url_scheme" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"></meta-data>
+        </provider>
+
+        <!-- Push: a white silhouette, or Android draws a grey square in the status bar. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_notify" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/fittin_accent" />
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="fittin" />
+    </application>
+
+    <!-- Permissions: only what is used. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+</manifest>
