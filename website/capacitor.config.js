@@ -67,7 +67,9 @@ const config = {
     SplashScreen: {
       // Hidden from JS as soon as the first page has painted (components/native/NativeBoot).
       // This duration is only the ceiling for when JS never runs (offline, server down).
-      launchShowDuration: 4000,
+      // 10 s, not 4: a first launch on a slow connection took >12 s to paint /boeken in the
+      // simulator, and with a 4 s ceiling that showed an empty indigo screen in between.
+      launchShowDuration: 10000,
       launchAutoHide: true,
       launchFadeOutDuration: 200,
       backgroundColor: LAUNCH_BG,
