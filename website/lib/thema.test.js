@@ -220,6 +220,66 @@ describe("de constructie waar dark mode op leunt", () => {
     expect(layout).toMatch(/suppressHydrationWarning/);
   });
 
+  it("de focusring is zichtbaar in BEIDE thema's — op de kaart, de pagina en het indigo vlak", () => {
+    // Deze ene regel in globals.css is de enige focusindicator van de app: op twee bestanden na zet
+    // geen enkele component er zelf een. Stond de merkindigo erin, dan was hij in donker weg —
+    // gemeten 1,19:1 op het kaartvlak, en 1,00:1 op een indigo vlak in ALLEBEI de thema's, want dan
+    // is de ring exact de ondergrond. Niemand die met het toetsenbord werkt, ziet dan waar hij staat.
+    const regel = /:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--color-([a-z-]+)\)/.exec(css);
+    expect(regel, "de basisregel voor :focus-visible is weg").toBeTruthy();
+    const token = regel[1];
+
+    for (const [thema, lees] of [["licht", licht], ["donker", donker]]) {
+      const ring = lees(token);
+      for (const vlak of ["surface", "paper", "brand"]) {
+        // WCAG 1.4.11: een indicator heeft 3:1 nodig tegen wat eromheen ligt.
+        expect(contrast(ring, lees(vlak)), `${token} op ${vlak} in ${thema}`).toBeGreaterThanOrEqual(AA_GROOT);
+      }
+    }
+  });
+
+  it("de schakelaar staat op ELKE pagina, niet alleen bij je instellingen", () => {
+    // Hij stond eerst alleen op /account. Dat is waar hij HOORT, maar niet waar iemand hem vindt
+    // die niet weet dat hij bestaat — en een bezoeker zonder account kwam er sowieso nooit.
+    // De voetbalk zit in de site-layout en staat dus onder elke publieke én ledenpagina.
+    const voet = fs.readFileSync(path.join(ROOT, "components/Footer.jsx"), "utf8");
+    expect(voet).toMatch(/<ThemaKeuze variant="voet"/);
+    expect(fs.readFileSync(path.join(ROOT, "app/(site)/layout.jsx"), "utf8")).toMatch(/<Footer\s*\/>/);
+    // En de uitgebreide versie blijft bij de instellingen staan.
+    expect(fs.readFileSync(path.join(ROOT, "app/(site)/account/page.jsx"), "utf8")).toMatch(/<ThemaKeuze \/>/);
+  });
+
+  it("maar één plek schrijft het thema weg", () => {
+    // Twee schakelaars met elk hun eigen schrijfregel is hoe de ene ooit iets anders bewaart dan de
+    // andere. `ThemaKeuze` heeft twee MATEN, geen twee implementaties — het scriptje in layout.jsx
+    // leest de sleutel alleen.
+    const schrijvers = [];
+    (function loop(dir) {
+      for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const q = path.join(dir, e.name);
+        if (e.isDirectory()) { if (e.name !== "node_modules") loop(q); continue; }
+        if (!/\.jsx?$/.test(q)) continue;
+        // Op de sleutel én op het schrijven, niet op de twee samen in één aanroep: de sleutel staat
+        // sinds kort in een constante, dus `setItem("fittin-thema", ...)` komt letterlijk niet meer
+        // voor. Een test die op de oude vorm zocht, vond niets en zou dus ook een tweede schrijver
+        // niet gezien hebben — precies het tegenovergestelde van wat ze moet doen.
+        const bron = fs.readFileSync(q, "utf8");
+        if (bron.includes("fittin-thema") && /localStorage\.setItem\(/.test(bron)) schrijvers.push(path.relative(ROOT, q));
+      }
+    })(path.join(ROOT, "components"));
+    expect(schrijvers).toEqual([path.join("components", "ThemaKeuze.jsx")]);
+  });
+
+  it("de standaard is LICHT, en het scherm zegt dat ook", () => {
+    // De kop bij de instellingen beweerde tot 11-09 dat de app standaard je toestel volgt. Dat was
+    // ze één dag, en toen kreeg elke bezoeker met een donker toestel een donkere etalage. Sinds de
+    // terugdraai is licht de standaard — en dan hoort er niet het omgekeerde boven de knoppen.
+    const acc = fs.readFileSync(path.join(ROOT, "app/(site)/account/page.jsx"), "utf8")
+      .replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+    expect(acc).not.toMatch(/Standaard volgt de app je toestel/);
+    expect(acc).toMatch(/standaard licht/);
+  });
+
   it("er staat geen transitie op de themawissel", () => {
     // Een transitie op de wissel sleept élk element van de pagina 150 ms mee — en de bewegingslaag
     // stuurt 497 transition-klassen vanuit datzelfde @theme-blok.
@@ -244,6 +304,16 @@ describe("de sweep die betekenis van kleur scheidde", () => {
     }
   })(path.join(ROOT, "components"));
 
+  // RUWE bestandstekst, met commentaar en al. Dat is bewust grof, en het moet grof blijven.
+  //
+  // Ik heb hier één keer een commentaar-strip ingezet omdat de toelichting bij de themaschakelaar
+  // de test liet afgaan. Nagemeten wat dat kostte: `accept="image/*"` in
+  // app/beheer/coaches/[id]/page.jsx opent voor een regex een `/*`, die pas sluit bij het volgende
+  // `*/` — 3.562 tekens verderop. Vijfentwintig className-strings vielen zo buiten de bewaking,
+  // zonder dat iets het merkte. Een poort met een gat is erger dan een poort die te vaak piept.
+  //
+  // Schrijf je dus een toelichting bij een kleurkeuze: benoem de klasse niet letterlijk. Zie de
+  // uitleg boven `InDeVoet` in components/ThemaKeuze.jsx voor hoe dat eruitziet.
   const inhoud = jsxBestanden.map((p) => ({ p, s: fs.readFileSync(p, "utf8") }));
 
   // DE REGEL, in een zin: `ink` is tekst op een vlak dat MEEFLIPT, `brand` is tekst op een vlak dat

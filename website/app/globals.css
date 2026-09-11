@@ -210,11 +210,34 @@ body {
   overflow-wrap: break-word;
 }
 
-/* Visible keyboard-focus indicator (WCAG 2.4.7). Only shows for keyboard/AT users, not mouse clicks. */
+/* Visible keyboard-focus indicator (WCAG 2.4.7). Only shows for keyboard/AT users, not mouse clicks.
+
+   DE RING IS GROEN EN GEEN INDIGO, en dat is geen smaak. Deze regel is de ENIGE focusindicator van
+   de hele app — op twee bestanden na zet niemand er zelf een. Met de merkindigo erin was hij in het
+   donkere thema weg: gemeten met de formule uit lib/thema.test.js haalt #251d54 op het donkere
+   kaartvlak #17151f een contrast van 1,19:1, en op de pagina 1,26:1, waar WCAG 1.4.11 om 3:1 vraagt.
+   Op een indigo vlak was het zelfs in BEIDE thema's 1,00:1 — letterlijk dezelfde kleur.
+
+   `accentdark` is de enige bestaande token die overal slaagt, juist omdát hij per thema flipt
+   (#1a7d34 op licht, #5fda6b op donker):
+                       kaart   pagina   indigo vlak
+       licht            5,21     4,83          3,05
+       donker          10,08    10,71          8,48
+   Een nieuwe --ring-token zou hetzelfde doen met één token meer. `lib/thema.test.js` meet dit nu. */
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--color-accentdark);
   outline-offset: 2px;
   border-radius: 2px;
+}
+
+/* De voetbalk is het grootste indigo vlak van de site, en sinds er drie icoonknoppen in staan is het
+   ook het vlak waar de ring het hardst nodig is — zonder ring zijn ☀ ☾ ◐ met het toetsenbord niet
+   uit elkaar te houden. Daar is 3,05 uit de tabel hierboven wel geldig maar krap; het merkgroen zelf
+   haalt er 8,88. Eén regel voor de hele voet, want het probleem is de ondergrond en niet de knop.
+   ⚠️ Andere indigo vlakken (hero-blokken, de donkere kaart op /account) houden die 3,05. Geldig,
+   maar wie ze ruimer wil, geeft ze een klasse — niet nog een elementregel erbij. */
+footer :focus-visible {
+  outline-color: var(--color-accent);
 }
 
 /* Distinctive display face on headings + brand mark — keeps the UI out of generic-AI territory.

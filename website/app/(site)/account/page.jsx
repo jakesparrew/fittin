@@ -832,7 +832,12 @@ export default async function AccountPage({ searchParams }) {
         <section className="mt-10 rounded-2xl border border-borderc bg-surface p-5">
           <h2 className="font-black text-ink">Weergave</h2>
           <p className="mt-1 text-sm text-ink-soft">
-            Standaard volgt de app je toestel. Wil je het anders, kies dan hier.
+            {/* Deze zin zei tot 11-09 dat de app standaard je toestel volgt. Dat was ze ook, één
+                dag lang — en daardoor kreeg elke bezoeker met een donker toestel een donkere
+                marketingpagina. Sindsdien is LICHT de standaard en is "volg mijn toestel" een
+                keuze. De zin bleef staan en beloofde dus het omgekeerde van wat de knoppen doen. */}
+            De app is standaard licht. Wil je hem donker, of wil je dat hij je toestel volgt,
+            kies dat hier.
           </p>
           <div className="mt-4"><ThemaKeuze /></div>
         </section>

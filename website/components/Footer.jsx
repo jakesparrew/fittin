@@ -1,5 +1,6 @@
 import Link from "next/link";
 import NewsletterSignup from "./NewsletterSignup";
+import ThemaKeuze from "./ThemaKeuze";
 
 export default function Footer() {
   return (
@@ -67,6 +68,11 @@ export default function Footer() {
         <Link href="/cookies" className="transition hover:text-white">Cookies</Link>
         <span aria-hidden>·</span>
         <Link href="/disclosure" className="transition hover:text-white">Disclosure</Link>
+        {/* De themaschakelaar stond alleen op /account, en dus vond niemand hem die niet wist dat
+            hij bestond. De voetbalk is waar een mens zoiets zoekt: hij staat op élke pagina van de
+            site, ook zonder account. De volledige versie mét uitleg blijft bij je instellingen. */}
+        <span aria-hidden>·</span>
+        <ThemaKeuze variant="voet" />
       </div>
     </footer>
   );
