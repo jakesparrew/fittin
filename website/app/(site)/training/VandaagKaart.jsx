@@ -50,7 +50,7 @@ export default function VandaagKaart({ dag, dagen, minuten, klaar }) {
                 href={`/training/sessie?dag=${d.id}`}
                 className={
                   "shrink-0 rounded-full px-4 py-2 text-sm font-bold transition " +
-                  (d.id === dag.id ? "bg-white text-brand" : "bg-white/10 text-white hover:bg-white/20")
+                  (d.id === dag.id ? "bg-surface text-ink" : "bg-surface/10 text-white hover:bg-surface/20")
                 }
               >
                 {d.name || `Dag ${d.day_no}`}

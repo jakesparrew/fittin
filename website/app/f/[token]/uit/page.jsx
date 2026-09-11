@@ -10,9 +10,9 @@ export default async function FeedbackUit({ params }) {
   const r = await zetFeedbackUit(token);
   return (
     <main className="flex min-h-screen items-center justify-center bg-paper px-5">
-      <div className="w-full max-w-md rounded-3xl border border-borderc bg-white p-8 text-center">
+      <div className="w-full max-w-md rounded-3xl border border-borderc bg-surface p-8 text-center">
         <p className="text-3xl">{r?.ok ? "✅" : "🕓"}</p>
-        <h1 className="mt-3 text-2xl font-black text-brand">{r?.ok ? "Geregeld" : "Deze link is verlopen"}</h1>
+        <h1 className="mt-3 text-2xl font-black text-ink">{r?.ok ? "Geregeld" : "Deze link is verlopen"}</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
           {r?.ok
             ? "Je krijgt na je sessies geen vraag meer. Je deurcodes en boekingsmails blijven gewoon komen."

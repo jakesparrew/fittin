@@ -38,11 +38,11 @@ export default async function Bewaren({ searchParams }) {
     <main className="min-h-screen bg-paper">
       <div className="mx-auto max-w-lg px-5 py-12">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Bewaren</p>
-        <h1 className="mt-2 text-3xl font-black text-brand">Video bewaren</h1>
-        <p className="mt-2 leading-relaxed text-brand/60">
+        <h1 className="mt-2 text-3xl font-black text-ink">Video bewaren</h1>
+        <p className="mt-2 leading-relaxed text-ink/60">
           Plak een link van Instagram, YouTube of TikTok en geef hem een plek in je bibliotheek.
         </p>
-        <div className="mt-8 rounded-3xl border border-borderc bg-white p-6">
+        <div className="mt-8 rounded-3xl border border-borderc bg-surface p-6">
           <BewaarSheet folders={folders || []} initieelRuw={link} ingebed />
         </div>
       </div>

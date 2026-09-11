@@ -46,15 +46,15 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
   const hourLabel = fmtHour;
 
   return (
-    <section className="rounded-3xl border border-borderc bg-white p-6">
+    <section className="rounded-3xl border border-borderc bg-surface p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-black text-brand">Planning</h2>
+        <h2 className="font-black text-ink">Planning</h2>
         <div className="flex items-center gap-2">
-          <button onClick={() => setOffset(0)} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (offset === 0 ? "bg-brand text-white" : "bg-paper text-brand/60")}>Deze week</button>
-          <button onClick={() => setOffset(7)} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (offset === 7 ? "bg-brand text-white" : "bg-paper text-brand/60")}>Volgende week</button>
+          <button onClick={() => setOffset(0)} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (offset === 0 ? "bg-brand text-white" : "bg-paper text-ink/60")}>Deze week</button>
+          <button onClick={() => setOffset(7)} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (offset === 7 ? "bg-brand text-white" : "bg-paper text-ink/60")}>Volgende week</button>
         </div>
       </div>
-      <p className="mt-1 text-xs text-brand/50">Klik op een vrij uur om een sessie in te plannen — {clientVerplicht ? "met je client, of met de naam van je externe client." : "met een client, of reserveer het uur alvast voor jezelf."}</p>
+      <p className="mt-1 text-xs text-ink/50">Klik op een vrij uur om een sessie in te plannen — {clientVerplicht ? "met je client, of met de naam van je externe client." : "met een client, of reserveer het uur alvast voor jezelf."}</p>
 
       {/* Desktop: full week grid */}
       <div className="mt-4 hidden overflow-x-auto md:block">
@@ -64,15 +64,15 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
             <div />
             {week.map((d) => (
               <div key={d.dateStr} className="px-1 pb-2 text-center">
-                <p className="text-xs font-black capitalize text-brand">{d.weekday}</p>
-                <p className="text-[10px] text-brand/50">{d.dayMonth}</p>
+                <p className="text-xs font-black capitalize text-ink">{d.weekday}</p>
+                <p className="text-[10px] text-ink/50">{d.dayMonth}</p>
               </div>
             ))}
           </div>
           {/* Rows per hour */}
           {hours.map((h) => (
             <div key={h} className="grid items-stretch border-t border-borderc/60" style={{ gridTemplateColumns: `48px repeat(${week.length}, 1fr)` }}>
-              <div className="py-1 pr-1 text-right text-[10px] font-bold text-brand/40">{hourLabel(h)}</div>
+              <div className="py-1 pr-1 text-right text-[10px] font-bold text-ink/40">{hourLabel(h)}</div>
               {week.map((d) => {
                 const key = `${d.dateStr}:${h}`;
                 const own = mine[key];
@@ -82,11 +82,11 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
                   return <div key={key} className="m-0.5 rounded-md bg-accent/25 px-1 py-1 text-center text-[10px] font-bold leading-tight text-accentdark" title={`${own.name} · ${own.service}`}>{own.name?.split(" ")[0] || "Client"}</div>;
                 }
                 if (isTaken || past) {
-                  return <div key={key} className="m-0.5 rounded-md bg-paper px-1 py-1 text-center text-[10px] text-brand/30">{past && !isTaken ? "" : "bezet"}</div>;
+                  return <div key={key} className="m-0.5 rounded-md bg-paper px-1 py-1 text-center text-[10px] text-ink/30">{past && !isTaken ? "" : "bezet"}</div>;
                 }
                 return (
                   <button key={key} onClick={() => setSlot({ dateStr: d.dateStr, hour: h, label: `${d.weekday} ${d.dayMonth} · ${hourLabel(h)}` })}
-                    className="m-0.5 rounded-md border border-dashed border-borderc py-1 text-center text-[11px] font-bold text-brand/40 transition hover:border-accent hover:bg-accent/10 hover:text-accentdark">
+                    className="m-0.5 rounded-md border border-dashed border-borderc py-1 text-center text-[11px] font-bold text-ink/40 transition hover:border-accent hover:bg-accent/10 hover:text-accentdark">
                     +
                   </button>
                 );
@@ -103,8 +103,8 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
             const act = activeDay === d.dateStr;
             return (
               <button key={d.dateStr} onClick={() => setMobileDay(d.dateStr)} className={"flex-1 shrink-0 rounded-xl border-2 px-2 py-1.5 text-center transition " + (act ? "border-accent bg-accent/15" : "border-borderc")}>
-                <span className="block text-[9px] font-bold uppercase text-brand/40">{d.weekday}</span>
-                <span className="block text-xs font-black text-brand">{d.dayMonth.split(" ")[0]}</span>
+                <span className="block text-[9px] font-bold uppercase text-ink/40">{d.weekday}</span>
+                <span className="block text-xs font-black text-ink">{d.dayMonth.split(" ")[0]}</span>
               </button>
             );
           })}
@@ -116,11 +116,11 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
             const isTaken = takenSet.has(key);
             const past = slotInstant(activeDay, h).getTime() < Date.now();
             if (own) return <div key={h} className="rounded-xl bg-accent/25 py-2 text-center text-[10px] font-bold leading-tight text-accentdark">{hourLabel(h)}<br />{own.name?.split(" ")[0] || "Client"}</div>;
-            if (isTaken) return <div key={h} className="rounded-xl bg-paper py-2 text-center text-[10px] leading-tight text-brand/30">{hourLabel(h)}<br />bezet</div>;
-            if (past) return <div key={h} className="rounded-xl bg-paper/60 py-2 text-center text-[10px] text-brand/25">{hourLabel(h)}</div>;
+            if (isTaken) return <div key={h} className="rounded-xl bg-paper py-2 text-center text-[10px] leading-tight text-ink/30">{hourLabel(h)}<br />bezet</div>;
+            if (past) return <div key={h} className="rounded-xl bg-paper/60 py-2 text-center text-[10px] text-ink/25">{hourLabel(h)}</div>;
             return (
               <button key={h} onClick={() => setSlot({ dateStr: activeDay, hour: h, label: `${activeDayObj?.weekday} ${activeDayObj?.dayMonth} · ${hourLabel(h)}` })}
-                className="rounded-xl border-2 border-dashed border-borderc py-2 text-center text-xs font-bold text-brand/50 transition hover:border-accent hover:bg-accent/10 hover:text-accentdark">
+                className="rounded-xl border-2 border-dashed border-borderc py-2 text-center text-xs font-bold text-ink/50 transition hover:border-accent hover:bg-accent/10 hover:text-accentdark">
                 {hourLabel(h)}
               </button>
             );
@@ -131,13 +131,13 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
       {/* Booking modal */}
       {slot && (
         <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4" onClick={() => setSlot(null)}>
-          <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="anim-in w-full max-w-md rounded-3xl bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="font-black text-brand">Sessie inplannen</h3>
-                <p className="mt-0.5 text-sm capitalize text-brand/60">{slot.label}</p>
+                <h3 className="font-black text-ink">Sessie inplannen</h3>
+                <p className="mt-0.5 text-sm capitalize text-ink/60">{slot.label}</p>
               </div>
-              <button onClick={() => setSlot(null)} className="text-brand/40 hover:text-brand">✕</button>
+              <button onClick={() => setSlot(null)} className="text-ink/40 hover:text-ink">✕</button>
             </div>
             <form action={action} className="mt-4 space-y-3">
               <input type="hidden" name="date" value={slot.dateStr} />
@@ -162,7 +162,7 @@ export default function CoachScheduler({ days, hours, taken = [], mine = {}, mem
                 <input name="clientName" value={naam} onChange={(e) => setNaam(e.target.value)} required={clientVerplicht && !clientId} placeholder="bv. Sarah" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </Lbl>
               {clientVerplicht && !clientId && (
-                <p className="-mt-1 text-xs text-brand/50">Bij jou is dit verplicht: kies een client, of vul de naam van je externe client in.</p>
+                <p className="-mt-1 text-xs text-ink/50">Bij jou is dit verplicht: kies een client, of vul de naam van je externe client in.</p>
               )}
               {services.length === 1 ? (
                 <input type="hidden" name="serviceId" value={services[0].id} />

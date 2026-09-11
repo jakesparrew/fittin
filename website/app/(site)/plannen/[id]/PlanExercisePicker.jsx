@@ -27,7 +27,7 @@ export default function PlanExercisePicker({ dayId, programId }) {
 
   if (!open) {
     return (
-      <button onClick={() => { setOpen(true); run("", "alle"); }} className="mt-2 w-full rounded-xl border-2 border-dashed border-borderc py-2.5 text-sm font-bold text-brand/60 transition hover:border-accent hover:text-brand">
+      <button onClick={() => { setOpen(true); run("", "alle"); }} className="mt-2 w-full rounded-xl border-2 border-dashed border-borderc py-2.5 text-sm font-bold text-ink/60 transition hover:border-accent hover:text-ink">
         + Oefening toevoegen
       </button>
     );
@@ -40,30 +40,30 @@ export default function PlanExercisePicker({ dayId, programId }) {
           autoFocus value={q}
           onChange={(e) => { setQ(e.target.value); run(e.target.value, cat); }}
           placeholder="Zoek oefening…" aria-label="Zoek oefening"
-          className="flex-1 rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent"
+          className="flex-1 rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent"
         />
-        <button onClick={() => setOpen(false)} className="rounded-full px-3 py-1.5 text-xs font-bold text-brand/50 hover:text-brand">sluit</button>
+        <button onClick={() => setOpen(false)} className="rounded-full px-3 py-1.5 text-xs font-bold text-ink/50 hover:text-ink">sluit</button>
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {CATS.map((c) => (
-          <button key={c} onClick={() => { setCat(c); run(q, c); }} aria-pressed={cat === c} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize transition " + (cat === c ? "bg-brand text-white" : "bg-white text-brand/60")}>{c}</button>
+          <button key={c} onClick={() => { setCat(c); run(q, c); }} aria-pressed={cat === c} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize transition " + (cat === c ? "bg-brand text-white" : "bg-surface text-ink/60")}>{c}</button>
         ))}
       </div>
       <div className="mt-2 max-h-72 space-y-1.5 overflow-y-auto">
-        {pending && results.length === 0 && <p className="py-3 text-center text-xs text-brand/40">Zoeken…</p>}
+        {pending && results.length === 0 && <p className="py-3 text-center text-xs text-ink/40">Zoeken…</p>}
         {results.map((ex) => (
-          <div key={ex.id} className="flex items-center gap-3 rounded-xl bg-white p-2">
+          <div key={ex.id} className="flex items-center gap-3 rounded-xl bg-surface p-2">
             <ExerciseMedia exercise={ex} thumb className="h-10 w-10" rounded="rounded-lg" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-brand">{ex.name}</p>
-              <p className="truncate text-[11px] text-brand/50">{[ex.primary_muscles?.[0] || ex.muscle, ex.equipment].filter(Boolean).join(" · ")}</p>
+              <p className="truncate text-sm font-bold text-ink">{ex.name}</p>
+              <p className="truncate text-[11px] text-ink/50">{[ex.primary_muscles?.[0] || ex.muscle, ex.equipment].filter(Boolean).join(" · ")}</p>
             </div>
             <button onClick={() => add(ex.id)} disabled={pending} className={"rounded-full px-3 py-1.5 text-xs font-black transition disabled:opacity-50 " + (added[ex.id] ? "bg-paper text-accentdark" : "bg-accent text-brand hover:opacity-90")}>
               {added[ex.id] ? "✓" : "+"}
             </button>
           </div>
         ))}
-        {!pending && results.length === 0 && <p className="py-3 text-center text-xs text-brand/40">Geen resultaten.</p>}
+        {!pending && results.length === 0 && <p className="py-3 text-center text-xs text-ink/40">Geen resultaten.</p>}
       </div>
     </div>
   );

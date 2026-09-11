@@ -45,7 +45,7 @@ export default function CoachWorden() {
               <h1 className="mt-4 max-w-3xl text-3xl font-black leading-tight sm:text-4xl md:text-5xl">
                 Jouw PT-praktijk, <span className="text-accentdark">zonder eigen zaal te moeten huren</span>
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-relaxed text-brand/70 sm:mt-6 sm:text-lg">
+              <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink/70 sm:mt-6 sm:text-lg">
                 Train je klanten in een volledig uitgeruste privégym in Gent (Sint-Amandsberg).
                 Je betaalt enkel per sessie, houdt je eigen tarief en je eigen klanten — en onze app
                 regelt de planning, de programma&rsquo;s en de toegang.
@@ -73,9 +73,9 @@ export default function CoachWorden() {
           <h2 className="mt-3 max-w-2xl text-3xl font-black md:text-4xl">Alles van een eigen zaal, zonder de kosten</h2>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {voordelen.map((v) => (
-              <div key={v.titel} className="rounded-2xl bg-white p-7">
+              <div key={v.titel} className="rounded-2xl bg-surface p-7">
                 <h3 className="text-lg font-black">{v.titel}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand/60">{v.tekst}</p>
+                <p className="mt-2 text-sm leading-relaxed text-ink/60">{v.tekst}</p>
               </div>
             ))}
           </div>
@@ -89,9 +89,9 @@ export default function CoachWorden() {
           <h2 className="mt-3 text-3xl font-black md:text-4xl">In drie stappen aan de slag</h2>
           <div className="mt-8 grid gap-4">
             {stappen.map(([t, tekst]) => (
-              <div key={t} className="rounded-2xl border border-borderc bg-white p-6">
-                <h3 className="font-black text-brand">{t}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-brand/60">{tekst}</p>
+              <div key={t} className="rounded-2xl border border-borderc bg-surface p-6">
+                <h3 className="font-black text-ink">{t}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-ink/60">{tekst}</p>
               </div>
             ))}
           </div>

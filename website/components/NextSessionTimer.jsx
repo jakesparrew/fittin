@@ -53,7 +53,7 @@ export default function NextSessionTimer({ startsAt, name, bookingId }) {
 function Unit({ n, label, soon }) {
   return (
     <span className="flex flex-col items-center">
-      <span className={"min-w-[2.5rem] rounded-xl px-2 py-1.5 text-center text-xl font-black " + (soon ? "bg-accent text-brand" : "bg-white/10")}>
+      <span className={"min-w-[2.5rem] rounded-xl px-2 py-1.5 text-center text-xl font-black " + (soon ? "bg-accent text-brand" : "bg-surface/10")}>
         {n == null ? "--" : String(n).padStart(2, "0")}
       </span>
       <span className="mt-1 text-[10px] font-bold uppercase tracking-widest text-lav">{label}</span>

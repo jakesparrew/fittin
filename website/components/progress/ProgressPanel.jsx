@@ -10,16 +10,16 @@ export default async function ProgressPanel({ userId }) {
 
   if (!p.hasData) {
     return (
-      <section id="voortgang" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Mijn voortgang 📈</h2>
-        <p className="mt-2 text-sm text-brand/55">Log je sets in een workout en je vooruitgang verschijnt hier — volume, PR's en gewicht per oefening.</p>
+      <section id="voortgang" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-surface p-6">
+        <h2 className="font-black text-ink">Mijn voortgang 📈</h2>
+        <p className="mt-2 text-sm text-ink/55">Log je sets in een workout en je vooruitgang verschijnt hier — volume, PR's en gewicht per oefening.</p>
       </section>
     );
   }
 
   return (
-    <section id="voortgang" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-white p-6">
-      <h2 className="font-black text-brand">Mijn voortgang 📈</h2>
+    <section id="voortgang" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-surface p-6">
+      <h2 className="font-black text-ink">Mijn voortgang 📈</h2>
 
       {/* Stat tiles */}
       <div className="mt-4 grid grid-cols-3 gap-3">
@@ -30,7 +30,7 @@ export default async function ProgressPanel({ userId }) {
 
       {/* Weekly volume */}
       <div className="mt-6">
-        <p className="text-xs font-bold uppercase tracking-wide text-lav">Volume per week <span className="normal-case text-brand/40">(sets × reps × kg)</span></p>
+        <p className="text-xs font-bold uppercase tracking-wide text-lav">Volume per week <span className="normal-case text-ink/40">(sets × reps × kg)</span></p>
         <div className="mt-3"><VolumeBars weeks={p.weeks} /></div>
       </div>
 
@@ -42,10 +42,10 @@ export default async function ProgressPanel({ userId }) {
             {p.topExercises.map((e) => (
               <div key={e.name} className="rounded-2xl border border-borderc p-3">
                 <div className="flex items-baseline justify-between gap-2">
-                  <p className="truncate text-sm font-bold text-brand">{e.name}</p>
+                  <p className="truncate text-sm font-bold text-ink">{e.name}</p>
                   <span className="shrink-0 text-xs font-black text-accentdark">{e.best} kg</span>
                 </div>
-                {e.e1rm > 0 && <p className="text-[10px] text-brand/40">geschatte 1RM ~{e.e1rm} kg</p>}
+                {e.e1rm > 0 && <p className="text-[10px] text-ink/40">geschatte 1RM ~{e.e1rm} kg</p>}
                 <div className="mt-2"><Sparkline points={e.points} /></div>
               </div>
             ))}
@@ -61,8 +61,8 @@ export default async function ProgressPanel({ userId }) {
             <div className="mt-3 space-y-1.5">
               {p.prs.map((pr, i) => (
                 <div key={i} className="flex items-center justify-between rounded-xl bg-paper px-3 py-2 text-sm">
-                  <span className="truncate font-semibold text-brand">{pr.name}</span>
-                  <span className="shrink-0 text-xs text-brand/50">{pr.weight} kg · {fmtDay(pr.date)}</span>
+                  <span className="truncate font-semibold text-ink">{pr.name}</span>
+                  <span className="shrink-0 text-xs text-ink/50">{pr.weight} kg · {fmtDay(pr.date)}</span>
                 </div>
               ))}
             </div>
@@ -75,8 +75,8 @@ export default async function ProgressPanel({ userId }) {
             <p className="text-xs font-bold uppercase tracking-wide text-lav">Lichaamsgewicht</p>
             <div className="mt-3 rounded-2xl border border-borderc p-3">
               <div className="flex items-baseline justify-between">
-                <span className="text-sm font-bold text-brand">{p.bodyweight[p.bodyweight.length - 1].kg.toFixed(1)} kg</span>
-                <span className="text-xs text-brand/40">{fmtDay(p.bodyweight[0].date)} → nu</span>
+                <span className="text-sm font-bold text-ink">{p.bodyweight[p.bodyweight.length - 1].kg.toFixed(1)} kg</span>
+                <span className="text-xs text-ink/40">{fmtDay(p.bodyweight[0].date)} → nu</span>
               </div>
               <div className="mt-2"><Sparkline points={p.bodyweight} stroke="#22194f" /></div>
             </div>
@@ -94,9 +94,9 @@ function Tile({ label, value, hint, accent }) {
   // de spatiëring weg op mobiel — de hint eronder zegt toch al waarover het gaat.
   return (
     <div className="min-w-0 rounded-2xl border border-borderc bg-paper/40 p-3 text-center sm:p-4">
-      <p className={"text-2xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+      <p className={"text-2xl font-black " + (accent ? "text-accentdark" : "text-ink")}>{value}</p>
       <p className="mt-0.5 break-words text-[11px] font-bold uppercase text-lav sm:tracking-wide">{label}</p>
-      {hint && <p className="break-words text-[10px] text-brand/40">{hint}</p>}
+      {hint && <p className="break-words text-[10px] text-ink/40">{hint}</p>}
     </div>
   );
 }

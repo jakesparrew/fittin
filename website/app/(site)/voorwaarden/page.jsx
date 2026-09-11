@@ -17,8 +17,8 @@ export const metadata = {
 //    zo'n beding is onrechtmatig (art. VI.83) en zou de hele clausule onderuit halen.
 const Section = ({ title, children }) => (
   <section className="mt-8">
-    <h2 className="text-xl font-black text-brand">{title}</h2>
-    <div className="mt-3 space-y-3 leading-relaxed text-brand/70">{children}</div>
+    <h2 className="text-xl font-black text-ink">{title}</h2>
+    <div className="mt-3 space-y-3 leading-relaxed text-ink/70">{children}</div>
   </section>
 );
 
@@ -31,10 +31,10 @@ export default function Voorwaarden() {
     <main className="bg-paper">
       <div className="mx-auto max-w-3xl px-5 py-16">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Voorwaarden</p>
-        <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Algemene voorwaarden</h1>
-        <p className="mt-3 text-sm text-brand/50">Versie 2 — laatst bijgewerkt: 5 augustus 2026</p>
+        <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Algemene voorwaarden</h1>
+        <p className="mt-3 text-sm text-ink/50">Versie 2 — laatst bijgewerkt: 5 augustus 2026</p>
 
-        <p className="mt-6 leading-relaxed text-brand/70">
+        <p className="mt-6 leading-relaxed text-ink/70">
           Deze voorwaarden gelden voor elke boeking, elke aankoop en elk gebruik van Fittin&rsquo;.
           Je aanvaardt ze wanneer je een sessie boekt of een beurtenkaart of abonnement koopt. We
           hebben ze bewust in gewone taal geschreven — vind je iets onduidelijk, vraag het gerust
@@ -159,15 +159,15 @@ export default function Voorwaarden() {
             Als consument heb je bij een aankoop op afstand normaal <strong>14 dagen</strong> bedenktijd.
             Voor onze diensten werkt dat als volgt.
           </p>
-          <p className="rounded-2xl border border-borderc bg-white p-4">
-            <strong className="text-brand">Een geboekte sessie op een vaste datum en uur.</strong>{" "}
+          <p className="rounded-2xl border border-borderc bg-surface p-4">
+            <strong className="text-ink">Een geboekte sessie op een vaste datum en uur.</strong>{" "}
             Hiervoor geldt het herroepingsrecht <strong>niet</strong>. De wet voorziet die uitzondering
             uitdrukkelijk voor vrijetijdsdiensten waarvoor een bepaalde datum of periode is afgesproken
             (art. VI.53, 12° van het Wetboek van economisch recht). Verplaatsen kan uiteraard wel, tot
             6 uur vooraf.
           </p>
-          <p className="rounded-2xl border border-borderc bg-white p-4">
-            <strong className="text-brand">Een beurtenkaart of een abonnement.</strong> Hiervoor heb je
+          <p className="rounded-2xl border border-borderc bg-surface p-4">
+            <strong className="text-ink">Een beurtenkaart of een abonnement.</strong> Hiervoor heb je
             wél 14 dagen bedenktijd, te rekenen vanaf de dag na je aankoop. Vraag je bij de aankoop
             uitdrukkelijk om je tegoed of abonnement <em>meteen</em> te kunnen gebruiken, dan start de
             uitvoering onmiddellijk. Herroep je daarna binnen de 14 dagen, dan betalen we je terug wat

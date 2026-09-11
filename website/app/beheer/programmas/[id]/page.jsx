@@ -65,9 +65,9 @@ export default async function ProgramBuilder({ params }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/beheer/programmas" className="text-sm font-semibold text-brand/50 hover:text-brand">← Programma's</Link>
+      <Link href="/beheer/programmas" className="text-sm font-semibold text-ink/50 hover:text-ink">← Programma's</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-black text-brand">{program.name}</h1>
+        <h1 className="text-3xl font-black text-ink">{program.name}</h1>
         <form action={deleteProgram}>
           <input type="hidden" name="id" value={program.id} />
           {/* Zelfde bevestiging als in de coach-versie: een toegewezen programma weghalen laat de
@@ -82,7 +82,7 @@ export default async function ProgramBuilder({ params }) {
       </div>
 
       {/* Assign */}
-      <ActionForm action={assignProgram} success="Programma toegewezen ✓" className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-4">
+      <ActionForm action={assignProgram} success="Programma toegewezen ✓" className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-surface p-4">
         <input type="hidden" name="programId" value={program.id} />
         <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Toewijzen aan</span>
@@ -90,7 +90,7 @@ export default async function ProgramBuilder({ params }) {
         </label>
         <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</button>
         {program.member_id && (
-          <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
+          <span className="ml-auto text-sm font-semibold text-ink/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
         )}
       </ActionForm>
 
@@ -101,8 +101,8 @@ export default async function ProgramBuilder({ params }) {
         {days.map((day) => {
           const exs = [...(day.program_exercises || [])];
           return (
-            <div key={day.id} className="rounded-2xl border border-borderc bg-white p-6">
-              <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
+            <div key={day.id} className="rounded-2xl border border-borderc bg-surface p-6">
+              <h2 className="font-black text-ink">{day.name || `Dag ${day.day_no}`}</h2>
               <div className="mt-3 space-y-2">
                 {exs.map((pe) => (
                   <ProgramExerciseEditor
@@ -115,7 +115,7 @@ export default async function ProgramBuilder({ params }) {
                     lastDate={lastByPe[pe.id] ? fmtDay(lastByPe[pe.id]) : null}
                   />
                 ))}
-                {exs.length === 0 && <p className="text-xs text-brand/40">Nog geen oefeningen op deze dag.</p>}
+                {exs.length === 0 && <p className="text-xs text-ink/40">Nog geen oefeningen op deze dag.</p>}
               </div>
 
               <ActionForm action={addProgramExercise} success="Oefening toegevoegd ✓" className="mt-3 rounded-xl border border-dashed border-borderc p-3">
@@ -129,7 +129,7 @@ export default async function ProgramBuilder({ params }) {
                   <button className="rounded-full bg-accent px-4 py-1.5 text-sm font-bold text-brand">+ Oefening</button>
                 </div>
                 <details className="mt-2">
-                  <summary className="cursor-pointer text-xs font-bold text-brand/50">+ meer (notitie, streefgewicht, tempo, RPE, superset)</summary>
+                  <summary className="cursor-pointer text-xs font-bold text-ink/50">+ meer (notitie, streefgewicht, tempo, RPE, superset)</summary>
                   <div className="mt-2 flex flex-wrap items-end gap-2">
                     <input name="target_weight_kg" placeholder="streef kg" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
                     <input name="tempo" placeholder="tempo 3-1-2" className="w-28 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
@@ -146,7 +146,7 @@ export default async function ProgramBuilder({ params }) {
 
       <ActionForm action={addProgramDay} success="Dag toegevoegd ✓" className="mt-5">
         <input type="hidden" name="programId" value={program.id} />
-        <button className="rounded-full border-2 border-dashed border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-accent">
+        <button className="rounded-full border-2 border-dashed border-borderc px-6 py-3 text-sm font-bold text-ink transition hover:border-accent">
           + Dag toevoegen
         </button>
       </ActionForm>

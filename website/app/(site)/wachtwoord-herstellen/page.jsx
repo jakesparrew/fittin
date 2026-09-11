@@ -32,7 +32,7 @@ export default function ResetPassword() {
   return (
     <main className="bg-paper">
       <div className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center px-5 py-16">
-        <div className="rounded-3xl border border-borderc bg-white p-8 shadow-sm">
+        <div className="rounded-3xl border border-borderc bg-surface p-8 shadow-sm">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Nieuw wachtwoord</p>
           <h1 className="mt-2 text-3xl font-black">Kies een nieuw wachtwoord</h1>
           {done ? (

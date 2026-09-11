@@ -111,16 +111,16 @@ export default async function Coaches({ searchParams }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Coaches</h1>
+      <h1 className="text-3xl font-black text-ink">Coaches</h1>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-soft">
         Coaches huren de zaal aan € 12 per beurt en kopen vooraf. Zij brachten{" "}
-        <strong className="text-brand">{euro(coachOmzet)}</strong> op
+        <strong className="text-ink">{euro(coachOmzet)}</strong> op
         {aandeel > 0 && <> — {aandeel} % van de {euro(gymOmzet)} die de gym ooit ontving</>}.
       </p>
 
       {/* Signaalstrook: smalle regels, geen kaarten. Nul signalen is een geldige uitkomst en
           krijgt één gedempte regel in plaats van een leeg kader. */}
-      <div className="mt-5 overflow-hidden rounded-2xl border border-borderc bg-white">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-borderc bg-surface">
         {signalen.length === 0 ? (
           // "Elke coach heeft betaald en is recent nog geweest" stond hier eerst, en dat was
           // aantoonbaar onwaar: Jean Francois staat € 12 open en is 63 dagen weg — hij haalt
@@ -130,8 +130,8 @@ export default async function Coaches({ searchParams }) {
           signalen.slice(0, 3).map((s) => (
             <Link key={s.id} href={`/beheer/coaches/${s.id}`} className="flex items-center gap-3 border-t border-borderc px-4 py-2.5 text-sm transition first:border-t-0 hover:bg-paper/60">
               <span aria-hidden>{s.icoon}</span>
-              <span className="min-w-0 flex-1 text-brand">{s.tekst}</span>
-              <span className="shrink-0 text-brand/30">›</span>
+              <span className="min-w-0 flex-1 text-ink">{s.tekst}</span>
+              <span className="shrink-0 text-ink/30">›</span>
             </Link>
           ))
         )}
@@ -140,7 +140,7 @@ export default async function Coaches({ searchParams }) {
             <summary className="cursor-pointer px-4 py-2 text-xs font-bold text-ink-soft">+ {signalen.length - 3} meer</summary>
             {signalen.slice(3).map((s) => (
               <Link key={s.id} href={`/beheer/coaches/${s.id}`} className="flex items-center gap-3 border-t border-borderc px-4 py-2.5 text-sm hover:bg-paper/60">
-                <span aria-hidden>{s.icoon}</span><span className="min-w-0 flex-1 text-brand">{s.tekst}</span>
+                <span aria-hidden>{s.icoon}</span><span className="min-w-0 flex-1 text-ink">{s.tekst}</span>
               </Link>
             ))}
           </details>
@@ -153,7 +153,7 @@ export default async function Coaches({ searchParams }) {
       )}
 
       {/* Het roster */}
-      <div className="mt-5 overflow-hidden rounded-2xl border border-borderc bg-white">
+      <div className="mt-5 overflow-hidden rounded-2xl border border-borderc bg-surface">
         <div className="hidden grid-cols-[minmax(0,2.4fr)_minmax(0,1.6fr)_minmax(0,0.7fr)_minmax(0,0.7fr)_minmax(0,0.9fr)_minmax(0,1fr)_auto] gap-x-3 border-b border-borderc bg-paper/60 px-4 py-2 text-[10px] font-bold uppercase tracking-wide text-lav md:grid">
           <span>Coach</span><span>Sessies 90 d</span><span>Laatst</span><span>Gepland</span><span>Tegoed</span><span>Betaald ooit</span><span />
         </div>
@@ -167,7 +167,7 @@ export default async function Coaches({ searchParams }) {
       </div>
 
       {slapend.length > 0 && (
-        <details className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-white">
+        <details className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-surface">
           <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-ink-soft">Slapend · {slapend.length} <span className="font-normal">— nooit een sessie, niets open</span></summary>
           <div className="border-t border-borderc">
             {slapend.map((c) => (
@@ -181,10 +181,10 @@ export default async function Coaches({ searchParams }) {
       {/* De grafiek staat ONDER de tabel: het roster beantwoordt een dagelijkse vraag, de grafiek
           een maandelijkse. De lopende week zit er bewust niet in — die staat ernaast als tekst,
           anders leest een halve week naast volle weken als een instorting die er niet is. */}
-      <div className="mt-6 rounded-2xl border border-borderc bg-white p-5">
+      <div className="mt-6 rounded-2xl border border-borderc bg-surface p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="text-sm font-black text-brand">Coach-sessies per week</p>
-          <p className="text-xs text-ink-soft">laatste 12 volledige weken · deze week tot nu: <strong className="text-brand">{dezeWeek}</strong></p>
+          <p className="text-sm font-black text-ink">Coach-sessies per week</p>
+          <p className="text-xs text-ink-soft">laatste 12 volledige weken · deze week tot nu: <strong className="text-ink">{dezeWeek}</strong></p>
         </div>
         {totaalWeken === 0 ? (
           <p className="py-6 text-center text-xs text-ink-soft">Nog geen coach-sessies in deze periode.</p>
@@ -194,7 +194,7 @@ export default async function Coaches({ searchParams }) {
       </div>
 
       {/* Coach toevoegen: een paar keer per jaar, dus onderaan en ingeklapt. */}
-      <details className="mt-3 rounded-2xl border border-borderc bg-white">
+      <details className="mt-3 rounded-2xl border border-borderc bg-surface">
         <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-ink-soft">+ Coach toevoegen</summary>
         <div className="grid gap-4 border-t border-borderc p-4 lg:grid-cols-2">
           <ActionForm action={addCoach} success="Coach toegevoegd ✓" className="flex flex-wrap items-end gap-2 rounded-xl bg-paper/60 p-4">

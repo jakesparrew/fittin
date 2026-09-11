@@ -296,10 +296,10 @@ export default function BookingClient({
   if (confirmed) {
     return (
       <main className="mx-auto max-w-2xl px-5 py-24">
-        <div className="rounded-3xl border border-borderc bg-white p-10 text-center">
+        <div className="rounded-3xl border border-borderc bg-surface p-10 text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent text-3xl font-black text-brand">✓</div>
           <h1 className="mt-6 text-3xl font-black">Boeking bevestigd!</h1>
-          <p className="mt-3 leading-relaxed text-brand/70">
+          <p className="mt-3 leading-relaxed text-ink/70">
             {confirmed.service} · {confirmed.day} · {confirmed.range} · {confirmed.persons}{" "}
             {confirmed.persons === 1 ? "persoon" : "personen"}
             {confirmed.free && " · gratis (je eerste uur)"}
@@ -307,23 +307,23 @@ export default function BookingClient({
           {/* Voor een nieuw lid is dit het allereerste scherm na zijn allereerste boeking. Zonder
               deze regel eindigt de flow bij "bevestigd" en blijft de belangrijkste vraag open:
               hoe raak ik straks binnen? */}
-          <p className="mt-3 text-sm leading-relaxed text-brand/55">
+          <p className="mt-3 text-sm leading-relaxed text-ink/55">
             Je bevestiging staat in je mailbox. Je deurcode komt automatisch ± 5 min vóór je sessie —
             verplaatsen kan tot 6u vooraf.
           </p>
           <div className="mt-7 flex flex-wrap justify-center gap-3">
             {confirmed.id && (
-              <a href={`/api/ics/${confirmed.id}`} className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-white px-6 py-3.5 font-bold text-brand transition hover:border-accent" title="Voeg deze sessie toe aan je agenda">📅 Agenda</a>
+              <a href={`/api/ics/${confirmed.id}`} className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-surface px-6 py-3.5 font-bold text-ink transition hover:border-accent" title="Voeg deze sessie toe aan je agenda">📅 Agenda</a>
             )}
             <Link href="/account" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90">Naar mijn account</Link>
-            <button onClick={() => { setConfirmed(null); setSelected(null); }} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-lav">Nieuwe boeking</button>
+            <button onClick={() => { setConfirmed(null); setSelected(null); }} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-ink transition hover:border-lav">Nieuwe boeking</button>
           </div>
           {/* De deelknop hing tot nu aan een betaald=1-conditie op /account, waardoor gratis-,
               tegoed- en kaartboekers hem nooit zagen. Hier staat hij op het enige moment waarop
               iemand net zelf overtuigd is. */}
           {referralCode && (
             <div className="mt-8 border-t border-borderc pt-6">
-              <p className="text-sm font-bold text-brand">Breng een vriend mee — zijn eerste uur is ook gratis.</p>
+              <p className="text-sm font-bold text-ink">Breng een vriend mee — zijn eerste uur is ook gratis.</p>
               <div className="mt-3 flex justify-center"><ShareReferral code={referralCode} compact /></div>
             </div>
           )}
@@ -337,19 +337,19 @@ export default function BookingClient({
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-6xl px-5 py-16">
-        <Link href={isLoggedIn ? "/account" : "/"} className="inline-flex items-center gap-1.5 text-sm font-bold text-brand/60 transition hover:text-brand">← {isLoggedIn ? "Terug naar account" : "Terug naar home"}</Link>
+        <Link href={isLoggedIn ? "/account" : "/"} className="inline-flex items-center gap-1.5 text-sm font-bold text-ink/60 transition hover:text-ink">← {isLoggedIn ? "Terug naar account" : "Terug naar home"}</Link>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.25em] text-lav">Online boeken</p>
         <h1 className="mt-3 text-3xl font-black md:text-4xl">Reserveer je sessie</h1>
         {/* De code-framing is weg: de kortingsvalidatie weigert "FittinWelcome" expliciet, dus wie
             hem effectief intikte kreeg een foutmelding op de belofte van de homepage. Het gratis uur
             hangt aan het profiel, niet aan een code. */}
         {welcomeAvailable || !isLoggedIn ? (
-          <p className="mt-3 max-w-xl text-brand/70">
+          <p className="mt-3 max-w-xl text-ink/70">
             Je eerste privé sessie van 1 uur is <span className="font-bold text-accentdark">gratis</span>
             {isLoggedIn ? "." : " — dat geldt voor je eerste boeking bij Fittin'."}
           </p>
         ) : (
-          <p className="mt-3 max-w-xl text-brand/70">De hele zaal is van jou tijdens je boeking — open van {gym.open_hour}u tot {gym.close_hour}u, kies je moment.</p>
+          <p className="mt-3 max-w-xl text-ink/70">De hele zaal is van jou tijdens je boeking — open van {gym.open_hour}u tot {gym.close_hour}u, kies je moment.</p>
         )}
 
         <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -368,9 +368,9 @@ export default function BookingClient({
                     >
                       <p className="font-black">{s.name}</p>
                       {s.type === "fit60" && isMember && s.member_price_cents != null ? (
-                        <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · <span className="font-bold text-accentdark">{euro(s.member_price_cents)}</span> <span className="text-brand/40 line-through">{euro(s.price_cents)}</span> <span className="font-bold text-accentdark">ledenprijs</span></p>
+                        <p className="mt-1 text-sm text-ink/60">{s.duration_min} min · <span className="font-bold text-accentdark">{euro(s.member_price_cents)}</span> <span className="text-ink/40 line-through">{euro(s.price_cents)}</span> <span className="font-bold text-accentdark">ledenprijs</span></p>
                       ) : (
-                        <p className="mt-1 text-sm text-brand/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "op aanvraag"}</p>
+                        <p className="mt-1 text-sm text-ink/60">{s.duration_min} min · {s.type === "fit60" ? euro(s.price_cents) : "op aanvraag"}</p>
                       )}
                     </button>
                   ))}
@@ -382,7 +382,7 @@ export default function BookingClient({
             {isPT && (
               <Card step="•" title="Kies je coach">
                 {coaches.length === 0 ? (
-                  <p className="text-sm text-brand/50">Nog geen coaches beschikbaar — neem contact op.</p>
+                  <p className="text-sm text-ink/50">Nog geen coaches beschikbaar — neem contact op.</p>
                 ) : (
                   <div className="grid gap-3 sm:grid-cols-3">
                     {coaches.map((c) => (
@@ -402,17 +402,17 @@ export default function BookingClient({
                     de halve kaartbreedte leeg en maakten de pagina onnodig lang. */}
                 <div className="grid gap-6 sm:grid-cols-2">
                   <div>
-                    <p className="mb-2 text-sm font-black text-brand">Met hoeveel kom je?</p>
+                    <p className="mb-2 text-sm font-black text-ink">Met hoeveel kom je?</p>
                     <div className="flex gap-3">
                       {[1, 2, 3, 4].map((n) => (
                         <button key={n} onClick={() => setPersons(n)} className={"h-12 w-12 rounded-2xl border-2 font-black transition " + (persons === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n}</button>
                       ))}
                     </div>
-                    <p className="mt-3 text-xs text-brand/50">Zelfde prijs, ook met vrienden — geen extra kosten.</p>
+                    <p className="mt-3 text-xs text-ink/50">Zelfde prijs, ook met vrienden — geen extra kosten.</p>
                     {/* Uitgelogd kan je nog niemand uitnodigen (dat vraagt een account). Zonder deze regel
                         lijkt het alsof samen boeken niet bestaat — je ziet enkel dat er niets verschijnt. */}
                     {!isLoggedIn && persons >= 2 && (
-                      <p className="mt-2 text-xs text-brand/50">
+                      <p className="mt-2 text-xs text-ink/50">
                         Vrienden uitnodigen in de app kan zodra je een account hebt — ze krijgen dan zelf een
                         uitnodiging. Je kan ze uiteraard ook gewoon meebrengen.
                       </p>
@@ -420,18 +420,18 @@ export default function BookingClient({
                   </div>
 
                   <div className="sm:border-l sm:border-borderc sm:pl-6">
-                    <p className="mb-2 text-sm font-black text-brand">Hoe lang?</p>
+                    <p className="mb-2 text-sm font-black text-ink">Hoe lang?</p>
                     <div className="flex flex-wrap gap-2">
                       {[1, 1.5, 2, 3, 4].map((n) => (
                         // Altijd kiesbaar: de duur bepaalt wélke momenten het rooster hieronder toont, niet
                         // omgekeerd. Ze grijs maken tot er een moment gekozen is, verborg 1u30 volledig.
                         <button key={n} onClick={() => { setDuration(n); if (selected && !canBook(selected.dateStr, selected.hour, n)) setSelected(null); }} className={"rounded-2xl border-2 px-3.5 py-2.5 text-center transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                          <span className="block text-sm font-black text-brand">{n % 1 ? `${Math.floor(n)}u30` : `${n} uur`}</span>
+                          <span className="block text-sm font-black text-ink">{n % 1 ? `${Math.floor(n)}u30` : `${n} uur`}</span>
                         </button>
                       ))}
                     </div>
-                    <p className="mt-2 text-xs text-brand/40">Hieronder zie je meteen welke momenten vrij zijn voor deze duur.</p>
-                    {duration > 1 && <p className="mt-2 text-xs text-brand/50">Je boekt de zaal exclusief voor de volledige duur — {durLabel(duration)} kost {sess(duration)} sessie{duration === 1 ? "" : "s"}.</p>}
+                    <p className="mt-2 text-xs text-ink/40">Hieronder zie je meteen welke momenten vrij zijn voor deze duur.</p>
+                    {duration > 1 && <p className="mt-2 text-xs text-ink/50">Je boekt de zaal exclusief voor de volledige duur — {durLabel(duration)} kost {sess(duration)} sessie{duration === 1 ? "" : "s"}.</p>}
                     {welcomeAvailable && useWelcome && duration > 1 && (
                       <p className="mt-2 text-xs font-bold text-amber-600">Let op: je gratis eerste sessie geldt enkel voor 1 uur. Bij {durLabel(duration)} betaal je de volledige prijs — zet de duur op 1 uur om ze gratis te houden.</p>
                     )}
@@ -441,13 +441,13 @@ export default function BookingClient({
                 {/* Invite friends — members by name, or non-members straight by e-mail */}
                 {isLoggedIn && persons >= 2 && (
                   <div className="mt-4 rounded-2xl border border-borderc bg-paper p-4">
-                    <p className="text-sm font-black text-brand">Nodig vrienden uit ({usedInvites}/{inviteSlots})</p>
-                    <p className="mt-0.5 text-xs text-brand/50">Leden: hun bezoek telt mee voor hun stats. Nog geen account? Nodig ze uit via e-mail — ze krijgen een uitnodiging + link om een account te maken.</p>
+                    <p className="text-sm font-black text-ink">Nodig vrienden uit ({usedInvites}/{inviteSlots})</p>
+                    <p className="mt-0.5 text-xs text-ink/50">Leden: hun bezoek telt mee voor hun stats. Nog geen account? Nodig ze uit via e-mail — ze krijgen een uitnodiging + link om een account te maken.</p>
 
                     {(invitees.length > 0 || emailInvitees.length > 0) && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {invitees.map((m) => (
-                          <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">{m.name}<button type="button" aria-label={`Verwijder ${m.name}`} onClick={() => setInvitees((s) => s.filter((x) => x.id !== m.id))} className="text-brand/60 hover:text-brand">×</button></span>
+                          <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1.5 text-xs font-bold text-brand">{m.name}<button type="button" aria-label={`Verwijder ${m.name}`} onClick={() => setInvitees((s) => s.filter((x) => x.id !== m.id))} className="text-ink/60 hover:text-ink">×</button></span>
                         ))}
                         {emailInvitees.map((e) => (
                           <span key={e} className="inline-flex items-center gap-1.5 rounded-full bg-brand px-3 py-1.5 text-xs font-bold text-white">{e}<button type="button" aria-label={`Verwijder uitnodiging voor ${e}`} onClick={() => setEmailInvitees((s) => s.filter((x) => x !== e))} className="text-white/60 hover:text-white">×</button></span>
@@ -458,7 +458,7 @@ export default function BookingClient({
                     {usedInvites < inviteSlots && buddies.filter((b) => !invitees.some((i) => i.id === b.id)).length > 0 && (
                       <div className="mt-3 flex flex-wrap gap-2">
                         {buddies.filter((b) => !invitees.some((i) => i.id === b.id)).map((b) => (
-                          <button key={b.id} type="button" onClick={() => setInvitees((s) => (usedInvites < inviteSlots ? [...s, { id: b.id, name: b.name }] : s))} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand/70 transition hover:bg-accent/15">+ {b.name}</button>
+                          <button key={b.id} type="button" onClick={() => setInvitees((s) => (usedInvites < inviteSlots ? [...s, { id: b.id, name: b.name }] : s))} className="rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-ink/70 transition hover:bg-accent/15">+ {b.name}</button>
                         ))}
                       </div>
                     )}
@@ -477,12 +477,12 @@ export default function BookingClient({
                           }}
                           placeholder="Zoek een lid op naam…"
                           aria-label="Zoek een lid op naam om uit te nodigen"
-                          className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent"
+                          className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent"
                         />
                         {memberResults.length > 0 && (
-                          <div className="absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-borderc bg-white shadow-lg">
+                          <div className="absolute z-20 mt-1 max-h-44 w-full overflow-y-auto rounded-xl border border-borderc bg-surface shadow-lg">
                             {memberResults.map((m) => (
-                              <button key={m.id} type="button" onClick={() => { setInvitees((s) => (usedInvites < inviteSlots ? [...s, m] : s)); setMemberQuery(""); setMemberResults([]); }} className="block w-full px-3 py-2 text-left text-sm text-brand transition hover:bg-paper">{m.name}</button>
+                              <button key={m.id} type="button" onClick={() => { setInvitees((s) => (usedInvites < inviteSlots ? [...s, m] : s)); setMemberQuery(""); setMemberResults([]); }} className="block w-full px-3 py-2 text-left text-sm text-ink transition hover:bg-paper">{m.name}</button>
                             ))}
                           </div>
                         )}
@@ -491,8 +491,8 @@ export default function BookingClient({
 
                     {usedInvites < inviteSlots && (
                       <div className="mt-2 flex gap-2">
-                        <input type="email" aria-label="Nodig iemand zonder account uit via e-mail" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEmailInvite(); } }} placeholder="Geen account? E-mailadres…" className="min-w-0 flex-1 rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
-                        <button type="button" onClick={addEmailInvite} className="shrink-0 rounded-xl bg-white px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">Uitnodigen</button>
+                        <input type="email" aria-label="Nodig iemand zonder account uit via e-mail" value={emailInput} onChange={(e) => setEmailInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addEmailInvite(); } }} placeholder="Geen account? E-mailadres…" className="min-w-0 flex-1 rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
+                        <button type="button" onClick={addEmailInvite} className="shrink-0 rounded-xl bg-surface px-4 py-2 text-sm font-bold text-ink transition hover:bg-accent/15">Uitnodigen</button>
                       </div>
                     )}
                   </div>
@@ -504,13 +504,13 @@ export default function BookingClient({
             {/* Schedule grid */}
             <Card step={stepNr(3)} title="Kies je moment">
               <div className="mb-3 flex items-center justify-between">
-                <button onClick={() => setWeekOffset((w) => Math.max(0, w - 1))} disabled={weekOffset === 0} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">‹ vorige</button>
-                <span className="text-sm font-bold text-brand/60">{weekLabel}</span>
-                <button onClick={() => setWeekOffset((w) => Math.min(maxWeek, w + 1))} disabled={weekOffset >= maxWeek} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-brand transition enabled:hover:border-lav disabled:opacity-30">volgende ›</button>
+                <button onClick={() => setWeekOffset((w) => Math.max(0, w - 1))} disabled={weekOffset === 0} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-ink transition enabled:hover:border-lav disabled:opacity-30">‹ vorige</button>
+                <span className="text-sm font-bold text-ink/60">{weekLabel}</span>
+                <button onClick={() => setWeekOffset((w) => Math.min(maxWeek, w + 1))} disabled={weekOffset >= maxWeek} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-ink transition enabled:hover:border-lav disabled:opacity-30">volgende ›</button>
               </div>
               {/* Honest membership perk: members can book further ahead than non-members. */}
               {!isMember && weekOffset >= maxWeek && (
-                <div className="mb-3 rounded-xl bg-accent/10 px-4 py-3 text-sm text-brand/70">
+                <div className="mb-3 rounded-xl bg-accent/10 px-4 py-3 text-sm text-ink/70">
                   Leden boeken tot 8 weken vooruit (jij 2). <Link href="/lidmaatschap" className="font-bold text-accentdark hover:underline">Word lid →</Link>
                 </div>
               )}
@@ -522,8 +522,8 @@ export default function BookingClient({
                     const act = activeDay === d.dateStr;
                     return (
                       <button key={d.dateStr} onClick={() => setMobileDay(d.dateStr)} className={"rounded-xl border-2 py-1.5 text-center transition " + (act ? "border-accent bg-accent/15" : "border-borderc")}>
-                        <span className="block text-[9px] font-bold uppercase text-brand/40">{d.weekday}</span>
-                        <span className="block text-xs font-black text-brand">{d.dayMonth.split(" ")[0]}</span>
+                        <span className="block text-[9px] font-bold uppercase text-ink/40">{d.weekday}</span>
+                        <span className="block text-xs font-black text-ink">{d.dayMonth.split(" ")[0]}</span>
                       </button>
                     );
                   })}
@@ -537,9 +537,9 @@ export default function BookingClient({
                     const inRange = selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
                     const isSel = selected && selected.dateStr === activeDay && selected.hour === h;
                     const label = fmtHour(h);
-                    if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/25">{label}</div>;
+                    if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-ink/25">{label}</div>;
                     if (taken) return <WaitlistSlot key={h} date={activeDay} hour={h} label={label} isLoggedIn={isLoggedIn} />;
-                    if (!inRange && !canBook(activeDay, h, fitDur)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-brand/20">{label}</div>;
+                    if (!inRange && !canBook(activeDay, h, fitDur)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-ink/20">{label}</div>;
                     return (
                       <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
                         {label}{isSel ? " ✓" : ""}
@@ -547,7 +547,7 @@ export default function BookingClient({
                     );
                   })}
                 </div>
-                {hours.length === 0 && <p className="mt-2 text-xs text-brand/40">Geen vrije uren op deze dag.</p>}
+                {hours.length === 0 && <p className="mt-2 text-xs text-ink/40">Geen vrije uren op deze dag.</p>}
               </div>
 
               {/* Desktop: volledige weekrooster */}
@@ -558,8 +558,8 @@ export default function BookingClient({
                     <div />
                     {days.map((d) => (
                       <div key={d.dateStr} className="pb-1 text-center">
-                        <p className="text-[10px] font-bold uppercase text-brand/40">{d.weekday}</p>
-                        <p className="text-xs font-black text-brand">{d.dayMonth}</p>
+                        <p className="text-[10px] font-bold uppercase text-ink/40">{d.weekday}</p>
+                        <p className="text-xs font-black text-ink">{d.dayMonth}</p>
                       </div>
                     ))}
                   </div>
@@ -567,7 +567,7 @@ export default function BookingClient({
                   <div>
                     {hours.map((h) => (
                       <div key={h} className="grid grid-cols-[44px_repeat(7,1fr)] gap-1 py-0.5">
-                        <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-brand/30">{fmtHour(h)}</div>
+                        <div className="flex items-center justify-end pr-1 text-[10px] font-bold text-ink/30">{fmtHour(h)}</div>
                         {days.map((d) => {
                           const t = slotInstant(d.dateStr, h).getTime();
                           const taken = takenSet.has(t);
@@ -597,7 +597,7 @@ export default function BookingClient({
                 {/* De legende moet de wáárheid zeggen: sinds het rooster op de gekozen duur toetst,
                     kan grijs óók "past niet in deze duur" betekenen. Dat verzwijgen zou lezen als
                     "alles is volgeboekt" terwijl het uur gewoon te kort is vóór sluitingstijd. */}
-                <p className="text-xs text-brand/40">
+                <p className="text-xs text-ink/40">
                   Groen = vrij voor {fitDur % 1 ? `${Math.floor(fitDur)}u30` : `${fitDur} uur`} · grijs = geboekt of te kort · de zaal is exclusief van jou tijdens je sessie.
                 </p>
                 {fringeCount > 0 && (
@@ -623,15 +623,15 @@ export default function BookingClient({
                     return (
                       <button key={f.n} type="button" disabled={!offered} onClick={() => offered && setPersons(f.n)}
                         className={"rounded-2xl border-2 p-4 text-left transition disabled:opacity-40 " + (persons === f.n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                        <span className="block text-sm font-black text-brand">{f.label}</span>
-                        <span className="mt-0.5 block text-xs text-brand/55">{f.price != null ? `${euro(f.price)}${f.per ? " " + f.per : ""}` : (ptCoach ? "op aanvraag" : "—")}</span>
+                        <span className="block text-sm font-black text-ink">{f.label}</span>
+                        <span className="mt-0.5 block text-xs text-ink/55">{f.price != null ? `${euro(f.price)}${f.per ? " " + f.per : ""}` : (ptCoach ? "op aanvraag" : "—")}</span>
                       </button>
                     );
                   })}
                 </div>
                 {ptCoach && (
-                  <p className="mt-3 text-xs text-brand/50">
-                    1-op-2 en 1-op-3 zijn prijs per persoon. Totaal: <span className="font-bold text-brand">{euro(priceCents)}</span> voor {persons} {persons === 1 ? "persoon" : "personen"}.
+                  <p className="mt-3 text-xs text-ink/50">
+                    1-op-2 en 1-op-3 zijn prijs per persoon. Totaal: <span className="font-bold text-ink">{euro(priceCents)}</span> voor {persons} {persons === 1 ? "persoon" : "personen"}.
                   </p>
                 )}
               </Card>
@@ -651,7 +651,7 @@ export default function BookingClient({
             </dl>
 
             {isFit60 && welcomeAvailable && (
-              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
+              <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-surface/10 p-3 text-sm">
                 <input type="checkbox" checked={useWelcome} onChange={(e) => setUseWelcome(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
                 {/* Het label moet de werkelijkheid volgen: bij een langere sessie bleef hier
                     "je eerste uur is gratis" staan terwijl het totaal € 30 toonde. */}
@@ -664,7 +664,7 @@ export default function BookingClient({
             )}
 
             {isFit60 && !welcomeApplies && creditBalance >= 1 && (
-              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-white/10 p-3 text-sm">
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-2xl bg-surface/10 p-3 text-sm">
                 <input type="checkbox" checked={useCredit} onChange={(e) => setUseCredit(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
                 {/* "Sessietegoed" i.p.v. "beurtenkaart": een abo-sessie komt in hetzelfde grootboek
                     terecht en is geen kaart. En een ontoereikend saldo moet je hier lezen, niet pas
@@ -679,7 +679,7 @@ export default function BookingClient({
                 <p className="text-xs font-bold uppercase tracking-wide text-lav">Kortingscode</p>
                 <div className="mt-2 flex gap-2">
                   <input value={discountCode} onChange={(e) => { setDiscountCode(e.target.value); setDiscountInfo(null); }} placeholder="bv. TERUG50" aria-label="Kortingscode"
-                    className="min-w-0 flex-1 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm uppercase text-white placeholder:text-lav/60 outline-none focus:border-accent" />
+                    className="min-w-0 flex-1 rounded-xl border border-white/20 bg-surface/10 px-3 py-2 text-sm uppercase text-white placeholder:text-lav/60 outline-none focus:border-accent" />
                   <button type="button" disabled={!discountCode.trim() || applyingCode}
                     onClick={async () => {
                       setApplyingCode(true);
@@ -742,10 +742,10 @@ export default function BookingClient({
       {selected && (
         // bottom-[4.75rem] houdt de tabbalk vrij, maar die verdwijnt al vanaf md — daarboven bleef
         // er een lege strook onder deze balk staan.
-        <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-borderc bg-white/95 px-4 py-3 shadow-[0_-6px_20px_rgba(34,25,79,0.08)] backdrop-blur md:bottom-0 lg:hidden">
+        <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-borderc bg-surface/95 px-4 py-3 shadow-[0_-6px_20px_rgba(34,25,79,0.08)] backdrop-blur md:bottom-0 lg:hidden">
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-brand">{days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · {slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}</p>
+              <p className="truncate text-xs font-bold text-ink">{days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · {slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}</p>
               <p className="text-sm font-black text-accentdark">{totalValue()}</p>
             </div>
             {isLoggedIn ? (
@@ -768,7 +768,7 @@ function Card({ step, title, children }) {
   return (
     // p-5 op de telefoon: p-7 aan beide kanten kostte 24px inhoudsbreedte, en net daar staat het
     // rooster van zeven dagen naast elkaar.
-    <div className="rounded-3xl border border-borderc bg-white p-5 sm:p-7">
+    <div className="rounded-3xl border border-borderc bg-surface p-5 sm:p-7">
       <h2 className="font-black"><span className="text-accentdark">{step} · </span>{title}</h2>
       <div className="mt-4">{children}</div>
     </div>
@@ -810,8 +810,8 @@ function WaitlistSlot({ date, hour, label, compact = false, isLoggedIn }) {
   };
   if (!isLoggedIn) {
     return compact
-      ? <div className="flex h-7 items-center justify-center rounded-md bg-borderc/40 text-[9px] font-bold text-brand/30">vol</div>
-      : <div className="rounded-xl bg-borderc/40 py-3 text-center text-[10px] font-bold leading-tight text-brand/35">{label}<br />vol</div>;
+      ? <div className="flex h-7 items-center justify-center rounded-md bg-borderc/40 text-[9px] font-bold text-ink/30">vol</div>
+      : <div className="rounded-xl bg-borderc/40 py-3 text-center text-[10px] font-bold leading-tight text-ink/35">{label}<br />vol</div>;
   }
   const on = state === "on";
   if (compact) {

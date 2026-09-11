@@ -23,16 +23,16 @@ export default function HelpForm({ ingelogd }) {
   if (klaar) {
     return (
       <div className="rounded-3xl border-2 border-accent bg-accent/10 p-6 text-center">
-        <p className="text-lg font-black text-brand">Verstuurd 🙌</p>
-        <p className="mt-1 text-sm text-brand/70">{klaar}</p>
+        <p className="text-lg font-black text-ink">Verstuurd 🙌</p>
+        <p className="mt-1 text-sm text-ink/70">{klaar}</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={verstuur} className="rounded-3xl border border-borderc bg-white p-6">
-      <h2 className="font-black text-brand">Stuur ons je vraag</h2>
-      <p className="mt-1 text-sm text-brand/55">
+    <form onSubmit={verstuur} className="rounded-3xl border border-borderc bg-surface p-6">
+      <h2 className="font-black text-ink">Stuur ons je vraag</h2>
+      <p className="mt-1 text-sm text-ink/55">
         {ingelogd
           ? "We zien wie je bent en waar je vastliep — beschrijf gewoon wat er misgaat."
           : "Vul je gegevens in, dan antwoorden we per mail."}
@@ -42,11 +42,11 @@ export default function HelpForm({ ingelogd }) {
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Je naam</span>
-            <input name="name" required className="w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm text-brand outline-none focus:border-accent" />
+            <input name="name" required className="w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm text-ink outline-none focus:border-accent" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Je e-mail</span>
-            <input name="email" type="email" required className="w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm text-brand outline-none focus:border-accent" />
+            <input name="email" type="email" required className="w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm text-ink outline-none focus:border-accent" />
           </label>
         </div>
       )}
@@ -54,7 +54,7 @@ export default function HelpForm({ ingelogd }) {
       <label className="mt-3 block">
         <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Waarmee kunnen we helpen?</span>
         <textarea name="message" required rows={5} placeholder="Bv. de deur ging niet open, mijn betaling lukte niet, ik raak niet ingelogd…"
-          className="w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm text-brand outline-none focus:border-accent" />
+          className="w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm text-ink outline-none focus:border-accent" />
       </label>
 
       {/* Honeypot: onzichtbaar voor mensen, onweerstaanbaar voor bots. */}
@@ -65,7 +65,7 @@ export default function HelpForm({ ingelogd }) {
       <button disabled={pending} className="mt-4 w-full rounded-full bg-accent px-6 py-3 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">
         {pending ? "Versturen…" : "Verstuur je vraag"}
       </button>
-      <p className="mt-2 text-center text-[11px] text-brand/45">Meestal antwoorden we dezelfde dag.</p>
+      <p className="mt-2 text-center text-[11px] text-ink/45">Meestal antwoorden we dezelfde dag.</p>
     </form>
   );
 }

@@ -7,7 +7,7 @@ export default function BookingUnavailable() {
       <div className="mx-auto max-w-2xl px-5 py-24 text-center">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Online boeken</p>
         <h1 className="mt-3 text-3xl font-black md:text-4xl">Boeken komt zo live</h1>
-        <p className="mt-4 leading-relaxed text-brand/70">
+        <p className="mt-4 leading-relaxed text-ink/70">
           Het boekingssysteem wordt momenteel gekoppeld aan de database. Heel binnenkort
           reserveer je hier de zaal — alleen of met vrienden — en open je de deur met de app.
         </p>

@@ -30,8 +30,8 @@ export default async function Instellingen() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Instellingen</h1>
-      <p className="mt-1 text-sm text-brand/50">Algemene gegevens van de gym.</p>
+      <h1 className="text-3xl font-black text-ink">Instellingen</h1>
+      <p className="mt-1 text-sm text-ink/50">Algemene gegevens van de gym.</p>
 
       {readOnly && (
         <p className="mt-4 rounded-xl bg-accent/10 p-3 text-sm font-semibold text-accentdark">
@@ -39,7 +39,7 @@ export default async function Instellingen() {
         </p>
       )}
 
-      <ActionForm action={updateGymSettings} success="Instellingen opgeslagen ✓" className="mt-6 max-w-2xl space-y-5 rounded-2xl border border-borderc bg-white p-7">
+      <ActionForm action={updateGymSettings} success="Instellingen opgeslagen ✓" className="mt-6 max-w-2xl space-y-5 rounded-2xl border border-borderc bg-surface p-7">
         <Field name="name" label="Naam" defaultValue={gym.name} />
         <Field name="address" label="Adres" defaultValue={gym.address} />
         <Field name="slot_minutes" label="Duur van een sessie (min)" type="number" defaultValue={gym.slot_minutes} min={15} max={240} />
@@ -50,10 +50,10 @@ export default async function Instellingen() {
           <Field name="open_hour" label="Eerste boekbaar uur" type="number" defaultValue={gym.open_hour ?? 6} min={0} max={23} />
           <Field name="close_hour" label="Sluitingsuur (laatste start = sluiting − 1)" type="number" defaultValue={gym.close_hour ?? 23} min={1} max={24} />
         </div>
-        <p className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
+        <p className="rounded-2xl bg-paper p-4 text-sm text-ink/60">
           🕑 Leden kunnen boeken van <b>{gym.open_hour ?? 6}u</b> tot <b>{gym.close_hour ?? 23}u</b> — de laatste sessie start om {(gym.close_hour ?? 23) - 1}u. (Prijzen per sessie beheer je bij <b>Diensten &amp; prijzen</b>.)
         </p>
-        <p className="rounded-2xl bg-paper p-4 text-sm text-brand/60">
+        <p className="rounded-2xl bg-paper p-4 text-sm text-ink/60">
           🔑 De <b>toegangscode</b> hierboven wordt automatisch ± 5 minuten voor elke sessie naar het lid gemaild (met adres + navigatieknop). Leden kunnen hun sessie tot <b>6u</b> vooraf verplaatsen; annuleren kan niet meer.
         </p>
 
@@ -68,9 +68,9 @@ export default async function Instellingen() {
       <NukiSettings initial={nukiInitial} tokenSet={tokenSet} envToken={false} readOnly={readOnly} />
 
       {/* Weekrapport — de mail vertrekt maandagochtend vanzelf; deze knop laat je hem nu al zien. */}
-      <section className="mt-8 max-w-2xl rounded-2xl border border-borderc bg-white p-7">
-        <h2 className="text-xl font-black text-brand">📊 Wekelijks rapport</h2>
-        <p className="mt-1 text-sm leading-relaxed text-brand/60">
+      <section className="mt-8 max-w-2xl rounded-2xl border border-borderc bg-surface p-7">
+        <h2 className="text-xl font-black text-ink">📊 Wekelijks rapport</h2>
+        <p className="mt-1 text-sm leading-relaxed text-ink/60">
           Elke <b>maandagochtend</b> krijgt elke beheerder een mail over de week ervoor: sessies, omzet en nieuwe leden
           (telkens vergeleken met de week daarvoor), de bezetting per dag, de drukste uren, en een korte lijst met wat
           jij zelf moet oppakken — openstaand geld, mislukte abo-betalingen, abo-kandidaten en meldingen.
@@ -79,12 +79,12 @@ export default async function Instellingen() {
         <ActionForm action={sendWeekReportTest} className="mt-4">
           <SubmitButton
             disabled={readOnly}
-            className="rounded-full border-2 border-borderc bg-white px-6 py-2.5 text-sm font-bold text-brand transition hover:border-accent disabled:opacity-40"
+            className="rounded-full border-2 border-borderc bg-surface px-6 py-2.5 text-sm font-bold text-ink transition hover:border-accent disabled:opacity-40"
           >
             Stuur mij het rapport nu
           </SubmitButton>
         </ActionForm>
-        <p className="mt-2 text-xs text-brand/40">Je krijgt het rapport over de week die net is afgelopen, op je eigen adres.</p>
+        <p className="mt-2 text-xs text-ink/40">Je krijgt het rapport over de week die net is afgelopen, op je eigen adres.</p>
       </section>
     </div>
   );
@@ -93,13 +93,13 @@ export default async function Instellingen() {
 function Field({ label, name, type = "text", defaultValue, ...rest }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-bold text-brand">{label}</span>
+      <span className="mb-1 block text-sm font-bold text-ink">{label}</span>
       <input
         name={name}
         type={type}
         defaultValue={defaultValue ?? ""}
         {...rest}
-        className="w-full rounded-xl border-2 border-borderc bg-white px-4 py-2.5 text-brand outline-none transition focus:border-accent"
+        className="w-full rounded-xl border-2 border-borderc bg-surface px-4 py-2.5 text-ink outline-none transition focus:border-accent"
       />
     </label>
   );

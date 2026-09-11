@@ -17,7 +17,7 @@ export default function NewsletterSignup() {
           type="email"
           required
           placeholder="jouw@email.be"
-          className="min-w-0 flex-1 rounded-full border border-white/20 bg-white/10 px-4 py-2.5 text-sm text-white placeholder:text-lav/70 outline-none focus:border-accent"
+          className="min-w-0 flex-1 rounded-full border border-white/20 bg-surface/10 px-4 py-2.5 text-sm text-white placeholder:text-lav/70 outline-none focus:border-accent"
         />
         <button disabled={pending} className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90 disabled:opacity-60">
           {pending ? "Bezig…" : "Inschrijven"}

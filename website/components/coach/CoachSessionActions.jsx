@@ -54,7 +54,7 @@ export default function CoachSessionActions({ bookingId, startsAt, endsAt = null
   const [client, setClient] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (locked) return <span className="text-xs text-brand/40">Wijzigen kan tot 1u vooraf</span>;
+  if (locked) return <span className="text-xs text-ink/40">Wijzigen kan tot 1u vooraf</span>;
 
   async function submitAssign() {
     if (!client) { toast("error", "Kies een client."); return; }
@@ -121,7 +121,7 @@ export default function CoachSessionActions({ bookingId, startsAt, endsAt = null
           {(hours || []).map((h) => <option key={h} value={h}>{fh(h)}</option>)}
         </select>
         <button onClick={submitMove} disabled={busy} className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-brand disabled:opacity-50">{busy ? "Bezig…" : "Bevestig"}</button>
-        <button onClick={() => setMode(null)} className="px-2 py-1.5 text-xs font-bold text-brand/40 hover:text-brand">✕</button>
+        <button onClick={() => setMode(null)} className="px-2 py-1.5 text-xs font-bold text-ink/40 hover:text-ink">✕</button>
       </div>
     );
   }
@@ -134,7 +134,7 @@ export default function CoachSessionActions({ bookingId, startsAt, endsAt = null
           {clients.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
         </select>
         <button onClick={submitAssign} disabled={busy} className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-brand disabled:opacity-50">{busy ? "Bezig…" : "Bevestig"}</button>
-        <button onClick={() => setMode(null)} className="px-2 py-1.5 text-xs font-bold text-brand/40 hover:text-brand">✕</button>
+        <button onClick={() => setMode(null)} className="px-2 py-1.5 text-xs font-bold text-ink/40 hover:text-ink">✕</button>
       </div>
     );
   }
@@ -145,16 +145,16 @@ export default function CoachSessionActions({ bookingId, startsAt, endsAt = null
         <button onClick={() => setMode("assign")} className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-brand transition hover:brightness-95">+ Client toevoegen</button>
       )}
       {kanVerplaatsen && (
-        <button onClick={openMove} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent hover:text-accentdark">Verplaats</button>
+        <button onClick={openMove} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-ink transition hover:border-accent hover:text-accentdark">Verplaats</button>
       )}
       {kanAnnuleren ? (
-        <button onClick={doCancel} disabled={busy} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer</button>
+        <button onClick={doCancel} disabled={busy} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-ink transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer</button>
       ) : (
         // Binnen 6 uur is annuleren dicht maar verplaatsen nog open — zeg dat, anders lijkt de knop zoek.
-        <span className="text-xs text-brand/40">Annuleren kon tot 6u vooraf</span>
+        <span className="text-xs text-ink/40">Annuleren kon tot 6u vooraf</span>
       )}
       {kanAnnuleren && seriesId && (
-        <button onClick={doCancelSeries} disabled={busy} title="Annuleer alle toekomstige sessies in deze reeks" className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand/70 transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer reeks 🔁</button>
+        <button onClick={doCancelSeries} disabled={busy} title="Annuleer alle toekomstige sessies in deze reeks" className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-ink/70 transition hover:border-red-300 hover:text-red-600 disabled:opacity-50">Annuleer reeks 🔁</button>
       )}
     </div>
   );

@@ -16,14 +16,14 @@ export default function MessageThread({ coachId, clientId, meId, messages = [], 
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 space-y-2 overflow-y-auto rounded-2xl bg-paper p-4" style={{ maxHeight: "60vh" }}>
-        {messages.length === 0 && <p className="py-8 text-center text-sm text-brand/40">Nog geen berichten. Stuur het eerste!</p>}
+        {messages.length === 0 && <p className="py-8 text-center text-sm text-ink/40">Nog geen berichten. Stuur het eerste!</p>}
         {messages.map((m) => {
           const mine = m.sender_id === meId;
           return (
             <div key={m.id} className={"flex " + (mine ? "justify-end" : "justify-start")}>
-              <div className={"max-w-[78%] rounded-2xl px-3.5 py-2 text-sm " + (mine ? "bg-brand text-white" : "bg-white text-brand")}>
+              <div className={"max-w-[78%] rounded-2xl px-3.5 py-2 text-sm " + (mine ? "bg-brand text-white" : "bg-surface text-ink")}>
                 <p className="whitespace-pre-wrap">{m.body}</p>
-                <p className={"mt-0.5 text-[10px] " + (mine ? "text-white/50" : "text-brand/40")}>{t(m.created_at)}</p>
+                <p className={"mt-0.5 text-[10px] " + (mine ? "text-white/50" : "text-ink/40")}>{t(m.created_at)}</p>
               </div>
             </div>
           );

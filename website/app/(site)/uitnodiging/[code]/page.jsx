@@ -45,11 +45,11 @@ export default async function Uitnodiging({ params }) {
     <main className="bg-paper">
       <div className="mx-auto max-w-2xl px-5 py-16 sm:py-24">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Uitnodiging</p>
-        <h1 className="mt-3 text-3xl font-black leading-tight text-brand sm:text-4xl md:text-5xl">
+        <h1 className="mt-3 text-3xl font-black leading-tight text-ink sm:text-4xl md:text-5xl">
           {voornaam ? <>{voornaam} nodigt je uit om <span className="text-accentdark">samen te trainen</span></> : <>Je bent uitgenodigd om <span className="text-accentdark">mee te trainen</span></>}
         </h1>
-        <p className="mt-5 text-lg leading-relaxed text-brand/70">
-          Bij Fittin&rsquo; in Gent boek je geen plekje tussen anderen — je boekt de <strong className="text-brand">hele zaal</strong> voor
+        <p className="mt-5 text-lg leading-relaxed text-ink/70">
+          Bij Fittin&rsquo; in Gent boek je geen plekje tussen anderen — je boekt de <strong className="text-ink">hele zaal</strong> voor
           jezelf. Alleen, of met tot vier vrienden, voor exact dezelfde prijs.
         </p>
 
@@ -69,8 +69,8 @@ export default async function Uitnodiging({ params }) {
             ["Zelfde prijs, met z'n vieren", "€ 15 voor het uur — of je nu alleen komt of met drie vrienden."],
             ["Open van 6 tot 23 uur", "Je opent de deur met een code die je per mail krijgt, vlak voor je sessie."],
           ].map(([kop, tekst]) => (
-            <div key={kop} className="rounded-2xl border border-borderc bg-white p-5">
-              <h2 className="font-black text-brand">{kop}</h2>
+            <div key={kop} className="rounded-2xl border border-borderc bg-surface p-5">
+              <h2 className="font-black text-ink">{kop}</h2>
               <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{tekst}</p>
             </div>
           ))}

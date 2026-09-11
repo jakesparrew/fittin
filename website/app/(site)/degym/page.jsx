@@ -89,7 +89,7 @@ export default async function DeGym() {
           <h1 className="mt-4 max-w-3xl text-4xl font-black leading-tight md:text-5xl">
             Privégym in Gent — <span className="text-accentdark">de zaal is helemaal van jou</span>
           </h1>
-          <p className="mt-5 max-w-xl text-lg text-brand/70">
+          <p className="mt-5 max-w-xl text-lg text-ink/70">
             Reserveer de volledige zaal voor jezelf of je vrienden. Je{" "}
             <span className="rounded-full bg-brand px-3 py-1 font-bold text-accent">eerste sessie is gratis</span>{" "}
             — automatisch verrekend bij je eerste online boeking.
@@ -107,11 +107,11 @@ export default async function DeGym() {
       <section>
         <div className="mx-auto grid max-w-6xl gap-5 px-5 py-20 md:grid-cols-3">
           {cards.map((card) => (
-            <div key={card.title} className="rounded-2xl border border-borderc bg-white p-7">
+            <div key={card.title} className="rounded-2xl border border-borderc bg-surface p-7">
               <h2 className="text-xl font-black">{card.title}</h2>
               <ul className="mt-4 space-y-3">
                 {card.items.map((item) => (
-                  <li key={item} className="flex gap-3 text-sm leading-relaxed text-brand/70">
+                  <li key={item} className="flex gap-3 text-sm leading-relaxed text-ink/70">
                     <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-accent" />
                     {item}
                   </li>
@@ -131,11 +131,11 @@ export default async function DeGym() {
           </h2>
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
             {prive.map(([title, text]) => (
-              <div key={title} className="flex gap-4 rounded-2xl bg-white p-6">
+              <div key={title} className="flex gap-4 rounded-2xl bg-surface p-6">
                 <span className="mt-1 h-3 w-3 shrink-0 rounded-full bg-accent" />
                 <div>
                   <h3 className="font-black">{title}</h3>
-                  <p className="mt-1 text-sm leading-relaxed text-brand/60">{text}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink/60">{text}</p>
                 </div>
               </div>
             ))}
@@ -143,7 +143,7 @@ export default async function DeGym() {
           {/* De zaal zelf. Wie een uur boekt, boekt een ruimte die hij nog nooit zag — tot nu stond
               er op de hele site één beeld, en dat was een still uit de promovideo. */}
           <GymFotos slugs={["zaal-logo-2", "dumbbells", "zaal-rek"]} className="mt-10" />
-          <p className="mt-3 text-xs text-brand/45">De zaal in Sint-Amandsberg — tijdens jouw uur heb je ze helemaal voor jezelf.</p>
+          <p className="mt-3 text-xs text-ink/45">De zaal in Sint-Amandsberg — tijdens jouw uur heb je ze helemaal voor jezelf.</p>
         </div>
       </section>
 
@@ -176,7 +176,7 @@ export default async function DeGym() {
             <div key={title} className="rounded-2xl border border-borderc p-7">
               <div className="h-2.5 w-10 rounded-full bg-accent" />
               <h3 className="mt-4 text-lg font-black">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-brand/60">{text}</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink/60">{text}</p>
             </div>
           ))}
         </div>
@@ -187,7 +187,7 @@ export default async function DeGym() {
         <div className="mx-auto max-w-3xl px-5 py-20 text-center">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">What about Fittin&rsquo;</p>
           <h2 className="mt-3 text-3xl font-black md:text-4xl">Persoonlijk en doelgericht</h2>
-          <p className="mt-5 leading-relaxed text-brand/70">
+          <p className="mt-5 leading-relaxed text-ink/70">
             Fittin&rsquo; is een project van De Wereld Draait Door, vereniging zonder winstoogmerk.
             Anders dan de hedendaagse gymketens hanteren wij geen verplicht lidgeld. We vinden het
             belangrijk een toegankelijk tarief te bieden: je betaalt enkel voor de tijd waarin je
@@ -204,15 +204,15 @@ export default async function DeGym() {
           de knop "Routebeschrijving" was toch al het echte pad naar de deur. */}
       <section id="locatie" className="pb-20">
         <div className="mx-auto max-w-6xl px-5">
-          <div className="overflow-hidden rounded-3xl border border-borderc bg-white">
+          <div className="overflow-hidden rounded-3xl border border-borderc bg-surface">
             <div className="p-8 md:p-10">
               <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Vind ons</p>
-              <h2 className="mt-2 text-3xl font-black text-brand">Fitness in Sint-Amandsberg, Gent</h2>
-              <p className="mt-4 max-w-2xl leading-relaxed text-brand/70">Onze privégym ligt in Sint-Amandsberg (Gent), vlot bereikbaar met gratis parking aan de deur.</p>
+              <h2 className="mt-2 text-3xl font-black text-ink">Fitness in Sint-Amandsberg, Gent</h2>
+              <p className="mt-4 max-w-2xl leading-relaxed text-ink/70">Onze privégym ligt in Sint-Amandsberg (Gent), vlot bereikbaar met gratis parking aan de deur.</p>
               <dl className="mt-6 grid gap-3 text-sm sm:grid-cols-3 sm:gap-6">
-                <div><dt className="font-bold text-brand">Adres</dt><dd><a href="https://www.google.com/maps/search/?api=1&query=Aannemersstraat+186,+9040+Gent" target="_blank" rel="noreferrer" className="text-brand/70 hover:text-accentdark hover:underline">Aannemersstraat 186, 9040 Gent</a></dd></div>
-                <div><dt className="font-bold text-brand">Parking</dt><dd className="text-brand/70">Gratis parking aan de deur</dd></div>
-                <div><dt className="font-bold text-brand">Contact</dt><dd><a href="mailto:info@fittin.be" className="text-accentdark hover:underline">info@fittin.be</a></dd></div>
+                <div><dt className="font-bold text-ink">Adres</dt><dd><a href="https://www.google.com/maps/search/?api=1&query=Aannemersstraat+186,+9040+Gent" target="_blank" rel="noreferrer" className="text-ink/70 hover:text-accentdark hover:underline">Aannemersstraat 186, 9040 Gent</a></dd></div>
+                <div><dt className="font-bold text-ink">Parking</dt><dd className="text-ink/70">Gratis parking aan de deur</dd></div>
+                <div><dt className="font-bold text-ink">Contact</dt><dd><a href="mailto:info@fittin.be" className="text-accentdark hover:underline">info@fittin.be</a></dd></div>
               </dl>
               <a href="https://www.google.com/maps/dir/?api=1&destination=Aannemersstraat+186,+9040+Gent" target="_blank" rel="noreferrer" className="mt-6 inline-block rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Routebeschrijving →</a>
             </div>

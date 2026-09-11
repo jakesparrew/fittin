@@ -42,14 +42,14 @@ export default function ExerciseLibrary({ initial, total, categories, onSearch, 
           onChange={(e) => setQ(e.target.value)}
           placeholder="Zoek een oefening…"
           aria-label="Zoek een oefening"
-          className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 text-sm text-brand outline-none transition focus:border-accent"
+          className="w-full rounded-2xl border-2 border-borderc bg-surface px-4 py-3 text-sm text-ink outline-none transition focus:border-accent"
         />
         <div className="mt-3 flex flex-wrap gap-2">
           {favs && favs.length > 0 && (
             <button
               onClick={() => { setAlleenFavs((v) => !v); setQ(""); setCat("alle"); }}
               aria-pressed={alleenFavs}
-              className={"rounded-full px-3.5 py-1.5 text-xs font-bold transition " + (alleenFavs ? "bg-accent text-brand" : "bg-white text-accentdark hover:bg-accent/10")}
+              className={"rounded-full px-3.5 py-1.5 text-xs font-bold transition " + (alleenFavs ? "bg-accent text-brand" : "bg-surface text-accentdark hover:bg-accent/10")}
             >
               ❤ Mijn favorieten ({favs.length})
             </button>
@@ -59,7 +59,7 @@ export default function ExerciseLibrary({ initial, total, categories, onSearch, 
               key={c}
               onClick={() => { setCat(c); setAlleenFavs(false); }}
               aria-pressed={cat === c}
-              className={"rounded-full px-3.5 py-1.5 text-xs font-bold capitalize transition " + (cat === c ? "bg-brand text-white" : "bg-white text-brand/60 hover:text-brand")}
+              className={"rounded-full px-3.5 py-1.5 text-xs font-bold capitalize transition " + (cat === c ? "bg-brand text-white" : "bg-surface text-ink/60 hover:text-ink")}
             >
               {c}
             </button>
@@ -67,17 +67,17 @@ export default function ExerciseLibrary({ initial, total, categories, onSearch, 
         </div>
       </div>
 
-      <p className="mt-4 text-xs font-bold text-brand/40">
+      <p className="mt-4 text-xs font-bold text-ink/40">
         {alleenFavs ? `${zichtbaar.length} bewaard` : browsingAll ? `${total} oefeningen — typ of filter om te zoeken` : pending ? "Zoeken…" : `${zichtbaar.length} resultaten`}
       </p>
 
       <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {zichtbaar.map((ex) => (
-          <Link key={ex.id} href={`/oefeningen/${ex.slug}`} className="group rounded-3xl border border-borderc bg-white p-2 transition hover:-translate-y-0.5 hover:shadow-md">
+          <Link key={ex.id} href={`/oefeningen/${ex.slug}`} className="group rounded-3xl border border-borderc bg-surface p-2 transition hover:-translate-y-0.5 hover:shadow-md">
             <ExerciseMedia exercise={ex} thumb className="aspect-square w-full" rounded="rounded-2xl" />
             <div className="px-2 pb-2 pt-3">
-              <p className="font-black leading-tight text-brand">{ex.name}</p>
-              <p className="mt-1 text-xs text-brand/50">
+              <p className="font-black leading-tight text-ink">{ex.name}</p>
+              <p className="mt-1 text-xs text-ink/50">
                 {(ex.primary_muscles?.[0] || ex.muscle || ex.category || "").toString()}
                 {ex.difficulty ? ` · ${DIFF[ex.difficulty] || ex.difficulty}` : ""}
               </p>
@@ -86,7 +86,7 @@ export default function ExerciseLibrary({ initial, total, categories, onSearch, 
         ))}
       </div>
 
-      {!pending && results.length === 0 && <p className="mt-10 text-center text-sm text-brand/50">Geen oefeningen gevonden.</p>}
+      {!pending && results.length === 0 && <p className="mt-10 text-center text-sm text-ink/50">Geen oefeningen gevonden.</p>}
     </div>
   );
 }

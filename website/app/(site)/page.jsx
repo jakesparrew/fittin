@@ -215,7 +215,7 @@ export default async function Home() {
               <Link href="/boeken" className="shine w-full rounded-full bg-accent px-8 py-3.5 text-center text-base font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-accent/40 sm:w-auto sm:py-4 sm:text-lg">
                 Reserveer de gym
               </Link>
-              <Link href={SIGNUP_HREF} className="w-full rounded-full border-2 border-white/30 px-8 py-3.5 text-center text-base font-bold text-white backdrop-blur transition hover:border-white hover:bg-white/10 sm:w-auto sm:py-4 sm:text-lg">
+              <Link href={SIGNUP_HREF} className="w-full rounded-full border-2 border-white/30 px-8 py-3.5 text-center text-base font-bold text-white backdrop-blur transition hover:border-white hover:bg-surface/10 sm:w-auto sm:py-4 sm:text-lg">
                 Maak gratis account
               </Link>
             </div>
@@ -229,9 +229,9 @@ export default async function Home() {
                 <span key={c.t} className="flex items-center gap-3">
                   {i > 0 && <span className="h-1 w-1 rounded-full bg-accent" />}
                   {c.href ? (
-                    <Link href={c.href} className="rounded-full bg-white/10 px-3 py-1.5 ring-1 ring-white/20 transition hover:bg-white/20 hover:ring-white/40">{c.t}</Link>
+                    <Link href={c.href} className="rounded-full bg-surface/10 px-3 py-1.5 ring-1 ring-white/20 transition hover:bg-surface/20 hover:ring-white/40">{c.t}</Link>
                   ) : (
-                    <span className="rounded-full bg-white/10 px-3 py-1.5 ring-1 ring-white/20">{c.t}</span>
+                    <span className="rounded-full bg-surface/10 px-3 py-1.5 ring-1 ring-white/20">{c.t}</span>
                   )}
                 </span>
               ))}
@@ -245,12 +245,12 @@ export default async function Home() {
       </section>
 
       {/* ============ MARQUEE ============ */}
-      <div className="border-y border-borderc bg-white py-4">
+      <div className="border-y border-borderc bg-surface py-4">
         <div
           className="flex overflow-hidden"
           style={{ maskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, #000 8%, #000 92%, transparent)" }}
         >
-          <div className="marquee-track flex shrink-0 items-center gap-8 whitespace-nowrap pr-8 text-lg font-black uppercase tracking-wide text-brand/30 md:text-xl">
+          <div className="marquee-track flex shrink-0 items-center gap-8 whitespace-nowrap pr-8 text-lg font-black uppercase tracking-wide text-ink/30 md:text-xl">
             {[...Array(2)].map((_, k) => (
               <span key={k} className="flex items-center gap-8">
                 {["Privé", "7 dagen op 7", "Geen lidgeld", "Personal coaching", "Open de deur met de app", "Train met vrienden", "In Gent"].map((w) => (
@@ -279,12 +279,12 @@ export default async function Home() {
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {usps.map(([title, text, icon], i) => (
               <Reveal key={title} delay={i * 90}>
-                <div className="group h-full rounded-3xl border border-borderc bg-white p-7 transition hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand/5">
+                <div className="group h-full rounded-3xl border border-borderc bg-surface p-7 transition hover:-translate-y-1.5 hover:shadow-xl hover:shadow-brand/5">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accentdark transition group-hover:bg-accent group-hover:text-brand">
                     <Icon name={icon} />
                   </div>
                   <h3 className="mt-5 text-lg font-black">{title}</h3>
-                  <p className="mt-2 text-sm leading-relaxed text-brand/60">{text}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-ink/60">{text}</p>
                 </div>
               </Reveal>
             ))}
@@ -310,7 +310,7 @@ export default async function Home() {
           <div className="mt-14 grid gap-6 md:grid-cols-3">
             {steps.map(([title, text, num], i) => (
               <Reveal key={num} delay={i * 120}>
-                <div className="relative h-full rounded-3xl border border-white/10 bg-white/5 p-8 backdrop-blur transition hover:border-accent/40 hover:bg-white/[0.08]">
+                <div className="relative h-full rounded-3xl border border-white/10 bg-surface/5 p-8 backdrop-blur transition hover:border-accent/40 hover:bg-surface/[0.08]">
                   <span className="text-5xl font-black text-accent/30">{num}</span>
                   <h3 className="mt-4 text-xl font-black">{title}</h3>
                   <p className="mt-2 leading-relaxed text-white/60">{text}</p>
@@ -323,7 +323,7 @@ export default async function Home() {
               <Link href={SIGNUP_HREF} className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-accent px-8 py-4 text-lg font-black text-brand transition hover:-translate-y-0.5 hover:opacity-90 sm:w-auto">
                 Maak gratis account <span aria-hidden>→</span>
               </Link>
-              <Link href="/personal-training" className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-white/30 px-7 py-4 text-center font-bold text-white transition hover:border-white hover:bg-white/10 sm:w-auto">
+              <Link href="/personal-training" className="inline-flex w-full items-center justify-center gap-2 rounded-full border-2 border-white/30 px-7 py-4 text-center font-bold text-white transition hover:border-white hover:bg-surface/10 sm:w-auto">
                 Liever met coach? Gratis proeftraining
               </Link>
             </div>
@@ -346,15 +346,15 @@ export default async function Home() {
           <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {cards.map((p, i) => (
               <Reveal key={p.name} delay={i * 90} className="h-full">
-                <div className={"relative flex h-full flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 " + (p.hot ? "border-accent bg-brand text-white shadow-xl shadow-brand/20" : "border-borderc bg-white hover:shadow-xl hover:shadow-brand/5")}>
+                <div className={"relative flex h-full flex-col rounded-3xl border p-8 transition hover:-translate-y-1.5 " + (p.hot ? "border-accent bg-brand text-white shadow-xl shadow-brand/20" : "border-borderc bg-surface hover:shadow-xl hover:shadow-brand/5")}>
                   {p.badge && <span className="absolute -top-3 left-8 rounded-full bg-accent px-3 py-1 text-xs font-black text-brand">{p.badge}</span>}
                   <p className={"text-xs font-black uppercase tracking-widest " + (p.hot ? "text-accent" : "text-lav")}>{p.name}</p>
-                  <p className="mt-3 text-4xl font-black">{p.price}<span className={"text-base font-bold " + (p.hot ? "text-white/50" : "text-brand/40")}> {p.per}</span></p>
+                  <p className="mt-3 text-4xl font-black">{p.price}<span className={"text-base font-bold " + (p.hot ? "text-white/50" : "text-ink/40")}> {p.per}</span></p>
                   <ul className="mt-6 flex-1 space-y-3 text-sm">
                     {p.items.map((it) => (
                       <li key={it} className="flex items-center gap-3">
                         <span className="text-accent">✓</span>
-                        <span className={p.hot ? "text-white/80" : "text-brand/70"}>{it}</span>
+                        <span className={p.hot ? "text-white/80" : "text-ink/70"}>{it}</span>
                       </li>
                     ))}
                   </ul>
@@ -368,7 +368,7 @@ export default async function Home() {
       )}
 
       {/* ============ COACHING ============ */}
-      <section className="bg-white">
+      <section className="bg-surface">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-24 lg:grid-cols-2">
           <Reveal>
             <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Get coached</p>
@@ -377,7 +377,7 @@ export default async function Home() {
             </h2>
             {/* "Ervaren", niet "gecertificeerd": een diploma-claim is controleerbaar en we hebben geen
                 certificaten om te tonen. Alleen beloven wat we kunnen waarmaken. */}
-            <p className="mt-5 max-w-lg leading-relaxed text-brand/70">
+            <p className="mt-5 max-w-lg leading-relaxed text-ink/70">
               Haal het beste uit jezelf met een duwtje in de rug.{" "}
               {eenCoach ? "Onze ervaren coach werkt" : "Onze ervaren coaches werken"} datagedreven: een
               schema op maat, opvolging en consistente progressie — één-op-één, voor koppels of met
@@ -398,7 +398,7 @@ export default async function Home() {
                 <div className="h-full rounded-3xl bg-paper p-6 transition hover:-translate-y-1 hover:shadow-lg hover:shadow-brand/5">
                   <div className="h-2.5 w-10 rounded-full bg-accent" />
                   <h3 className="mt-4 font-black">{t}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-brand/60">{d}</p>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink/60">{d}</p>
                 </div>
               </Reveal>
             ))}
@@ -407,7 +407,7 @@ export default async function Home() {
       </section>
 
       {/* ============ ALLES IN ÉÉN APP ============ */}
-      <section className="bg-white">
+      <section className="bg-surface">
         <div className="mx-auto max-w-6xl px-5 py-24">
           <div className="grid items-center gap-12 lg:grid-cols-2">
             <Reveal>
@@ -415,16 +415,16 @@ export default async function Home() {
               <h2 className="mt-3 text-4xl font-black leading-tight md:text-5xl">
                 Boeken, trainen én opvolgen — <span className="text-accentdark">alles op fittin.be</span>
               </h2>
-              <p className="mt-4 leading-relaxed text-brand/60">
+              <p className="mt-4 leading-relaxed text-ink/60">
                 Fittin&rsquo; is meer dan een privézaal die je per uur reserveert. In je account zit een complete
                 trainingsapp: kant-en-klare workouts met demo&rsquo;s en rusttimer, ~800 oefeningen, je eigen plannen
                 en sjablonen, training loggen met PR&rsquo;s, een community met leaderboard én je coaching.
               </p>
               <div className="mt-8 flex flex-wrap items-center gap-4">
                 <Link href="/workouts" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:-translate-y-0.5 hover:opacity-90">Ontdek de workouts →</Link>
-                <Link href={SIGNUP_HREF} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-accent">Maak gratis account</Link>
+                <Link href={SIGNUP_HREF} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-ink transition hover:border-accent">Maak gratis account</Link>
               </div>
-              <p className="mt-4 text-sm font-semibold text-brand/50">Eén login, alles erin — van je gratis eerste sessie tot je honderdste PR.</p>
+              <p className="mt-4 text-sm font-semibold text-ink/50">Eén login, alles erin — van je gratis eerste sessie tot je honderdste PR.</p>
             </Reveal>
             <Reveal delay={120}>
               <PhoneMockup />
@@ -433,12 +433,12 @@ export default async function Home() {
           <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {appFeatures.map((f, i) => (
               <Reveal key={f.title} delay={i * 70}>
-                <div className="group h-full rounded-3xl border border-borderc bg-paper p-6 transition hover:-translate-y-1.5 hover:bg-white hover:shadow-xl hover:shadow-brand/5">
+                <div className="group h-full rounded-3xl border border-borderc bg-paper p-6 transition hover:-translate-y-1.5 hover:bg-surface hover:shadow-xl hover:shadow-brand/5">
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent/15 text-accentdark transition group-hover:bg-accent group-hover:text-brand">
                     <FeatureIcon name={f.icon} />
                   </div>
-                  <h3 className="mt-5 font-black text-brand">{f.title}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-brand/60">{f.desc}</p>
+                  <h3 className="mt-5 font-black text-ink">{f.title}</h3>
+                  <p className="mt-1.5 text-sm leading-relaxed text-ink/60">{f.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -457,7 +457,7 @@ export default async function Home() {
             </h2>
             <p className="mx-auto mt-5 max-w-xl text-lg text-white/70">
               Word Fittin&rsquo; member — je{" "}
-              <span className="rounded-full bg-white/10 px-3 py-1 font-black text-accent ring-1 ring-accent/30">eerste sessie is gratis</span>{" "}
+              <span className="rounded-full bg-surface/10 px-3 py-1 font-black text-accent ring-1 ring-accent/30">eerste sessie is gratis</span>{" "}
               en wordt automatisch verrekend bij je eerste online boeking.
             </p>
             <Link href="/boeken" className="shine mt-10 inline-block rounded-full bg-accent px-10 py-4 text-lg font-black text-brand shadow-lg shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-xl">
@@ -523,14 +523,14 @@ function PhoneMockup() {
           {/* body */}
           <div className="-mt-3 space-y-3 rounded-t-3xl bg-paper px-4 pb-3 pt-4">
             {/* featured workout */}
-            <div className="overflow-hidden rounded-2xl bg-white shadow-sm shadow-brand/5">
+            <div className="overflow-hidden rounded-2xl bg-surface shadow-sm shadow-brand/5">
               <div className="relative flex h-20 items-start justify-between bg-gradient-to-br from-accentdark to-accent p-3">
-                <span className="rounded-full bg-white/90 px-2 py-0.5 text-[9px] font-black text-brand">VANDAAG</span>
+                <span className="rounded-full bg-surface/90 px-2 py-0.5 text-[9px] font-black text-ink">VANDAAG</span>
                 <span className="rounded-full bg-brand/20 px-2 py-0.5 text-[9px] font-black text-white">45 min</span>
               </div>
               <div className="p-3">
-                <p className="text-sm font-black text-brand">Full Body — Kracht</p>
-                <p className="text-[10px] font-semibold text-brand/45">8 oefeningen · push / pull / legs</p>
+                <p className="text-sm font-black text-ink">Full Body — Kracht</p>
+                <p className="text-[10px] font-semibold text-ink/45">8 oefeningen · push / pull / legs</p>
                 <div className="mt-2 flex items-center gap-2">
                   <div className="h-1.5 flex-1 rounded-full bg-borderc">
                     <div className="h-1.5 w-2/3 rounded-full bg-accent" />
@@ -542,26 +542,26 @@ function PhoneMockup() {
             {/* exercise rows */}
             <div className="space-y-2">
               {rows.map((r) => (
-                <div key={r.name} className="flex items-center gap-3 rounded-xl bg-white px-3 py-2.5 shadow-sm shadow-brand/5">
-                  <span className={"flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black " + (r.done ? "bg-accent text-brand" : "border-2 border-borderc text-brand/30")}>{r.done ? "✓" : ""}</span>
+                <div key={r.name} className="flex items-center gap-3 rounded-xl bg-surface px-3 py-2.5 shadow-sm shadow-brand/5">
+                  <span className={"flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-black " + (r.done ? "bg-accent text-brand" : "border-2 border-borderc text-ink/30")}>{r.done ? "✓" : ""}</span>
                   <div className="flex-1">
-                    <p className="text-[11px] font-bold text-brand">{r.name}</p>
-                    <p className="text-[9px] font-semibold text-brand/40">{r.sets}</p>
+                    <p className="text-[11px] font-bold text-ink">{r.name}</p>
+                    <p className="text-[9px] font-semibold text-ink/40">{r.sets}</p>
                   </div>
-                  <span className="text-brand/20">›</span>
+                  <span className="text-ink/20">›</span>
                 </div>
               ))}
             </div>
           </div>
           {/* bottom tab bar */}
-          <div className="flex items-center justify-around border-t border-borderc bg-white px-2 py-2.5">
+          <div className="flex items-center justify-around border-t border-borderc bg-surface px-2 py-2.5">
             {[
               { d: "M3 11l9-8 9 8M5 10v10h14V10", active: false },
               { d: "M4 7v10M8 5v14M16 5v14M20 7v10M8 12h8", active: true },
               { d: "M3 3v18h18M19 9l-5 5-3-3-4 4", active: false },
               { d: "M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M3 21a6 6 0 0 1 12 0", active: false },
             ].map((t, i) => (
-              <span key={i} className={t.active ? "text-accentdark" : "text-brand/25"}>
+              <span key={i} className={t.active ? "text-accentdark" : "text-ink/25"}>
                 <svg {...tab}><path d={t.d} /></svg>
               </span>
             ))}

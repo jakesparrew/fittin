@@ -34,7 +34,7 @@ export default function ShareSession({ text, className = "" }) {
         target="_blank"
         rel="noopener noreferrer"
         title="Stuur de sessiedetails naar je client via WhatsApp"
-        className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-white px-3 py-1.5 text-xs font-bold text-brand transition hover:border-accent"
+        className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-surface px-3 py-1.5 text-xs font-bold text-ink transition hover:border-accent"
       >
         📲 Stuur naar client
       </a>
@@ -42,7 +42,7 @@ export default function ShareSession({ text, className = "" }) {
         type="button"
         onClick={copy}
         title="Kopieer het bericht"
-        className="rounded-full px-2 py-1.5 text-xs font-bold text-brand/45 transition hover:text-brand"
+        className="rounded-full px-2 py-1.5 text-xs font-bold text-ink/45 transition hover:text-ink"
       >
         {copied ? "✓" : "📋"}
       </button>

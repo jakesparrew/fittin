@@ -53,15 +53,15 @@ export default async function CoachClientDetail({ params }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/coach/clienten" className="text-sm font-semibold text-brand/50 hover:text-brand">← Mijn clienten</Link>
+      <Link href="/coach/clienten" className="text-sm font-semibold text-ink/50 hover:text-ink">← Mijn clienten</Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">{client.full_name || client.email}</h1>
-          <p className="mt-1 text-sm text-brand/50">{client.email}</p>
+          <h1 className="text-3xl font-black text-ink">{client.full_name || client.email}</h1>
+          <p className="mt-1 text-sm text-ink/50">{client.email}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Link href="/coach#boeken" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Sessie boeken</Link>
-          <Link href={`/coach/berichten?client=${client.id}`} className="rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">Bericht sturen</Link>
+          <Link href={`/coach/berichten?client=${client.id}`} className="rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent">Bericht sturen</Link>
         </div>
       </div>
 
@@ -80,16 +80,16 @@ export default async function CoachClientDetail({ params }) {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
         {/* Sessions */}
-        <section className="rounded-3xl border border-borderc bg-white p-6">
-          <h2 className="font-black text-brand">Sessies</h2>
+        <section className="rounded-3xl border border-borderc bg-surface p-6">
+          <h2 className="font-black text-ink">Sessies</h2>
           {upcoming.length > 0 && (
             <div className="mt-3">
               <p className="text-xs font-bold uppercase tracking-wide text-lav">Aankomend</p>
               <div className="mt-2 space-y-1.5">
                 {upcoming.map((b) => (
                   <div key={b.id} className="flex items-center justify-between rounded-xl bg-accent/5 px-4 py-2.5 text-sm">
-                    <span className="font-semibold capitalize text-brand">{fmt(b.starts_at)}</span>
-                    <span className="text-brand/50">{b.services?.name} · {b.persons}p</span>
+                    <span className="font-semibold capitalize text-ink">{fmt(b.starts_at)}</span>
+                    <span className="text-ink/50">{b.services?.name} · {b.persons}p</span>
                   </div>
                 ))}
               </div>
@@ -98,13 +98,13 @@ export default async function CoachClientDetail({ params }) {
           <div className="mt-3">
             <p className="text-xs font-bold uppercase tracking-wide text-lav">Verleden</p>
             {past.length === 0 ? (
-              <p className="mt-2 text-sm text-brand/50">Nog geen afgeronde sessies.</p>
+              <p className="mt-2 text-sm text-ink/50">Nog geen afgeronde sessies.</p>
             ) : (
               <div className="mt-2 space-y-1.5">
                 {past.slice(0, 12).map((b) => (
                   <div key={b.id} className="flex items-center justify-between rounded-xl bg-paper px-4 py-2.5 text-sm">
-                    <span className="capitalize text-brand/70">{fmt(b.starts_at)}</span>
-                    <span className="text-brand/40">{b.services?.name}</span>
+                    <span className="capitalize text-ink/70">{fmt(b.starts_at)}</span>
+                    <span className="text-ink/40">{b.services?.name}</span>
                   </div>
                 ))}
               </div>
@@ -114,9 +114,9 @@ export default async function CoachClientDetail({ params }) {
 
         <div className="space-y-6">
           {/* Private note */}
-          <section className="rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Privé-notitie</h2>
-            <p className="mt-1 text-xs text-brand/50">Alleen jij ziet dit. Bv. doelen, blessures, voorkeuren.</p>
+          <section className="rounded-3xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Privé-notitie</h2>
+            <p className="mt-1 text-xs text-ink/50">Alleen jij ziet dit. Bv. doelen, blessures, voorkeuren.</p>
             <ActionForm action={coachSaveClientNote} success="Notitie opgeslagen ✓" className="mt-3">
               <input type="hidden" name="clientId" value={client.id} />
               <textarea name="body" rows={5} defaultValue={note?.body || ""} placeholder="Notities over deze client…" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
@@ -125,9 +125,9 @@ export default async function CoachClientDetail({ params }) {
           </section>
 
           {/* Feedback to the client (W3) — the client sees this under /training + gets a notification. */}
-          <section className="rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Feedback aan client 💬</h2>
-            <p className="mt-1 text-xs text-brand/50">Dit ziet de client wél — bv. “top PR!” of “let op je vorm bij squats”.</p>
+          <section className="rounded-3xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Feedback aan client 💬</h2>
+            <p className="mt-1 text-xs text-ink/50">Dit ziet de client wél — bv. “top PR!” of “let op je vorm bij squats”.</p>
             <ActionForm action={coachGiveFeedback} success="Feedback verstuurd ✓" className="mt-3">
               <input type="hidden" name="clientId" value={client.id} />
               <textarea name="body" rows={3} placeholder="Schrijf feedback voor je client…" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
@@ -137,8 +137,8 @@ export default async function CoachClientDetail({ params }) {
               <div className="mt-4 space-y-2 border-t border-borderc pt-3">
                 {feedback.map((f) => (
                   <div key={f.id} className="rounded-xl bg-paper px-3 py-2 text-sm">
-                    <p className="text-brand/80">{f.body}</p>
-                    <p className="mt-0.5 text-[10px] text-brand/40">{fmtDay(f.created_at)}</p>
+                    <p className="text-ink/80">{f.body}</p>
+                    <p className="mt-0.5 text-[10px] text-ink/40">{fmtDay(f.created_at)}</p>
                   </div>
                 ))}
               </div>
@@ -146,9 +146,9 @@ export default async function CoachClientDetail({ params }) {
           </section>
 
           {/* Payment requests (Batch 3.6) */}
-          <section className="rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Betaalverzoek</h2>
-            <p className="mt-1 text-xs text-brand/50">Stuur een verzoek — je client betaalt via de app (Stripe). {link.price_cents ? `Afgesproken tarief: ${euro(link.price_cents)}.` : ""}</p>
+          <section className="rounded-3xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Betaalverzoek</h2>
+            <p className="mt-1 text-xs text-ink/50">Stuur een verzoek — je client betaalt via de app (Stripe). {link.price_cents ? `Afgesproken tarief: ${euro(link.price_cents)}.` : ""}</p>
             <ActionForm action={sendCoachPaymentRequest} success="Betaalverzoek verstuurd ✓" className="mt-3 flex flex-wrap items-end gap-2">
               <input type="hidden" name="clientId" value={client.id} />
               <label className="block">
@@ -165,13 +165,13 @@ export default async function CoachClientDetail({ params }) {
               <div className="mt-4 space-y-2 border-t border-borderc pt-3">
                 {reqs.map((r) => (
                   <div key={r.id} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-brand/70">{euro(r.amount_cents)} · {r.description || "PT"} <span className="text-xs text-brand/40">{fmtDay(r.created_at)}</span></span>
+                    <span className="text-ink/70">{euro(r.amount_cents)} · {r.description || "PT"} <span className="text-xs text-ink/40">{fmtDay(r.created_at)}</span></span>
                     <span className="flex items-center gap-2">
-                      <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold " + (r.status === "paid" ? "bg-accent/15 text-accentdark" : r.status === "cancelled" ? "bg-paper text-brand/40" : "bg-amber-100 text-amber-700")}>{r.status === "paid" ? "betaald" : r.status === "cancelled" ? "geannuleerd" : "open"}</span>
+                      <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold " + (r.status === "paid" ? "bg-accent/15 text-accentdark" : r.status === "cancelled" ? "bg-paper text-ink/40" : "bg-amber-100 text-amber-700")}>{r.status === "paid" ? "betaald" : r.status === "cancelled" ? "geannuleerd" : "open"}</span>
                       {r.status === "pending" && (
                         <ActionForm action={cancelCoachPaymentRequest}>
                           <input type="hidden" name="id" value={r.id} />
-                          <button className="text-xs font-bold text-brand/40 hover:text-red-500">annuleer</button>
+                          <button className="text-xs font-bold text-ink/40 hover:text-red-500">annuleer</button>
                         </ActionForm>
                       )}
                     </span>
@@ -188,10 +188,10 @@ export default async function CoachClientDetail({ params }) {
 
 function Mini({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className="mt-2 text-2xl font-black text-brand">{value}</p>
-      {hint && <p className="mt-1 text-xs text-brand/45">{hint}</p>}
+      <p className="mt-2 text-2xl font-black text-ink">{value}</p>
+      {hint && <p className="mt-1 text-xs text-ink/45">{hint}</p>}
     </div>
   );
 }

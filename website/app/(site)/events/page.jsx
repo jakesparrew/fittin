@@ -61,9 +61,9 @@ export default async function EventsPage() {
 
       <section className="mx-auto max-w-4xl px-5 py-14">
         {list.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
-            <p className="font-semibold text-brand/70">Er staan nog geen events gepland.</p>
-            <p className="mt-1 text-sm text-brand/50">Hou je account in de gaten — nieuwe events verschijnen hier en in je community-feed.</p>
+          <div className="rounded-3xl border border-dashed border-borderc bg-surface p-10 text-center">
+            <p className="font-semibold text-ink/70">Er staan nog geen events gepland.</p>
+            <p className="mt-1 text-sm text-ink/50">Hou je account in de gaten — nieuwe events verschijnen hier en in je community-feed.</p>
             <Link href="/boeken" className="mt-5 inline-block rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Reserveer intussen een sessie</Link>
           </div>
         ) : (
@@ -72,7 +72,7 @@ export default async function EventsPage() {
               const taken = (e.event_signups || []).length;
               const spots = e.capacity ? Math.max(0, e.capacity - taken) : null;
               return (
-                <div key={e.id} className="overflow-hidden rounded-3xl border border-borderc bg-white md:flex">
+                <div key={e.id} className="overflow-hidden rounded-3xl border border-borderc bg-surface md:flex">
                   {e.image_url && (
                     <div className="md:w-56 md:shrink-0">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -81,11 +81,11 @@ export default async function EventsPage() {
                   )}
                   <div className="flex-1 p-6">
                     <p className="text-xs font-bold uppercase tracking-wide text-accentdark">{fmtLong(e.starts_at)}</p>
-                    <h2 className="mt-1 text-xl font-black text-brand">{e.title}</h2>
-                    {e.description && <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-brand/65">{e.description}</p>}
+                    <h2 className="mt-1 text-xl font-black text-ink">{e.title}</h2>
+                    {e.description && <p className="mt-2 line-clamp-3 text-sm leading-relaxed text-ink/65">{e.description}</p>}
                     <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold">
-                      <span className="rounded-full bg-paper px-3 py-1 text-brand/70">{euro(e.price_cents)}</span>
-                      {spots !== null && <span className="rounded-full bg-paper px-3 py-1 text-brand/70">{spots > 0 ? `${spots} plaatsen vrij` : "Volzet"}</span>}
+                      <span className="rounded-full bg-paper px-3 py-1 text-ink/70">{euro(e.price_cents)}</span>
+                      {spots !== null && <span className="rounded-full bg-paper px-3 py-1 text-ink/70">{spots > 0 ? `${spots} plaatsen vrij` : "Volzet"}</span>}
                     </div>
                     <Link
                       href={user ? "/community" : `/login?next=/community`}

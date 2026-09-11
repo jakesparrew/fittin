@@ -69,11 +69,11 @@ export default function ExerciseMedia({ exercise, className = "", rounded = "rou
   // Branded placeholder when no media is set yet.
   return (
     <div className={`${base} flex flex-col items-center justify-center gap-1 bg-gradient-to-br from-paper to-borderc/40`}>
-      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-brand/25">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-ink/25">
         <path d="m6.5 6.5 11 11" /><path d="m21 21-1-1" /><path d="m3 3 1 1" />
         <path d="m18 22 4-4" /><path d="m2 6 4-4" /><path d="m3 10 7-7" /><path d="m14 21 7-7" />
       </svg>
-      <span className="text-[10px] font-bold uppercase tracking-wider text-brand/30">Demo binnenkort</span>
+      <span className="text-[10px] font-bold uppercase tracking-wider text-ink/30">Demo binnenkort</span>
     </div>
   );
 }

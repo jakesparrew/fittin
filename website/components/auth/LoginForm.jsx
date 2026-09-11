@@ -52,12 +52,12 @@ export default function LoginForm() {
   return (
     <main className="bg-paper">
       <div className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center px-5 py-16">
-        <div className="rounded-3xl border border-borderc bg-white p-8 shadow-sm">
+        <div className="rounded-3xl border border-borderc bg-surface p-8 shadow-sm">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">
             {mode === "login" ? "Welkom terug" : "Word lid"}
           </p>
           <h1 className="mt-2 text-3xl font-black">{mode === "login" ? "Inloggen" : "Account aanmaken"}</h1>
-          <p className="mt-2 text-sm leading-relaxed text-brand/60">
+          <p className="mt-2 text-sm leading-relaxed text-ink/60">
             {mode === "login"
               ? "Log in om de gym te reserveren en je boekingen te beheren."
               : "Registreren is gratis. Je eerste sessie is automatisch gratis bij je eerste boeking."}
@@ -78,7 +78,7 @@ export default function LoginForm() {
           <button
             onClick={handleGoogle}
             disabled={!isSupabaseConfigured}
-            className="mt-6 flex w-full items-center justify-center gap-3 rounded-full border-2 border-borderc bg-white py-3 font-bold text-brand transition hover:border-lav disabled:opacity-40"
+            className="mt-6 flex w-full items-center justify-center gap-3 rounded-full border-2 border-borderc bg-surface py-3 font-bold text-ink transition hover:border-lav disabled:opacity-40"
           >
             <GoogleIcon />
             Verder met Google
@@ -126,7 +126,7 @@ export default function LoginForm() {
             </button>
           </form>
 
-          <p className="mt-5 text-center text-sm text-brand/60">
+          <p className="mt-5 text-center text-sm text-ink/60">
             {mode === "login" ? "Nog geen account?" : "Al een account?"}{" "}
             <button
               onClick={() => setMode(mode === "login" ? "signup" : "login")}
@@ -137,7 +137,7 @@ export default function LoginForm() {
           </p>
         </div>
 
-        <Link href="/" className="mt-6 text-center text-sm font-semibold text-brand/50 hover:text-brand">
+        <Link href="/" className="mt-6 text-center text-sm font-semibold text-ink/50 hover:text-ink">
           ← Terug naar de site
         </Link>
       </div>
@@ -148,10 +148,10 @@ export default function LoginForm() {
 function Field({ label, ...rest }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-bold text-brand">{label}</span>
+      <span className="mb-1 block text-sm font-bold text-ink">{label}</span>
       <input
         {...rest}
-        className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 text-brand outline-none transition focus:border-accent"
+        className="w-full rounded-2xl border-2 border-borderc bg-surface px-4 py-3 text-ink outline-none transition focus:border-accent"
       />
     </label>
   );
@@ -161,14 +161,14 @@ function PasswordField({ autoComplete }) {
   const [show, setShow] = useState(false);
   return (
     <label className="block">
-      <span className="mb-1 block text-sm font-bold text-brand">Wachtwoord</span>
+      <span className="mb-1 block text-sm font-bold text-ink">Wachtwoord</span>
       <div className="relative">
         <input
           name="password"
           type={show ? "text" : "password"}
           autoComplete={autoComplete}
           required
-          className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 pr-12 text-brand outline-none transition focus:border-accent"
+          className="w-full rounded-2xl border-2 border-borderc bg-surface px-4 py-3 pr-12 text-ink outline-none transition focus:border-accent"
         />
         {/* Tikvlak i.p.v. enkel het icoon: 20×20 px haalde het WCAG-minimum van 24×24 niet, op de
             inlogpagina van de hele app. tabIndex={-1} is bewust weg — met het toetsenbord moet je
@@ -177,7 +177,7 @@ function PasswordField({ autoComplete }) {
           type="button"
           onClick={() => setShow((s) => !s)}
           aria-label={show ? "Verberg wachtwoord" : "Toon wachtwoord"}
-          className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-brand/40 transition hover:text-brand focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="absolute right-1 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-full text-ink/40 transition hover:text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
           {show ? (
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19M6.61 6.61A18.45 18.45 0 0 0 1 12s4 8 11 8a9.12 9.12 0 0 0 5.39-1.61" /><line x1="2" y1="2" x2="22" y2="22" /><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" /></svg>

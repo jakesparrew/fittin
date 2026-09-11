@@ -115,10 +115,10 @@ export default async function Abonnementen({ searchParams }) {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">Abonnementen</h1>
-          <p className="mt-1 text-sm text-brand/50">Wie betaalt er maandelijks, wat halen ze eruit, en wie dreigt te vertrekken.</p>
+          <h1 className="text-3xl font-black text-ink">Abonnementen</h1>
+          <p className="mt-1 text-sm text-ink/50">Wie betaalt er maandelijks, wat halen ze eruit, en wie dreigt te vertrekken.</p>
         </div>
-        <Link href="/beheer/leden" className="rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm font-bold text-brand transition hover:border-accent">Alle leden →</Link>
+        <Link href="/beheer/leden" className="rounded-full border-2 border-borderc bg-surface px-4 py-2 text-sm font-bold text-ink transition hover:border-accent">Alle leden →</Link>
       </div>
 
       {/* De ?q=-filter hierboven bestond al, alleen het invoerveld ontbrak: zoeken kon enkel door
@@ -137,7 +137,7 @@ export default async function Abonnementen({ searchParams }) {
       {slapend.length > 0 && (
         <div className="mt-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
           <p className="font-black text-amber-700">⚠ {slapend.length} {slapend.length === 1 ? "abonnee betaalt" : "abonnees betalen"} zonder te trainen</p>
-          <p className="mt-1 text-sm text-brand/70">
+          <p className="mt-1 text-sm text-ink/70">
             Zij betalen € 12 per maand en krijgen er niets voor terug. Dat is het duidelijkste signaal vóór een opzegging —
             en meteen het makkelijkst om te keren met één persoonlijk bericht. {slapend.map((r) => r.member?.full_name).filter(Boolean).join(", ")}.
           </p>
@@ -145,9 +145,9 @@ export default async function Abonnementen({ searchParams }) {
       )}
 
       {verloop.length >= 2 && (
-        <section className="mt-8 rounded-2xl border border-borderc bg-white p-5">
+        <section className="mt-8 rounded-2xl border border-borderc bg-surface p-5">
           <h2 className="text-xs font-black uppercase tracking-widest text-lav">Abonnees door de tijd</h2>
-          <p className="mt-1 text-xs text-brand/45">
+          <p className="mt-1 text-xs text-ink/45">
             Week per week sinds het eerste abonnement. Stijgt de lijn, dan groeit je vaste inkomen; blijft ze vlak
             terwijl er wel nieuwe bijkomen, dan vertrekt er evenveel als er binnenkomt.
           </p>
@@ -161,7 +161,7 @@ export default async function Abonnementen({ searchParams }) {
       {pastDue.length > 0 && <Tabel titel={`Betaling mislukt (${pastDue.length})`} rijen={pastDue} />}
       {gestopt.length > 0 && <Tabel titel={`Gestopt (${gestopt.length})`} rijen={gestopt} gestopt />}
 
-      <p className="mt-8 text-xs leading-relaxed text-brand/40">
+      <p className="mt-8 text-xs leading-relaxed text-ink/40">
         <b>Hoe "voordeel" berekend wordt:</b> met abonnement betaal je € 12 per maand (één sessie inbegrepen) plus € 12 per
         extra sessie; zonder abonnement € 15 per sessie. Vanaf één sessie per maand is het abonnement dus altijd voordeliger.
         Boekt iemand een maand niets, dan kost het abonnement hem € 12 zonder tegenprestatie — dat trekt dit cijfer omlaag.
@@ -172,10 +172,10 @@ export default async function Abonnementen({ searchParams }) {
 
 function Stat({ label, value, hint, danger }) {
   return (
-    <div className={"rounded-2xl border bg-white p-5 " + (danger ? "border-amber-300" : "border-borderc")}>
+    <div className={"rounded-2xl border bg-surface p-5 " + (danger ? "border-amber-300" : "border-borderc")}>
       <p className="text-xs font-bold uppercase tracking-wide text-lav">{label}</p>
-      <p className={"mt-1 text-3xl font-black " + (danger ? "text-amber-600" : "text-brand")}>{value}</p>
-      {hint && <p className="mt-0.5 text-xs text-brand/50">{hint}</p>}
+      <p className={"mt-1 text-3xl font-black " + (danger ? "text-amber-600" : "text-ink")}>{value}</p>
+      {hint && <p className="mt-0.5 text-xs text-ink/50">{hint}</p>}
     </div>
   );
 }
@@ -185,7 +185,7 @@ function Tabel({ titel, rijen, gestopt = false }) {
   return (
     <section className="mt-8">
       <h2 className="text-xs font-black uppercase tracking-widest text-lav">{titel}</h2>
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-white">
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-surface">
         <table className="w-full min-w-[820px] text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -204,7 +204,7 @@ function Tabel({ titel, rijen, gestopt = false }) {
               return (
                 <tr key={r.user_id} className={stil ? "bg-amber-50/60" : ""}>
                   <td className="px-4 py-3">
-                    <p className="font-bold text-brand">{r.member?.full_name || "Lid"}</p>
+                    <p className="font-bold text-ink">{r.member?.full_name || "Lid"}</p>
                     {/* Een slapende abonnee betaalt zonder te trainen — de beste opzeg-voorspeller.
                         Het inzicht en de handeling horen op dezelfde rij: hier terughalen, niet
                         eerst doorklikken naar een andere lijst. */}
@@ -217,23 +217,23 @@ function Tabel({ titel, rijen, gestopt = false }) {
                         ]}
                       />
                     )}
-                    <p className="text-xs text-brand/40">{r.member?.email}</p>
+                    <p className="text-xs text-ink/40">{r.member?.email}</p>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-brand/70">
+                  <td className="whitespace-nowrap px-4 py-3 text-ink/70">
                     {dag(r.started_at)}
-                    <span className="block text-xs text-brand/40">{r.maanden.toFixed(1)} maanden</span>
+                    <span className="block text-xs text-ink/40">{r.maanden.toFixed(1)} maanden</span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
-                    <span className={"font-black " + (r.perMaand >= 2 ? "text-accentdark" : r.perMaand >= 1 ? "text-brand" : "text-amber-600")}>
+                    <span className={"font-black " + (r.perMaand >= 2 ? "text-accentdark" : r.perMaand >= 1 ? "text-ink" : "text-amber-600")}>
                       {r.perMaand.toFixed(1)}×
                     </span>
-                    <span className="block text-xs text-brand/40">per maand · {r.sessies} totaal</span>
+                    <span className="block text-xs text-ink/40">per maand · {r.sessies} totaal</span>
                   </td>
                   <td className="whitespace-nowrap px-4 py-3">
                     {r.dagenStil == null ? (
                       <span className="font-bold text-amber-600">nooit geboekt</span>
                     ) : (
-                      <span className={r.dagenStil > 21 ? "font-bold text-amber-600" : "text-brand/70"}>
+                      <span className={r.dagenStil > 21 ? "font-bold text-amber-600" : "text-ink/70"}>
                         {r.dagenStil === 0 ? "vandaag" : r.dagenStil + " dagen geleden"}
                       </span>
                     )}
@@ -243,14 +243,14 @@ function Tabel({ titel, rijen, gestopt = false }) {
                       {r.voordeel > 0 ? "+" : ""}{euro(r.voordeel)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-brand/70">{euro(r.betaald)}</td>
+                  <td className="whitespace-nowrap px-4 py-3 text-ink/70">{euro(r.betaald)}</td>
                   <td className="whitespace-nowrap px-4 py-3">
                     {gestopt ? (
-                      <span className="rounded-full bg-paper px-2.5 py-1 text-xs font-bold capitalize text-brand/50">{r.status}</span>
+                      <span className="rounded-full bg-paper px-2.5 py-1 text-xs font-bold capitalize text-ink/50">{r.status}</span>
                     ) : r.cancel_at_period_end ? (
                       <span className="text-xs font-bold text-amber-600">stopt {dag(r.current_period_end)}</span>
                     ) : (
-                      <span className="text-xs text-brand/60">{dag(r.current_period_end)}</span>
+                      <span className="text-xs text-ink/60">{dag(r.current_period_end)}</span>
                     )}
                   </td>
                 </tr>

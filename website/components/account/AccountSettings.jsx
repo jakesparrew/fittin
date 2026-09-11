@@ -33,22 +33,22 @@ export default function AccountSettings({ userId, initialName = "", initialPhone
 
   return (
     <section className="mt-12 grid gap-6 md:grid-cols-2">
-      <form onSubmit={saveProfile} className="rounded-3xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Profiel</h2>
+      <form onSubmit={saveProfile} className="rounded-3xl border border-borderc bg-surface p-6">
+        <h2 className="font-black text-ink">Profiel</h2>
         <label className="mt-4 block">
-          <span className="mb-1 block text-sm font-bold text-brand">Naam</span>
+          <span className="mb-1 block text-sm font-bold text-ink">Naam</span>
           <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-2xl border-2 border-borderc px-4 py-3 outline-none focus:border-accent" />
         </label>
         <label className="mt-3 block">
-          <span className="mb-1 block text-sm font-bold text-brand">Telefoon</span>
+          <span className="mb-1 block text-sm font-bold text-ink">Telefoon</span>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+32…" className="w-full rounded-2xl border-2 border-borderc px-4 py-3 outline-none focus:border-accent" />
         </label>
         {msg && <p className="mt-3 text-sm font-semibold text-accentdark">{msg}</p>}
         <button className="mt-4 rounded-full bg-brand px-6 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Opslaan</button>
       </form>
 
-      <form onSubmit={savePassword} className="rounded-3xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Wachtwoord wijzigen</h2>
+      <form onSubmit={savePassword} className="rounded-3xl border border-borderc bg-surface p-6">
+        <h2 className="font-black text-ink">Wachtwoord wijzigen</h2>
         <div className="mt-4">
           <PasswordInput value={pw} onChange={setPw} placeholder="Nieuw wachtwoord" autoComplete="new-password" />
         </div>

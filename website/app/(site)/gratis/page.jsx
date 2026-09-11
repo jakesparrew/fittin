@@ -71,7 +71,7 @@ export default async function GratisLanding({ searchParams }) {
   } catch { /* zonder cijfer verder */ }
 
   return (
-    <main className="bg-white">
+    <main className="bg-surface">
       {/* ── Hero — message match met de advertentie ── */}
       <section className="relative overflow-hidden bg-brand text-white">
         <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent/20 blur-3xl" />
@@ -109,8 +109,8 @@ export default async function GratisLanding({ searchParams }) {
 
       {/* ── Sociale bewijskracht: één echt cijfer ── */}
       {ledenTekst && (
-        <div className="border-b border-borderc bg-white">
-          <p className="mx-auto max-w-6xl px-5 py-4 text-center text-sm font-bold text-brand/70"
+        <div className="border-b border-borderc bg-surface">
+          <p className="mx-auto max-w-6xl px-5 py-4 text-center text-sm font-bold text-ink/70"
              dangerouslySetInnerHTML={{ __html: `★ ${ledenTekst}` }} />
         </div>
       )}
@@ -120,12 +120,12 @@ export default async function GratisLanding({ searchParams }) {
         <div className="mx-auto max-w-6xl px-5 py-20">
           <div className="grid gap-5 md:grid-cols-3">
             {BEATS.map(([titel, tekst], i) => (
-              <div key={titel} className="flex flex-col rounded-3xl border border-borderc bg-white p-7">
+              <div key={titel} className="flex flex-col rounded-3xl border border-borderc bg-surface p-7">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-accent/15 text-lg font-black text-accentdark">
                   {i + 1}
                 </span>
-                <h2 className="mt-5 text-xl font-black text-brand">{titel}</h2>
-                <p className="mt-2 text-sm leading-relaxed text-brand/60">{tekst}</p>
+                <h2 className="mt-5 text-xl font-black text-ink">{titel}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-ink/60">{tekst}</p>
               </div>
             ))}
           </div>
@@ -136,7 +136,7 @@ export default async function GratisLanding({ searchParams }) {
       <section>
         <div className="mx-auto max-w-6xl px-5 py-20">
           <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">De zaal</p>
-          <h2 className="mt-3 max-w-xl text-3xl font-black text-brand md:text-4xl">
+          <h2 className="mt-3 max-w-xl text-3xl font-black text-ink md:text-4xl">
             Dit is waar je traint. En tijdens jouw uur staat er niemand anders.
           </h2>
           <GymFotos slugs={["zaal-logo", "dumbbells", "training-logo"]} className="mt-10" />
@@ -163,15 +163,15 @@ export default async function GratisLanding({ searchParams }) {
       {/* ── FAQ: de twijfels wegnemen vóór de laatste vraag ── */}
       <section>
         <div className="mx-auto max-w-3xl px-5 py-20">
-          <h2 className="text-3xl font-black text-brand md:text-4xl">Even goed om te weten</h2>
+          <h2 className="text-3xl font-black text-ink md:text-4xl">Even goed om te weten</h2>
           <div className="mt-8 divide-y divide-borderc border-y border-borderc">
             {FAQ.map(([vraag, antwoord]) => (
               <details key={vraag} className="group py-4">
-                <summary className="flex cursor-pointer items-center justify-between gap-4 text-lg font-black text-brand marker:content-['']">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 text-lg font-black text-ink marker:content-['']">
                   {vraag}
                   <span className="shrink-0 text-2xl font-light text-accentdark transition group-open:rotate-45">+</span>
                 </summary>
-                <p className="mt-3 text-brand/65 leading-relaxed">{antwoord}</p>
+                <p className="mt-3 text-ink/65 leading-relaxed">{antwoord}</p>
               </details>
             ))}
           </div>
@@ -181,8 +181,8 @@ export default async function GratisLanding({ searchParams }) {
       {/* ── Slot-CTA + geruststelling ── */}
       <section className="bg-paper">
         <div className="mx-auto max-w-3xl px-5 py-20 text-center">
-          <h2 className="text-3xl font-black text-brand md:text-4xl">Klaar om het te proberen?</h2>
-          <p className="mx-auto mt-3 max-w-md text-brand/60">
+          <h2 className="text-3xl font-black text-ink md:text-4xl">Klaar om het te proberen?</h2>
+          <p className="mx-auto mt-3 max-w-md text-ink/60">
             Je eerste uur is gratis. Bevalt het niet, dan heb je niets verloren — geen lidgeld, geen
             verplichting.
           </p>
@@ -192,7 +192,7 @@ export default async function GratisLanding({ searchParams }) {
           >
             Boek je gratis uur →
           </Link>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-semibold text-brand/50">
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-semibold text-ink/50">
             <span>📍 Aannemersstraat 186, 9040 Gent</span>
             <span>🅿️ Gratis parking</span>
             <span>🕕 Elke dag 6–23u</span>

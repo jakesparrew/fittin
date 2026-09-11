@@ -30,15 +30,15 @@ export default function Feed({ posts = [], me, buddyIds = [], isCoach = false })
   ];
 
   return (
-    <section className="rounded-3xl border border-borderc bg-white p-6">
+    <section className="rounded-3xl border border-borderc bg-surface p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-black text-brand">Feed</h2>
-          <p className="mt-1 text-sm text-brand/60">Deel je trainingen, geef elkaar kudos en blijf gemotiveerd.</p>
+          <h2 className="font-black text-ink">Feed</h2>
+          <p className="mt-1 text-sm text-ink/60">Deel je trainingen, geef elkaar kudos en blijf gemotiveerd.</p>
         </div>
         <div className="inline-flex rounded-full border border-borderc p-1 text-xs font-bold">
           {TABS.map((t) => (
-            <button key={t.v} onClick={() => setTab(t.v)} className={"rounded-full px-3 py-1.5 transition " + (tab === t.v ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>{t.l}</button>
+            <button key={t.v} onClick={() => setTab(t.v)} className={"rounded-full px-3 py-1.5 transition " + (tab === t.v ? "bg-brand text-white" : "text-ink/60 hover:text-ink")}>{t.l}</button>
           ))}
         </div>
       </div>
@@ -47,7 +47,7 @@ export default function Feed({ posts = [], me, buddyIds = [], isCoach = false })
 
       <div className="mt-5 space-y-4">
         {filtered.length === 0 && (
-          <p className="rounded-2xl bg-paper p-6 text-center text-sm text-brand/50">
+          <p className="rounded-2xl bg-paper p-6 text-center text-sm text-ink/50">
             {tab === "buddies" ? "Nog niks van je buddies. Voeg buddies toe of post zelf iets!" : tab === "coaches" ? "Nog geen coach-tips." : "Nog niks te zien. Wees de eerste — boek een sessie of post iets!"}
           </p>
         )}
@@ -69,10 +69,10 @@ function Composer({ isCoach }) {
 
   return (
     <form ref={formRef} action={action} className="mt-5 rounded-2xl border border-borderc bg-paper/50 p-4">
-      <textarea name="body" rows={2} placeholder={isCoach ? "Deel een tip, aankondiging of motivatie met de community…" : "Hoe ging je training? Deel een update…"} className="w-full resize-none rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm" />
+      <textarea name="body" rows={2} placeholder={isCoach ? "Deel een tip, aankondiging of motivatie met de community…" : "Hoe ging je training? Deel een update…"} className="w-full resize-none rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm" />
       <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
         {isCoach && (
-          <label className="flex items-center gap-1.5 text-xs font-bold text-brand/60">
+          <label className="flex items-center gap-1.5 text-xs font-bold text-ink/60">
             <input type="checkbox" name="kind" value="coach_tip" className="h-4 w-4 accent-[#5fda6b]" /> Als coach-tip
           </label>
         )}
@@ -87,22 +87,22 @@ function PostCard({ post, me }) {
   const mine = post.author_id === me.id;
 
   return (
-    <article className="rounded-2xl border border-borderc bg-white p-4">
+    <article className="rounded-2xl border border-borderc bg-surface p-4">
       <div className="flex items-start gap-3">
         <Avatar name={post.author_name} url={post.author_photo} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <span className="font-bold text-brand">{post.author_name}</span>
-            {badge && <span className="rounded-full bg-paper px-2 py-0.5 text-[10px] font-bold text-brand/60">{badge.icon} {badge.label}</span>}
-            <span className="text-xs text-brand/40">· {fmt(post.created_at)}</span>
+            <span className="font-bold text-ink">{post.author_name}</span>
+            {badge && <span className="rounded-full bg-paper px-2 py-0.5 text-[10px] font-bold text-ink/60">{badge.icon} {badge.label}</span>}
+            <span className="text-xs text-ink/40">· {fmt(post.created_at)}</span>
             {mine && (
               <form action={deletePost} className="ml-auto">
                 <input type="hidden" name="id" value={post.id} />
-                <button className="text-xs text-brand/30 hover:text-red-500" title="Verwijder">×</button>
+                <button className="text-xs text-ink/30 hover:text-red-500" title="Verwijder">×</button>
               </form>
             )}
           </div>
-          {post.body && <p className={"mt-1 text-sm " + (post.kind === "activity" || post.kind === "achievement" ? "font-semibold text-brand/80" : "text-brand/80")}>{post.body}</p>}
+          {post.body && <p className={"mt-1 text-sm " + (post.kind === "activity" || post.kind === "achievement" ? "font-semibold text-ink/80" : "text-ink/80")}>{post.body}</p>}
           {post.image_url && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={post.image_url} alt="" loading="lazy" decoding="async" className="mt-3 max-h-96 w-full rounded-xl object-cover" />
@@ -112,7 +112,7 @@ function PostCard({ post, me }) {
           <div className="mt-3 flex items-center gap-4 text-sm">
             <form action={toggleKudos}>
               <input type="hidden" name="postId" value={post.id} />
-              <button className={"inline-flex items-center gap-1.5 font-bold transition " + (post.i_kudosed ? "text-accentdark" : "text-brand/50 hover:text-brand")}>
+              <button className={"inline-flex items-center gap-1.5 font-bold transition " + (post.i_kudosed ? "text-accentdark" : "text-ink/50 hover:text-ink")}>
                 <span className="text-base">👏</span> {post.kudos > 0 ? post.kudos : ""} Kudos
               </button>
             </form>

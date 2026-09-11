@@ -37,14 +37,14 @@ export default function PlanBeheer({ status, toestemming }) {
     });
   }
 
-  const knop = "rounded-full border-2 border-borderc bg-white px-4 py-2 text-xs font-bold text-brand transition hover:border-lav disabled:opacity-50";
+  const knop = "rounded-full border-2 border-borderc bg-surface px-4 py-2 text-xs font-bold text-ink transition hover:border-lav disabled:opacity-50";
 
   return (
-    <details className="rounded-3xl border border-borderc bg-white p-5">
-      <summary className="cursor-pointer text-sm font-black text-brand">Je plan en je gegevens</summary>
+    <details className="rounded-3xl border border-borderc bg-surface p-5">
+      <summary className="cursor-pointer text-sm font-black text-ink">Je plan en je gegevens</summary>
 
       <div className="mt-4 border-t border-borderc pt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Je plan</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Je plan</p>
         <p className="mt-1 text-sm leading-relaxed text-ink-soft">
           {status === "gepauzeerd"
             ? "Je plan staat op pauze. Er gaat niets meer open en je krijgt geen zondagmail tot je hervat."
@@ -67,13 +67,13 @@ export default function PlanBeheer({ status, toestemming }) {
             </button>
           ) : (
             <span className="anim-in flex flex-wrap items-center gap-2 rounded-2xl bg-paper px-3 py-2">
-              <span className="text-xs text-brand/70">Stoppen kan niet ongedaan gemaakt worden.</span>
+              <span className="text-xs text-ink/70">Stoppen kan niet ongedaan gemaakt worden.</span>
               <button type="button" disabled={bezig} onClick={() => zet("gestopt")}
                 className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-50">
                 Ja, stop mijn plan
               </button>
               <button type="button" disabled={bezig} onClick={() => setStoppen(false)}
-                className="text-xs font-bold text-brand/50 underline transition hover:text-brand">
+                className="text-xs font-bold text-ink/50 underline transition hover:text-ink">
                 Toch niet
               </button>
             </span>
@@ -82,7 +82,7 @@ export default function PlanBeheer({ status, toestemming }) {
       </div>
 
       <div className="mt-5 border-t border-borderc pt-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Je lichaamsgegevens</p>
+        <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Je lichaamsgegevens</p>
         <p className="mt-1 text-sm leading-relaxed text-ink-soft">
           {toestemming
             ? "Je coach mag je leeftijd, gewicht, lengte en wat je wil vermijden gebruiken om je schema af te stemmen. Je kan dat hier intrekken — dan werkt je coach verder zonder die informatie, en maakt hij geen weekmenu meer."
@@ -94,7 +94,7 @@ export default function PlanBeheer({ status, toestemming }) {
         </button>
       </div>
 
-      {melding && <p className="mt-4 rounded-xl bg-paper px-4 py-3 text-sm font-bold text-brand">{melding}</p>}
+      {melding && <p className="mt-4 rounded-xl bg-paper px-4 py-3 text-sm font-bold text-ink">{melding}</p>}
     </details>
   );
 }

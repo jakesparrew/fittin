@@ -24,8 +24,8 @@ export default async function OefeningenPage() {
     <main className="bg-paper min-h-screen">
       <div className="mx-auto max-w-5xl px-5 py-14">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Oefeningen</p>
-        <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Oefeningenbibliotheek</h1>
-        <p className="mt-2 max-w-2xl text-brand/60">
+        <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Oefeningenbibliotheek</h1>
+        <p className="mt-2 max-w-2xl text-ink/60">
           Bekijk hoe je elke oefening correct uitvoert — met demo, doelspieren en duidelijke uitleg.
           Je coach stelt hiermee jouw persoonlijke schema samen.
         </p>
@@ -33,8 +33,8 @@ export default async function OefeningenPage() {
           {all.length > 0 ? (
             <ExerciseLibrary initial={initial} total={all.length} categories={categories} onSearch={searchLibrary} onFavorites={myFavorites} />
           ) : (
-            <div className="rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
-              <p className="font-semibold text-brand/70">De bibliotheek wordt binnenkort gevuld.</p>
+            <div className="rounded-3xl border border-dashed border-borderc bg-surface p-10 text-center">
+              <p className="font-semibold text-ink/70">De bibliotheek wordt binnenkort gevuld.</p>
             </div>
           )}
         </div>
@@ -49,7 +49,7 @@ export default async function OefeningenPage() {
             <p className="text-xs font-bold uppercase tracking-wide text-lav">Alle spiergroepen</p>
             <div className="mt-2 flex flex-wrap gap-2">
               {hubCats.map((c) => (
-                <Link key={c} href={`/oefeningen/categorie/${c}`} className="rounded-full border border-borderc bg-white px-4 py-2 text-sm font-bold capitalize text-brand transition hover:border-accent hover:text-accentdark">
+                <Link key={c} href={`/oefeningen/categorie/${c}`} className="rounded-full border border-borderc bg-surface px-4 py-2 text-sm font-bold capitalize text-ink transition hover:border-accent hover:text-accentdark">
                   {catLabel(c)}
                 </Link>
               ))}

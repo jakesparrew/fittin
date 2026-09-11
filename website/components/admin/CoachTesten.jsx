@@ -24,12 +24,12 @@ export default function CoachTesten({ email }) {
   }
 
   return (
-    <section className="mt-6 rounded-2xl border border-borderc bg-white p-5">
-      <h2 className="font-display text-lg font-black text-brand">Zelf uitproberen</h2>
+    <section className="mt-6 rounded-2xl border border-borderc bg-surface p-5">
+      <h2 className="font-display text-lg font-black text-ink">Zelf uitproberen</h2>
       <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-soft">
         De zondagmail vertrekt pas als een week zes dagen loopt, en de deurcodemail hangt aan een
         echte boeking. Deze twee knoppen sturen dezelfde sjablonen met verzonnen cijfers naar{" "}
-        <b className="text-brand">{email}</b> — geen modelaanroep, geen kosten, en er verandert niets
+        <b className="text-ink">{email}</b> — geen modelaanroep, geen kosten, en er verandert niets
         aan het dossier van een lid.
       </p>
 
@@ -39,18 +39,18 @@ export default function CoachTesten({ email }) {
           {bezig && welke === "week" ? "Bezig…" : "Stuur mij de drie zondagmails"}
         </button>
         <button type="button" disabled={bezig} onClick={() => doe("deur", stuurTestDeurcodeMail)}
-          className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent disabled:opacity-50">
+          className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent disabled:opacity-50">
           {bezig && welke === "deur" ? "Bezig…" : "Stuur mij de deurcodemail met workout"}
         </button>
       </div>
 
       {melding && (
-        <p className={"mt-3 rounded-xl px-4 py-3 text-sm font-bold " + (melding.fout ? "bg-red-50 text-red-700" : "bg-accent/10 text-brand")}>
+        <p className={"mt-3 rounded-xl px-4 py-3 text-sm font-bold " + (melding.fout ? "bg-red-50 text-red-700" : "bg-accent/10 text-ink")}>
           {melding.fout || melding.ok}
         </p>
       )}
 
-      <p className="mt-3 text-xs leading-relaxed text-brand/40">
+      <p className="mt-3 text-xs leading-relaxed text-ink/40">
         Ze staan daarna in <b>Inbox → Automatisch</b> onder soort <code>coaching_test</code>. Wil je
         de intake zelf opnieuw doorlopen, stop dan je eigen plan via &ldquo;Je plan en je
         gegevens&rdquo; op /coaching — daarna staat de wizard er weer, met je antwoorden voorgevuld.

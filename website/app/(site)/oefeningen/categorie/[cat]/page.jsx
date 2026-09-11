@@ -43,31 +43,31 @@ export default async function CategoryHub({ params }) {
       <script {...jsonLdScript(crumbs)} />
       <div className="mx-auto max-w-5xl px-5 py-14">
         {/* Breadcrumb */}
-        <nav className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-brand/45">
-          <Link href="/oefeningen" className="hover:text-brand">Oefeningen</Link>
+        <nav className="flex flex-wrap items-center gap-1.5 text-xs font-semibold text-ink/45">
+          <Link href="/oefeningen" className="hover:text-ink">Oefeningen</Link>
           <span>›</span>
-          <span className="text-brand/70">{catLabel(cat)}</span>
+          <span className="text-ink/70">{catLabel(cat)}</span>
         </nav>
 
-        <h1 className="mt-3 text-3xl font-black text-brand md:text-4xl">{catTitle(cat)}</h1>
-        <p className="mt-2 max-w-2xl text-brand/60">{catIntro(cat)}</p>
-        <p className="mt-3 text-sm font-bold text-brand/40">{list.length} oefeningen</p>
+        <h1 className="mt-3 text-3xl font-black text-ink md:text-4xl">{catTitle(cat)}</h1>
+        <p className="mt-2 max-w-2xl text-ink/60">{catIntro(cat)}</p>
+        <p className="mt-3 text-sm font-bold text-ink/40">{list.length} oefeningen</p>
 
         {/* Sibling category links (crawlable topical cluster) */}
         <div className="mt-5 flex flex-wrap gap-2">
-          <Link href="/oefeningen" className="rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-brand/60 transition hover:text-brand">Alle oefeningen</Link>
+          <Link href="/oefeningen" className="rounded-full bg-surface px-3.5 py-1.5 text-xs font-bold text-ink/60 transition hover:text-ink">Alle oefeningen</Link>
           {["borst", "rug", "schouders", "benen", "armen", "core"].filter((c) => c !== cat).map((c) => (
-            <Link key={c} href={`/oefeningen/categorie/${c}`} className="rounded-full bg-white px-3.5 py-1.5 text-xs font-bold capitalize text-brand/60 transition hover:text-brand">{catLabel(c)}</Link>
+            <Link key={c} href={`/oefeningen/categorie/${c}`} className="rounded-full bg-surface px-3.5 py-1.5 text-xs font-bold capitalize text-ink/60 transition hover:text-ink">{catLabel(c)}</Link>
           ))}
         </div>
 
         <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
           {list.map((ex) => (
-            <Link key={ex.id} href={`/oefeningen/${ex.slug}`} className="group rounded-3xl border border-borderc bg-white p-2 transition hover:-translate-y-0.5 hover:shadow-md">
+            <Link key={ex.id} href={`/oefeningen/${ex.slug}`} className="group rounded-3xl border border-borderc bg-surface p-2 transition hover:-translate-y-0.5 hover:shadow-md">
               <ExerciseMedia exercise={ex} thumb className="aspect-square w-full" rounded="rounded-2xl" />
               <div className="px-2 pb-2 pt-3">
-                <p className="font-black leading-tight text-brand">{ex.name}</p>
-                <p className="mt-1 text-xs text-brand/50">
+                <p className="font-black leading-tight text-ink">{ex.name}</p>
+                <p className="mt-1 text-xs text-ink/50">
                   {(ex.primary_muscles?.[0] || ex.muscle || catLabel(cat)).toString()}
                   {ex.difficulty ? ` · ${DIFF[ex.difficulty] || ex.difficulty}` : ""}
                 </p>
@@ -85,7 +85,7 @@ export default async function CategoryHub({ params }) {
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link href="/boeken" className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Boek je gratis sessie</Link>
-            <Link href="/oefeningen" className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10">Alle oefeningen</Link>
+            <Link href="/oefeningen" className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white transition hover:bg-surface/10">Alle oefeningen</Link>
           </div>
         </div>
       </div>

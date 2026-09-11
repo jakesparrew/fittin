@@ -51,7 +51,7 @@ export default async function CoachLayout({ children }) {
             {owed > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3 bg-amber-500 px-4 py-3 text-white md:px-8">
                 <p className="text-sm font-black md:text-base">⚠️ Openstaand sessietegoed: {owed} {owed === 1 ? "sessie" : "sessies"} · € {owed * 12} te betalen</p>
-                <a href="/coach#tegoed" className="shrink-0 rounded-full bg-white px-4 py-1.5 text-sm font-black text-amber-700 transition hover:bg-white/90">Sessietegoed aanvullen →</a>
+                <a href="/coach#tegoed" className="shrink-0 rounded-full bg-surface px-4 py-1.5 text-sm font-black text-amber-700 transition hover:bg-surface/90">Sessietegoed aanvullen →</a>
               </div>
             )}
           </div>

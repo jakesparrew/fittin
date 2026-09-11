@@ -42,7 +42,7 @@ export default function BottomTabBar() {
   const isActive = (href) => (href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(href + "/"));
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-borderc bg-white/95 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-borderc bg-surface/95 backdrop-blur md:hidden" style={{ paddingBottom: "env(safe-area-inset-bottom)" }}>
       {/* min-w-0 op elk tabblad is hier geen detail: een flex-item krimpt standaard niet onder de
           breedte van zijn langste woord, en "Oefeningen" past met vijf tabs niet op een smal
           scherm — op 320px liep de balk 23px over en werd de laatste tab afgeknipt. Zelfde valkuil
@@ -52,7 +52,7 @@ export default function BottomTabBar() {
           const act = isActive(href);
           return (
             <li key={href} className="min-w-0 flex-1">
-              <Link href={href} className={"relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition " + (act ? "text-accentdark" : "text-brand/55 hover:text-brand")}>
+              <Link href={href} className={"relative flex flex-col items-center gap-0.5 py-2 text-[10px] font-bold transition " + (act ? "text-accentdark" : "text-ink/55 hover:text-ink")}>
                 <span className="relative">
                   <Icon d={ICONS[icon]} />
                   {href === "/account" && unread > 0 && (

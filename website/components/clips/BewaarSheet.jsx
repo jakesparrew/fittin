@@ -65,16 +65,16 @@ export default function BewaarSheet({ folders = [], sluit, na, initieelRuw = "",
   const body = klaar ? (
     <div className="mx-auto max-w-lg text-center">
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-3xl">✓</div>
-      <h2 className="mt-4 text-2xl font-black text-brand">{klaar.alBekend ? "Stond er al" : "Bewaard"}</h2>
+      <h2 className="mt-4 text-2xl font-black text-ink">{klaar.alBekend ? "Stond er al" : "Bewaard"}</h2>
       <p className="mt-2 text-ink-soft">
-        <strong className="text-brand">{klaar.titel}</strong>{" "}
+        <strong className="text-ink">{klaar.titel}</strong>{" "}
         {klaar.alBekend ? "had je al bewaard — je naam en map blijven staan." : "staat in je bibliotheek."}
       </p>
       <div className="mt-7 flex flex-col gap-3">
         <button type="button" onClick={opnieuw} className="rounded-full bg-accent px-6 py-3.5 font-black text-brand transition hover:opacity-90">
           Nog een bewaren
         </button>
-        <a href="/bewaard" className="rounded-full border-2 border-borderc px-6 py-3.5 font-bold text-brand transition hover:border-lav">
+        <a href="/bewaard" className="rounded-full border-2 border-borderc px-6 py-3.5 font-bold text-ink transition hover:border-lav">
           Naar mijn bibliotheek
         </a>
       </div>
@@ -89,11 +89,11 @@ export default function BewaarSheet({ folders = [], sluit, na, initieelRuw = "",
           onChange={(e) => { setRuw(e.target.value); setFout(null); }}
           rows={3}
           placeholder="Plak hier de link van een reel, short of video"
-          className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2.5 text-base text-brand outline-none transition placeholder:text-brand/30 focus:border-accent"
+          className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-ink/30 focus:border-accent"
         />
       </label>
       <div className="mt-2 flex items-center gap-3">
-        <button type="button" onClick={plak} className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-ink-soft transition hover:border-lav hover:text-brand">
+        <button type="button" onClick={plak} className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-ink-soft transition hover:border-lav hover:text-ink">
           Plak van klembord
         </button>
         {gelezen && (
@@ -110,7 +110,7 @@ export default function BewaarSheet({ folders = [], sluit, na, initieelRuw = "",
           onChange={(e) => setTitel(e.target.value)}
           maxLength={120}
           placeholder="bv. Bulgarian split squat"
-          className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2.5 text-base text-brand outline-none transition placeholder:text-brand/30 focus:border-accent"
+          className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-ink/30 focus:border-accent"
         />
       </label>
       <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">
@@ -134,7 +134,7 @@ export default function BewaarSheet({ folders = [], sluit, na, initieelRuw = "",
             maxLength={40}
             autoFocus
             placeholder="bv. Leg day"
-            className="mt-3 w-full rounded-xl border-2 border-borderc bg-white px-3 py-2.5 text-base text-brand outline-none transition placeholder:text-brand/30 focus:border-accent"
+            className="mt-3 w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-ink/30 focus:border-accent"
           />
         )}
       </div>
@@ -158,10 +158,10 @@ export default function BewaarSheet({ folders = [], sluit, na, initieelRuw = "",
   if (ingebed) return body;
 
   return (
-    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Video bewaren">
+    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-surface" role="dialog" aria-modal="true" aria-label="Video bewaren">
       <div className="flex items-center gap-3 border-b border-borderc px-4 py-3">
-        <button type="button" onClick={sluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-brand/50 transition hover:bg-paper hover:text-brand">✕</button>
-        <p className="flex-1 font-black text-brand">Video bewaren</p>
+        <button type="button" onClick={sluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-ink/50 transition hover:bg-paper hover:text-ink">✕</button>
+        <p className="flex-1 font-black text-ink">Video bewaren</p>
         {klaar && <button type="button" onClick={na} className="shrink-0 text-sm font-bold text-accentdark">Klaar</button>}
       </div>
       <div className="flex-1 overflow-y-auto px-5 py-7">{body}</div>
@@ -176,7 +176,7 @@ function Keuze({ actief, op, label }) {
       onClick={op}
       className={
         "rounded-full border-2 px-4 py-2 text-sm font-bold transition " +
-        (actief ? "border-accent bg-accent/10 text-brand" : "border-borderc text-ink-soft hover:border-lav hover:text-brand")
+        (actief ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink-soft hover:border-lav hover:text-ink")
       }
     >
       {label}

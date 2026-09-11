@@ -39,20 +39,20 @@ export default function BookingBuddies({ bookingId, capacity, participants = [],
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-xs font-bold uppercase tracking-wide text-lav">Vrienden ({people.length}/{capacity - 1})</span>
         {people.map((m) => (
-          <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand">
+          <span key={m.id} className="inline-flex items-center gap-1.5 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink">
             {m.name}
-            <button type="button" disabled={busy} onClick={() => remove(m.id)} className="text-brand/50 hover:text-red-600" aria-label="Verwijder">×</button>
+            <button type="button" disabled={busy} onClick={() => remove(m.id)} className="text-ink/50 hover:text-red-600" aria-label="Verwijder">×</button>
           </span>
         ))}
         {left > 0 && (
-          <button type="button" onClick={() => setOpen((o) => !o)} className="rounded-full border-2 border-borderc px-3 py-1 text-xs font-bold text-brand transition hover:border-lav">
+          <button type="button" onClick={() => setOpen((o) => !o)} className="rounded-full border-2 border-borderc px-3 py-1 text-xs font-bold text-ink transition hover:border-lav">
             + Nodig uit
           </button>
         )}
       </div>
 
       {!paid && people.length > 0 && (
-        <p className="mt-2 text-xs text-brand/50">Je vrienden zien deze sessie zodra je betaald hebt.</p>
+        <p className="mt-2 text-xs text-ink/50">Je vrienden zien deze sessie zodra je betaald hebt.</p>
       )}
       {err && <p className="mt-2 text-xs font-semibold text-red-600">{err}</p>}
 
@@ -69,9 +69,9 @@ export default function BookingBuddies({ bookingId, capacity, participants = [],
             className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm"
           />
           {results.length > 0 && (
-            <div className="mt-1 overflow-hidden rounded-lg border-2 border-borderc bg-white">
+            <div className="mt-1 overflow-hidden rounded-lg border-2 border-borderc bg-surface">
               {results.slice(0, 6).map((m) => (
-                <button key={m.id} type="button" disabled={busy} onClick={() => add(m)} className="block w-full px-3 py-2 text-left text-sm text-brand transition hover:bg-paper">
+                <button key={m.id} type="button" disabled={busy} onClick={() => add(m)} className="block w-full px-3 py-2 text-left text-sm text-ink transition hover:bg-paper">
                   {m.name}
                 </button>
               ))}

@@ -30,13 +30,13 @@ export default async function PlanBuilder({ params }) {
   return (
     <main className="bg-paper min-h-screen">
       <div className="mx-auto max-w-2xl px-5 py-12">
-        <Link href="/plannen" className="text-sm font-bold text-brand/60 hover:text-brand">← Mijn plannen</Link>
+        <Link href="/plannen" className="text-sm font-bold text-ink/60 hover:text-ink">← Mijn plannen</Link>
 
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
           <form action={renamePlan} className="flex items-center gap-2">
             <input type="hidden" name="id" value={plan.id} />
-            <input name="name" defaultValue={plan.name} aria-label="Plannaam" className="rounded-xl border-2 border-borderc bg-white px-3 py-2 text-lg font-black text-brand outline-none focus:border-accent" />
-            <SubmitButton className="rounded-full bg-paper px-3 py-2 text-xs font-bold text-brand">Hernoem</SubmitButton>
+            <input name="name" defaultValue={plan.name} aria-label="Plannaam" className="rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-lg font-black text-ink outline-none focus:border-accent" />
+            <SubmitButton className="rounded-full bg-paper px-3 py-2 text-xs font-bold text-ink">Hernoem</SubmitButton>
           </form>
           {plan.is_active ? (
             <span className="rounded-full bg-accent px-3 py-1.5 text-xs font-black text-brand">ACTIEF PLAN</span>
@@ -49,9 +49,9 @@ export default async function PlanBuilder({ params }) {
           {days.map((day) => {
             const exs = [...(day.program_exercises || [])].sort((a, b) => (a.position || 0) - (b.position || 0));
             return (
-              <section key={day.id} className="rounded-3xl border border-borderc bg-white p-5">
+              <section key={day.id} className="rounded-3xl border border-borderc bg-surface p-5">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
+                  <h2 className="font-black text-ink">{day.name || `Dag ${day.day_no}`}</h2>
                   <form action={removeDay}>
                     <input type="hidden" name="dayId" value={day.id} /><input type="hidden" name="programId" value={plan.id} />
                     <button className="text-xs font-bold text-red-400 hover:text-red-600">dag verwijderen</button>
@@ -64,8 +64,8 @@ export default async function PlanBuilder({ params }) {
                       <div className="flex items-center gap-3">
                         <ExerciseMedia exercise={pe.exercises} thumb className="h-12 w-12" rounded="rounded-lg" />
                         <div className="min-w-0 flex-1">
-                          <Link href={`/oefeningen/${pe.exercises?.slug}`} target="_blank" className="block truncate font-bold text-brand hover:text-accentdark">{pe.exercises?.name}</Link>
-                          <p className="truncate text-[11px] text-brand/50">{pe.exercises?.primary_muscles?.[0] || pe.exercises?.muscle || ""}</p>
+                          <Link href={`/oefeningen/${pe.exercises?.slug}`} target="_blank" className="block truncate font-bold text-ink hover:text-accentdark">{pe.exercises?.name}</Link>
+                          <p className="truncate text-[11px] text-ink/50">{pe.exercises?.primary_muscles?.[0] || pe.exercises?.muscle || ""}</p>
                         </div>
                         <form action={removePlanExercise}>
                           <input type="hidden" name="peId" value={pe.id} /><input type="hidden" name="programId" value={plan.id} />
@@ -81,7 +81,7 @@ export default async function PlanBuilder({ params }) {
                       </form>
                     </div>
                   ))}
-                  {exs.length === 0 && <p className="text-xs text-brand/40">Nog geen oefeningen. Voeg er een toe ↓</p>}
+                  {exs.length === 0 && <p className="text-xs text-ink/40">Nog geen oefeningen. Voeg er een toe ↓</p>}
                 </div>
 
                 <PlanExercisePicker dayId={day.id} programId={plan.id} />
@@ -92,7 +92,7 @@ export default async function PlanBuilder({ params }) {
 
         <form action={addDay} className="mt-5">
           <input type="hidden" name="programId" value={plan.id} />
-          <SubmitButton className="w-full rounded-2xl border-2 border-dashed border-borderc py-3 text-sm font-bold text-brand/60 hover:border-accent hover:text-brand">+ Dag toevoegen</SubmitButton>
+          <SubmitButton className="w-full rounded-2xl border-2 border-dashed border-borderc py-3 text-sm font-bold text-ink/60 hover:border-accent hover:text-ink">+ Dag toevoegen</SubmitButton>
         </form>
 
         {/* Delen staat onderaan, ná het bouwen: je deelt een schema pas als het af is. */}
@@ -111,7 +111,7 @@ function Mini({ name, label, defaultValue, w = "w-16" }) {
   return (
     <label className="block">
       <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wide text-lav">{label}</span>
-      <input name={name} defaultValue={defaultValue} inputMode="numeric" className={`${w} rounded-lg border-2 border-borderc bg-white px-2 py-1.5 text-sm text-brand outline-none focus:border-accent`} />
+      <input name={name} defaultValue={defaultValue} inputMode="numeric" className={`${w} rounded-lg border-2 border-borderc bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-accent`} />
     </label>
   );
 }

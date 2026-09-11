@@ -28,12 +28,12 @@ export default function PublishWorkoutPanel({ program }) {
   return (
     <div className="mt-4 rounded-2xl border-2 border-accent/40 bg-accent/5 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-black text-brand">
+        <p className="font-black text-ink">
           Publieke workout {pub && <span className="ml-1 rounded-full bg-accent px-2 py-0.5 text-xs text-brand">LIVE</span>}
         </p>
         {pub && slug && <a href={`/workouts/${slug}`} className="text-sm font-bold text-accentdark hover:underline">Bekijk op /workouts →</a>}
       </div>
-      <p className="mt-0.5 text-xs text-brand/60">Publiceer dit sjabloon zodat iedereen het kan volgen op de Workouts-pagina.</p>
+      <p className="mt-0.5 text-xs text-ink/60">Publiceer dit sjabloon zodat iedereen het kan volgen op de Workouts-pagina.</p>
       <form className="mt-3 grid gap-2 sm:grid-cols-2" onSubmit={(e) => { e.preventDefault(); run(true, e.currentTarget); }}>
         <input name="subtitle" defaultValue={program.subtitle || ""} placeholder="Ondertitel (1 zin)" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm sm:col-span-2" />
         <select name="level" defaultValue={program.level || "Gemiddeld"} className="rounded-lg border-2 border-borderc px-3 py-2 text-sm">{LEVELS.map((l) => <option key={l}>{l}</option>)}</select>
@@ -46,7 +46,7 @@ export default function PublishWorkoutPanel({ program }) {
             {busy ? "Bezig…" : pub ? "Bijwerken" : "Publiceren"}
           </button>
           {pub && (
-            <button type="button" disabled={busy} onClick={(e) => run(false, e.currentTarget.closest("form"))} className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-red-300 hover:text-red-600">
+            <button type="button" disabled={busy} onClick={(e) => run(false, e.currentTarget.closest("form"))} className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-ink transition hover:border-red-300 hover:text-red-600">
               Offline halen
             </button>
           )}

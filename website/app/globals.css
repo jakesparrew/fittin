@@ -13,6 +13,20 @@
   --color-ink-soft: #5a5479;
   --color-paper: #f5f6fa;
   --color-borderc: #e6e4f0;
+
+  /* ---------- Betekenis, niet kleur ----------
+     Twee rollen die in een donker thema moeten OMKEREN, en die eerder een naam deelden met een rol
+     die juist NIET mag omkeren:
+
+       surface  het kaartvlak. Heette `bg-white`, maar `--color-white` draagt óók `text-white`, en
+                dat staat op groen en op indigo — dat moet wit blijven. 518 tegen 240 gemeten.
+       ink      de hoofdtekstkleur. Heette `text-brand`, maar `--color-brand` draagt óók `bg-brand`,
+                het donkere vlak dat donker moet blijven. 2.326 tegen 192 gemeten.
+
+     Sinds die scheiding (scripts/darkmode-sweep.mjs) is een donker thema het herdefiniëren van acht
+     variabelen. `brand` en `white` zijn nu constanten: het merkindigo en echt wit. */
+  --color-surface: #ffffff;
+  --color-ink: #22194f;
   --font-sans: var(--font-lato), "Lato", ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-display), "Bricolage Grotesque", var(--font-lato), ui-sans-serif, sans-serif;
 
@@ -38,6 +52,118 @@
   /* Deze twee sturen élke kale `transition`-klasse in de app in één keer bij. */
   --default-transition-timing-function: var(--ease-uit);
   --default-transition-duration: 150ms;
+}
+
+/* ---------------------------------------------------------------------------
+   Donker thema
+   ---------------------------------------------------------------------------
+   Geen enkele `dark:`-klasse in de app. Dat kan doordat élke kleurklasse hier naar een `var()`
+   compileert — controleer het zelf in .next/static/css: `.bg-brand{background-color:
+   var(--color-brand)}`. Met `@theme inline` had Tailwind de hexwaarde ingebakken en was dit
+   onmogelijk geweest; dat is dus de enige onomkeerbare fout die je in dit bestand kan maken.
+
+   DE WAARDEN STAAN ÉÉN KEER, hieronder als `--dm-*`. De twee schakelaars die volgen (het systeem
+   vraagt donker, of het lid koos donker) mappen ze alleen maar. Twee volledige lijsten naast elkaar
+   lopen gegarandeerd uit de pas zodra iemand er één bijstelt.
+
+   DE CONTRASTREKENING IS GEMAAKT, niet gegokt. Op het donkere kaartvlak #17151f:
+     ink #ece9f5 → 13,9:1    ink-soft #cfcbe0 → 10,7:1    accent #5fda6b → 10,3:1
+   En twee tokens die je NIET naïef mag omkeren, want ze zakken door AA:
+     ink-soft #5a5479 → 2,62:1    accentdark #1a7d34 → 3,54:1
+   Dat laatste is geen toeval: `accentdark` is er ooit juist voor gedarkend om op WIT te halen
+   (5,21:1). In het donker is het gewone `accent` de juiste groene tekstkleur.
+
+   WAAROM DE STATUSKLEUREN MEEDRAAIEN. Een amberkaart die licht blijft terwijl de tekst erop
+   meeflipt, is onleesbaar — gemeten 1,15:1 toen dat gebeurde. Er zijn maar twee families in gebruik
+   (amber en rood, geteld), dus draaien die mee: het vlak wordt donker, de tekst wordt licht. Alle
+   combinaties zijn nagerekend en zitten boven 9:1, ook `text-red-600` op een gewone kaart. */
+
+@layer base {
+  :root {
+    color-scheme: light;
+
+    /* Het donkere palet, één keer. Wijzig HIER, nergens anders. */
+    --dm-paper: #0f0e17;
+    --dm-surface: #17151f;
+    --dm-ink: #ece9f5;
+    --dm-ink-soft: #cfcbe0;
+    --dm-borderc: #2a2736;
+    /* `lav` verandert NIET. Dat was eerst wel zo (#8d88a3) en dat kostte de hele beheerzijbalk zijn
+       leesbaarheid: lav op brand zakte van 7,31:1 naar 4,05:1 — 48 elementen net onder de grens.
+       De lichte waarde haalt op een donkere kaart 8,29:1 en op de zijbalk 6,98:1. Sommige tokens
+       hoeven simpelweg niet te flippen. */
+    --dm-lav: #b2adc2;
+    /* Groene tekst: in donker is dat het gewone accent, niet de voor-wit-gedarkende variant. */
+    --dm-accentdark: #5fda6b;
+    /* `brand` is sinds de sweep alleen nog een VLAK en de wordmark. Een tikje lichter, zodat een
+       indigo paneel op een bijna-zwarte pagina niet wegvalt — maar niet meer dan dat: elke stap
+       lichter kost de zijbalk contrast, en wit-op-brand moet ruim boven AA blijven (15,19:1). */
+    --dm-brand: #251d54;
+    --dm-branddeep: #1c1642;
+    /* Statuskaarten: vlak donker, tekst licht, rand zichtbaar genoeg om de kaart af te bakenen. */
+    --dm-amber-50: #2a1f08;  --dm-amber-100: #33260b;
+    --dm-amber-200: #6b5216; --dm-amber-300: #8a6a1d; --dm-amber-400: #a8811f;
+    --dm-amber-600: #fbbf24; --dm-amber-700: #fcd34d; --dm-amber-800: #fde68a; --dm-amber-900: #fef3c7;
+    --dm-red-50: #2b1214;    --dm-red-100: #361618;
+    --dm-red-200: #6b2626;   --dm-red-300: #8a3030;   --dm-red-400: #a83a3a;
+    --dm-red-600: #fca5a5;   --dm-red-700: #fecaca;
+  }
+
+  /* Wat het systeem vraagt — tenzij het lid uitdrukkelijk LICHT koos. Zonder die `:not()` wordt een
+     bewuste keuze 's avonds alsnog overruled door de telefoon. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --color-paper: var(--dm-paper);
+      --color-surface: var(--dm-surface);
+      --color-ink: var(--dm-ink);
+      --color-ink-soft: var(--dm-ink-soft);
+      --color-borderc: var(--dm-borderc);
+      --color-lav: var(--dm-lav);
+      --color-accentdark: var(--dm-accentdark);
+      --color-brand: var(--dm-brand);
+      --color-branddeep: var(--dm-branddeep);
+      --color-amber-50: var(--dm-amber-50);   --color-amber-100: var(--dm-amber-100);
+      --color-amber-200: var(--dm-amber-200); --color-amber-300: var(--dm-amber-300);
+      --color-amber-400: var(--dm-amber-400); --color-amber-600: var(--dm-amber-600);
+      --color-amber-700: var(--dm-amber-700); --color-amber-800: var(--dm-amber-800);
+      --color-amber-900: var(--dm-amber-900);
+      --color-red-50: var(--dm-red-50);       --color-red-100: var(--dm-red-100);
+      --color-red-200: var(--dm-red-200);     --color-red-300: var(--dm-red-300);
+      --color-red-400: var(--dm-red-400);     --color-red-600: var(--dm-red-600);
+      --color-red-700: var(--dm-red-700);
+    }
+  }
+
+  /* Wat het lid zelf koos. Wint altijd. */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --color-paper: var(--dm-paper);
+    --color-surface: var(--dm-surface);
+    --color-ink: var(--dm-ink);
+    --color-ink-soft: var(--dm-ink-soft);
+    --color-borderc: var(--dm-borderc);
+    --color-lav: var(--dm-lav);
+    --color-accentdark: var(--dm-accentdark);
+    --color-brand: var(--dm-brand);
+    --color-branddeep: var(--dm-branddeep);
+    --color-amber-50: var(--dm-amber-50);   --color-amber-100: var(--dm-amber-100);
+    --color-amber-200: var(--dm-amber-200); --color-amber-300: var(--dm-amber-300);
+    --color-amber-400: var(--dm-amber-400); --color-amber-600: var(--dm-amber-600);
+    --color-amber-700: var(--dm-amber-700); --color-amber-800: var(--dm-amber-800);
+    --color-amber-900: var(--dm-amber-900);
+    --color-red-50: var(--dm-red-50);       --color-red-100: var(--dm-red-100);
+    --color-red-200: var(--dm-red-200);     --color-red-300: var(--dm-red-300);
+    --color-red-400: var(--dm-red-400);     --color-red-600: var(--dm-red-600);
+    --color-red-700: var(--dm-red-700);
+  }
+
+  /* Een schaduw is lichtval op een lichte ondergrond. Op donker doet hij niets zichtbaars behalve
+     de randen vervuilen — daar neemt de haarlijn het over. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) [class*="shadow-"] { --tw-shadow-color: transparent; }
+  }
+  :root[data-theme="dark"] [class*="shadow-"] { --tw-shadow-color: transparent; }
 }
 
 html {

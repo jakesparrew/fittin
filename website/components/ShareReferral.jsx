@@ -47,7 +47,7 @@ export default function ShareReferral({ code, compact = false }) {
         target="_blank"
         rel="noopener noreferrer"
         onClick={whatsapp}
-        className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm font-bold text-brand transition hover:border-accent"
+        className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-surface px-4 py-2 text-sm font-bold text-ink transition hover:border-accent"
       >
         WhatsApp
       </a>

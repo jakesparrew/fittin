@@ -49,23 +49,23 @@ export default async function AdminNotificaties({ searchParams }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Notificaties</h1>
-      <p className="mt-1 text-sm text-brand/50">Alles wat er leeft in je gym — boekingen, betalingen, inschrijvingen, coach-acties.</p>
+      <h1 className="text-3xl font-black text-ink">Notificaties</h1>
+      <p className="mt-1 text-sm text-ink/50">Alles wat er leeft in je gym — boekingen, betalingen, inschrijvingen, coach-acties.</p>
 
       <div className="mt-4">
         <ListSearch placeholder="Zoek op naam, sessie of bedrag…" className="w-full max-w-md" />
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-white">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-surface">
         {zichtbaar.map((it, i) => (
           <div key={i} className="flex items-center gap-3 border-b border-borderc px-5 py-3 last:border-0">
             <span className="text-lg">{it.icon}</span>
-            <p className="flex-1 text-sm font-semibold text-brand">{it.text}</p>
-            <span className="shrink-0 text-xs capitalize text-brand/40">{fmt(it.when)}</span>
+            <p className="flex-1 text-sm font-semibold text-ink">{it.text}</p>
+            <span className="shrink-0 text-xs capitalize text-ink/40">{fmt(it.when)}</span>
           </div>
         ))}
         {zichtbaar.length === 0 && (
-          <p className="px-5 py-10 text-center text-sm text-brand/40">
+          <p className="px-5 py-10 text-center text-sm text-ink/40">
             {zoek ? `Geen activiteit gevonden voor “${zoek}”.` : "Nog geen activiteit de afgelopen 30 dagen."}
           </p>
         )}

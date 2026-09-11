@@ -16,9 +16,9 @@ export default async function Feedback({ params, searchParams }) {
   if (!b) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-paper px-5">
-        <div className="w-full max-w-md rounded-3xl border border-borderc bg-white p-8 text-center">
+        <div className="w-full max-w-md rounded-3xl border border-borderc bg-surface p-8 text-center">
           <p className="text-3xl">🕓</p>
-          <h1 className="mt-3 text-2xl font-black text-brand">Deze link is verlopen</h1>
+          <h1 className="mt-3 text-2xl font-black text-ink">Deze link is verlopen</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">
             Wil je toch nog iets kwijt? Mail <a href="mailto:info@fittin.be" className="font-bold text-accentdark hover:underline">info@fittin.be</a>.
           </p>
@@ -38,7 +38,7 @@ export default async function Feedback({ params, searchParams }) {
   return (
     <main className="min-h-screen bg-paper px-5 py-10">
       <div className="mx-auto max-w-md">
-        <p className="text-2xl font-black text-brand">Fittin<span className="text-accent">&rsquo;</span></p>
+        <p className="text-2xl font-black text-ink">Fittin<span className="text-accent">&rsquo;</span></p>
         <BedanktScherm token={token} score={huidig?.rating || null} opmerking={huidig?.comment || ""} />
       </div>
     </main>

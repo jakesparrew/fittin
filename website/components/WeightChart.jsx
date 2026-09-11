@@ -2,7 +2,7 @@
 // points: [{ logged_on: "YYYY-MM-DD", weight_kg: number }] ascending by date.
 export default function WeightChart({ points = [], goal = null }) {
   if (points.length < 2) {
-    return <p className="text-sm text-brand/50">Log je gewicht op minstens twee dagen om je grafiek te zien.</p>;
+    return <p className="text-sm text-ink/50">Log je gewicht op minstens twee dagen om je grafiek te zien.</p>;
   }
   const W = 640, H = 200, padL = 36, padR = 12, padT = 14, padB = 24;
   const ys = points.map((p) => Number(p.weight_kg));
@@ -22,11 +22,11 @@ export default function WeightChart({ points = [], goal = null }) {
   return (
     <div>
       <div className="flex flex-wrap items-end gap-4">
-        <div><p className="text-3xl font-black text-brand">{last} <span className="text-base font-bold text-brand/40">kg</span></p><p className="text-xs text-brand/50">huidig</p></div>
-        <div className={"rounded-full px-3 py-1 text-sm font-bold " + (delta < 0 ? "bg-accent/15 text-accentdark" : delta > 0 ? "bg-paper text-brand/60" : "bg-paper text-brand/50")}>
-          {delta > 0 ? "+" : ""}{delta} kg <span className="font-normal text-brand/40">sinds {fmtD(points[0].logged_on)}</span>
+        <div><p className="text-3xl font-black text-ink">{last} <span className="text-base font-bold text-ink/40">kg</span></p><p className="text-xs text-ink/50">huidig</p></div>
+        <div className={"rounded-full px-3 py-1 text-sm font-bold " + (delta < 0 ? "bg-accent/15 text-accentdark" : delta > 0 ? "bg-paper text-ink/60" : "bg-paper text-ink/50")}>
+          {delta > 0 ? "+" : ""}{delta} kg <span className="font-normal text-ink/40">sinds {fmtD(points[0].logged_on)}</span>
         </div>
-        {goal != null && <div className="text-sm text-brand/50">doel: <span className="font-bold text-brand">{goal} kg</span></div>}
+        {goal != null && <div className="text-sm text-ink/50">doel: <span className="font-bold text-ink">{goal} kg</span></div>}
       </div>
       <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full" preserveAspectRatio="none" role="img" aria-label="Gewichtsgrafiek">
         <defs>

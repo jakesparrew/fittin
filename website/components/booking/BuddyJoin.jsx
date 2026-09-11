@@ -28,7 +28,7 @@ export default function BuddyJoin({ bookingId, buddies = [], askedIds = [] }) {
             type="button"
             disabled={busy === b.id || asked.has(b.id)}
             onClick={() => ask(b)}
-            className={"rounded-full px-3 py-1.5 text-xs font-bold transition disabled:opacity-60 " + (asked.has(b.id) ? "bg-paper text-brand/50" : "border-2 border-borderc text-brand hover:border-accent")}
+            className={"rounded-full px-3 py-1.5 text-xs font-bold transition disabled:opacity-60 " + (asked.has(b.id) ? "bg-paper text-ink/50" : "border-2 border-borderc text-ink hover:border-accent")}
           >
             {asked.has(b.id) ? `✓ ${b.name} gevraagd` : `+ ${b.name}`}
           </button>

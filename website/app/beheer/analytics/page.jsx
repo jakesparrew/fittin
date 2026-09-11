@@ -134,17 +134,17 @@ export default async function Analytics() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Analytics</h1>
-      <p className="mt-1 text-sm text-brand/50">De gezondheid van je business in één oogopslag — omzet, groei, retentie en bezetting.</p>
+      <h1 className="text-3xl font-black text-ink">Analytics</h1>
+      <p className="mt-1 text-sm text-ink/50">De gezondheid van je business in één oogopslag — omzet, groei, retentie en bezetting.</p>
 
       {/* In-app first-party traffic analytics (own DB, privacy-friendly) */}
       <Link
         href="/beheer/verkeer"
-        className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent"
+        className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-surface p-5 transition hover:border-accent"
       >
         <div>
-          <p className="font-black text-brand">🌐 Websiteverkeer</p>
-          <p className="mt-0.5 text-sm text-brand/55">Bezoekers, paginaweergaves, populairste pagina's en herkomst — live in je eigen dashboard, zonder cookies of externe tracker.</p>
+          <p className="font-black text-ink">🌐 Websiteverkeer</p>
+          <p className="mt-0.5 text-sm text-ink/55">Bezoekers, paginaweergaves, populairste pagina's en herkomst — live in je eigen dashboard, zonder cookies of externe tracker.</p>
         </div>
         <span className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">Bekijk verkeer →</span>
       </Link>
@@ -180,7 +180,7 @@ export default async function Analytics() {
                 "start comeback-reeks voor iedereen" — het cijfer is meteen de handeling. */}
             <Link href="/beheer/leden?filter=atrisk" className="rounded-xl bg-accent/10 p-4 transition hover:bg-accent/20">
               <p className="text-2xl font-black text-accentdark">{atRisk}</p>
-              <p className="text-xs font-bold text-brand/60">leden at-risk — mail ze terug →</p>
+              <p className="text-xs font-bold text-ink/60">leden at-risk — mail ze terug →</p>
             </Link>
           </div>
         </Card>
@@ -220,16 +220,16 @@ export default async function Analytics() {
       {/* Heatmap */}
       <Card className="mt-6" title="Bezettings-heatmap" subtitle="boekingen per uur en weekdag (laatste 60 dagen)">
         {peakDay && (
-          <p className="mb-3 text-sm text-brand/60">Piek: <span className="font-bold text-brand">{({ ma: "maandag", di: "dinsdag", wo: "woensdag", do: "donderdag", vr: "vrijdag", za: "zaterdag", zo: "zondag" })[peakDay[0]]}</span> en rond <span className="font-bold text-brand">{peakHour?.[0]}:00</span>.</p>
+          <p className="mb-3 text-sm text-ink/60">Piek: <span className="font-bold text-ink">{({ ma: "maandag", di: "dinsdag", wo: "woensdag", do: "donderdag", vr: "vrijdag", za: "zaterdag", zo: "zondag" })[peakDay[0]]}</span> en rond <span className="font-bold text-ink">{peakHour?.[0]}:00</span>.</p>
         )}
         <div className="overflow-x-auto">
           {/* Full-width grid — fixed 40px-wide cells left ~70% of the card empty. */}
           <table className="w-full table-fixed text-xs">
-            <thead><tr className="text-brand/40"><th className="w-12 px-2 py-1"></th>{WD.map((d) => <th key={d} className="px-2 py-1 font-bold uppercase">{d}</th>)}</tr></thead>
+            <thead><tr className="text-ink/40"><th className="w-12 px-2 py-1"></th>{WD.map((d) => <th key={d} className="px-2 py-1 font-bold uppercase">{d}</th>)}</tr></thead>
             <tbody>
               {showHours.map((h) => (
                 <tr key={h}>
-                  <td className="w-12 px-2 py-0.5 text-right text-[10px] font-bold text-brand/40">{h}:00</td>
+                  <td className="w-12 px-2 py-0.5 text-right text-[10px] font-bold text-ink/40">{h}:00</td>
                   {WD.map((d) => {
                     const c = grid[`${d}-${h}`] || 0; const intensity = gmax ? c / gmax : 0;
                     return (
@@ -254,19 +254,19 @@ export default async function Analytics() {
 
 function Kpi({ label, value, delta, sub, good }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className="mt-2 text-2xl font-black text-brand">{value}</p>
+      <p className="mt-2 text-2xl font-black text-ink">{value}</p>
       {delta != null && <p className={"text-xs font-bold " + (delta >= 0 ? "text-accentdark" : "text-red-500")}>{delta >= 0 ? "▲" : "▼"} {Math.abs(delta)}% vs vorige maand</p>}
-      {sub && delta == null && <p className={"text-xs font-semibold " + (good === false ? "text-red-500" : "text-brand/40")}>{sub}</p>}
+      {sub && delta == null && <p className={"text-xs font-semibold " + (good === false ? "text-red-500" : "text-ink/40")}>{sub}</p>}
     </div>
   );
 }
 function Card({ title, subtitle, children, className = "" }) {
   return (
-    <section className={"rounded-2xl border border-borderc bg-white p-6 " + className}>
-      <h2 className="font-black text-brand">{title}</h2>
-      {subtitle && <p className="text-xs text-brand/50">{subtitle}</p>}
+    <section className={"rounded-2xl border border-borderc bg-surface p-6 " + className}>
+      <h2 className="font-black text-ink">{title}</h2>
+      {subtitle && <p className="text-xs text-ink/50">{subtitle}</p>}
       <div className="mt-4">{children}</div>
     </section>
   );
@@ -274,25 +274,25 @@ function Card({ title, subtitle, children, className = "" }) {
 function Mini({ label, value, sub, warn }) {
   return (
     <div className="rounded-xl bg-paper p-4">
-      <p className={"text-2xl font-black " + (warn ? "text-red-500" : "text-brand")}>{value}</p>
-      <p className="text-xs font-bold text-brand/60">{label}</p>
-      {sub && <p className="text-[10px] text-brand/40">{sub}</p>}
+      <p className={"text-2xl font-black " + (warn ? "text-red-500" : "text-ink")}>{value}</p>
+      <p className="text-xs font-bold text-ink/60">{label}</p>
+      {sub && <p className="text-[10px] text-ink/40">{sub}</p>}
     </div>
   );
 }
 function TopList({ rows, empty }) {
-  if (!rows.length) return <p className="text-sm text-brand/40">{empty}</p>;
+  if (!rows.length) return <p className="text-sm text-ink/40">{empty}</p>;
   const tone = { ok: "bg-accent/15 text-accentdark", warn: "bg-red-100 text-red-600", amber: "bg-amber-100 text-amber-600" };
   return (
     <div className="space-y-1.5">
       {rows.map((r, i) => (
         <div key={i} className="flex items-center justify-between gap-2 rounded-lg bg-paper px-3 py-2 text-sm">
-          <span className="flex min-w-0 items-center gap-2 font-semibold text-brand">
+          <span className="flex min-w-0 items-center gap-2 font-semibold text-ink">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand text-[10px] font-black text-white">{i + 1}</span>
             <span className="truncate">{r.name}</span>
             {r.tag && <span className={"shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black " + (tone[r.tagTone] || tone.amber)}>{r.tag}</span>}
           </span>
-          <span className="shrink-0 text-xs font-bold text-brand/50">{r.value}</span>
+          <span className="shrink-0 text-xs font-bold text-ink/50">{r.value}</span>
         </div>
       ))}
     </div>

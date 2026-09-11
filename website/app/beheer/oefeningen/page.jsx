@@ -39,13 +39,13 @@ export default async function Oefeningen({ searchParams }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Oefeningen</h1>
-      <p className="mt-1 text-sm text-brand/50">De gym-bibliotheek: demo, doelspieren en uitleg. Leden zien deze in /oefeningen en hun schema.</p>
+      <h1 className="text-3xl font-black text-ink">Oefeningen</h1>
+      <p className="mt-1 text-sm text-ink/50">De gym-bibliotheek: demo, doelspieren en uitleg. Leden zien deze in /oefeningen en hun schema.</p>
 
       {/* Completeness filter — helps the owner find + fix library gaps. */}
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <ListSearch placeholder="Zoek op naam, categorie, materiaal of spier…" className="w-full max-w-sm" />
-        <span className="text-sm text-brand/60">
+        <span className="text-sm text-ink/60">
           {zoek ? `${exercises.length} van ${(allExercises || []).length} oefeningen` : `${(allExercises || []).length} oefeningen`}
         </span>
         {incompleteCount > 0 && (
@@ -56,10 +56,10 @@ export default async function Oefeningen({ searchParams }) {
         )}
       </div>
 
-      <ActionForm key={editing?.id || "new"} action={upsertExercise} success="Oefening opgeslagen ✓" className="mt-6 scroll-mt-6 rounded-2xl border border-borderc bg-white p-5" id="form">
+      <ActionForm key={editing?.id || "new"} action={upsertExercise} success="Oefening opgeslagen ✓" className="mt-6 scroll-mt-6 rounded-2xl border border-borderc bg-surface p-5" id="form">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-black text-brand">{editing ? `Bewerk: ${editing.name}` : "Nieuwe oefening"}</p>
-          {editing && <Link href="/beheer/oefeningen" className="text-xs font-bold text-brand/50 hover:text-brand">✕ annuleer bewerken</Link>}
+          <p className="text-sm font-black text-ink">{editing ? `Bewerk: ${editing.name}` : "Nieuwe oefening"}</p>
+          {editing && <Link href="/beheer/oefeningen" className="text-xs font-bold text-ink/50 hover:text-ink">✕ annuleer bewerken</Link>}
         </div>
         {editing && <input type="hidden" name="id" value={editing.id} />}
         <div className="grid gap-4 md:grid-cols-2">
@@ -84,10 +84,10 @@ export default async function Oefeningen({ searchParams }) {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {zoek && exercises.length === 0 && (
-          <p className="text-sm text-brand/50 sm:col-span-2 lg:col-span-3">Geen oefening gevonden voor “{zoek}”.</p>
+          <p className="text-sm text-ink/50 sm:col-span-2 lg:col-span-3">Geen oefening gevonden voor “{zoek}”.</p>
         )}
         {exercises.map((ex) => (
-          <div key={ex.id} className="overflow-hidden rounded-2xl border border-borderc bg-white">
+          <div key={ex.id} className="overflow-hidden rounded-2xl border border-borderc bg-surface">
             <ExerciseMedia exercise={ex} thumb className="aspect-video w-full" rounded="rounded-none" />
             <div className="p-4">
               {isIncomplete(ex) && (
@@ -95,8 +95,8 @@ export default async function Oefeningen({ searchParams }) {
               )}
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className="truncate font-black text-brand">{ex.name}</p>
-                  <p className="text-xs text-brand/50">{[ex.primary_muscles?.[0] || ex.muscle, ex.equipment].filter(Boolean).join(" · ")}</p>
+                  <p className="truncate font-black text-ink">{ex.name}</p>
+                  <p className="text-xs text-ink/50">{[ex.primary_muscles?.[0] || ex.muscle, ex.equipment].filter(Boolean).join(" · ")}</p>
                 </div>
                 <ActionForm action={deleteExercise} success="Oefening verwijderd ✓">
                   <input type="hidden" name="id" value={ex.id} />
@@ -106,13 +106,13 @@ export default async function Oefeningen({ searchParams }) {
                 </ActionForm>
               </div>
               <div className="mt-2 flex items-center gap-3">
-                <Link href={`/beheer/oefeningen?edit=${ex.id}${onlyIncomplete ? "&filter=onvolledig" : ""}#form`} className="text-xs font-bold text-brand/60 hover:text-accentdark">✎ bewerken</Link>
+                <Link href={`/beheer/oefeningen?edit=${ex.id}${onlyIncomplete ? "&filter=onvolledig" : ""}#form`} className="text-xs font-bold text-ink/60 hover:text-accentdark">✎ bewerken</Link>
                 {ex.slug && <Link href={`/oefeningen/${ex.slug}`} target="_blank" className="text-xs font-semibold text-accentdark hover:underline">bekijk ↗</Link>}
               </div>
             </div>
           </div>
         ))}
-        {(!exercises || exercises.length === 0) && <p className="text-sm text-brand/50">Nog geen oefeningen. Voeg er hierboven een toe.</p>}
+        {(!exercises || exercises.length === 0) && <p className="text-sm text-ink/50">Nog geen oefeningen. Voeg er hierboven een toe.</p>}
       </div>
     </div>
   );
@@ -122,7 +122,7 @@ function Field({ name, label, required, dv }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">{label}</span>
-      <input name={name} required={required} defaultValue={dv || ""} className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none transition focus:border-accent" />
+      <input name={name} required={required} defaultValue={dv || ""} className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-accent" />
     </label>
   );
 }
@@ -130,7 +130,7 @@ function Area({ name, label, rows = 3, dv }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">{label}</span>
-      <textarea name={name} rows={rows} defaultValue={dv || ""} className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none transition focus:border-accent" />
+      <textarea name={name} rows={rows} defaultValue={dv || ""} className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-accent" />
     </label>
   );
 }
@@ -138,7 +138,7 @@ function Select({ name, label, options, dv }) {
   return (
     <label className="block">
       <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">{label}</span>
-      <select name={name} defaultValue={dv || ""} className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none transition focus:border-accent">
+      <select name={name} defaultValue={dv || ""} className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-accent">
         {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
       </select>
     </label>

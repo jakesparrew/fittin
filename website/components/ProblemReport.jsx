@@ -9,8 +9,8 @@ import { reportProblem } from "@/app/(site)/account/actions";
 export default function ProblemReport() {
   const path = usePathname();
   return (
-    <details id="meld-probleem" className="rounded-2xl border border-borderc bg-white p-4">
-      <summary className="cursor-pointer text-sm font-bold text-brand transition hover:text-accentdark">🛟 Werkt iets niet? Meld het ons</summary>
+    <details id="meld-probleem" className="rounded-2xl border border-borderc bg-surface p-4">
+      <summary className="cursor-pointer text-sm font-bold text-ink transition hover:text-accentdark">🛟 Werkt iets niet? Meld het ons</summary>
       <ActionForm action={reportProblem} className="mt-3 space-y-2">
         <input type="hidden" name="page" value={path || ""} />
         <textarea
@@ -19,11 +19,11 @@ export default function ProblemReport() {
           minLength={5}
           rows={3}
           placeholder="Wat ging er mis? Bv. “de deurcode werkte niet om 18u” of “betalen lukte niet”."
-          className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none transition focus:border-accent"
+          className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-accent"
         />
         <div className="flex items-center gap-3">
           <SubmitButton className="rounded-full bg-brand px-4 py-2 text-xs font-bold text-white transition hover:opacity-90">Verstuur melding</SubmitButton>
-          <span className="text-[11px] text-brand/40">Komt rechtstreeks bij de gym terecht.</span>
+          <span className="text-[11px] text-ink/40">Komt rechtstreeks bij de gym terecht.</span>
         </div>
       </ActionForm>
     </details>

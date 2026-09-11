@@ -38,8 +38,8 @@ export default function BedanktScherm({ token, score, opmerking }) {
 
   if (uit) {
     return (
-      <div className="mt-8 rounded-3xl border border-borderc bg-white p-8 text-center">
-        <h1 className="text-2xl font-black text-brand">Geregeld</h1>
+      <div className="mt-8 rounded-3xl border border-borderc bg-surface p-8 text-center">
+        <h1 className="text-2xl font-black text-ink">Geregeld</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
           Je krijgt na je sessies geen vraag meer. Je deurcodes en boekingsmails blijven gewoon komen.
         </p>
@@ -49,9 +49,9 @@ export default function BedanktScherm({ token, score, opmerking }) {
 
   return (
     <>
-      <h1 className="mt-4 text-2xl font-black text-brand">{ster ? "Bedankt!" : "Hoe was je sessie?"}</h1>
+      <h1 className="mt-4 text-2xl font-black text-ink">{ster ? "Bedankt!" : "Hoe was je sessie?"}</h1>
 
-      <div className="mt-4 flex justify-center gap-1 rounded-2xl border border-borderc bg-white py-4">
+      <div className="mt-4 flex justify-center gap-1 rounded-2xl border border-borderc bg-surface py-4">
         {[1, 2, 3, 4, 5].map((n) => (
           <button
             key={n}
@@ -75,21 +75,21 @@ export default function BedanktScherm({ token, score, opmerking }) {
               rows={3}
               maxLength={1000}
               placeholder="Wat viel op, goed of slecht?"
-              className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2.5 text-base text-brand outline-none transition placeholder:text-brand/30 focus:border-accent"
+              className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-ink/30 focus:border-accent"
             />
           </label>
           <button
             type="button"
             disabled={pending || bewaard}
             onClick={bewaarTekst}
-            className="mt-2 rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-brand transition hover:border-lav disabled:opacity-50"
+            className="mt-2 rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-ink transition hover:border-lav disabled:opacity-50"
           >
             {bewaard ? "Bewaard ✓" : pending ? "Bezig…" : "Bewaren"}
           </button>
 
           {/* Identiek voor elke score. */}
-          <div className="mt-8 rounded-2xl border border-borderc bg-white p-6 text-center">
-            <p className="font-black text-brand">Help anderen ons vinden</p>
+          <div className="mt-8 rounded-2xl border border-borderc bg-surface p-6 text-center">
+            <p className="font-black text-ink">Help anderen ons vinden</p>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">
               Een eerlijke review op Google — goed of slecht — helpt iemand die twijfelt meer dan
               eender welke advertentie die wij kunnen kopen.
@@ -105,11 +105,11 @@ export default function BedanktScherm({ token, score, opmerking }) {
           </div>
 
           <div className="mt-6 text-center">
-            <a href="/account" className="text-sm font-bold text-brand hover:underline">Naar mijn account</a>
+            <a href="/account" className="text-sm font-bold text-ink hover:underline">Naar mijn account</a>
             <button
               type="button"
               onClick={() => start(async () => { const r = await zetFeedbackUit(token); if (!r?.error) setUit(true); })}
-              className="mt-3 block w-full text-xs text-ink-soft hover:text-brand hover:underline"
+              className="mt-3 block w-full text-xs text-ink-soft hover:text-ink hover:underline"
             >
               Liever geen vraag meer na mijn sessie
             </button>

@@ -118,7 +118,7 @@ export default async function Community() {
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-5xl px-5 py-16">
-        <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand">← Mijn account</Link>
+        <Link href="/account" className="text-sm font-semibold text-ink/50 hover:text-ink">← Mijn account</Link>
         <p className="mt-3 text-sm font-bold uppercase tracking-[0.25em] text-lav">Community</p>
         <h1 className="mt-2 text-3xl font-black md:text-4xl">Blijf gemotiveerd</h1>
 
@@ -128,13 +128,13 @@ export default async function Community() {
         </div>
 
         {/* Buddies */}
-        <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">
+        <section className="mt-8 rounded-3xl border border-borderc bg-surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h2 className="font-black text-brand">Mijn buddies</h2>
-              <p className="mt-1 text-sm text-brand/60">Connect met andere leden en neem elkaar mee naar een sessie — elk bezoek telt mee voor jullie stats.</p>
+              <h2 className="font-black text-ink">Mijn buddies</h2>
+              <p className="mt-1 text-sm text-ink/60">Connect met andere leden en neem elkaar mee naar een sessie — elk bezoek telt mee voor jullie stats.</p>
             </div>
-            <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">{accepted.length} buddies</span>
+            <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink/60">{accepted.length} buddies</span>
           </div>
 
           {incoming.length > 0 && (
@@ -143,10 +143,10 @@ export default async function Community() {
               <div className="mt-2 space-y-2">
                 {incoming.map((r) => (
                   <div key={r.id} className="flex items-center justify-between rounded-xl bg-accent/10 px-3 py-2 text-sm">
-                    <span className="font-bold text-brand">{buddyName(r)} wil je buddy zijn</span>
+                    <span className="font-bold text-ink">{buddyName(r)} wil je buddy zijn</span>
                     <div className="flex gap-2">
                       <form action={acceptBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full bg-accent px-3 py-1 text-xs font-bold text-brand">Accepteer</button></form>
-                      <form action={removeBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">Weiger</button></form>
+                      <form action={removeBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink/60">Weiger</button></form>
                     </div>
                   </div>
                 ))}
@@ -157,7 +157,7 @@ export default async function Community() {
           {accepted.length > 0 && (
             <div className="mt-4 flex flex-wrap gap-2">
               {accepted.map((r) => (
-                <span key={r.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-sm font-bold text-brand">
+                <span key={r.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-sm font-bold text-ink">
                   {buddyName(r)}
                   <form action={removeBuddy} className="inline"><input type="hidden" name="id" value={r.id} /><button className="text-red-400 hover:text-red-600" title="Verwijder">×</button></form>
                 </span>
@@ -171,8 +171,8 @@ export default async function Community() {
               <div className="mt-2 space-y-2">
                 {outgoing.map((r) => (
                   <div key={r.id} className="flex items-center justify-between rounded-xl bg-paper px-3 py-2 text-sm">
-                    <span className="font-semibold text-brand/70">Aanvraag naar <span className="font-bold text-brand">{buddyName(r)}</span> · in afwachting</span>
-                    <form action={removeBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full border-2 border-borderc px-3 py-1 text-xs font-bold text-brand/60 transition hover:border-red-300 hover:text-red-600">Intrekken</button></form>
+                    <span className="font-semibold text-ink/70">Aanvraag naar <span className="font-bold text-ink">{buddyName(r)}</span> · in afwachting</span>
+                    <form action={removeBuddy}><input type="hidden" name="id" value={r.id} /><button className="rounded-full border-2 border-borderc px-3 py-1 text-xs font-bold text-ink/60 transition hover:border-red-300 hover:text-red-600">Intrekken</button></form>
                   </div>
                 ))}
               </div>
@@ -184,9 +184,9 @@ export default async function Community() {
 
         <div className="mt-6 grid gap-6 lg:grid-cols-2">
           {/* Referral */}
-          <section className="rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Breng een vriend 🎁</h2>
-            <p className="mt-1 text-sm text-brand/60">Nodig een vriend uit met jouw code. Zodra zij hun eerste sessie boeken, krijgt <span className="font-bold text-brand">jij een extra punt op het scoreboard</span> én <span className="font-bold text-brand">cadeauen we hen een gratis sessie</span> (direct als tegoed op hun account).</p>
+          <section className="rounded-3xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Breng een vriend 🎁</h2>
+            <p className="mt-1 text-sm text-ink/60">Nodig een vriend uit met jouw code. Zodra zij hun eerste sessie boeken, krijgt <span className="font-bold text-ink">jij een extra punt op het scoreboard</span> én <span className="font-bold text-ink">cadeauen we hen een gratis sessie</span> (direct als tegoed op hun account).</p>
             <div className="mt-4 flex items-center gap-3">
               <span className="text-xs font-bold uppercase text-lav">Jouw code</span>
               <span className="rounded-full bg-brand px-4 py-1.5 font-black tracking-wider text-accent">{profile.referral_code}</span>
@@ -207,29 +207,29 @@ export default async function Community() {
           </section>
 
           {/* Leaderboard */}
-          <section className="rounded-3xl border border-borderc bg-white p-6">
+          <section className="rounded-3xl border border-borderc bg-surface p-6">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <h2 className="font-black text-brand">Leaderboard <span className="text-xs font-bold text-brand/40">· deze maand</span></h2>
+              <h2 className="font-black text-ink">Leaderboard <span className="text-xs font-bold text-ink/40">· deze maand</span></h2>
               {myRank >= 0 && <ShareRank />}
             </div>
             <div className="mt-4 space-y-2">
               {board.slice(0, 6).map((r, i) => (
                 <div key={r.id} className={"flex items-center justify-between rounded-xl px-3 py-2 text-sm " + (r.id === user.id ? "bg-brand text-white" : "bg-paper")}>
                   <span className="flex items-center gap-3">
-                    <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-white/20" : "bg-white")}>{i + 1}</span>
+                    <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-surface/20" : "bg-surface")}>{i + 1}</span>
                     <span className="font-bold">{r.name}</span>
                   </span>
                   <span className="font-black">{r.score} pt{r.pts > 0 ? ` · ${r.n}× + ${r.pts} vriend${r.pts === 1 ? "" : "en"}` : ""}</span>
                 </div>
               ))}
-              {board.length === 0 && <p className="text-sm text-brand/50">Nog geen sessies deze maand. Wees de eerste!</p>}
-              {myRank >= 6 && <p className="pt-1 text-center text-xs text-brand/50">Jij: #{myRank + 1} · {mySessions} sessies</p>}
+              {board.length === 0 && <p className="text-sm text-ink/50">Nog geen sessies deze maand. Wees de eerste!</p>}
+              {myRank >= 6 && <p className="pt-1 text-center text-xs text-ink/50">Jij: #{myRank + 1} · {mySessions} sessies</p>}
             </div>
           </section>
 
           {/* Challenges */}
-          <section className="rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Challenges</h2>
+          <section className="rounded-3xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Challenges</h2>
             <div className="mt-4 space-y-3">
               {(challenges || []).map((c) => {
                 const prog = Math.min(challengeProgress(c), c.goal_count);
@@ -240,17 +240,17 @@ export default async function Community() {
                 return (
                   <div key={c.id} className="rounded-2xl bg-paper p-4">
                     <div className="flex justify-between text-sm">
-                      <span className="font-bold text-brand">{c.name} {done && "🏆"}</span>
-                      <span className="text-brand/50">+{c.reward_credits} sessies</span>
+                      <span className="font-bold text-ink">{c.name} {done && "🏆"}</span>
+                      <span className="text-ink/50">+{c.reward_credits} sessies</span>
                     </div>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-white">
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface">
                       <div className={"h-full rounded-full " + (done ? "bg-accentdark" : "bg-accent")} style={{ width: `${pct}%` }} />
                     </div>
-                    <p className="mt-1 text-xs text-brand/50">{prog} / {c.goal_count} {c.goal_type}{myCi >= 0 && ` · jij staat #${myCi + 1}`}</p>
+                    <p className="mt-1 text-xs text-ink/50">{prog} / {c.goal_count} {c.goal_type}{myCi >= 0 && ` · jij staat #${myCi + 1}`}</p>
                     {cb.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         {cb.slice(0, 3).map((r, i) => (
-                          <span key={r.id} className={"rounded-full px-2.5 py-1 text-[11px] font-bold " + (r.id === user.id ? "bg-brand text-white" : "bg-white text-brand/70")}>
+                          <span key={r.id} className={"rounded-full px-2.5 py-1 text-[11px] font-bold " + (r.id === user.id ? "bg-brand text-white" : "bg-surface text-ink/70")}>
                             {["🥇", "🥈", "🥉"][i]} {r.name?.split(" ")[0]} ({r.n})
                           </span>
                         ))}
@@ -259,13 +259,13 @@ export default async function Community() {
                   </div>
                 );
               })}
-              {(!challenges || challenges.length === 0) && <p className="text-sm text-brand/50">Nog geen challenges.</p>}
+              {(!challenges || challenges.length === 0) && <p className="text-sm text-ink/50">Nog geen challenges.</p>}
             </div>
           </section>
 
           {/* Events */}
-          <section className="rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Events &amp; groepslessen</h2>
+          <section className="rounded-3xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Events &amp; groepslessen</h2>
             <div className="mt-4 space-y-3">
               {events.map((ev) => {
                 const signups = ev.event_signups || [];
@@ -277,13 +277,13 @@ export default async function Community() {
                   <div key={ev.id} className="rounded-2xl bg-paper p-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div>
-                        <p className="font-bold text-brand">{ev.title}</p>
-                        <p className="text-xs capitalize text-brand/50">{fmt(ev.starts_at)} · {taken}/{ev.capacity}</p>
+                        <p className="font-bold text-ink">{ev.title}</p>
+                        <p className="text-xs capitalize text-ink/50">{fmt(ev.starts_at)} · {taken}/{ev.capacity}</p>
                       </div>
                       {mine ? (
                         <form action={cancelSignup}>
                           <input type="hidden" name="signupId" value={mine.id} />
-                          <button className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand">Uitschrijven</button>
+                          <button className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-ink">Uitschrijven</button>
                         </form>
                       ) : (
                         <form action={signupEvent}>
@@ -297,7 +297,7 @@ export default async function Community() {
                   </div>
                 );
               })}
-              {events.length === 0 && <p className="text-sm text-brand/50">Nog geen komende events.</p>}
+              {events.length === 0 && <p className="text-sm text-ink/50">Nog geen komende events.</p>}
             </div>
           </section>
         </div>

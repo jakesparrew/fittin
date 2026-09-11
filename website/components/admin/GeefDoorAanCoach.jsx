@@ -31,7 +31,7 @@ export default function GeefDoorAanCoach({ coaches = [], defaultEmail = "", defa
 
   if (!beschikbaar.length) {
     return (
-      <p className="rounded-2xl border border-borderc bg-white px-5 py-4 text-sm text-brand/60">
+      <p className="rounded-2xl border border-borderc bg-surface px-5 py-4 text-sm text-ink/60">
         Geen enkele coach staat op dit moment open voor nieuwe klanten, dus er valt niets door te geven.
       </p>
     );
@@ -39,7 +39,7 @@ export default function GeefDoorAanCoach({ coaches = [], defaultEmail = "", defa
 
   if (!open) {
     return (
-      <div className="rounded-2xl border border-borderc bg-white p-5">
+      <div className="rounded-2xl border border-borderc bg-surface p-5">
         <button
           type="button"
           onClick={() => setOpen(true)}
@@ -47,18 +47,18 @@ export default function GeefDoorAanCoach({ coaches = [], defaultEmail = "", defa
         >
           Geef door aan coach
         </button>
-        <p className="mt-2 text-xs text-brand/50">{uitleg}</p>
+        <p className="mt-2 text-xs text-ink/50">{uitleg}</p>
       </div>
     );
   }
 
   return (
-    <ActionForm action={geefDoorAanCoach} success="Doorgegeven ✓" className="rounded-2xl border border-borderc bg-white p-5">
+    <ActionForm action={geefDoorAanCoach} success="Doorgegeven ✓" className="rounded-2xl border border-borderc bg-surface p-5">
       <input type="hidden" name="source" value="intake" />
       <input type="hidden" name="inboundEmailId" value={inboundEmailId} />
 
-      <p className="text-sm font-bold text-brand">Geef door aan coach</p>
-      <p className="mt-1 text-xs text-brand/50">{uitleg}</p>
+      <p className="text-sm font-bold text-ink">Geef door aan coach</p>
+      <p className="mt-1 text-xs text-ink/50">{uitleg}</p>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <Veld t="Coach">
@@ -67,46 +67,46 @@ export default function GeefDoorAanCoach({ coaches = [], defaultEmail = "", defa
         </Veld>
         <Veld t="Aanbreng per sessie (€)">
           <input name="feeEur" type="number" step="0.5" min="0" max={FEE_MAX_CENTS / 100} defaultValue={eur(feeCents)}
-            className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+            className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
         </Veld>
         <Veld t="E-mail van de klant">
           <input name="clientEmail" type="email" required defaultValue={defaultEmail} placeholder="naam@voorbeeld.be"
-            className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+            className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
         </Veld>
         <Veld t="Naam van de klant">
           <input name="clientName" defaultValue={defaultName} placeholder="Voornaam Naam"
-            className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+            className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
         </Veld>
       </div>
 
       {/* Twee tarieven, twee situaties. Koos de klant in de intake zelf al een coach, dan bracht
           Fittin' de klant aan maar niet de match — de gym kan daar een ander bedrag voor vragen. */}
       {voorkeur && (
-        <p className="mt-2 text-xs text-brand/50">
+        <p className="mt-2 text-xs text-ink/50">
           Deze klant vroeg in de intake zelf al naar deze coach. Daarom staat het voorkeurtarief ingevuld: Fittin&rsquo; bracht de klant aan, maar niet de match.
         </p>
       )}
-      <p className="mt-2 text-xs text-brand/45">
+      <p className="mt-2 text-xs text-ink/45">
         Dit staat enkel in het tegoedboek van de coach. Wat de klant zelf betaalt, verandert niet.
       </p>
 
       {/* Grenzen zijn de uitzondering: bijna elke doorgave loopt onbeperkt door. Ingeklapt dus. */}
       <details className="mt-3 border-t border-borderc pt-3">
-        <summary className="cursor-pointer list-none text-xs font-bold text-brand/50 transition hover:text-brand">+ Grens of notitie</summary>
+        <summary className="cursor-pointer list-none text-xs font-bold text-ink/50 transition hover:text-ink">+ Grens of notitie</summary>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <Veld t="Stopt na … sessies">
             <input name="sessionsCap" type="number" min="1" placeholder="onbeperkt"
-              className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+              className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
           </Veld>
           <Veld t="Stopt na … maanden">
             <input name="monthsCap" type="number" min="1" placeholder="onbeperkt"
-              className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+              className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
           </Veld>
         </div>
         <div className="mt-3">
           <Veld t="Notitie voor de coach">
             <textarea name="note" rows={2} placeholder="Wat de coach hierover moet weten…"
-              className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-brand outline-none focus:border-accent" />
+              className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-ink outline-none focus:border-accent" />
           </Veld>
         </div>
       </details>
@@ -115,7 +115,7 @@ export default function GeefDoorAanCoach({ coaches = [], defaultEmail = "", defa
         <SubmitButton pendingText="Doorgeven…" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">
           Doorgeven
         </SubmitButton>
-        <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 text-sm font-bold text-brand/40 transition hover:text-brand">Annuleer</button>
+        <button type="button" onClick={() => setOpen(false)} className="px-3 py-2 text-sm font-bold text-ink/40 transition hover:text-ink">Annuleer</button>
       </div>
     </ActionForm>
   );

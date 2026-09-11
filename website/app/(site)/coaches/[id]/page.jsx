@@ -84,15 +84,15 @@ export default async function CoachProfile({ params }) {
       <script {...jsonLdScript(personLd(c, coachUrl))} />
       <script {...jsonLdScript(breadcrumbLd([{ name: "Home", url: "/" }, { name: "Coaches", url: "/coaches" }, { name: c.full_name, url: coachUrl }]))} />
       <div className="mx-auto max-w-4xl px-5 py-16">
-        <Link href="/coaches" className="text-sm font-semibold text-brand/50 hover:text-brand">← Alle coaches</Link>
+        <Link href="/coaches" className="text-sm font-semibold text-ink/50 hover:text-ink">← Alle coaches</Link>
 
         <div className="mt-6 grid gap-8 md:grid-cols-[300px_minmax(0,1fr)]">
           <div>
-            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-borderc bg-white">
+            <div className="relative aspect-[4/5] overflow-hidden rounded-3xl border border-borderc bg-surface">
               {c.coach_photo_url ? (
                 <Image src={c.coach_photo_url} alt={c.full_name || "Coach"} fill sizes="(max-width: 768px) 100vw, 300px" className="object-cover" />
               ) : (
-                <div className="flex h-full items-center justify-center text-7xl font-black text-brand/15">{(c.full_name || "C").slice(0, 1)}</div>
+                <div className="flex h-full items-center justify-center text-7xl font-black text-ink/15">{(c.full_name || "C").slice(0, 1)}</div>
               )}
             </div>
             {/* Rechtstreeks boeken bij een coach staat bewust uit — de intake is de enige echte route.
@@ -103,8 +103,8 @@ export default async function CoachProfile({ params }) {
                 Gratis proeftraining met {voornaam} →
               </Link>
             ) : (
-              <div className="mt-4 rounded-2xl border border-borderc bg-white p-4 text-center">
-                <p className="text-sm font-bold text-brand">{voornaam} neemt momenteel geen nieuwe klanten aan.</p>
+              <div className="mt-4 rounded-2xl border border-borderc bg-surface p-4 text-center">
+                <p className="text-sm font-bold text-ink">{voornaam} neemt momenteel geen nieuwe klanten aan.</p>
                 <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">
                   Bekijk <Link href="/coaches" className="font-bold text-accentdark hover:underline">onze coaches</Link> of vraag een{" "}
                   <Link href={intakeUrl} className="font-bold text-accentdark hover:underline">gratis intake</Link> aan — dan zoeken we samen wie bij je past.
@@ -121,10 +121,10 @@ export default async function CoachProfile({ params }) {
                 <p className="mt-3 rounded-full bg-accent/10 px-4 py-2.5 text-center text-sm font-bold text-accentdark">Verbonden met deze coach ✓</p>
               ) : myLink?.status === "pending" && myLink.requested_by === "client" ? (
                 <div className="mt-3 rounded-2xl bg-paper px-4 py-3 text-center">
-                  <p className="text-sm font-bold text-brand/60">Aanvraag verstuurd — wacht op bevestiging</p>
+                  <p className="text-sm font-bold text-ink/60">Aanvraag verstuurd — wacht op bevestiging</p>
                   {/* Eerlijk over de wachttijd: de aanvraag geeft vandaag alleen een melding in de app,
                       dus een coach die niet inlogt, ziet ze niet meteen. */}
-                  <p className="mt-1 text-xs text-brand/50">
+                  <p className="mt-1 text-xs text-ink/50">
                     Hoor je binnen 2 dagen niets? Mail{" "}
                     <a href="mailto:info@fittin.be" className="font-bold text-accentdark hover:underline">info@fittin.be</a>.
                   </p>
@@ -133,35 +133,35 @@ export default async function CoachProfile({ params }) {
                 <ActionForm action={respondCoachLink} success="Verbonden ✓" className="mt-3">
                   <input type="hidden" name="linkId" value={myLink.id} />
                   <input type="hidden" name="accept" value="1" />
-                  <button className="w-full rounded-full border-2 border-accent px-6 py-3 text-sm font-black text-brand transition hover:bg-accent/10">Deze coach nodigde je uit — aanvaarden</button>
+                  <button className="w-full rounded-full border-2 border-accent px-6 py-3 text-sm font-black text-ink transition hover:bg-accent/10">Deze coach nodigde je uit — aanvaarden</button>
                 </ActionForm>
               ) : neemtAan ? (
                 <ActionForm action={clientRequestCoach} success="Aanvraag verstuurd ✓" className="mt-3">
                   <input type="hidden" name="coachId" value={c.id} />
-                  <button className="w-full rounded-full border-2 border-borderc px-6 py-3 text-sm font-black text-brand transition hover:border-accent">+ Verbind met deze coach</button>
+                  <button className="w-full rounded-full border-2 border-borderc px-6 py-3 text-sm font-black text-ink transition hover:border-accent">+ Verbind met deze coach</button>
                 </ActionForm>
               ) : null
             )}
             {!user && neemtAan && (
-              <Link href={`/login?next=/coaches/${coachSlug(c)}`} className="mt-3 block text-center text-sm font-semibold text-brand/50 hover:text-brand">Log in om te verbinden met deze coach</Link>
+              <Link href={`/login?next=/coaches/${coachSlug(c)}`} className="mt-3 block text-center text-sm font-semibold text-ink/50 hover:text-ink">Log in om te verbinden met deze coach</Link>
             )}
           </div>
 
           <div>
-            <h1 className="text-4xl font-black text-brand">{c.full_name}</h1>
+            <h1 className="text-4xl font-black text-ink">{c.full_name}</h1>
             <SpecialtyTags value={c.coach_specialty} className="mt-2" />
-            {c.coach_bio && <p className="mt-5 whitespace-pre-line leading-relaxed text-brand/70">{c.coach_bio}</p>}
+            {c.coach_bio && <p className="mt-5 whitespace-pre-line leading-relaxed text-ink/70">{c.coach_bio}</p>}
 
             {c.coach_pricelist && (
-              <div className="mt-6 rounded-2xl border border-borderc bg-white p-5">
+              <div className="mt-6 rounded-2xl border border-borderc bg-surface p-5">
                 {/* PT-prijzen staan bewust op aanvraag; dit vrije veld is dus geen prijslijst. */}
                 <p className="text-xs font-bold uppercase tracking-widest text-lav">Goed om te weten</p>
-                <p className="mt-2 whitespace-pre-line text-sm text-brand/80">{c.coach_pricelist}</p>
+                <p className="mt-2 whitespace-pre-line text-sm text-ink/80">{c.coach_pricelist}</p>
               </div>
             )}
 
             {availRows.length > 0 && (
-              <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
+              <div className="mt-4 rounded-2xl border border-borderc bg-surface p-5">
                 {toontIets && (
                   <>
                     <p className="text-xs font-bold uppercase tracking-widest text-lav">Beschikbaarheid</p>
@@ -171,7 +171,7 @@ export default async function CoachProfile({ params }) {
                         if (!slots.length) return null;
                         return (
                           <div key={wd} className="flex flex-wrap items-center gap-2">
-                            <span className="w-24 shrink-0 font-bold capitalize text-brand">{WD[wd]}</span>
+                            <span className="w-24 shrink-0 font-bold capitalize text-ink">{WD[wd]}</span>
                             <div className="flex flex-wrap gap-1.5">
                               {slots.map((a, i) => (
                                 <span key={i} className="inline-flex items-center rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accentdark">
@@ -185,7 +185,7 @@ export default async function CoachProfile({ params }) {
                     </div>
                   </>
                 )}
-                <p className={(toontIets ? "mt-4 " : "") + "text-xs text-brand/50"}>
+                <p className={(toontIets ? "mt-4 " : "") + "text-xs text-ink/50"}>
                   {toontIets ? "Ander moment nodig? " : "Een moment afspreken? "}
                   <Link href={intakeUrl} className="font-bold text-accentdark hover:underline">Vraag het bij je gratis intake</Link>.
                 </p>

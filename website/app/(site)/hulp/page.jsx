@@ -51,8 +51,8 @@ export default async function HulpPagina() {
     <main className="min-h-screen bg-paper">
       <div className="mx-auto max-w-2xl px-5 py-14">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Hulp</p>
-        <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Waarmee kunnen we helpen?</h1>
-        <p className="mt-2 text-brand/60">
+        <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Waarmee kunnen we helpen?</h1>
+        <p className="mt-2 text-ink/60">
           Loop je ergens vast? Grote kans dat je antwoord hieronder staat. Zo niet, stel je vraag onderaan — we lezen alles zelf.
         </p>
 
@@ -60,17 +60,17 @@ export default async function HulpPagina() {
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <a href="mailto:info@fittin.be" className="rounded-2xl border-2 border-accent bg-accent/5 p-5 transition hover:bg-accent/10">
             <p className="text-xs font-bold uppercase tracking-wide text-lav">Mail ons</p>
-            <p className="mt-1 break-words font-black text-brand">info@fittin.be</p>
-            <p className="mt-0.5 text-xs text-brand/55">Meestal antwoord dezelfde dag</p>
+            <p className="mt-1 break-words font-black text-ink">info@fittin.be</p>
+            <p className="mt-0.5 text-xs text-ink/55">Meestal antwoord dezelfde dag</p>
           </a>
           <a
             href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(adres)}`}
             target="_blank" rel="noopener noreferrer"
-            className="rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent"
+            className="rounded-2xl border border-borderc bg-surface p-5 transition hover:border-accent"
           >
             <p className="text-xs font-bold uppercase tracking-wide text-lav">Kom langs</p>
-            <p className="mt-1 break-words font-black text-brand">{adres}</p>
-            <p className="mt-0.5 text-xs text-brand/55">Open {uren} · reserveer je eigen uur</p>
+            <p className="mt-1 break-words font-black text-ink">{adres}</p>
+            <p className="mt-0.5 text-xs text-ink/55">Open {uren} · reserveer je eigen uur</p>
           </a>
         </div>
 
@@ -78,9 +78,9 @@ export default async function HulpPagina() {
           <h2 className="text-xs font-black uppercase tracking-widest text-lav">Veelgestelde vragen</h2>
           <div className="mt-3 space-y-2">
             {vragen.map((q, i) => (
-              <details key={i} className="rounded-2xl border border-borderc bg-white p-4">
-                <summary className="cursor-pointer font-bold text-brand">{q.v}</summary>
-                <p className="mt-2 text-sm leading-relaxed text-brand/70">{q.a}</p>
+              <details key={i} className="rounded-2xl border border-borderc bg-surface p-4">
+                <summary className="cursor-pointer font-bold text-ink">{q.v}</summary>
+                <p className="mt-2 text-sm leading-relaxed text-ink/70">{q.a}</p>
               </details>
             ))}
           </div>
@@ -90,7 +90,7 @@ export default async function HulpPagina() {
           <HelpForm ingelogd={!!user} />
         </section>
 
-        <p className="mt-6 text-center text-xs text-brand/45">
+        <p className="mt-6 text-center text-xs text-ink/45">
           Ook handig: <Link href="/voorwaarden" className="font-bold text-accentdark hover:underline">voorwaarden</Link>
           {" · "}<Link href="/privacy" className="font-bold text-accentdark hover:underline">privacy</Link>
           {" · "}<Link href="/cookies" className="font-bold text-accentdark hover:underline">cookies</Link>

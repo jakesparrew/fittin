@@ -50,12 +50,12 @@ export default async function CoachBerichten({ searchParams }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Dashboard</Link>
-      <h1 className="mt-2 text-3xl font-black text-brand">Berichten</h1>
-      <p className="mt-1 text-sm text-brand/50">Chat rechtstreeks met je clienten.</p>
+      <Link href="/coach" className="text-sm font-semibold text-ink/50 hover:text-ink">← Dashboard</Link>
+      <h1 className="mt-2 text-3xl font-black text-ink">Berichten</h1>
+      <p className="mt-1 text-sm text-ink/50">Chat rechtstreeks met je clienten.</p>
 
       {clients.length === 0 ? (
-        <p className="mt-6 rounded-2xl border border-dashed border-borderc bg-white p-8 text-center text-sm text-brand/50">Je hebt nog geen toegewezen clienten.</p>
+        <p className="mt-6 rounded-2xl border border-dashed border-borderc bg-surface p-8 text-center text-sm text-ink/50">Je hebt nog geen toegewezen clienten.</p>
       ) : (
         <div className="mt-6 grid gap-5 lg:grid-cols-[240px_1fr]">
           <div className="space-y-1">
@@ -65,7 +65,7 @@ export default async function CoachBerichten({ searchParams }) {
               .map((c) => {
                 const unread = unreadByClient[c.id] || 0;
                 return (
-                  <Link key={c.id} href={`/coach/berichten?client=${c.id}`} className={"flex items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-bold transition " + (c.id === active ? "bg-brand text-white" : "bg-white text-brand hover:bg-paper")}>
+                  <Link key={c.id} href={`/coach/berichten?client=${c.id}`} className={"flex items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-bold transition " + (c.id === active ? "bg-brand text-white" : "bg-surface text-ink hover:bg-paper")}>
                     <span className="truncate">{c.full_name || c.email}</span>
                     {unread > 0 && c.id !== active && (
                       <span className="shrink-0 rounded-full bg-accent px-2 py-0.5 text-[10px] font-black text-brand">{unread > 9 ? "9+" : unread}</span>
@@ -74,8 +74,8 @@ export default async function CoachBerichten({ searchParams }) {
                 );
               })}
           </div>
-          <div className="rounded-3xl border border-borderc bg-white p-5">
-            {activeClient && <p className="mb-3 font-black text-brand">{activeClient.full_name || activeClient.email}</p>}
+          <div className="rounded-3xl border border-borderc bg-surface p-5">
+            {activeClient && <p className="mb-3 font-black text-ink">{activeClient.full_name || activeClient.email}</p>}
             {active && <MessageThread coachId={userId} clientId={active} meId={userId} messages={messages} otherName={activeClient?.full_name} />}
           </div>
         </div>

@@ -13,9 +13,9 @@ import { setTrainingVisibility } from "@/app/(site)/oefeningen/loop-actions";
 // wegvegen is geen zorgvuldigheid maar roekeloosheid — de beheerder voert het uit binnen de maand.
 export default function PrivacyControls({ healthConsent, deletionRequestedAt, newsletterOptIn = true, trainingVisible = false }) {
   return (
-    <section className="mt-12 rounded-3xl border border-borderc bg-white p-6">
-      <h2 className="text-xl font-black text-brand">Je gegevens</h2>
-      <p className="mt-1 text-sm text-brand/55">
+    <section className="mt-12 rounded-3xl border border-borderc bg-surface p-6">
+      <h2 className="text-xl font-black text-ink">Je gegevens</h2>
+      <p className="mt-1 text-sm text-ink/55">
         Je bepaalt zelf wat we van je bijhouden. Hoe we met je gegevens omgaan staat in ons{" "}
         <a href="/privacy" className="font-bold text-accentdark hover:underline">privacybeleid</a>.
       </p>
@@ -27,8 +27,8 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
             waar mensen zich zorgen over maken ("krijg ik mijn deurcode dan nog?"). */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper p-4">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-brand">Nieuwsbrief &amp; tips</p>
-            <p className="mt-0.5 text-xs text-brand/55">
+            <p className="text-sm font-bold text-ink">Nieuwsbrief &amp; tips</p>
+            <p className="mt-0.5 text-xs text-ink/55">
               {newsletterOptIn
                 ? "Je krijgt af en toe nieuws en aanbiedingen van de gym."
                 : "Je krijgt géén nieuwsbrieven meer."}
@@ -37,7 +37,7 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
           </div>
           <ActionForm action={setNewsletterOptIn}>
             <input type="hidden" name="aan" value={newsletterOptIn ? "0" : "1"} />
-            <button className={"rounded-full px-4 py-2 text-sm font-bold transition " + (newsletterOptIn ? "border-2 border-borderc text-brand hover:border-lav" : "bg-accent text-brand hover:opacity-90")}>
+            <button className={"rounded-full px-4 py-2 text-sm font-bold transition " + (newsletterOptIn ? "border-2 border-borderc text-ink hover:border-lav" : "bg-accent text-brand hover:opacity-90")}>
               {newsletterOptIn ? "Uitschrijven" : "Weer inschrijven"}
             </button>
           </ActionForm>
@@ -47,8 +47,8 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
             zien als jij het aanzet. Zelfde lijn als het leaderboard-vinkje. */}
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper p-4">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-brand">Laat buddies zien dat je meetraint</p>
-            <p className="mt-0.5 text-xs text-brand/55">
+            <p className="text-sm font-bold text-ink">Laat buddies zien dat je meetraint</p>
+            <p className="mt-0.5 text-xs text-ink/55">
               {trainingVisible
                 ? "Je buddies zien tijdens een workout dat jij vandaag dezelfde oefeningen doet, en hoeveel sets."
                 : "Nu ziet niemand wanneer of wat je traint."}
@@ -57,7 +57,7 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
           </div>
           <ActionForm action={setTrainingVisibility}>
             <input type="hidden" name="aan" value={trainingVisible ? "0" : "1"} />
-            <button className={"rounded-full px-4 py-2 text-sm font-bold transition " + (trainingVisible ? "border-2 border-borderc text-brand hover:border-lav" : "bg-accent text-brand hover:opacity-90")}>
+            <button className={"rounded-full px-4 py-2 text-sm font-bold transition " + (trainingVisible ? "border-2 border-borderc text-ink hover:border-lav" : "bg-accent text-brand hover:opacity-90")}>
               {trainingVisible ? "Zet uit" : "Zet aan"}
             </button>
           </ActionForm>
@@ -65,12 +65,12 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper p-4">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-brand">Download al je gegevens</p>
-            <p className="mt-0.5 text-xs text-brand/55">Een volledig bestand met je account, boekingen, betalingen en metingen.</p>
+            <p className="text-sm font-bold text-ink">Download al je gegevens</p>
+            <p className="mt-0.5 text-xs text-ink/55">Een volledig bestand met je account, boekingen, betalingen en metingen.</p>
           </div>
           <a
             href="/api/me/export"
-            className="shrink-0 rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent"
+            className="shrink-0 rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent"
           >
             ⬇ Downloaden
           </a>
@@ -79,8 +79,8 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
         {healthConsent && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper p-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-brand">Gewicht en lichaamsgegevens wissen</p>
-              <p className="mt-0.5 text-xs text-brand/55">
+              <p className="text-sm font-bold text-ink">Gewicht en lichaamsgegevens wissen</p>
+              <p className="mt-0.5 text-xs text-ink/55">
                 Trekt je toestemming in en verwijdert je gewichtshistoriek, lengte en streefgewicht. Meteen en definitief.
               </p>
             </div>
@@ -90,7 +90,7 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
               className="shrink-0"
               onSubmit={(e) => { if (!confirm("Je gewichtshistoriek, lengte en streefgewicht worden definitief gewist. Doorgaan?")) e.preventDefault(); }}
             >
-              <SubmitButton className="rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-red-400 hover:text-red-600">
+              <SubmitButton className="rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink transition hover:border-red-400 hover:text-red-600">
                 Wissen
               </SubmitButton>
             </ActionForm>
@@ -101,7 +101,7 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4">
             <div className="min-w-0">
               <p className="text-sm font-bold text-amber-700">Je vroeg om je account te verwijderen</p>
-              <p className="mt-0.5 text-xs text-brand/60">
+              <p className="mt-0.5 text-xs text-ink/60">
                 We behandelen je aanvraag binnen 30 dagen en bevestigen per e-mail. Van gedacht veranderd? Trek ze gerust weer in.
               </p>
             </div>
@@ -114,8 +114,8 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
         ) : (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-paper p-4">
             <div className="min-w-0">
-              <p className="text-sm font-bold text-brand">Account laten verwijderen</p>
-              <p className="mt-0.5 text-xs text-brand/55">
+              <p className="text-sm font-bold text-ink">Account laten verwijderen</p>
+              <p className="mt-0.5 text-xs text-ink/55">
                 We wissen je persoonsgegevens binnen 30 dagen. Facturen moeten we wettelijk 7 jaar bewaren — die blijven
                 bestaan, los van je profiel.
               </p>
@@ -126,7 +126,7 @@ export default function PrivacyControls({ healthConsent, deletionRequestedAt, ne
               className="shrink-0"
               onSubmit={(e) => { if (!confirm("Je vraagt om je account en je persoonsgegevens te laten verwijderen. We behandelen dit binnen 30 dagen. Doorgaan?")) e.preventDefault(); }}
             >
-              <SubmitButton className="rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand/70 transition hover:border-red-400 hover:text-red-600">
+              <SubmitButton className="rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink/70 transition hover:border-red-400 hover:text-red-600">
                 Verwijdering aanvragen
               </SubmitButton>
             </ActionForm>

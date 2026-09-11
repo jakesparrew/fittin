@@ -13,14 +13,14 @@ export default function PasswordInput({ value, onChange, name = "password", auto
         required={required}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border-2 border-borderc bg-white px-4 py-3 pr-12 text-brand outline-none transition focus:border-accent"
+        className="w-full rounded-2xl border-2 border-borderc bg-surface px-4 py-3 pr-12 text-ink outline-none transition focus:border-accent"
       />
       <button
         type="button"
         tabIndex={-1}
         onClick={() => setShow((s) => !s)}
         aria-label={show ? "Verberg wachtwoord" : "Toon wachtwoord"}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-brand/40 transition hover:text-brand"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-ink/40 transition hover:text-ink"
       >
         {show ? (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

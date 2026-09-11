@@ -12,9 +12,9 @@ import { GESLACHTEN } from "@/lib/aanmelding-velden";
 // de antwoorden; halverwege stoppen verliest niets, want er wordt pas weggeschreven op het einde.
 
 const KNOP = "w-full rounded-2xl border-2 px-4 py-3.5 text-left text-sm font-bold transition ";
-const AAN = "border-accent bg-accent/10 text-brand";
-const UIT = "border-borderc text-brand/70 hover:border-lav";
-const VELD = "mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-base font-normal text-brand outline-none transition focus:border-accent";
+const AAN = "border-accent bg-accent/10 text-ink";
+const UIT = "border-borderc text-ink/70 hover:border-lav";
+const VELD = "mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-base font-normal text-ink outline-none transition focus:border-accent";
 
 const DOELEN = [
   { v: "sterker", l: "Sterker worden", u: "Meer kracht, zwaardere gewichten." },
@@ -97,7 +97,7 @@ export default function IntakeWizard({ profiel }) {
   }
 
   return (
-    <div className="anim-in rounded-3xl border border-borderc bg-white p-6 sm:p-8">
+    <div className="anim-in rounded-3xl border border-borderc bg-surface p-6 sm:p-8">
       {/* Voortgang: zes stippen. Geen percentage — dat suggereert een lange weg. */}
       <div className="flex items-center gap-1.5" aria-label={`Stap ${stap} van ${LAATSTE}`}>
         {Array.from({ length: LAATSTE }).map((_, i) => (
@@ -111,7 +111,7 @@ export default function IntakeWizard({ profiel }) {
             {DOELEN.map((d) => (
               <button key={d.v} type="button" onClick={() => { setDoel(d.v); verder(); }} className={KNOP + (doel === d.v ? AAN : UIT)}>
                 {d.l}
-                <span className="mt-0.5 block text-xs font-normal text-brand/50">{d.u}</span>
+                <span className="mt-0.5 block text-xs font-normal text-ink/50">{d.u}</span>
               </button>
             ))}
           </div>
@@ -123,7 +123,7 @@ export default function IntakeWizard({ profiel }) {
           <div className="space-y-2">
             <div className={KNOP + AAN + " cursor-default"}>
               Workouts
-              <span className="mt-0.5 block text-xs font-normal text-brand/50">
+              <span className="mt-0.5 block text-xs font-normal text-ink/50">
                 Je plan van week tot week, met je sessie in je deurcodemail. Dit is de basis en staat altijd aan.
               </span>
             </div>
@@ -137,20 +137,20 @@ export default function IntakeWizard({ profiel }) {
                       <span className={"flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 text-xs transition " + (aan ? "border-accent bg-accent text-brand" : "border-borderc text-transparent")}>&#10003;</span>
                       {m.l}
                     </span>
-                    <span className="mt-0.5 block text-xs font-normal text-brand/50">{m.u}</span>
+                    <span className="mt-0.5 block text-xs font-normal text-ink/50">{m.u}</span>
                   </button>
 
                   {/* De voedingsvraag hoort bij de knop die ze oproept, niet op een eigen scherm. */}
                   {m.v === "mealplan" && aan && (
                     <div className="anim-in mt-2 rounded-2xl border-2 border-borderc p-4">
-                      <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Wat eet je niet?</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Wat eet je niet?</p>
                       <div className="mt-2.5 flex flex-wrap gap-2">
                         {VOEDINGSVOORKEUREN.map((v) => {
                           const gekozen = voeding.includes(v.v);
                           return (
                             <button key={v.v} type="button"
                               onClick={() => setVoeding((l) => (gekozen ? l.filter((x) => x !== v.v) : [...l, v.v]))}
-                              className={"rounded-full border-2 px-3.5 py-1.5 text-xs font-bold transition " + (gekozen ? "border-accent bg-accent/10 text-brand" : "border-borderc text-brand/60 hover:border-lav")}>
+                              className={"rounded-full border-2 px-3.5 py-1.5 text-xs font-bold transition " + (gekozen ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink/60 hover:border-lav")}>
                               {v.l}
                             </button>
                           );
@@ -159,7 +159,7 @@ export default function IntakeWizard({ profiel }) {
                       <textarea rows={2} maxLength={300} value={voedingVrij} onChange={(e) => setVoedingVrij(e.target.value)}
                         placeholder="Bv. geen paprika, ik kook 's avonds voor twee"
                         className={VELD + " resize-none"} />
-                      <p className="mt-1.5 text-xs leading-relaxed text-brand/45">
+                      <p className="mt-1.5 text-xs leading-relaxed text-ink/45">
                         Een weekmenu heeft je gewicht, lengte en leeftijd nodig — die vraag komt straks.
                         Gaat het over een aandoening, medicatie, zwangerschap of een eetstoornis, dan maakt je
                         coach geen menu maar verwijst hij je door. Dat hoort bij een diëtist.
@@ -179,7 +179,7 @@ export default function IntakeWizard({ profiel }) {
             {ERVARING.map((e) => (
               <button key={e.v} type="button" onClick={() => { setErvaring(e.v); verder(); }} className={KNOP + (ervaring === e.v ? AAN : UIT)}>
                 {e.l}
-                <span className="mt-0.5 block text-xs font-normal text-brand/50">{e.u}</span>
+                <span className="mt-0.5 block text-xs font-normal text-ink/50">{e.u}</span>
               </button>
             ))}
           </div>
@@ -202,7 +202,7 @@ export default function IntakeWizard({ profiel }) {
             {[{ n: 6, l: "6 weken", u: "Kort en concreet" }, { n: 8, l: "8 weken", u: "De gulden middenweg" }, { n: 12, l: "12 weken", u: "Echt iets opbouwen" }].map((o) => (
               <button key={o.n} type="button" onClick={() => setWeken(o.n)} className={KNOP + (weken === o.n ? AAN : UIT)}>
                 {o.l}
-                <span className="mt-0.5 block text-xs font-normal text-brand/50">{o.u}</span>
+                <span className="mt-0.5 block text-xs font-normal text-ink/50">{o.u}</span>
               </button>
             ))}
           </div>
@@ -214,11 +214,11 @@ export default function IntakeWizard({ profiel }) {
           <div className="grid gap-2 sm:grid-cols-2">
             <button type="button" onClick={() => setToon("rustig")} className={KNOP + (toon === "rustig" ? AAN : UIT)}>
               Hou het rustig
-              <span className="mt-0.5 block text-xs font-normal text-brand/50">Bemoedigend, zonder druk.</span>
+              <span className="mt-0.5 block text-xs font-normal text-ink/50">Bemoedigend, zonder druk.</span>
             </button>
             <button type="button" onClick={() => setToon("scherp")} className={KNOP + (toon === "scherp" ? AAN : UIT)}>
               Hou me scherp
-              <span className="mt-0.5 block text-xs font-normal text-brand/50">Kort, direct, to the point.</span>
+              <span className="mt-0.5 block text-xs font-normal text-ink/50">Kort, direct, to the point.</span>
             </button>
           </div>
         </Vraag>
@@ -234,9 +234,9 @@ export default function IntakeWizard({ profiel }) {
           <div className="rounded-2xl border-2 border-borderc p-4">
             <label className="flex cursor-pointer items-start gap-3">
               <input type="checkbox" checked={toestemming} onChange={(e) => setToestemming(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-accent" />
-              <span className="text-sm text-brand">
+              <span className="text-sm text-ink">
                 <b>Ja, gebruik mijn gegevens om mijn schema af te stemmen.</b>
-                <span className="mt-1 block text-xs leading-relaxed text-brand/55">
+                <span className="mt-1 block text-xs leading-relaxed text-ink/55">
                   Je leeftijdsklasse, gewicht en wat je wil vermijden gaan mee naar het model dat je plan opstelt.
                   Je naam, e-mailadres en adres nooit. Je kan dit op elk moment intrekken bij je gegevens —
                   dan werkt je coach verder zonder die informatie.
@@ -247,12 +247,12 @@ export default function IntakeWizard({ profiel }) {
 
           {toestemming && (
             <div className="anim-in mt-4 grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-bold text-brand">
+              <label className="block text-sm font-bold text-ink">
                 Geboortedatum
                 <input type="date" value={geboortedatum} min="1920-01-01" onChange={(e) => setGeboortedatum(e.target.value)} className={VELD} />
               </label>
-              <label className="block text-sm font-bold text-brand">
-                Geslacht <span className="font-normal text-brand/40">(mag je openlaten)</span>
+              <label className="block text-sm font-bold text-ink">
+                Geslacht <span className="font-normal text-ink/40">(mag je openlaten)</span>
                 <span className="mt-1.5 flex gap-2">
                   {GESLACHTEN.map((g) => (
                     <button key={g} type="button" onClick={() => setGeslacht(geslacht === g ? "" : g)}
@@ -261,24 +261,24 @@ export default function IntakeWizard({ profiel }) {
                     </button>
                   ))}
                 </span>
-                <span className="mt-1 block text-xs font-normal text-brand/45">
+                <span className="mt-1 block text-xs font-normal text-ink/45">
                   Enkel gebruikt om je dagbehoefte te berekenen als je een weekmenu vraagt.
                 </span>
               </label>
-              <label className="block text-sm font-bold text-brand">
-                Gewicht <span className="font-normal text-brand/40">(kg)</span>
+              <label className="block text-sm font-bold text-ink">
+                Gewicht <span className="font-normal text-ink/40">(kg)</span>
                 <input type="number" inputMode="decimal" step="0.1" value={gewicht} onChange={(e) => setGewicht(e.target.value)} className={VELD} />
               </label>
-              <label className="block text-sm font-bold text-brand">
-                Lengte <span className="font-normal text-brand/40">(cm)</span>
+              <label className="block text-sm font-bold text-ink">
+                Lengte <span className="font-normal text-ink/40">(cm)</span>
                 <input type="number" inputMode="numeric" value={lengte} onChange={(e) => setLengte(e.target.value)} className={VELD} />
               </label>
-              <label className="block text-sm font-bold text-brand sm:col-span-2">
-                Iets wat we moeten vermijden? <span className="font-normal text-brand/40">(optioneel)</span>
+              <label className="block text-sm font-bold text-ink sm:col-span-2">
+                Iets wat we moeten vermijden? <span className="font-normal text-ink/40">(optioneel)</span>
                 <textarea rows={2} maxLength={500} value={beperkingen} onChange={(e) => setBeperkingen(e.target.value)}
                   placeholder="Bv. lage rug, gevoelige knie, schouder in revalidatie"
                   className={VELD + " resize-none"} />
-                <span className="mt-1 block text-xs font-normal text-brand/45">
+                <span className="mt-1 block text-xs font-normal text-ink/45">
                   Bij pijn of een blessure in behandeling verwijst je coach je door naar een echte coach — dat is geen medisch advies.
                 </span>
               </label>
@@ -291,7 +291,7 @@ export default function IntakeWizard({ profiel }) {
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <button type="button" onClick={terug} disabled={stap === 1 || bezig}
-          className="rounded-full px-4 py-2.5 text-sm font-bold text-brand/50 transition hover:text-brand disabled:opacity-0">
+          className="rounded-full px-4 py-2.5 text-sm font-bold text-ink/50 transition hover:text-ink disabled:opacity-0">
           ← Terug
         </button>
         {stap < LAATSTE ? (
@@ -309,7 +309,7 @@ export default function IntakeWizard({ profiel }) {
       </div>
 
       {bezig && (
-        <p className="mt-3 text-right text-xs text-brand/45">Dit duurt een tiental seconden — je coach stelt je weken samen.</p>
+        <p className="mt-3 text-right text-xs text-ink/45">Dit duurt een tiental seconden — je coach stelt je weken samen.</p>
       )}
     </div>
   );
@@ -318,7 +318,7 @@ export default function IntakeWizard({ profiel }) {
 function Vraag({ titel, uitleg, children }) {
   return (
     <div className="anim-in mt-6">
-      <h2 className="font-display text-xl font-black leading-tight text-brand sm:text-2xl">{titel}</h2>
+      <h2 className="font-display text-xl font-black leading-tight text-ink sm:text-2xl">{titel}</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{uitleg}</p>
       <div className="mt-5">{children}</div>
     </div>

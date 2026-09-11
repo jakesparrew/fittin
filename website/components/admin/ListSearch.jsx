@@ -38,14 +38,14 @@ export default function ListSearch({ placeholder = "Zoeken…", param = "q", cla
         onChange={(e) => setValue(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full rounded-full border-2 border-borderc bg-white py-2 pl-4 pr-9 text-sm text-brand outline-none transition focus:border-accent"
+        className="w-full rounded-full border-2 border-borderc bg-surface py-2 pl-4 pr-9 text-sm text-ink outline-none transition focus:border-accent"
       />
       {value && (
         <button
           type="button"
           onClick={() => setValue("")}
           aria-label="Zoekopdracht wissen"
-          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 text-brand/40 transition hover:text-brand"
+          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full px-2 text-ink/40 transition hover:text-ink"
         >
           ×
         </button>

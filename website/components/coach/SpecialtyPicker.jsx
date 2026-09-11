@@ -38,10 +38,10 @@ export default function SpecialtyPicker({ name = "specialty", defaultValue = "",
               className={
                 "rounded-full border-2 px-3.5 py-1.5 text-sm font-bold transition " +
                 (aan
-                  ? "border-accent bg-accent/10 text-brand"
+                  ? "border-accent bg-accent/10 text-ink"
                   : vol
-                    ? "cursor-not-allowed border-borderc text-brand/25"
-                    : "border-borderc text-ink-soft hover:border-lav hover:text-brand")
+                    ? "cursor-not-allowed border-borderc text-ink/25"
+                    : "border-borderc text-ink-soft hover:border-lav hover:text-ink")
               }
             >
               {label}

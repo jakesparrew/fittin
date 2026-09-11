@@ -35,7 +35,7 @@ export default async function MemberFactuur({ params }) {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
       <div className="mb-4 flex items-center justify-between print:hidden">
-        <Link href="/account/betalingen" className="text-sm font-semibold text-brand/50 hover:text-brand">← Betalingen</Link>
+        <Link href="/account/betalingen" className="text-sm font-semibold text-ink/50 hover:text-ink">← Betalingen</Link>
         <PrintButton />
       </div>
       <Invoice
@@ -50,5 +50,5 @@ export default async function MemberFactuur({ params }) {
 }
 
 function Missing() {
-  return <div className="px-6 py-10 text-sm text-brand/60">Factuur niet gevonden. <Link href="/account/betalingen" className="text-accentdark">Terug</Link></div>;
+  return <div className="px-6 py-10 text-sm text-ink/60">Factuur niet gevonden. <Link href="/account/betalingen" className="text-accentdark">Terug</Link></div>;
 }

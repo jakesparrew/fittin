@@ -13,9 +13,9 @@ export default function Disclosure() {
   return (
     <main className="bg-paper">
       <div className="mx-auto max-w-2xl px-5 py-16">
-        <Link href="/" className="text-sm font-semibold text-brand/50 hover:text-brand">← Home</Link>
-        <h1 className="mt-4 text-3xl font-black text-brand md:text-4xl">Affiliate-disclosure</h1>
-        <div className="mt-6 space-y-4 leading-relaxed text-brand/70">
+        <Link href="/" className="text-sm font-semibold text-ink/50 hover:text-ink">← Home</Link>
+        <h1 className="mt-4 text-3xl font-black text-ink md:text-4xl">Affiliate-disclosure</h1>
+        <div className="mt-6 space-y-4 leading-relaxed text-ink/70">
           {/* Stond hier: "sommige links zijn affiliate-links … partner zoals Body & Fit". Dat klopte
               niet — er is nooit een affiliate-account geactiveerd (AWIN_AFFID is nergens ingevuld,
               nagemeten op de live site: de link ging rechtstreeks naar de winkel, niet via Awin), en
@@ -31,7 +31,7 @@ export default function Disclosure() {
             partner krijgt nooit een plaats <em>omdat</em> het een partner is, en aan jouw prijs
             verandert er nooit iets.
           </p>
-          <p className="text-sm text-brand/50">
+          <p className="text-sm text-ink/50">
             Vragen? Mail ons gerust op <a href="mailto:info@fittin.be" className="underline">info@fittin.be</a>.
           </p>
         </div>

@@ -38,7 +38,7 @@ export default function AddClientInline() {
         <input name="email" type="email" required placeholder="client@voorbeeld.be" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
       </label>
       <button disabled={pending} className="rounded-full bg-brand px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{pending ? "Bezig…" : "Aanmaken & toewijzen"}</button>
-      <button type="button" onClick={() => setOpen(false)} className="px-2 py-2 text-sm font-bold text-brand/40 hover:text-brand">✕</button>
+      <button type="button" onClick={() => setOpen(false)} className="px-2 py-2 text-sm font-bold text-ink/40 hover:text-ink">✕</button>
     </form>
   );
 }

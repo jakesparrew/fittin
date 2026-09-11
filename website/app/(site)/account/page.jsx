@@ -31,6 +31,7 @@ import { hasConsent } from "@/lib/legal";
 import { euro } from "@/lib/format";
 import TrackBookingCompleted from "./TrackBookingCompleted";
 import TrackSignup from "@/components/TrackSignup";
+import ThemaKeuze from "@/components/ThemaKeuze";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -301,7 +302,7 @@ export default async function AccountPage({ searchParams }) {
             lidmaatschap, community-events en coach-betaalverzoeken); coaches krijgen dezelfde
             melding op /coach, want deze pagina stuurt hen mét querystring door. */}
         {sp.betaling === "afgebroken" && (
-          <p className="mb-6 rounded-2xl border border-borderc bg-white p-4 text-sm text-brand/70">
+          <p className="mb-6 rounded-2xl border border-borderc bg-surface p-4 text-sm text-ink/70">
             {pendingPay.length > 0 ? (
               <>Je betaling is afgebroken — er is niets aangerekend. Je uur blijft nog even gereserveerd; reken hierboven af om het vast te zetten.</>
             ) : (
@@ -315,12 +316,12 @@ export default async function AccountPage({ searchParams }) {
           <div>
             <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Mijn account</p>
             <h1 className="mt-2 text-3xl font-black md:text-4xl">Hey {firstName} 👋</h1>
-            <p className="mt-2 text-sm text-brand/60">
+            <p className="mt-2 text-sm text-ink/60">
               {profile?.email} · {ROLE_LABEL[profile?.role] || "Lid"}
             </p>
           </div>
           <form action="/auth/signout" method="post">
-            <button className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-lav">
+            <button className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-ink transition hover:border-lav">
               Uitloggen
             </button>
           </form>
@@ -349,7 +350,7 @@ export default async function AccountPage({ searchParams }) {
 
           {/* Buy more sessions — bundles + membership */}
           <div className="mt-6 grid gap-3 border-t border-white/10 pt-5 sm:grid-cols-3">
-            <Link href="/lidmaatschap" className="rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
+            <Link href="/lidmaatschap" className="rounded-2xl bg-surface/5 p-4 transition hover:bg-surface/10">
               <p className="text-sm font-black text-white">10-beurtenkaart</p>
               <p className="mt-0.5 text-xs text-lav">€ 150 · 11 sessies (10 + 1 gratis)</p>
             </Link>
@@ -363,12 +364,12 @@ export default async function AccountPage({ searchParams }) {
                 <p className="mt-0.5 text-xs text-lav">Voordeeltarief + boek tot 8 weken vooruit</p>
               </div>
             ) : (
-              <Link href="/lidmaatschap" className="rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
+              <Link href="/lidmaatschap" className="rounded-2xl bg-surface/5 p-4 transition hover:bg-surface/10">
                 <p className="text-sm font-black text-white">Word member</p>
                 <p className="mt-0.5 text-xs text-lav">€ 12/maand · 1 sessie incl. + alles aan € 12</p>
               </Link>
             )}
-            <Link href="/boeken" className="rounded-2xl bg-white/5 p-4 transition hover:bg-white/10">
+            <Link href="/boeken" className="rounded-2xl bg-surface/5 p-4 transition hover:bg-surface/10">
               <p className="text-sm font-black text-white">Losse sessie</p>
               <p className="mt-0.5 text-xs text-lav">€ 15 · 1 uur, de hele zaal voor jou</p>
             </Link>
@@ -396,17 +397,17 @@ export default async function AccountPage({ searchParams }) {
 
         {(incomingJoins || []).length > 0 && (
           <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
-            <p className="font-black text-brand">🤝 Kom je mee trainen?</p>
+            <p className="font-black text-ink">🤝 Kom je mee trainen?</p>
             <div className="mt-3 space-y-2">
               {incomingJoins.map((r) => (
-                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4">
+                <div key={r.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-surface p-4">
                   <div>
-                    <p className="font-bold text-brand">{r.from?.full_name || "Een buddy"} gaat trainen</p>
-                    <p className="text-xs capitalize text-brand/50">{r.booking ? fmtRange(r.booking.starts_at, r.booking.ends_at) : ""} · {r.booking?.services?.name || "Sessie"}</p>
+                    <p className="font-bold text-ink">{r.from?.full_name || "Een buddy"} gaat trainen</p>
+                    <p className="text-xs capitalize text-ink/50">{r.booking ? fmtRange(r.booking.starts_at, r.booking.ends_at) : ""} · {r.booking?.services?.name || "Sessie"}</p>
                   </div>
                   <div className="flex gap-2">
                     <ActionForm action={respondJoinRequest} success="Je komt mee ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="accept" /><button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Ik kom mee</button></ActionForm>
-                    <ActionForm action={respondJoinRequest} success="Afgemeld ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="decline" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand/60">Kan niet</button></ActionForm>
+                    <ActionForm action={respondJoinRequest} success="Afgemeld ✓"><input type="hidden" name="id" value={r.id} /><input type="hidden" name="decision" value="decline" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-ink/60">Kan niet</button></ActionForm>
                   </div>
                 </div>
               ))}
@@ -421,10 +422,10 @@ export default async function AccountPage({ searchParams }) {
             <div className="mt-2 space-y-2">
               {incomingCoachReqs.map((l) => (
                 <div key={l.id} className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-sm text-brand/80"><span className="font-black text-brand">{l.coach.full_name || "Een coach"}</span> wil je coachen.</p>
+                  <p className="text-sm text-ink/80"><span className="font-black text-ink">{l.coach.full_name || "Een coach"}</span> wil je coachen.</p>
                   <div className="flex gap-2">
                     <ActionForm action={respondCoachLink} success="Verbonden ✓"><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="1" /><button className="rounded-full bg-accent px-4 py-2 text-xs font-bold text-brand transition hover:opacity-90">Aanvaarden</button></ActionForm>
-                    <ActionForm action={respondCoachLink} success="Geweigerd ✓"><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="0" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand transition hover:border-red-300 hover:text-red-600">Weiger</button></ActionForm>
+                    <ActionForm action={respondCoachLink} success="Geweigerd ✓"><input type="hidden" name="linkId" value={l.id} /><input type="hidden" name="accept" value="0" /><button className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-ink transition hover:border-red-300 hover:text-red-600">Weiger</button></ActionForm>
                   </div>
                 </div>
               ))}
@@ -433,19 +434,19 @@ export default async function AccountPage({ searchParams }) {
         )}
 
         {myCoach ? (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-surface p-6">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-lav">Jouw coach</p>
-              <p className="mt-1 text-lg font-black text-brand">{myCoach.full_name || "Je coach"}</p>
+              <p className="mt-1 text-lg font-black text-ink">{myCoach.full_name || "Je coach"}</p>
             </div>
-            <Link href="/training" className="rounded-full bg-paper px-5 py-2.5 text-sm font-bold text-brand transition hover:bg-accent/15">Mijn training →</Link>
+            <Link href="/training" className="rounded-full bg-paper px-5 py-2.5 text-sm font-bold text-ink transition hover:bg-accent/15">Mijn training →</Link>
           </div>
         ) : (
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-white p-6">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-borderc bg-surface p-6">
             <div>
               <p className="text-xs font-bold uppercase tracking-widest text-lav">Coaching</p>
-              <p className="mt-1 font-bold text-brand">Wil je begeleiding van een coach?</p>
-              <p className="text-sm text-brand/55">Bekijk onze coaches en stuur een verbindingsverzoek. Eens verbonden kan je samen trainen en plant je coach je sessies in.</p>
+              <p className="mt-1 font-bold text-ink">Wil je begeleiding van een coach?</p>
+              <p className="text-sm text-ink/55">Bekijk onze coaches en stuur een verbindingsverzoek. Eens verbonden kan je samen trainen en plant je coach je sessies in.</p>
               {sentCoachReqs.length > 0 && <p className="mt-1 text-xs font-bold text-accentdark">Aanvraag verstuurd — wachten op bevestiging van {sentCoachReqs.map((l) => l.coach.full_name || "de coach").join(", ")}.</p>}
             </div>
             <Link href="/coaches" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Bekijk coaches →</Link>
@@ -459,10 +460,10 @@ export default async function AccountPage({ searchParams }) {
         <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border-2 border-accent/30 bg-accent/5 p-6">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-widest text-accentdark">Fittin&rsquo; coaching</p>
-            <p className="mt-1 text-lg font-black text-brand">
+            <p className="mt-1 text-lg font-black text-ink">
               {profile?.coaching_doel ? "Je plan en je week" : "Start je AI Coaching"}
             </p>
-            <p className="mt-0.5 text-sm text-brand/60">
+            <p className="mt-0.5 text-sm text-ink/60">
               {profile?.coaching_doel
                 ? "Bekijk je week, vink je sessies af en lees wat je coach schreef."
                 : "Een paar vragen en je krijgt een trainingsplan op maat, week per week."}
@@ -475,11 +476,11 @@ export default async function AccountPage({ searchParams }) {
         )}
 
         {/* Leaderboard + share */}
-        <section className="mt-6 rounded-3xl border border-borderc bg-white p-6">
+        <section className="mt-6 rounded-3xl border border-borderc bg-surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-black text-brand">Leaderboard <span className="text-brand/40">· deze maand</span></h2>
-              <p className="text-sm text-brand/60">
+              <h2 className="font-black text-ink">Leaderboard <span className="text-ink/40">· deze maand</span></h2>
+              <p className="text-sm text-ink/60">
                 {myRank >= 0 ? <>Je staat <span className="font-black text-accentdark">#{myRank + 1}</span> van de {leaderboard.length} leden.</> : "Boek een sessie deze maand om mee te doen."}
               </p>
             </div>
@@ -487,7 +488,7 @@ export default async function AccountPage({ searchParams }) {
           </div>
           <ActionForm action={setLeaderboardOptIn} success={profile?.leaderboard_opt_in === false ? "Je staat nu op de leaderboard ✓" : "Je staat niet meer op de leaderboard."} className="mt-2">
             <input type="hidden" name="opt_in" value={profile?.leaderboard_opt_in === false ? "true" : "false"} />
-            <button className="text-xs font-bold text-brand/50 transition hover:text-brand">
+            <button className="text-xs font-bold text-ink/50 transition hover:text-ink">
               {profile?.leaderboard_opt_in === false ? "→ Doe weer mee aan de leaderboard" : "Mij verbergen van de leaderboard"}
             </button>
           </ActionForm>
@@ -495,14 +496,14 @@ export default async function AccountPage({ searchParams }) {
             {leaderboard.slice(0, 5).map((r, i) => (
               <div key={r.id} className={"flex items-center justify-between rounded-xl px-3 py-2 text-sm " + (r.id === user.id ? "bg-brand text-white" : "bg-paper")}>
                 <span className="flex items-center gap-3">
-                  <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-white/20" : "bg-white")}>{i + 1}</span>
+                  <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-surface/20" : "bg-surface")}>{i + 1}</span>
                   <span className="font-bold">{r.name}</span>
                 </span>
                 <span className="font-black">{r.n}</span>
               </div>
             ))}
-            {leaderboard.length === 0 && <p className="text-sm text-brand/50">Nog geen sessies deze maand. Wees de eerste!</p>}
-            {myRank >= 5 && <p className="pt-1 text-center text-xs text-brand/50">Jij: #{myRank + 1} · {leaderboard[myRank].n} sessies</p>}
+            {leaderboard.length === 0 && <p className="text-sm text-ink/50">Nog geen sessies deze maand. Wees de eerste!</p>}
+            {myRank >= 5 && <p className="pt-1 text-center text-xs text-ink/50">Jij: #{myRank + 1} · {leaderboard[myRank].n} sessies</p>}
           </div>
         </section>
 
@@ -510,8 +511,8 @@ export default async function AccountPage({ searchParams }) {
           <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="font-bold text-brand">🎁 Je gratis eerste sessie staat klaar!</p>
-                <p className="mt-1 text-sm text-brand/60">Welkomstpromo — je allereerste uur in de privégym is gratis. Geen kaart nodig, je betaalt pas vanaf je tweede sessie.</p>
+                <p className="font-bold text-ink">🎁 Je gratis eerste sessie staat klaar!</p>
+                <p className="mt-1 text-sm text-ink/60">Welkomstpromo — je allereerste uur in de privégym is gratis. Geen kaart nodig, je betaalt pas vanaf je tweede sessie.</p>
               </div>
               <Link href="/boeken" className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Boek gratis sessie</Link>
             </div>
@@ -520,11 +521,11 @@ export default async function AccountPage({ searchParams }) {
 
         <div className="mt-4 flex flex-wrap gap-2 text-sm font-bold">
           <Link href="/boeken" className="rounded-full bg-accent px-5 py-2.5 text-brand transition hover:opacity-90">+ Boek een sessie</Link>
-          <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Mijn training</Link>
-          <Link href="/training#voortgang" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">📈 Voortgang</Link>
-          <Link href="/oefeningen" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Oefeningen</Link>
-          <Link href="/bewaard" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">▷ Mijn video&rsquo;s</Link>
-          <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-brand transition hover:border-lav">Community</Link>
+          <Link href="/training" className="rounded-full border-2 border-borderc px-5 py-2.5 text-ink transition hover:border-lav">Mijn training</Link>
+          <Link href="/training#voortgang" className="rounded-full border-2 border-borderc px-5 py-2.5 text-ink transition hover:border-lav">📈 Voortgang</Link>
+          <Link href="/oefeningen" className="rounded-full border-2 border-borderc px-5 py-2.5 text-ink transition hover:border-lav">Oefeningen</Link>
+          <Link href="/bewaard" className="rounded-full border-2 border-borderc px-5 py-2.5 text-ink transition hover:border-lav">▷ Mijn video&rsquo;s</Link>
+          <Link href="/community" className="rounded-full border-2 border-borderc px-5 py-2.5 text-ink transition hover:border-lav">Community</Link>
         </div>
 
         {sp.nieuw === "1" && <TrackSignup />}
@@ -539,7 +540,7 @@ export default async function AccountPage({ searchParams }) {
             {/* S4 checkout-nudge: zelfde 60d-berekening als de banner + de suggestie-mail, zodat het lid
                 overal hetzelfde bedrag ziet. Vanaf 2 sessies al — dit moment (net betaald) is het meest ontvankelijk. */}
             {!membership && !aboPastDue && nudgeSessions >= 2 && (
-              <p className="mt-2 text-sm text-brand/70">
+              <p className="mt-2 text-sm text-ink/70">
                 {/* "gratis" is het verkeerde woord: die maandsessie is net wat je met de € 12 koopt.
                     /lidmaatschap noemt ze "inbegrepen" — hou dat hier gelijk. */}
                 Dat waren al {nudgeSessions} zelfbetaalde sessies in 60 dagen. Met het Member-abonnement (€ 12/sessie + elke maand 1 sessie inbegrepen) was dat ≈ € {nudgeSaving} voordeel.{" "}
@@ -548,7 +549,7 @@ export default async function AccountPage({ searchParams }) {
             )}
             {profile?.referral_code && (
               <div className="mt-3 border-t border-accent/20 pt-3">
-                <p className="text-sm font-semibold text-brand">Breng volgende keer een vriend mee — die traint gratis 🎁</p>
+                <p className="text-sm font-semibold text-ink">Breng volgende keer een vriend mee — die traint gratis 🎁</p>
                 <div className="mt-2"><ShareReferral code={profile.referral_code} compact /></div>
               </div>
             )}
@@ -584,8 +585,8 @@ export default async function AccountPage({ searchParams }) {
             past_due wordt uitgesloten (die heeft al een abo — enkel de betaling hapert). */}
         {!membership && !aboPastDue && nudgeSessions >= 3 && (
           <div className="mt-6 rounded-3xl border-2 border-accent bg-accent/10 p-6">
-            <p className="font-black text-brand">💡 Jij traint vaak — het abonnement is voor jou voordeliger</p>
-            <p className="mt-1 text-sm text-brand/70">
+            <p className="font-black text-ink">💡 Jij traint vaak — het abonnement is voor jou voordeliger</p>
+            <p className="mt-1 text-sm text-ink/70">
               Je trainde <b>{nudgeSessions}×</b> in de laatste 60 dagen. Met het Member-abonnement (€ 12/mnd) betaal je <b>€ 12 per sessie</b> én
               zit er <b>elke maand 1 sessie inbegrepen</b> — voor jou was dat ≈ <b>€ {nudgeSaving} voordeel</b> geweest.
             </p>
@@ -594,13 +595,13 @@ export default async function AccountPage({ searchParams }) {
         )}
 
         {/* Lichaam & voortgang */}
-        <section className="mt-8 rounded-3xl border border-borderc bg-white p-6">
+        <section className="mt-8 rounded-3xl border border-borderc bg-surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="font-black text-brand">Lichaam &amp; voortgang</h2>
-              <p className="mt-1 text-sm text-brand/60">Log je gewicht en volg je evolutie. Straks gebruiken we dit voor AI-coachingtips op maat.</p>
+              <h2 className="font-black text-ink">Lichaam &amp; voortgang</h2>
+              <p className="mt-1 text-sm text-ink/60">Log je gewicht en volg je evolutie. Straks gebruiken we dit voor AI-coachingtips op maat.</p>
             </div>
-            {bmi && <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">BMI {bmi}</span>}
+            {bmi && <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink/60">BMI {bmi}</span>}
           </div>
 
           <BodyMetricsForm heightCm={bodyProfile?.height_cm} goalKg={bodyProfile?.goal_weight_kg} healthConsent={healthConsent} />
@@ -618,12 +619,12 @@ export default async function AccountPage({ searchParams }) {
                   const prev = [...weights].reverse()[i + 1];
                   const diff = prev ? Number(w.weight_kg) - Number(prev.weight_kg) : null;
                   return (
-                    <div key={w.logged_on + i} className={"flex items-center justify-between px-4 py-2.5 text-sm " + (i % 2 ? "bg-paper/50" : "bg-white")}>
-                      <span className="capitalize text-brand/60">{new Intl.DateTimeFormat("nl-BE", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(w.logged_on))}</span>
+                    <div key={w.logged_on + i} className={"flex items-center justify-between px-4 py-2.5 text-sm " + (i % 2 ? "bg-paper/50" : "bg-surface")}>
+                      <span className="capitalize text-ink/60">{new Intl.DateTimeFormat("nl-BE", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(w.logged_on))}</span>
                       <span className="flex items-center gap-2">
-                        <span className="font-black text-brand">{Number(w.weight_kg).toFixed(1)} kg</span>
+                        <span className="font-black text-ink">{Number(w.weight_kg).toFixed(1)} kg</span>
                         {diff != null && diff !== 0 && (
-                          <span className={"text-xs font-bold " + (diff < 0 ? "text-accentdark" : "text-brand/40")}>{diff < 0 ? "▼" : "▲"} {Math.abs(diff).toFixed(1)}</span>
+                          <span className={"text-xs font-bold " + (diff < 0 ? "text-accentdark" : "text-ink/40")}>{diff < 0 ? "▼" : "▲"} {Math.abs(diff).toFixed(1)}</span>
                         )}
                       </span>
                     </div>
@@ -641,8 +642,8 @@ export default async function AccountPage({ searchParams }) {
               <div key={r.id} className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border-2 border-accent/40 bg-accent/5 p-5">
                 <div>
                   <p className="text-xs font-black uppercase tracking-widest text-accentdark">Betaalverzoek van je coach</p>
-                  <p className="mt-1 font-black text-brand">{euro(r.amount_cents)} · {r.description || "Personal training"}</p>
-                  <p className="mt-0.5 text-sm text-brand/55">van {r.coach?.full_name || "je coach"}</p>
+                  <p className="mt-1 font-black text-ink">{euro(r.amount_cents)} · {r.description || "Personal training"}</p>
+                  <p className="mt-0.5 text-sm text-ink/55">van {r.coach?.full_name || "je coach"}</p>
                 </div>
                 <form action={payCoachRequest}>
                   <input type="hidden" name="requestId" value={r.id} />
@@ -658,7 +659,7 @@ export default async function AccountPage({ searchParams }) {
           <section className="mt-8 overflow-hidden rounded-3xl border-2 border-accent/40 bg-accent/5">
             <div className="p-6">
               <p className="text-xs font-black uppercase tracking-widest text-accentdark">Jouw eerste bezoek</p>
-              <h2 className="mt-1 text-xl font-black text-brand">Zo raak je binnen 🔑</h2>
+              <h2 className="mt-1 text-xl font-black text-ink">Zo raak je binnen 🔑</h2>
               <ol className="mt-4 space-y-3">
                 {[
                   ["Je code komt vanzelf", "± 5 minuten voor je sessie krijg je je persoonlijke toegangscode — per e-mail én hier in de app."],
@@ -668,8 +669,8 @@ export default async function AccountPage({ searchParams }) {
                   <li key={t} className="flex gap-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-black text-brand">{i + 1}</span>
                     <div>
-                      <p className="font-bold text-brand">{t}</p>
-                      <p className="text-sm text-brand/65">{b}</p>
+                      <p className="font-bold text-ink">{t}</p>
+                      <p className="text-sm text-ink/65">{b}</p>
                     </div>
                   </li>
                 ))}
@@ -683,12 +684,12 @@ export default async function AccountPage({ searchParams }) {
                 >
                   📍 Navigeer naar de gym
                 </a>
-                <Link href="/huisregels" className="rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">
+                <Link href="/huisregels" className="rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent">
                   Toegang &amp; huisregels
                 </Link>
               </div>
-              <p className="mt-4 text-xs leading-relaxed text-brand/55">
-                De gym is onbemand. Bij nood bel je altijd eerst <b className="text-brand">112</b>. De EHBO-kit hangt bij de ingang. Adres: <b className="text-brand">{gymAddress}</b>.
+              <p className="mt-4 text-xs leading-relaxed text-ink/55">
+                De gym is onbemand. Bij nood bel je altijd eerst <b className="text-ink">112</b>. De EHBO-kit hangt bij de ingang. Adres: <b className="text-ink">{gymAddress}</b>.
               </p>
             </div>
           </section>
@@ -707,25 +708,25 @@ export default async function AccountPage({ searchParams }) {
           </div>
 
           {upcomingPaid.length === 0 ? (
-            <div className="mt-5 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
+            <div className="mt-5 rounded-3xl border border-dashed border-borderc bg-surface p-10 text-center">
               {welcomeReady ? (
                 <>
                   <p className="text-2xl">🎁</p>
-                  <p className="mt-2 font-black text-brand">Je gratis eerste sessie staat klaar</p>
-                  <p className="mt-1 text-sm text-brand/60">Ze wordt automatisch verrekend — kies gewoon een moment dat past.</p>
+                  <p className="mt-2 font-black text-ink">Je gratis eerste sessie staat klaar</p>
+                  <p className="mt-1 text-sm text-ink/60">Ze wordt automatisch verrekend — kies gewoon een moment dat past.</p>
                 </>
               ) : lastDone ? (
                 // Een lid dat al trainde is geen nieuw lid: "je hebt nog geen sessies geboekt" is
                 // dan gewoon onwaar. Zijn eigen vorige moment is het makkelijkste volgende moment.
                 <>
-                  <p className="font-black text-brand">
+                  <p className="font-black text-ink">
                     Je laatste sessie was {new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long" }).format(new Date(lastDone.starts_at))} om{" "}
                     {new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", hour: "2-digit", minute: "2-digit" }).format(new Date(lastDone.starts_at))}.
                   </p>
-                  <p className="mt-1 text-sm text-brand/60">Zelfde moment volgende week?</p>
+                  <p className="mt-1 text-sm text-ink/60">Zelfde moment volgende week?</p>
                 </>
               ) : (
-                <p className="font-semibold text-brand/70">Je hebt nog geen sessies geboekt.</p>
+                <p className="font-semibold text-ink/70">Je hebt nog geen sessies geboekt.</p>
               )}
               <Link
                 href={!welcomeReady && lastDone ? rebookHref(lastDone) : "/boeken"}
@@ -740,15 +741,15 @@ export default async function AccountPage({ searchParams }) {
                 <div
                   key={b.id}
                   id={`sessie-${b.id}`}
-                  className="scroll-mt-24 rounded-2xl border border-borderc bg-white p-5"
+                  className="scroll-mt-24 rounded-2xl border border-borderc bg-surface p-5"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-4">
                   <div>
                     <p className="font-black">{b.services?.name || "Sessie"}</p>
-                    <p className="mt-1 text-sm capitalize text-brand/60">
+                    <p className="mt-1 text-sm capitalize text-ink/60">
                       {fmtRange(b.starts_at, b.ends_at)}
                     </p>
-                    <p className="mt-1 text-xs text-brand/50">
+                    <p className="mt-1 text-xs text-ink/50">
                       {b.persons} {b.persons === 1 ? "persoon" : "personen"} ·{" "}
                       {b.invited
                         ? `🤝 Uitgenodigd door ${b.booker?.full_name || "een lid"}`
@@ -773,7 +774,7 @@ export default async function AccountPage({ searchParams }) {
                     )}
                     <a
                       href={`/api/ics/${b.id}`}
-                      className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-white px-4 py-2.5 text-sm font-bold text-brand transition hover:border-accent"
+                      className="inline-flex items-center gap-1.5 rounded-full border-2 border-borderc bg-surface px-4 py-2.5 text-sm font-bold text-ink transition hover:border-accent"
                       title="Voeg deze sessie toe aan je agenda"
                     >
                       📅 Agenda
@@ -795,7 +796,7 @@ export default async function AccountPage({ searchParams }) {
 
         {/* Payments & downloadable Stripe receipts */}
         <div className="mt-12">
-          <Link href="/account/betalingen" className="inline-flex items-center gap-2 rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">💳 Betalingen &amp; betaalbewijzen →</Link>
+          <Link href="/account/betalingen" className="inline-flex items-center gap-2 rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent">💳 Betalingen &amp; betaalbewijzen →</Link>
         </div>
 
         {/* Rechten van betrokkenen (AVG): downloaden, gezondheidsgegevens wissen, verwijdering aanvragen. */}
@@ -807,23 +808,34 @@ export default async function AccountPage({ searchParams }) {
         {history.length > 0 && (
           <section className="mt-12">
             <h2 className="text-xl font-black">Geschiedenis</h2>
-            <div className="mt-5 divide-y divide-borderc rounded-2xl border border-borderc bg-white">
+            <div className="mt-5 divide-y divide-borderc rounded-2xl border border-borderc bg-surface">
               {history.slice(0, HISTORY_VISIBLE).map((b) => <HistoryRow key={b.id} b={b} />)}
             </div>
             {/* De rest zit achter één klik (details werkt zonder JavaScript) — de laatste tien
                 sessies zijn wat een lid nodig heeft; de rest is archief. */}
             {history.length > HISTORY_VISIBLE && (
               <details className="mt-3">
-                <summary className="cursor-pointer text-sm font-bold text-brand/60 transition hover:text-brand">
+                <summary className="cursor-pointer text-sm font-bold text-ink/60 transition hover:text-ink">
                   Toon {history.length - HISTORY_VISIBLE} oudere {history.length - HISTORY_VISIBLE === 1 ? "sessie" : "sessies"}
                 </summary>
-                <div className="mt-3 divide-y divide-borderc rounded-2xl border border-borderc bg-white">
+                <div className="mt-3 divide-y divide-borderc rounded-2xl border border-borderc bg-surface">
                   {history.slice(HISTORY_VISIBLE).map((b) => <HistoryRow key={b.id} b={b} />)}
                 </div>
               </details>
             )}
           </section>
         )}
+
+        {/* Weergave. Bewust BUITEN elk voorwaardelijk blok: dit stond eerst in de
+            geschiedenis-sectie, en die rendert alleen voor wie al geboekt heeft — precies het
+            nieuwe lid dat zijn app 's avonds donker wil, zag de schakelaar dus niet. */}
+        <section className="mt-10 rounded-2xl border border-borderc bg-surface p-5">
+          <h2 className="font-black text-ink">Weergave</h2>
+          <p className="mt-1 text-sm text-ink-soft">
+            Standaard volgt de app je toestel. Wil je het anders, kies dan hier.
+          </p>
+          <div className="mt-4"><ThemaKeuze /></div>
+        </section>
 
         <AccountSettings userId={user.id} initialName={profile?.full_name || ""} initialPhone={profile?.phone || ""} />
         <AccountLinking providers={user.app_metadata?.providers || (user.app_metadata?.provider ? [user.app_metadata.provider] : [])} />
@@ -837,14 +849,14 @@ function HistoryRow({ b }) {
   return (
     <div className="flex items-center justify-between gap-4 px-5 py-4">
       <div>
-        <p className="font-bold text-brand/80">{b.services?.name || "Sessie"}</p>
-        <p className="mt-0.5 text-sm capitalize text-brand/50">{fmtRange(b.starts_at, b.ends_at)}</p>
+        <p className="font-bold text-ink/80">{b.services?.name || "Sessie"}</p>
+        <p className="mt-0.5 text-sm capitalize text-ink/50">{fmtRange(b.starts_at, b.ends_at)}</p>
       </div>
       <div className="flex items-center gap-3">
         {b.status !== "geannuleerd" && b.services?.type !== "pt" && (
           <Link
             href={rebookHref(b)}
-            className="rounded-full border-2 border-borderc bg-white px-4 py-1.5 text-xs font-bold text-brand transition hover:border-accent"
+            className="rounded-full border-2 border-borderc bg-surface px-4 py-1.5 text-xs font-bold text-ink transition hover:border-accent"
           >
             Boek opnieuw
           </Link>
@@ -852,7 +864,7 @@ function HistoryRow({ b }) {
         <span
           className={
             "rounded-full px-3 py-1 text-xs font-bold " +
-            (b.status === "geannuleerd" ? "bg-paper text-brand/50" : "bg-accent/15 text-accentdark")
+            (b.status === "geannuleerd" ? "bg-paper text-ink/50" : "bg-accent/15 text-accentdark")
           }
         >
           {b.status === "geannuleerd" ? "Geannuleerd" : "Voltooid"}
@@ -866,9 +878,9 @@ function Stat({ label, value, accent, hint }) {
   // min-w-0 + break-words: in een driekoloms raster op een smal scherm moet een lang label als
   // "Aankomende sessies" kunnen afbreken in plaats van de kaart open te duwen.
   return (
-    <div className="min-w-0 rounded-2xl border border-borderc bg-white p-3 sm:p-5">
+    <div className="min-w-0 rounded-2xl border border-borderc bg-surface p-3 sm:p-5">
       <p className="break-words text-[10px] font-bold uppercase text-lav sm:text-xs sm:tracking-widest">{label}</p>
-      <p className={"mt-1 text-xl font-black sm:mt-2 sm:text-2xl " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+      <p className={"mt-1 text-xl font-black sm:mt-2 sm:text-2xl " + (accent ? "text-accentdark" : "text-ink")}>{value}</p>
       {hint && <p className="mt-1 break-words text-[10px] font-semibold text-amber-600 sm:text-xs">{hint}</p>}
     </div>
   );

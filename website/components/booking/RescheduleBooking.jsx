@@ -50,13 +50,13 @@ export default function RescheduleBooking({ bookingId, startsAt, openHour = 6, c
   const isTaken = (h) => date && taken.has(slotInstant(date, h).getTime());
 
   if (locked) {
-    return <span className="text-xs text-brand/40">Verplaatsen kan tot 6u vooraf</span>;
+    return <span className="text-xs text-ink/40">Verplaatsen kan tot 6u vooraf</span>;
   }
   if (!open) {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent hover:text-accentdark"
+        className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent hover:text-accentdark"
       >
         Verplaatsen
       </button>
@@ -85,12 +85,12 @@ export default function RescheduleBooking({ bookingId, startsAt, openHour = 6, c
         min={todayStr()}
         value={date}
         onChange={(e) => setDate(e.target.value)}
-        className="rounded-xl border border-borderc px-3 py-2 text-sm text-brand"
+        className="rounded-xl border border-borderc px-3 py-2 text-sm text-ink"
       />
       <select
         value={hour}
         onChange={(e) => setHour(e.target.value)}
-        className="rounded-xl border border-borderc px-3 py-2 text-sm text-brand"
+        className="rounded-xl border border-borderc px-3 py-2 text-sm text-ink"
       >
         <option value="">Uur…</option>
         {hours.map((h) => (
@@ -106,7 +106,7 @@ export default function RescheduleBooking({ bookingId, startsAt, openHour = 6, c
       >
         {busy ? "Bezig…" : "Bevestig"}
       </button>
-      <button onClick={() => setOpen(false)} className="rounded-full px-2 py-2 text-sm font-bold text-brand/40 hover:text-brand">✕</button>
+      <button onClick={() => setOpen(false)} className="rounded-full px-2 py-2 text-sm font-bold text-ink/40 hover:text-ink">✕</button>
     </div>
   );
 }

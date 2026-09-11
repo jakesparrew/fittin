@@ -22,7 +22,7 @@ export default async function InboxItem({ params }) {
   const ctx = await getAdminContext();
   if (!ctx) return null;
   const { supabase, gym, profile } = ctx;
-  if (profile.role !== "beheerder") return <div className="px-8 py-8 text-brand/60">Geen toegang.</div>;
+  if (profile.role !== "beheerder") return <div className="px-8 py-8 text-ink/60">Geen toegang.</div>;
 
   const { data: m } = await supabase.from("inbound_emails").select("*").eq("id", id).eq("gym_id", gym.id).single();
   if (!m) return <div className="px-4 py-6 md:px-8 md:py-8">Bericht niet gevonden. <Link href="/beheer/inbox" className="text-accentdark">← Inbox</Link></div>;
@@ -84,33 +84,33 @@ export default async function InboxItem({ params }) {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex items-center justify-between">
-        <Link href="/beheer/inbox" className="text-sm font-semibold text-brand/50 hover:text-brand">← Inbox</Link>
-        <form action={archiveInbox}><input type="hidden" name="id" value={m.id} /><button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/60 hover:bg-borderc">Archiveren</button></form>
+        <Link href="/beheer/inbox" className="text-sm font-semibold text-ink/50 hover:text-ink">← Inbox</Link>
+        <form action={archiveInbox}><input type="hidden" name="id" value={m.id} /><button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/60 hover:bg-borderc">Archiveren</button></form>
       </div>
 
-      <div className="mt-4 rounded-2xl border border-borderc bg-white p-6">
-        <h1 className="text-2xl font-black text-brand">{m.subject}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-brand/60">
-          <span className="font-bold text-brand">{m.from_name || m.from_email}</span>
-          <span className="text-brand/40">&lt;{m.from_email}&gt;</span>
-          <span className="text-brand/30">→</span>
+      <div className="mt-4 rounded-2xl border border-borderc bg-surface p-6">
+        <h1 className="text-2xl font-black text-ink">{m.subject}</h1>
+        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink/60">
+          <span className="font-bold text-ink">{m.from_name || m.from_email}</span>
+          <span className="text-ink/40">&lt;{m.from_email}&gt;</span>
+          <span className="text-ink/30">→</span>
           <span className="rounded-full bg-paper px-2 py-0.5 text-xs font-bold">{m.to_email}</span>
-          <span className="ml-auto text-xs text-brand/40">{fmt(m.received_at)}</span>
+          <span className="ml-auto text-xs text-ink/40">{fmt(m.received_at)}</span>
         </div>
 
         <div className="mt-5 border-t border-borderc pt-5">
           {m.html_body ? (
-            <iframe title="email" sandbox="" srcDoc={m.html_body} className="h-[460px] w-full rounded-lg border border-borderc bg-white" />
+            <iframe title="email" sandbox="" srcDoc={m.html_body} className="h-[460px] w-full rounded-lg border border-borderc bg-surface" />
           ) : (
-            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-brand/80">{m.text_body || "(geen inhoud)"}</pre>
+            <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-ink/80">{m.text_body || "(geen inhoud)"}</pre>
           )}
         </div>
       </div>
 
       {(bijlagen || []).length > 0 && (
-        <div className="mt-5 rounded-2xl border border-borderc bg-white p-5">
-          <p className="text-sm font-bold text-brand">Meegestuurd</p>
-          <p className="mt-1 text-xs text-brand/45">Deze bestanden staan privé. De links hieronder verlopen na een uur.</p>
+        <div className="mt-5 rounded-2xl border border-borderc bg-surface p-5">
+          <p className="text-sm font-bold text-ink">Meegestuurd</p>
+          <p className="mt-1 text-xs text-ink/45">Deze bestanden staan privé. De links hieronder verlopen na een uur.</p>
           <div className="mt-3 flex flex-wrap gap-3">
             {(bijlagen || []).map((b) => {
               const url = bijlageUrls[b.id];
@@ -128,15 +128,15 @@ export default async function InboxItem({ params }) {
                   {foto ? (
                     <img src={url} alt="" className="h-14 w-14 rounded-lg object-cover" />
                   ) : (
-                    <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-paper text-lg font-black text-brand/50">PDF</span>
+                    <span className="flex h-14 w-14 items-center justify-center rounded-lg bg-paper text-lg font-black text-ink/50">PDF</span>
                   )}
                   <span className="min-w-0">
-                    <span className="block text-sm font-bold text-brand">{foto ? "Foto" : "Cv"}</span>
-                    <span className="block max-w-[16rem] truncate text-xs text-brand/45">{b.bestandsnaam || "bestand"}{b.bytes ? ` · ${kb(b.bytes)}` : ""}</span>
+                    <span className="block text-sm font-bold text-ink">{foto ? "Foto" : "Cv"}</span>
+                    <span className="block max-w-[16rem] truncate text-xs text-ink/45">{b.bestandsnaam || "bestand"}{b.bytes ? ` · ${kb(b.bytes)}` : ""}</span>
                   </span>
                 </a>
               ) : (
-                <p key={b.id} className="rounded-xl bg-paper px-4 py-3 text-xs text-brand/50">
+                <p key={b.id} className="rounded-xl bg-paper px-4 py-3 text-xs text-ink/50">
                   {foto ? "Foto" : "Cv"} kon niet geopend worden.
                 </p>
               );
@@ -152,15 +152,15 @@ export default async function InboxItem({ params }) {
             // je weten waar ze staat. De knop verdwijnt: een tweede doorgave naar dezelfde coach
             // ketst af op de unieke index, en een tweede coach hoort een beslissing te zijn die je
             // op het overzicht neemt, niet terloops vanaf een oud bericht.
-            <div className="rounded-2xl border border-borderc bg-white p-5">
-              <p className="text-sm font-bold text-brand">Al doorgegeven</p>
+            <div className="rounded-2xl border border-borderc bg-surface p-5">
+              <p className="text-sm font-bold text-ink">Al doorgegeven</p>
               <ul className="mt-3 space-y-2">
                 {actief.map((r) => (
                   <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                    <span className="font-bold text-brand">{coachNaam(r.coach_id)}</span>
-                    <span className={"rounded-full px-2 py-0.5 text-[11px] font-bold " + (STATUS_TOON[r.status] || "bg-paper text-brand/50")}>{STATUS_LABEL[r.status] || r.status}</span>
-                    <span className="text-brand/50">{feeZin(r.fee_cents)}</span>
-                    <span className="ml-auto text-xs text-brand/40">{fmt(r.referred_at)}</span>
+                    <span className="font-bold text-ink">{coachNaam(r.coach_id)}</span>
+                    <span className={"rounded-full px-2 py-0.5 text-[11px] font-bold " + (STATUS_TOON[r.status] || "bg-paper text-ink/50")}>{STATUS_LABEL[r.status] || r.status}</span>
+                    <span className="text-ink/50">{feeZin(r.fee_cents)}</span>
+                    <span className="ml-auto text-xs text-ink/40">{fmt(r.referred_at)}</span>
                   </li>
                 ))}
               </ul>
@@ -169,7 +169,7 @@ export default async function InboxItem({ params }) {
           ) : (
             <>
               {afgehandeld.length > 0 && (
-                <p className="mb-2 text-xs text-brand/45">
+                <p className="mb-2 text-xs text-ink/45">
                   Eerder doorgegeven: {afgehandeld.slice(0, 3).map((r) => `${coachNaam(r.coach_id)} — ${(STATUS_LABEL[r.status] || r.status).toLowerCase()}`).join(" · ")}
                 </p>
               )}

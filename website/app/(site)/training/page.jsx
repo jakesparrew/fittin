@@ -79,20 +79,20 @@ export default async function Training() {
   return (
     <main className="bg-paper min-h-screen">
       <div className="mx-auto max-w-4xl px-5 py-16">
-        <Link href="/account" className="inline-flex items-center gap-1.5 text-sm font-bold text-brand/60 transition hover:text-brand">← Terug naar account</Link>
+        <Link href="/account" className="inline-flex items-center gap-1.5 text-sm font-bold text-ink/60 transition hover:text-ink">← Terug naar account</Link>
         <p className="mt-6 text-sm font-bold uppercase tracking-[0.25em] text-lav">Mijn training</p>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-black md:text-4xl">{program ? program.name : "Nog geen programma"}</h1>
-          <Link href="/plannen" className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-accent">Mijn plannen →</Link>
+          <Link href="/plannen" className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-ink transition hover:border-accent">Mijn plannen →</Link>
         </div>
-        {coachName && <p className="mt-2 text-sm text-brand/60">Samengesteld door {coachName}</p>}
+        {coachName && <p className="mt-2 text-sm text-ink/60">Samengesteld door {coachName}</p>}
 
         {coachOpen && aiPlan && (
           <Link href="/coaching"
             className="anim-in mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent/30 bg-accent/5 px-5 py-3.5 transition hover:border-accent">
             <span className="min-w-0">
               <span className="block text-xs font-bold uppercase tracking-widest text-accentdark">Fittin&rsquo; coaching</span>
-              <span className="mt-0.5 block text-sm font-bold text-brand">
+              <span className="mt-0.5 block text-sm font-bold text-ink">
                 {coachWeek ? `Week ${coachWeek.weeknummer} van ${aiPlan.weken}` : `Je plan van ${aiPlan.weken} weken loopt`}
               </span>
             </span>
@@ -106,9 +106,9 @@ export default async function Training() {
         )}
 
         {myCoachId && (
-          <section id="berichten" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-white p-6">
-            <h2 className="font-black text-brand">Berichten met {coachName || "je coach"}</h2>
-            <p className="mt-1 text-sm text-brand/60">Stel een vraag of deel je voortgang.</p>
+          <section id="berichten" className="mt-6 scroll-mt-24 rounded-3xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Berichten met {coachName || "je coach"}</h2>
+            <p className="mt-1 text-sm text-ink/60">Stel een vraag of deel je voortgang.</p>
             <div className="mt-4">
               <MessageThread coachId={myCoachId} clientId={user.id} meId={user.id} messages={coachMessages} otherName={coachName} />
             </div>
@@ -118,12 +118,12 @@ export default async function Training() {
         {/* Coach feedback (W3) */}
         {(feedback || []).length > 0 && (
           <section className="mt-6 rounded-3xl border border-accent/40 bg-accent/5 p-6">
-            <h2 className="font-black text-brand">Feedback van je coach 💬</h2>
+            <h2 className="font-black text-ink">Feedback van je coach 💬</h2>
             <div className="mt-3 space-y-2">
               {feedback.map((f) => (
-                <div key={f.id} className="rounded-2xl bg-white p-3 text-sm">
-                  <p className="text-brand/80">{f.body}</p>
-                  <p className="mt-1 text-[11px] text-brand/40">{f.coach?.full_name || "Je coach"} · {new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(f.created_at))}</p>
+                <div key={f.id} className="rounded-2xl bg-surface p-3 text-sm">
+                  <p className="text-ink/80">{f.body}</p>
+                  <p className="mt-1 text-[11px] text-ink/40">{f.coach?.full_name || "Je coach"} · {new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "short" }).format(new Date(f.created_at))}</p>
                 </div>
               ))}
             </div>
@@ -134,19 +134,19 @@ export default async function Training() {
         <ProgressPanel userId={user.id} />
 
         {!program ? (
-          <div className="mt-6 rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
+          <div className="mt-6 rounded-3xl border border-dashed border-borderc bg-surface p-10 text-center">
             {coachName ? (
               <>
-                <p className="font-semibold text-brand/70">{coachName} stelt binnenkort je programma samen.</p>
-                <p className="mt-1 text-sm text-brand/50">Zodra je coach je trainingsschema klaarzet, verschijnt het hier.</p>
+                <p className="font-semibold text-ink/70">{coachName} stelt binnenkort je programma samen.</p>
+                <p className="mt-1 text-sm text-ink/50">Zodra je coach je trainingsschema klaarzet, verschijnt het hier.</p>
                 <Link href="/oefeningen" className="mt-5 inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Bekijk de oefeningen</Link>
               </>
             ) : (
               <>
-                <p className="font-semibold text-brand/70">Je hebt nog geen programma. Werk samen met een coach voor een plan op maat — of verken zelf de oefeningen.</p>
+                <p className="font-semibold text-ink/70">Je hebt nog geen programma. Werk samen met een coach voor een plan op maat — of verken zelf de oefeningen.</p>
                 <div className="mt-5 flex flex-wrap justify-center gap-3">
                   <Link href="/personal-training" className="inline-block rounded-full bg-accent px-7 py-3.5 font-bold text-brand transition hover:opacity-90">Ontdek personal training</Link>
-                  <Link href="/oefeningen" className="inline-block rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-brand transition hover:border-lav">Oefeningenbibliotheek</Link>
+                  <Link href="/oefeningen" className="inline-block rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-ink transition hover:border-lav">Oefeningenbibliotheek</Link>
                 </div>
               </>
             )}
@@ -164,7 +164,7 @@ export default async function Training() {
             {/* Het volledige schema blijft bereikbaar als naslag, maar dichtgeklapt: wie gewoon wil
                 trainen gebruikt de knop bovenaan. */}
             <details className="group mt-4">
-              <summary className="cursor-pointer list-none rounded-2xl border border-borderc bg-white px-5 py-4 font-bold text-brand transition hover:border-lav">
+              <summary className="cursor-pointer list-none rounded-2xl border border-borderc bg-surface px-5 py-4 font-bold text-ink transition hover:border-lav">
                 <span className="float-right text-ink-soft transition group-open:rotate-180">▾</span>
                 Volledig schema bekijken
                 <span className="ml-2 font-normal text-ink-soft">({days.length} {days.length === 1 ? "dag" : "dagen"})</span>

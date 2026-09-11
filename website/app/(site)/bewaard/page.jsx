@@ -30,8 +30,8 @@ export default async function Bewaard() {
           en begon de plank pas onder de vouw. Wie hier komt, komt voor zijn video's. */}
       <div className="mx-auto max-w-5xl px-5 py-8 md:py-12">
         <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Bewaard</p>
-        <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Mijn video&rsquo;s</h1>
-        <p className="mt-2 max-w-2xl leading-relaxed text-brand/60">
+        <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Mijn video&rsquo;s</h1>
+        <p className="mt-2 max-w-2xl leading-relaxed text-ink/60">
           Een oefening gezien op Instagram, YouTube of TikTok? Bewaar de link onder je eigen mappen.
           {isStaf ? " Met één tik wordt er een oefening van voor je programma's." : ""}
         </p>

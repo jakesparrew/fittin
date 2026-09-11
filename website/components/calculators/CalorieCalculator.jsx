@@ -47,7 +47,7 @@ export default function CalorieCalculator() {
   }, [sex, age, height, weight, act, goalK]);
 
   return (
-    <div className="rounded-3xl border border-borderc bg-white p-6 md:p-8">
+    <div className="rounded-3xl border border-borderc bg-surface p-6 md:p-8">
       <div className="grid gap-8 lg:grid-cols-[340px_minmax(0,1fr)]">
         {/* Inputs */}
         <div className="space-y-5">
@@ -55,7 +55,7 @@ export default function CalorieCalculator() {
             <Label>Geslacht</Label>
             <div className="mt-2 grid grid-cols-2 gap-2">
               {["man", "vrouw"].map((s) => (
-                <button key={s} onClick={() => setSex(s)} className={"rounded-xl border-2 px-3 py-2.5 text-sm font-bold capitalize transition " + (sex === s ? "border-accent bg-accent/10 text-brand" : "border-borderc text-brand/60 hover:border-lav")}>{s}</button>
+                <button key={s} onClick={() => setSex(s)} className={"rounded-xl border-2 px-3 py-2.5 text-sm font-bold capitalize transition " + (sex === s ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink/60 hover:border-lav")}>{s}</button>
               ))}
             </div>
           </div>
@@ -68,7 +68,7 @@ export default function CalorieCalculator() {
 
           <div>
             <Label>Activiteit</Label>
-            <select value={act} onChange={(e) => setAct(Number(e.target.value))} className="mt-2 w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm font-semibold text-brand">
+            <select value={act} onChange={(e) => setAct(Number(e.target.value))} className="mt-2 w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-sm font-semibold text-ink">
               {ACTIVITY.map((a) => <option key={a.v} value={a.v}>{a.label} — {a.hint}</option>)}
             </select>
           </div>
@@ -78,8 +78,8 @@ export default function CalorieCalculator() {
             <div className="mt-2 space-y-2">
               {GOALS.map((g) => (
                 <button key={g.k} onClick={() => setGoalK(g.k)} className={"block w-full rounded-xl border-2 px-3 py-2.5 text-left transition " + (goalK === g.k ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                  <span className="block text-sm font-bold text-brand">{g.label}</span>
-                  <span className="block text-xs text-brand/50">{g.note}</span>
+                  <span className="block text-sm font-bold text-ink">{g.label}</span>
+                  <span className="block text-xs text-ink/50">{g.note}</span>
                 </button>
               ))}
             </div>
@@ -93,7 +93,7 @@ export default function CalorieCalculator() {
             onbereikbaar in plaats van enkel lelijk. */}
         <div className="min-w-0">
           {!r ? (
-            <p className="text-sm text-brand/50">Vul je gegevens in om je resultaat te zien.</p>
+            <p className="text-sm text-ink/50">Vul je gegevens in om je resultaat te zien.</p>
           ) : (
             <>
               <div className="rounded-2xl bg-brand p-6 text-white">
@@ -110,8 +110,8 @@ export default function CalorieCalculator() {
 
               {/* Food plan / meal split */}
               <div className="mt-6">
-                <p className="text-sm font-black text-brand">Voorbeeld dagplan</p>
-                <p className="text-xs text-brand/50">Verdeling van je {round(r.cals)} kcal over de dag.</p>
+                <p className="text-sm font-black text-ink">Voorbeeld dagplan</p>
+                <p className="text-xs text-ink/50">Verdeling van je {round(r.cals)} kcal over de dag.</p>
                 <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc">
                   <table className="w-full text-sm">
                     <thead className="bg-paper text-left text-xs uppercase tracking-wide text-lav">
@@ -120,11 +120,11 @@ export default function CalorieCalculator() {
                     <tbody className="divide-y divide-borderc">
                       {MEALS.map((m) => (
                         <tr key={m.name}>
-                          <td className="px-2 py-2 sm:px-4 font-semibold text-brand">{m.name}</td>
-                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand">{round(r.cals * m.pct)}</td>
-                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand/60">{round(r.protein * m.pct)}g</td>
-                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand/60">{round(r.carbs * m.pct)}g</td>
-                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-brand/60">{round(r.fat * m.pct)}g</td>
+                          <td className="px-2 py-2 sm:px-4 font-semibold text-ink">{m.name}</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-ink">{round(r.cals * m.pct)}</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-ink/60">{round(r.protein * m.pct)}g</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-ink/60">{round(r.carbs * m.pct)}g</td>
+                          <td className="px-2 py-2 sm:px-4 text-right tabular-nums text-ink/60">{round(r.fat * m.pct)}g</td>
                         </tr>
                       ))}
                     </tbody>
@@ -134,14 +134,14 @@ export default function CalorieCalculator() {
 
               <div className="mt-6 flex flex-wrap gap-3">
                 <Link href="/personal-training" className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Laat een coach je plan maken →</Link>
-                <Link href="/boeken" className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-lav">Reserveer de gym</Link>
+                <Link href="/boeken" className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-ink transition hover:border-lav">Reserveer de gym</Link>
               </div>
               {/* De tip verwees naar /supplementen; die pagina staat tijdelijk uit (29-08-2026),
                   dus de link is eruit. De tip zelf blijft — het getal is het nuttige deel. */}
-              <p className="mt-3 text-sm text-brand/60">
+              <p className="mt-3 text-sm text-ink/60">
                 💡 {Math.round(r.protein)} g eiwit per dag haal je vlot met eiwitrijke maaltijden, eventueel aangevuld met een shake.
               </p>
-              <p className="mt-4 text-xs text-brand/40">Richtwaarden o.b.v. de Mifflin-St Jeor-formule. Geen medisch advies — bij twijfel raadpleeg een arts of diëtist.</p>
+              <p className="mt-4 text-xs text-ink/40">Richtwaarden o.b.v. de Mifflin-St Jeor-formule. Geen medisch advies — bij twijfel raadpleeg een arts of diëtist.</p>
             </>
           )}
         </div>
@@ -158,8 +158,8 @@ function Num({ label, value, onChange, suffix }) {
     <label className="block">
       <Label>{label}</Label>
       <div className="mt-2 flex items-center rounded-xl border-2 border-borderc px-3 focus-within:border-accent">
-        <input type="number" value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-transparent py-2.5 text-sm font-semibold text-brand outline-none" />
-        <span className="text-xs font-bold text-brand/40">{suffix}</span>
+        <input type="number" value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-transparent py-2.5 text-sm font-semibold text-ink outline-none" />
+        <span className="text-xs font-bold text-ink/40">{suffix}</span>
       </div>
     </label>
   );
@@ -169,11 +169,11 @@ function Macro({ label, grams, kcal, total, color }) {
   return (
     <div className="rounded-2xl border border-borderc p-4">
       <p className="text-xs font-bold uppercase tracking-wide text-lav">{label}</p>
-      <p className="mt-1 text-2xl font-black text-brand">{Math.round(grams)}<span className="text-sm font-bold text-brand/50">g</span></p>
+      <p className="mt-1 text-2xl font-black text-ink">{Math.round(grams)}<span className="text-sm font-bold text-ink/50">g</span></p>
       <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-paper">
         <div className={"h-full rounded-full " + color} style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-1 text-xs text-brand/40">{pct}% · {Math.round(kcal)} kcal</p>
+      <p className="mt-1 text-xs text-ink/40">{pct}% · {Math.round(kcal)} kcal</p>
     </div>
   );
 }

@@ -22,12 +22,12 @@ export default function NotifItem({ n }) {
 
   return (
     <button type="button" onClick={open} className="block w-full text-left">
-      <div className={"flex items-start gap-3 rounded-2xl border border-borderc p-4 transition " + (read ? "bg-white" : "bg-accent/5")}>
+      <div className={"flex items-start gap-3 rounded-2xl border border-borderc p-4 transition " + (read ? "bg-surface" : "bg-accent/5")}>
         <span className="text-xl">{ICON[n.type] || "🔔"}</span>
         <div className="min-w-0 flex-1">
-          <p className={"text-sm " + (read ? "font-semibold text-brand/80" : "font-black text-brand")}>{n.title}</p>
-          {n.body && <p className="text-sm text-brand/60">{n.body}</p>}
-          <p className="mt-0.5 text-xs text-brand/40">{fmt(n.created_at)}</p>
+          <p className={"text-sm " + (read ? "font-semibold text-ink/80" : "font-black text-ink")}>{n.title}</p>
+          {n.body && <p className="text-sm text-ink/60">{n.body}</p>}
+          <p className="mt-0.5 text-xs text-ink/40">{fmt(n.created_at)}</p>
         </div>
         {!read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />}
       </div>

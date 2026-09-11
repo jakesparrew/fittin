@@ -22,22 +22,22 @@ export default function SearchSelect({ name, options, placeholder = "Kies…", r
     <div ref={ref} className={"relative " + className}>
       <input type="hidden" name={name} value={value} required={required} />
       <button type="button" onClick={() => setOpen((o) => !o)}
-        className="flex w-full min-w-[200px] items-center justify-between gap-2 rounded-lg border-2 border-borderc bg-white px-3 py-2 text-left text-sm text-brand">
-        <span className={selected ? "" : "text-brand/40"}>{selected ? selected.label : placeholder}</span>
-        <span className="text-brand/40">▾</span>
+        className="flex w-full min-w-[200px] items-center justify-between gap-2 rounded-lg border-2 border-borderc bg-surface px-3 py-2 text-left text-sm text-ink">
+        <span className={selected ? "" : "text-ink/40"}>{selected ? selected.label : placeholder}</span>
+        <span className="text-ink/40">▾</span>
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-borderc bg-white shadow-lg">
+        <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border border-borderc bg-surface shadow-lg">
           <div className="p-2">
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek…"
               className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm outline-none focus:border-accent" />
           </div>
           <div className="max-h-60 overflow-y-auto pb-1">
-            {filtered.length === 0 && <p className="px-3 py-2 text-sm text-brand/40">Geen resultaten.</p>}
+            {filtered.length === 0 && <p className="px-3 py-2 text-sm text-ink/40">Geen resultaten.</p>}
             {filtered.map((o) => (
               <button key={o.value} type="button"
                 onClick={() => { setValue(o.value); setOpen(false); setQ(""); }}
-                className={"block w-full px-3 py-2 text-left text-sm transition hover:bg-paper " + (o.value === value ? "bg-accent/10 font-bold text-accentdark" : "text-brand")}>
+                className={"block w-full px-3 py-2 text-left text-sm transition hover:bg-paper " + (o.value === value ? "bg-accent/10 font-bold text-accentdark" : "text-ink")}>
                 {o.label}
               </button>
             ))}

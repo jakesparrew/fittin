@@ -120,18 +120,18 @@ export default function WorkoutPlayer({ days, focus = false }) {
       {days.map((day) => {
         const done = day.exercises.filter((pe) => pe.doneToday).length;
         return (
-          <section key={day.id} className={focus ? "" : "rounded-3xl border border-borderc bg-white p-5 md:p-6"}>
+          <section key={day.id} className={focus ? "" : "rounded-3xl border border-borderc bg-surface p-5 md:p-6"}>
             {/* In focusstand draagt de vaste kopbalk van het sessiescherm de dagnaam en de teller;
                 die hier nog eens tonen kost alleen ruimte. */}
             <div className={focus ? "hidden" : "flex items-center justify-between gap-2"}>
-              <h2 className="font-black text-brand">{day.name || `Dag ${day.day_no}`}</h2>
+              <h2 className="font-black text-ink">{day.name || `Dag ${day.day_no}`}</h2>
               <div className="flex items-center gap-2">
                 {done > 0 && done === day.exercises.length && (
                   shared[day.id] === "done"
                     ? <span className="text-xs font-bold text-accentdark">gedeeld 🎉</span>
                     : <button onClick={() => doShare(day, day.exercises.length)} disabled={shared[day.id] === "busy"} className="rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accentdark transition hover:bg-accent/25 disabled:opacity-50">🎉 Deel</button>
                 )}
-                <span className="text-xs font-bold text-brand/40">{done}/{day.exercises.length} klaar</span>
+                <span className="text-xs font-bold text-ink/40">{done}/{day.exercises.length} klaar</span>
               </div>
             </div>
             <div className="mt-4 space-y-3">
@@ -155,10 +155,10 @@ export default function WorkoutPlayer({ days, focus = false }) {
                     >
                       <ExerciseMedia exercise={pe.exercise} thumb className="h-11 w-11 shrink-0" rounded="rounded-lg" />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate font-bold text-brand">{pe.exercise?.name}</span>
+                        <span className="block truncate font-bold text-ink">{pe.exercise?.name}</span>
                         <span className="block text-xs text-ink-soft">{pe.sets ?? "–"} × {pe.repText ?? pe.reps ?? "–"}</span>
                       </span>
-                      <span className={"shrink-0 text-sm font-black " + (pe.doneToday ? "text-accentdark" : "text-brand/25")}>
+                      <span className={"shrink-0 text-sm font-black " + (pe.doneToday ? "text-accentdark" : "text-ink/25")}>
                         {pe.doneToday ? "✓" : "○"}
                       </span>
                     </button>
@@ -174,18 +174,18 @@ export default function WorkoutPlayer({ days, focus = false }) {
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           {pe.supersetGroup && <span className="rounded bg-brand px-1.5 py-0.5 text-[10px] font-black text-white" title="Superset — doe deze back-to-back">Superset {supLetter(pe.supersetGroup)}</span>}
-                          <p className="font-black text-brand">{pe.exercise?.name}</p>
+                          <p className="font-black text-ink">{pe.exercise?.name}</p>
                           {pe.pr > 0 && <span className="rounded-full bg-brand px-2 py-0.5 text-[10px] font-black text-white">PR {pe.pr}kg</span>}
                           {pe.doneToday && <span className="text-xs font-bold text-accentdark">✓ klaar</span>}
                         </div>
-                        <p className="text-xs text-brand/50">
+                        <p className="text-xs text-ink/50">
                           doel: {pe.sets ?? "–"} × {pe.repText ?? pe.reps ?? "–"}{pe.targetWeight != null ? ` @ ${pe.targetWeight}kg` : ""}{pe.rest_sec ? ` · ${pe.rest_sec}s rust` : ""}
                           {pe.tempo ? ` · tempo ${pe.tempo}` : ""}{pe.rpe != null ? ` · RPE ${pe.rpe}` : ""}
                           {pe.exercise?.primary_muscles?.[0] ? ` · ${pe.exercise.primary_muscles[0]}` : pe.exercise?.muscle ? ` · ${pe.exercise.muscle}` : ""}
                         </p>
                         {pe.notes && <p className="mt-1 rounded-lg bg-accent/10 px-2 py-1 text-xs font-semibold text-accentdark">💬 {pe.notes}</p>}
                         {last && (
-                          <p className="mt-0.5 text-xs text-brand/40">
+                          <p className="mt-0.5 text-xs text-ink/40">
                             vorige keer: {last}
                             {topLast > 0 && <span className="font-bold text-accentdark"> · probeer {topLast + 2.5} kg →</span>}
                           </p>
@@ -197,7 +197,7 @@ export default function WorkoutPlayer({ days, focus = false }) {
                     </div>
 
                     {open && (
-                      <div className="mt-4 rounded-2xl bg-white p-4 ring-1 ring-borderc">
+                      <div className="mt-4 rounded-2xl bg-surface p-4 ring-1 ring-borderc">
                         <ExerciseDetail exercise={pe.exercise} compact />
                       </div>
                     )}
@@ -205,25 +205,25 @@ export default function WorkoutPlayer({ days, focus = false }) {
                     <div className="mt-3 space-y-2">
                       {rows.map((row, i) => (
                         <div key={i} className="flex items-center gap-2">
-                          <span className="w-12 text-xs font-bold text-brand/40">Set {i + 1}</span>
-                          <input inputMode="numeric" value={row.reps} onChange={(e) => setRow(pe.peId, i, "reps", e.target.value)} placeholder="reps" aria-label={`Set ${i + 1} reps`} className="w-20 rounded-lg border-2 border-borderc bg-white px-2 py-1.5 text-sm text-brand outline-none focus:border-accent" />
-                          <input inputMode="decimal" value={row.weight_kg} onChange={(e) => setRow(pe.peId, i, "weight_kg", e.target.value)} placeholder="kg" aria-label={`Set ${i + 1} gewicht`} className="w-20 rounded-lg border-2 border-borderc bg-white px-2 py-1.5 text-sm text-brand outline-none focus:border-accent" />
+                          <span className="w-12 text-xs font-bold text-ink/40">Set {i + 1}</span>
+                          <input inputMode="numeric" value={row.reps} onChange={(e) => setRow(pe.peId, i, "reps", e.target.value)} placeholder="reps" aria-label={`Set ${i + 1} reps`} className="w-20 rounded-lg border-2 border-borderc bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-accent" />
+                          <input inputMode="decimal" value={row.weight_kg} onChange={(e) => setRow(pe.peId, i, "weight_kg", e.target.value)} placeholder="kg" aria-label={`Set ${i + 1} gewicht`} className="w-20 rounded-lg border-2 border-borderc bg-surface px-2 py-1.5 text-sm text-ink outline-none focus:border-accent" />
                         </div>
                       ))}
                       <div className="flex flex-wrap items-center gap-2 pt-1">
-                        <button onClick={() => addRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand">+ set</button>
-                        {rows.length > 1 && <button onClick={() => removeRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/40 hover:text-brand">− set</button>}
-                        {last && <button onClick={() => repeatLast(pe.peId, pe.lastSets)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand" title="Vul in met vorige sessie">↻ herhaal vorige</button>}
-                        {pe.rest_sec ? <button onClick={() => setRest({ left: pe.rest_sec, total: pe.rest_sec })} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand/70 hover:text-brand">⏱ rust {pe.rest_sec}s</button> : null}
+                        <button onClick={() => addRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/70 hover:text-ink">+ set</button>
+                        {rows.length > 1 && <button onClick={() => removeRow(pe.peId)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/40 hover:text-ink">− set</button>}
+                        {last && <button onClick={() => repeatLast(pe.peId, pe.lastSets)} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/70 hover:text-ink" title="Vul in met vorige sessie">↻ herhaal vorige</button>}
+                        {pe.rest_sec ? <button onClick={() => setRest({ left: pe.rest_sec, total: pe.rest_sec })} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/70 hover:text-ink">⏱ rust {pe.rest_sec}s</button> : null}
                         <button disabled={busyPe === pe.peId} onClick={() => doLog(pe.peId)} className="rounded-full bg-accent px-5 py-1.5 text-sm font-black text-brand transition hover:opacity-90 disabled:opacity-50">Log{rows.length > 1 ? " sets" : ""}</button>
-                        <button disabled={busyPe === pe.peId} onClick={() => doToggle(pe.peId)} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-brand transition hover:border-lav disabled:opacity-50">{pe.doneToday ? "Ongedaan" : "Klaar ✓"}</button>
+                        <button disabled={busyPe === pe.peId} onClick={() => doToggle(pe.peId)} className="rounded-full border-2 border-borderc px-4 py-1.5 text-xs font-bold text-ink transition hover:border-lav disabled:opacity-50">{pe.doneToday ? "Ongedaan" : "Klaar ✓"}</button>
                         {feedback[pe.peId] && <span className={`text-xs font-bold ${feedback[pe.peId].err ? "text-red-500" : "text-accentdark"}`}>{feedback[pe.peId].msg}</span>}
                       </div>
                     </div>
                   </div>
                 );
               })}
-              {day.exercises.length === 0 && <p className="text-xs text-brand/40">Nog geen oefeningen op deze dag.</p>}
+              {day.exercises.length === 0 && <p className="text-xs text-ink/40">Nog geen oefeningen op deze dag.</p>}
             </div>
           </section>
         );

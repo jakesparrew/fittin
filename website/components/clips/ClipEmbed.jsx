@@ -53,7 +53,7 @@ export default function ClipEmbed({ clip }) {
   }
 
   return (
-    <div className={`w-full overflow-hidden rounded-2xl bg-white ${HOOGTE[provider] || "h-[min(78vh,700px)]"}`}>
+    <div className={`w-full overflow-hidden rounded-2xl bg-surface ${HOOGTE[provider] || "h-[min(78vh,700px)]"}`}>
       <iframe
         src={embed}
         title={title || "Video"}

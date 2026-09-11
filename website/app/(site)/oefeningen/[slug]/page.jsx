@@ -73,11 +73,11 @@ export default async function ExercisePage({ params }) {
       {Array.isArray(ex.instructions) && ex.instructions.length > 0 && <script {...jsonLdScript(exerciseHowToLd(ex))} />}
       <div className="mx-auto max-w-2xl px-5 py-12">
         {/* Breadcrumb — links back up into the category hub (topical cluster) */}
-        <nav className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-brand/45">
-          <Link href="/oefeningen" className="hover:text-brand">Oefeningen</Link>
-          {ex.category && (<><span>›</span><Link href={`/oefeningen/categorie/${ex.category}`} className="capitalize hover:text-brand">{catLabel(ex.category)}</Link></>)}
+        <nav className="flex flex-wrap items-center gap-1.5 text-sm font-semibold text-ink/45">
+          <Link href="/oefeningen" className="hover:text-ink">Oefeningen</Link>
+          {ex.category && (<><span>›</span><Link href={`/oefeningen/categorie/${ex.category}`} className="capitalize hover:text-ink">{catLabel(ex.category)}</Link></>)}
         </nav>
-        <div className="mt-5 rounded-3xl border border-borderc bg-white p-5 md:p-7">
+        <div className="mt-5 rounded-3xl border border-borderc bg-surface p-5 md:p-7">
           <ExerciseDetail exercise={ex} />
           {/* Van artikel naar handeling: bewaren, in je schema zetten, of nu doen en loggen. */}
           <ExerciseActions exerciseId={ex.id} exerciseName={ex.name} />
@@ -88,9 +88,9 @@ export default async function ExercisePage({ params }) {
             <h2 className="text-sm font-bold uppercase tracking-widest text-lav">Alternatieven</h2>
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {alternatives.map((a) => (
-                <Link key={a.id} href={`/oefeningen/${a.slug}`} className="group rounded-2xl border border-borderc bg-white p-2 transition hover:-translate-y-0.5 hover:shadow-md">
+                <Link key={a.id} href={`/oefeningen/${a.slug}`} className="group rounded-2xl border border-borderc bg-surface p-2 transition hover:-translate-y-0.5 hover:shadow-md">
                   <ExerciseMedia exercise={a} thumb className="aspect-square w-full" rounded="rounded-xl" />
-                  <p className="px-1 pt-2 text-sm font-bold leading-tight text-brand">{a.name}</p>
+                  <p className="px-1 pt-2 text-sm font-bold leading-tight text-ink">{a.name}</p>
                 </Link>
               ))}
             </div>

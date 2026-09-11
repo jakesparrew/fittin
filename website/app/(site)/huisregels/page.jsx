@@ -49,22 +49,22 @@ export default function HuisregelsPage() {
 
       {/* Entry */}
       <section className="mx-auto max-w-4xl px-5 py-14">
-        <h2 className="text-2xl font-black text-brand">Zo kom je binnen 🔑</h2>
-        <p className="mt-2 max-w-2xl text-brand/60">
+        <h2 className="text-2xl font-black text-ink">Zo kom je binnen 🔑</h2>
+        <p className="mt-2 max-w-2xl text-ink/60">
           Je hebt geen badge of sleutel nodig. Je toegang komt automatisch naar je toe, vlak voor je sessie.
         </p>
         <ol className="mt-8 grid gap-4 sm:grid-cols-2">
           {entrySteps.map(([title, body], i) => (
-            <li key={title} className="rounded-3xl border border-borderc bg-white p-6">
+            <li key={title} className="rounded-3xl border border-borderc bg-surface p-6">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent font-black text-brand">{i + 1}</span>
-              <p className="mt-4 font-black text-brand">{title}</p>
-              <p className="mt-1 text-sm leading-relaxed text-brand/65">{body}</p>
+              <p className="mt-4 font-black text-ink">{title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-ink/65">{body}</p>
             </li>
           ))}
         </ol>
         <div className="mt-6 rounded-3xl border-2 border-accent/40 bg-accent/5 p-6">
-          <p className="font-bold text-brand">📩 Je toegangscode komt ± 5 minuten voor je sessie per e-mail.</p>
-          <p className="mt-1 text-sm text-brand/65">
+          <p className="font-bold text-ink">📩 Je toegangscode komt ± 5 minuten voor je sessie per e-mail.</p>
+          <p className="mt-1 text-sm text-ink/65">
             In die mail vind je de code, het adres en een knop om meteen naar de gym te navigeren. Kan je toch
             niet? Je kan je sessie tot <b>6 uur</b> voor de start verplaatsen in je account.
           </p>
@@ -73,13 +73,13 @@ export default function HuisregelsPage() {
 
       {/* House rules */}
       <section className="mx-auto max-w-4xl px-5 pb-14">
-        <h2 className="text-2xl font-black text-brand">Huisregels</h2>
-        <p className="mt-2 max-w-2xl text-brand/60">Een paar simpele afspraken houden de zaal voor iedereen top.</p>
+        <h2 className="text-2xl font-black text-ink">Huisregels</h2>
+        <p className="mt-2 max-w-2xl text-ink/60">Een paar simpele afspraken houden de zaal voor iedereen top.</p>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {houseRules.map(([title, body]) => (
-            <div key={title} className="rounded-3xl border border-borderc bg-white p-6">
-              <p className="font-black text-brand">{title}</p>
-              <p className="mt-1 text-sm leading-relaxed text-brand/65">{body}</p>
+            <div key={title} className="rounded-3xl border border-borderc bg-surface p-6">
+              <p className="font-black text-ink">{title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-ink/65">{body}</p>
             </div>
           ))}
         </div>
@@ -88,8 +88,8 @@ export default function HuisregelsPage() {
       {/* Emergency — the gym is unstaffed */}
       <section className="mx-auto max-w-4xl px-5 pb-8">
         <div className="rounded-3xl border-2 border-red-200 bg-red-50 p-6">
-          <h2 className="text-xl font-black text-brand">Bij nood 🚑</h2>
-          <p className="mt-2 leading-relaxed text-brand/70">
+          <h2 className="text-xl font-black text-ink">Bij nood 🚑</h2>
+          <p className="mt-2 leading-relaxed text-ink/70">
             De gym is <strong>onbemand</strong> tijdens je sessie. Bel bij een noodgeval altijd eerst{" "}
             <a href="tel:112" className="font-black text-red-600">112</a>. De EHBO-kit hangt aan de muur
             bij de ingang. Geef aan de hulpdiensten dit adres door:{" "}
@@ -117,7 +117,7 @@ export default function HuisregelsPage() {
           </ul>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/boeken" className="rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">Boek je sessie</Link>
-            <a href="mailto:info@fittin.be" className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white transition hover:bg-white/10">Iets melden? info@fittin.be</a>
+            <a href="mailto:info@fittin.be" className="rounded-full border border-white/30 px-6 py-3 text-sm font-bold text-white transition hover:bg-surface/10">Iets melden? info@fittin.be</a>
           </div>
         </div>
       </section>

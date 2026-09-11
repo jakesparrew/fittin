@@ -83,11 +83,11 @@ export default async function MemberDetail({ params }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/beheer/leden" className="text-sm font-semibold text-brand/50 hover:text-brand">← Leden</Link>
+      <Link href="/beheer/leden" className="text-sm font-semibold text-ink/50 hover:text-ink">← Leden</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">{member.full_name || "Lid"}</h1>
-          <p className="text-sm text-brand/50">{member.email}{member.phone ? " · " + member.phone : ""} · <span className="capitalize font-semibold">{member.role}</span></p>
+          <h1 className="text-3xl font-black text-ink">{member.full_name || "Lid"}</h1>
+          <p className="text-sm text-ink/50">{member.email}{member.phone ? " · " + member.phone : ""} · <span className="capitalize font-semibold">{member.role}</span></p>
         </div>
         {isBeheerder && member.id !== admin.id && (
           <div className="flex flex-wrap items-center gap-2">
@@ -95,7 +95,7 @@ export default async function MemberDetail({ params }) {
               <ActionForm key={r} action={adminSetRole} success="Rol gewijzigd ✓">
                 <input type="hidden" name="memberId" value={member.id} />
                 <input type="hidden" name="role" value={r} />
-                <button className="rounded-full border-2 border-borderc px-3 py-1.5 text-xs font-bold text-brand transition hover:border-accent hover:bg-accent/10">
+                <button className="rounded-full border-2 border-borderc px-3 py-1.5 text-xs font-bold text-ink transition hover:border-accent hover:bg-accent/10">
                   Maak {r === "beheerder" ? "beheerder" : r}
                 </button>
               </ActionForm>
@@ -117,8 +117,8 @@ export default async function MemberDetail({ params }) {
       </div>
 
       {/* Account & gebruik */}
-      <section className="mt-6 rounded-2xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Account &amp; gebruik</h2>
+      <section className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
+        <h2 className="font-black text-ink">Account &amp; gebruik</h2>
         <div className="mt-3 grid gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2 lg:grid-cols-3">
           <Info label="Lid sinds" value={memberSince ? fmtDay(memberSince) : "—"} />
           <Info label="Laatste login" value={lastLogin ? `${fmtDay(lastLogin)} · ${ago(lastLogin)}` : "Nog nooit ingelogd"} />
@@ -136,12 +136,12 @@ export default async function MemberDetail({ params }) {
       {aiDossier?.plan && <CoachDossier dossier={aiDossier} />}
 
       {/* Coach */}
-      <section className="mt-8 rounded-2xl border border-borderc bg-white p-6">
+      <section className="mt-8 rounded-2xl border border-borderc bg-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-black text-brand">Coach</h2>
+          <h2 className="font-black text-ink">Coach</h2>
           <div className="flex flex-wrap items-center gap-2">
             {(coachLinks || []).map((l) => (
-              <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">
+              <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink">
                 <Link href={`/beheer/coaches`} className="hover:text-accentdark">{l.coach?.full_name || l.coach?.email || "Coach"}</Link>
                 <ActionForm action={unassignCoachClient} success="Verwijderd ✓" className="inline">
                   <input type="hidden" name="id" value={l.id} />
@@ -150,7 +150,7 @@ export default async function MemberDetail({ params }) {
                 </ActionForm>
               </span>
             ))}
-            {(!coachLinks || coachLinks.length === 0) && <span className="text-xs text-brand/40">Geen coach toegewezen.</span>}
+            {(!coachLinks || coachLinks.length === 0) && <span className="text-xs text-ink/40">Geen coach toegewezen.</span>}
             <ActionForm action={assignCoachClient} success="Client toegewezen ✓" className="flex items-center gap-2">
               <input type="hidden" name="clientId" value={member.id} />
               <SearchSelect name="coachId" required placeholder="Wijs coach toe…" options={(coachList || []).filter((co) => co.id !== member.id && !(coachLinks || []).some((l) => l.coach_id === co.id)).map((co) => ({ value: co.id, label: co.full_name || co.email }))} />
@@ -163,20 +163,20 @@ export default async function MemberDetail({ params }) {
           <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
             {(coachSessions || []).slice(0, 8).map((s) => (
               <div key={s.id} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-sm">
-                <span className="font-semibold text-brand">{s.coach?.full_name || s.coach?.email || "Coach"}</span>
-                <span className="text-xs text-brand/50">{fmt(s.starts_at)} · {s.services?.name || "Sessie"}</span>
+                <span className="font-semibold text-ink">{s.coach?.full_name || s.coach?.email || "Coach"}</span>
+                <span className="text-xs text-ink/50">{fmt(s.starts_at)} · {s.services?.name || "Sessie"}</span>
               </div>
             ))}
-            {(!coachSessions || coachSessions.length === 0) && <p className="text-xs text-brand/40">Nog geen sessies met een coach.</p>}
+            {(!coachSessions || coachSessions.length === 0) && <p className="text-xs text-ink/40">Nog geen sessies met een coach.</p>}
           </div>
         </div>
       </section>
 
       {/* Payments */}
-      <section className="mt-8 rounded-2xl border border-borderc bg-white p-6">
+      <section className="mt-8 rounded-2xl border border-borderc bg-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-black text-brand">Betalingen</h2>
-          <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
+          <h2 className="font-black text-ink">Betalingen</h2>
+          <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink/60">
             Totaal: {euro(totalSpent)}
           </span>
         </div>
@@ -184,23 +184,23 @@ export default async function MemberDetail({ params }) {
           {(payments || []).map((p, i) => (
             <div key={i} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-sm">
               <div>
-                <span className="font-bold text-brand">{KIND[p.kind] || p.kind}</span>
-                {p.description && <span className="ml-2 text-xs text-brand/45">{p.description}</span>}
+                <span className="font-bold text-ink">{KIND[p.kind] || p.kind}</span>
+                {p.description && <span className="ml-2 text-xs text-ink/45">{p.description}</span>}
               </div>
               <div className="text-right">
-                <span className="font-black text-brand">{euro(p.amount_cents)}</span>
-                <span className="ml-2 text-xs text-brand/40">{fmt(p.created_at)}</span>
+                <span className="font-black text-ink">{euro(p.amount_cents)}</span>
+                <span className="ml-2 text-xs text-ink/40">{fmt(p.created_at)}</span>
               </div>
             </div>
           ))}
-          {(!payments || payments.length === 0) && <p className="text-xs text-brand/40">Nog geen betalingen geregistreerd.</p>}
+          {(!payments || payments.length === 0) && <p className="text-xs text-ink/40">Nog geen betalingen geregistreerd.</p>}
         </div>
       </section>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-2xl border border-borderc bg-white p-6">
+        <section className="rounded-2xl border border-borderc bg-surface p-6">
           <div className="flex items-center justify-between">
-            <h2 className="font-black text-brand">Coach-notitie</h2>
+            <h2 className="font-black text-ink">Coach-notitie</h2>
             {program && <Link href={`/beheer/programmas/${program.id}`} className="text-xs font-bold text-accentdark">Programma: {program.name} →</Link>}
           </div>
           <ActionForm action={addSessionNote} success="Notitie geplaatst ✓" className="mt-3 flex gap-2">
@@ -211,14 +211,14 @@ export default async function MemberDetail({ params }) {
           <div className="mt-4 space-y-2">
             {(notes || []).map((n, i) => (
               <div key={i} className="rounded-xl bg-paper px-3 py-2 text-sm">
-                <p className="text-brand">{n.body}</p>
-                <p className="mt-0.5 text-xs text-brand/40">{fmt(n.created_at)}</p>
+                <p className="text-ink">{n.body}</p>
+                <p className="mt-0.5 text-xs text-ink/40">{fmt(n.created_at)}</p>
               </div>
             ))}
-            {(!notes || notes.length === 0) && <p className="text-xs text-brand/40">Nog geen notities.</p>}
+            {(!notes || notes.length === 0) && <p className="text-xs text-ink/40">Nog geen notities.</p>}
           </div>
 
-          <h2 className="mt-6 font-black text-brand">Sessies aanpassen</h2>
+          <h2 className="mt-6 font-black text-ink">Sessies aanpassen</h2>
           <ActionForm action={adminAdjustCredits} success="Sessies aangepast — het lid kreeg een e-mail ✓" className="mt-2 flex flex-wrap items-center gap-2">
             <input type="hidden" name="memberId" value={member.id} />
             <input name="delta" type="number" placeholder="+3 of -3" title="+ = bijgeven, - = afhalen" className="w-24 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
@@ -227,27 +227,27 @@ export default async function MemberDetail({ params }) {
           </ActionForm>
         </section>
 
-        <section className="rounded-2xl border border-borderc bg-white p-6">
-          <h2 className="font-black text-brand">Recente boekingen</h2>
+        <section className="rounded-2xl border border-borderc bg-surface p-6">
+          <h2 className="font-black text-ink">Recente boekingen</h2>
           <div className="mt-3 space-y-1.5">
             {confirmed.slice(0, 6).map((b, i) => (
               <div key={i} className="flex justify-between rounded-lg bg-paper px-3 py-2 text-sm">
-                <span className="capitalize text-brand">{fmt(b.starts_at)}</span>
-                <span className="text-brand/50">{b.services?.name}</span>
+                <span className="capitalize text-ink">{fmt(b.starts_at)}</span>
+                <span className="text-ink/50">{b.services?.name}</span>
               </div>
             ))}
-            {confirmed.length === 0 && <p className="text-xs text-brand/40">Nog geen boekingen.</p>}
+            {confirmed.length === 0 && <p className="text-xs text-ink/40">Nog geen boekingen.</p>}
           </div>
 
-          <h2 className="mt-6 font-black text-brand">Workout-logs</h2>
+          <h2 className="mt-6 font-black text-ink">Workout-logs</h2>
           <div className="mt-3 space-y-1.5">
             {(logs || []).slice(0, 6).map((l, i) => (
               <div key={i} className="flex justify-between rounded-lg bg-paper px-3 py-2 text-sm">
-                <span className="font-bold text-brand">{l.program_exercise?.exercises?.name || "Oefening"}</span>
-                <span className="text-brand/50">{l.sets_json?.sets ?? "–"}×{l.sets_json?.reps ?? "–"} · {l.sets_json?.weight_kg ?? "–"}kg</span>
+                <span className="font-bold text-ink">{l.program_exercise?.exercises?.name || "Oefening"}</span>
+                <span className="text-ink/50">{l.sets_json?.sets ?? "–"}×{l.sets_json?.reps ?? "–"} · {l.sets_json?.weight_kg ?? "–"}kg</span>
               </div>
             ))}
-            {(!logs || logs.length === 0) && <p className="text-xs text-brand/40">Nog geen logs.</p>}
+            {(!logs || logs.length === 0) && <p className="text-xs text-ink/40">Nog geen logs.</p>}
           </div>
         </section>
       </div>
@@ -257,9 +257,9 @@ export default async function MemberDetail({ params }) {
 
 function Stat({ label, value, accent }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+      <p className={"mt-2 text-xl font-black " + (accent ? "text-accentdark" : "text-ink")}>{value}</p>
     </div>
   );
 }
@@ -267,8 +267,8 @@ function Stat({ label, value, accent }) {
 function Info({ label, value }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-borderc/60 pb-2">
-      <span className="shrink-0 text-brand/45">{label}</span>
-      <span className="text-right font-bold text-brand">{value}</span>
+      <span className="shrink-0 text-ink/45">{label}</span>
+      <span className="text-right font-bold text-ink">{value}</span>
     </div>
   );
 }

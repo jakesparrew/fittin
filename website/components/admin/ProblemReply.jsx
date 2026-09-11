@@ -31,7 +31,7 @@ export default function ProblemReply({ id, email, naam }) {
   }
 
   return (
-    <form action={action} className="mt-2 rounded-xl border border-borderc bg-white p-3">
+    <form action={action} className="mt-2 rounded-xl border border-borderc bg-surface p-3">
       <input type="hidden" name="id" value={id} />
       <textarea
         name="body"
@@ -39,14 +39,14 @@ export default function ProblemReply({ id, email, naam }) {
         required
         autoFocus
         placeholder={`Schrijf je antwoord aan ${naam || email}…`}
-        className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-brand outline-none focus:border-accent"
+        className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm text-ink outline-none focus:border-accent"
       />
-      <p className="mt-1 text-[11px] text-brand/45">Vertrekt vanaf info@fittin.be, met de melding eronder. De melding wordt meteen afgehandeld.</p>
+      <p className="mt-1 text-[11px] text-ink/45">Vertrekt vanaf info@fittin.be, met de melding eronder. De melding wordt meteen afgehandeld.</p>
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <button disabled={pending} className="rounded-full bg-brand px-4 py-1.5 text-xs font-bold text-white transition hover:opacity-90 disabled:opacity-60">
           {pending ? "Verzenden…" : "Verstuur antwoord"}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-2 py-1.5 text-xs font-bold text-brand/40 hover:text-brand">Annuleer</button>
+        <button type="button" onClick={() => setOpen(false)} className="px-2 py-1.5 text-xs font-bold text-ink/40 hover:text-ink">Annuleer</button>
         {state?.error && <span className="text-xs font-semibold text-red-500">{state.error}</span>}
       </div>
     </form>

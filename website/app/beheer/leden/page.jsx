@@ -77,13 +77,13 @@ export default async function Leden({ searchParams }) {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <MemberDrawer />
-      <h1 className="text-3xl font-black text-brand">Leden</h1>
+      <h1 className="text-3xl font-black text-ink">Leden</h1>
       {atRiskOnly ? (
-        <p className="mt-1 text-sm text-brand/50">
+        <p className="mt-1 text-sm text-ink/50">
           {shown.length} leden die al {">"}30 dagen niet trainden en niets meer geboekt hebben — oudste eerst. <Link href="/beheer/leden" className="font-bold text-accentdark hover:underline">Toon alle leden</Link>
         </p>
       ) : (
-        <p className="mt-1 text-sm text-brand/50">{(members || []).length} accounts · klik een naam voor het volledige overzicht.</p>
+        <p className="mt-1 text-sm text-ink/50">{(members || []).length} accounts · klik een naam voor het volledige overzicht.</p>
       )}
 
       {isBeheerder && !atRiskOnly && <div className="mt-6"><AddMemberForm /></div>}
@@ -93,8 +93,8 @@ export default async function Leden({ searchParams }) {
           twee keer indrukken kan dus geen tweede mailgolf veroorzaken. */}
       {isBeheerder && atRiskOnly && shown.length > 0 && (
         <div className="mt-4 rounded-2xl border-2 border-accent/50 bg-accent/5 p-4">
-          <p className="text-sm font-bold text-brand">Alle {shown.length} in één keer terughalen?</p>
-          <p className="mt-0.5 text-xs text-brand/55">Start de comeback-reeks (2 mails over 5 dagen) voor iedereen hieronder. Wie er al in zit of zich uitschreef, wordt automatisch overgeslagen.</p>
+          <p className="text-sm font-bold text-ink">Alle {shown.length} in één keer terughalen?</p>
+          <p className="mt-0.5 text-xs text-ink/55">Start de comeback-reeks (2 mails over 5 dagen) voor iedereen hieronder. Wie er al in zit of zich uitschreef, wordt automatisch overgeslagen.</p>
           <ActionForm action={enrollAllAtRiskInComeback} className="mt-2">
             <button className="rounded-full bg-accent px-5 py-2 text-sm font-black text-brand transition hover:opacity-90">📬 Start comeback-reeks voor iedereen</button>
           </ActionForm>

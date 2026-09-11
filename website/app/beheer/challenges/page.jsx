@@ -18,8 +18,8 @@ export default async function Challenges() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Challenges</h1>
-      <p className="mt-1 text-sm text-brand/50">Maandelijkse uitdagingen, beloond in sessies.</p>
+      <h1 className="text-3xl font-black text-ink">Challenges</h1>
+      <p className="mt-1 text-sm text-ink/50">Maandelijkse uitdagingen, beloond in sessies.</p>
       <QuickStart title="Een challenge opzetten" steps={[
         { title: "Kies een naam", body: "bv. '12 sessies in juni'." },
         { title: "Kies het doeltype", body: "aantal sessies, sessies in daluren, of een streak." },
@@ -32,19 +32,19 @@ export default async function Challenges() {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(challenges || []).map((c) => (
-          <div key={c.id} className="rounded-2xl border border-borderc bg-white p-5">
+          <div key={c.id} className="rounded-2xl border border-borderc bg-surface p-5">
             <div className="flex items-start justify-between">
-              <p className="font-black text-brand">{c.name}</p>
+              <p className="font-black text-ink">{c.name}</p>
               <ActionForm action={deleteChallenge} success="Challenge verwijderd ✓">
                 <input type="hidden" name="id" value={c.id} />
                 <button className="text-xs font-bold text-red-500 hover:underline">×</button>
               </ActionForm>
             </div>
-            <p className="mt-1 text-xs text-brand/50">{c.goal_count}× {c.goal_type} · +{c.reward_credits} sessies</p>
-            {(c.starts_on || c.ends_on) && <p className="mt-1 text-xs text-brand/40">{c.starts_on} → {c.ends_on}</p>}
+            <p className="mt-1 text-xs text-ink/50">{c.goal_count}× {c.goal_type} · +{c.reward_credits} sessies</p>
+            {(c.starts_on || c.ends_on) && <p className="mt-1 text-xs text-ink/40">{c.starts_on} → {c.ends_on}</p>}
           </div>
         ))}
-        {(!challenges || challenges.length === 0) && <p className="text-sm text-brand/50">Nog geen challenges.</p>}
+        {(!challenges || challenges.length === 0) && <p className="text-sm text-ink/50">Nog geen challenges.</p>}
       </div>
     </div>
   );

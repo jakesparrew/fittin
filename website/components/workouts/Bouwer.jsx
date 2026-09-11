@@ -158,15 +158,15 @@ export default function Bouwer({ program }) {
   return (
     <div className="space-y-5">
       {dagen.map((dag) => (
-        <section key={dag.id} className="rounded-3xl border border-borderc bg-white p-4 md:p-5">
+        <section key={dag.id} className="rounded-3xl border border-borderc bg-surface p-4 md:p-5">
           <div className="flex items-center gap-2">
             <input
               value={dag.naam}
               onChange={(e) => wijzigDag(dag.id, (d) => ({ ...d, naam: e.target.value }))}
               aria-label="Naam van de dag"
-              className="w-full min-w-0 rounded-xl border-2 border-transparent px-2 py-1.5 text-base font-black text-brand outline-none transition hover:border-borderc focus:border-accent"
+              className="w-full min-w-0 rounded-xl border-2 border-transparent px-2 py-1.5 text-base font-black text-ink outline-none transition hover:border-borderc focus:border-accent"
             />
-            <button type="button" onClick={() => dagActie(() => coachDupliceerDag(program.id, dag.id))} className="shrink-0 rounded-full px-3 py-2 text-xs font-bold text-ink-soft transition hover:bg-paper hover:text-brand" title="Dag dupliceren">⧉</button>
+            <button type="button" onClick={() => dagActie(() => coachDupliceerDag(program.id, dag.id))} className="shrink-0 rounded-full px-3 py-2 text-xs font-bold text-ink-soft transition hover:bg-paper hover:text-ink" title="Dag dupliceren">⧉</button>
             <button
               type="button"
               onClick={() => { if (confirm(`"${dag.naam}" en alle oefeningen erin verwijderen?`)) dagActie(() => coachVerwijderDagNieuw(program.id, dag.id)); }}
@@ -185,7 +185,7 @@ export default function Bouwer({ program }) {
                     <ExerciseMedia exercise={r.exercise} thumb className="h-14 w-14" rounded="rounded-xl" />
                   </button>
                   <button type="button" onClick={() => setBewerk({ dagId: dag.id, key: r.key })} className="min-w-0 flex-1 text-left">
-                    <p className="line-clamp-2 font-bold leading-snug text-brand">
+                    <p className="line-clamp-2 font-bold leading-snug text-ink">
                       {sup && <span className="mr-1.5 rounded bg-brand px-1.5 py-0.5 text-[10px] font-black text-white align-middle">{sup}</span>}
                       {r.exercise?.name}
                     </p>
@@ -198,7 +198,7 @@ export default function Bouwer({ program }) {
                     type="button"
                     onClick={() => setBewerk({ dagId: dag.id, key: r.key })}
                     aria-label={`Opties voor ${r.exercise?.name}`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl font-black text-brand/40 transition hover:bg-white hover:text-brand"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl font-black text-ink/40 transition hover:bg-surface hover:text-ink"
                   >⋯</button>
                 </div>
               );
@@ -219,7 +219,7 @@ export default function Bouwer({ program }) {
       <button
         type="button"
         onClick={() => dagActie(() => coachNieuweDag(program.id))}
-        className="w-full rounded-3xl border-2 border-dashed border-borderc py-4 font-bold text-brand/60 transition hover:border-lav hover:text-brand"
+        className="w-full rounded-3xl border-2 border-dashed border-borderc py-4 font-bold text-ink/60 transition hover:border-lav hover:text-ink"
       >
         + Dag toevoegen
       </button>
@@ -255,10 +255,10 @@ export default function Bouwer({ program }) {
 
       {detail && (
         <div className="anim-fade fixed inset-0 z-50 flex items-end justify-center bg-brand/40 p-3 backdrop-blur-sm sm:items-center" role="dialog" aria-modal="true" onClick={() => setDetail(null)}>
-          <div className="anim-in max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
+          <div className="anim-in max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface p-5" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-lg font-black text-brand">{detail.name}</h2>
-              <button type="button" onClick={() => setDetail(null)} aria-label="Sluiten" className="flex h-11 w-11 items-center justify-center rounded-full text-xl text-brand/50 hover:bg-paper">✕</button>
+              <h2 className="text-lg font-black text-ink">{detail.name}</h2>
+              <button type="button" onClick={() => setDetail(null)} aria-label="Sluiten" className="flex h-11 w-11 items-center justify-center rounded-full text-xl text-ink/50 hover:bg-paper">✕</button>
             </div>
             <ExerciseDetail exercise={detail} compact />
           </div>
@@ -271,15 +271,15 @@ export default function Bouwer({ program }) {
 // ── Het bewerkblad van één rij ────────────────────────────────────────────────────────────────
 function RijBlad({ rij, onWijzig, onDupliceer, onOmhoog, onOmlaag, onVerwijder, onSluit }) {
   const [meer, setMeer] = useState(!!(rij.tempo || rij.rpe || rij.notes || rij.superset_group || rij.section || rij.target_weight_kg));
-  const invoer = "w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-base text-brand outline-none transition focus:border-accent";
+  const invoer = "w-full rounded-xl border-2 border-borderc px-3 py-2.5 text-base text-ink outline-none transition focus:border-accent";
 
   return (
     <div className="anim-fade fixed inset-0 z-50 flex items-end justify-center bg-brand/40 backdrop-blur-sm" role="dialog" aria-modal="true" onClick={onSluit}>
-      <div className="anim-sheet max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 pb-8" onClick={(e) => e.stopPropagation()}>
+      <div className="anim-sheet max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-surface p-5 pb-8" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-3">
           <ExerciseMedia exercise={rij.exercise} thumb className="h-12 w-12 shrink-0" rounded="rounded-xl" />
-          <p className="min-w-0 flex-1 font-black leading-snug text-brand">{rij.exercise?.name}</p>
-          <button type="button" onClick={onSluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-brand/50 hover:bg-paper">✕</button>
+          <p className="min-w-0 flex-1 font-black leading-snug text-ink">{rij.exercise?.name}</p>
+          <button type="button" onClick={onSluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-ink/50 hover:bg-paper">✕</button>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-3">
@@ -332,16 +332,16 @@ function Stepper({ label, waarde, min, max, stap = 1, onChange }) {
     <div>
       <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-ink-soft">{label}</span>
       <div className="flex items-stretch overflow-hidden rounded-xl border-2 border-borderc">
-        <button type="button" onClick={() => zet((waarde || 0) - stap)} aria-label={`${label} lager`} className="w-10 shrink-0 bg-paper text-lg font-black text-brand transition hover:bg-borderc">−</button>
+        <button type="button" onClick={() => zet((waarde || 0) - stap)} aria-label={`${label} lager`} className="w-10 shrink-0 bg-paper text-lg font-black text-ink transition hover:bg-borderc">−</button>
         <input
           inputMode="numeric"
           value={waarde}
           onChange={(e) => { const n = parseInt(e.target.value, 10); onChange(Number.isFinite(n) ? n : ""); }}
           onBlur={() => zet(parseInt(waarde, 10) || min)}
           aria-label={label}
-          className="w-full min-w-0 border-0 py-2.5 text-center text-base font-bold text-brand outline-none"
+          className="w-full min-w-0 border-0 py-2.5 text-center text-base font-bold text-ink outline-none"
         />
-        <button type="button" onClick={() => zet((waarde || 0) + stap)} aria-label={`${label} hoger`} className="w-10 shrink-0 bg-paper text-lg font-black text-brand transition hover:bg-borderc">+</button>
+        <button type="button" onClick={() => zet((waarde || 0) + stap)} aria-label={`${label} hoger`} className="w-10 shrink-0 bg-paper text-lg font-black text-ink transition hover:bg-borderc">+</button>
       </div>
     </div>
   );
@@ -354,7 +354,7 @@ function Knopje({ op, label, gevaar = false, children }) {
       onClick={op}
       className={
         "flex h-12 flex-col items-center justify-center rounded-2xl border-2 text-sm font-black transition " +
-        (gevaar ? "border-red-200 text-red-500 hover:bg-red-50" : "border-borderc text-brand hover:border-lav")
+        (gevaar ? "border-red-200 text-red-500 hover:bg-red-50" : "border-borderc text-ink hover:border-lav")
       }
     >
       <span aria-hidden>{children}</span>
@@ -386,7 +386,7 @@ function OefeningBlad({ onKies, onSluit }) {
     setGekozen((g) => (g.some((x) => x.id === ex.id) ? g.filter((x) => x.id !== ex.id) : [...g, ex]));
 
   return (
-    <div className="anim-fade fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Oefeningen kiezen">
+    <div className="anim-fade fixed inset-0 z-50 flex flex-col bg-surface" role="dialog" aria-modal="true" aria-label="Oefeningen kiezen">
       <div className="border-b border-borderc p-3">
         <div className="flex items-center gap-2">
           <input
@@ -394,9 +394,9 @@ function OefeningBlad({ onKies, onSluit }) {
             value={zoek}
             onChange={(e) => setZoek(e.target.value)}
             placeholder="Zoek een oefening…"
-            className="w-full rounded-full border-2 border-borderc px-4 py-2.5 text-base text-brand outline-none transition focus:border-accent"
+            className="w-full rounded-full border-2 border-borderc px-4 py-2.5 text-base text-ink outline-none transition focus:border-accent"
           />
-          <button type="button" onClick={onSluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-brand/50 hover:bg-paper">✕</button>
+          <button type="button" onClick={onSluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-ink/50 hover:bg-paper">✕</button>
         </div>
       </div>
 
@@ -417,7 +417,7 @@ function OefeningBlad({ onKies, onSluit }) {
                   <ExerciseMedia exercise={ex} thumb className="aspect-square w-full" rounded="rounded-xl" />
                   {aan && <span className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-xs font-black text-brand">✓</span>}
                 </div>
-                <p className="mt-1 line-clamp-2 text-xs font-bold leading-tight text-brand">{ex.name}</p>
+                <p className="mt-1 line-clamp-2 text-xs font-bold leading-tight text-ink">{ex.name}</p>
               </button>
             );
           })}

@@ -50,16 +50,16 @@ export default async function WorkoutDetail({ params }) {
           <h1 className="mt-3 text-3xl font-black md:text-4xl">{workout.name}</h1>
           <p className="mt-2 text-white/75">{workout.subtitle}</p>
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold">
-            <span className="rounded-full bg-white/10 px-3 py-1">{workout.level}</span>
-            <span className="rounded-full bg-white/10 px-3 py-1">± {workout.est_minutes} min</span>
-            <span className="rounded-full bg-white/10 px-3 py-1">{workout.exercises.length} oefeningen</span>
+            <span className="rounded-full bg-surface/10 px-3 py-1">{workout.level}</span>
+            <span className="rounded-full bg-surface/10 px-3 py-1">± {workout.est_minutes} min</span>
+            <span className="rounded-full bg-surface/10 px-3 py-1">{workout.exercises.length} oefeningen</span>
             {workout.focus && <span className="rounded-full bg-accent/20 px-3 py-1 text-accent">{workout.focus}</span>}
             <ShareButton
               title={`${workout.name} · Fittin'`}
               text={workout.subtitle || "Volg deze workout mee bij Fittin'"}
               path={`/workouts/${slug}`}
               label="Deel"
-              className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-white transition hover:bg-white/20"
+              className="inline-flex items-center gap-1.5 rounded-full bg-surface/10 px-3 py-1 text-xs font-bold text-white transition hover:bg-surface/20"
             />
           </div>
           {/* De gecureerde workout als STARTPUNT: overnemen maakt er een eigen, bewerkbaar schema
@@ -72,11 +72,11 @@ export default async function WorkoutDetail({ params }) {
       </section>
 
       <div className="mx-auto max-w-2xl px-5 pt-6">
-        {workout.description && <p className="leading-relaxed text-brand/75">{workout.description}</p>}
+        {workout.description && <p className="leading-relaxed text-ink/75">{workout.description}</p>}
         {Array.isArray(workout.tips) && workout.tips.length > 0 && (
-          <div className="mt-5 rounded-3xl border border-borderc bg-white p-5">
-            <p className="text-xs font-black uppercase tracking-widest text-brand/50">Coachtips</p>
-            <ul className="mt-3 space-y-2 text-sm text-brand/75">
+          <div className="mt-5 rounded-3xl border border-borderc bg-surface p-5">
+            <p className="text-xs font-black uppercase tracking-widest text-ink/50">Coachtips</p>
+            <ul className="mt-3 space-y-2 text-sm text-ink/75">
               {workout.tips.map((t, i) => (
                 <li key={i} className="flex gap-2"><span className="text-accent">✓</span> {t}</li>
               ))}

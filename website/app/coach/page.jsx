@@ -227,10 +227,10 @@ export default async function CoachDashboard({ searchParams }) {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">Coach dashboard</h1>
-          <p className="mt-1 text-sm text-brand/50">Boek sessies met je clienten en beheer je agenda.</p>
+          <h1 className="text-3xl font-black text-ink">Coach dashboard</h1>
+          <p className="mt-1 text-sm text-ink/50">Boek sessies met je clienten en beheer je agenda.</p>
         </div>
-        <Link href="/community" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">💡 Deel een tip in de feed →</Link>
+        <Link href="/community" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-accent/15">💡 Deel een tip in de feed →</Link>
       </div>
 
       {sp.gekocht === "1" && <p className="mt-4 rounded-xl bg-accent/15 p-3 text-sm font-semibold text-accentdark">Coach-sessies bijgeschreven ✓</p>}
@@ -239,7 +239,7 @@ export default async function CoachDashboard({ searchParams }) {
           (/account stuurt hen door). `geannuleerd=1` blijft aanvaard voor checkoutsessies die nog
           met de oude cancel_url onderweg zijn. Zonder afgebroken betaling: onzichtbaar. */}
       {(sp.betaling === "afgebroken" || sp.geannuleerd === "1") && (
-        <p className="mt-4 rounded-xl border border-borderc bg-white p-3 text-sm text-brand/70">Je betaling is afgebroken — er is niets aangerekend.</p>
+        <p className="mt-4 rounded-xl border border-borderc bg-surface p-3 text-sm text-ink/70">Je betaling is afgebroken — er is niets aangerekend.</p>
       )}
 
       <TodayStrip sessions={todaySessions} next={nextSummary} />
@@ -251,7 +251,7 @@ export default async function CoachDashboard({ searchParams }) {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="font-black text-red-600">⛔ Boeken staat op pauze — je saldo is {sess(creditBalance)}</p>
-              <p className="mt-0.5 text-sm text-brand/70">
+              <p className="mt-0.5 text-sm text-ink/70">
                 Je boekte {sess(Math.abs(creditBalance))} sessies meer dan je kocht — <b>€ {Math.abs(creditBalance) * 12} openstaand</b> aan de gym.
                 Zuiver je saldo aan (of koop meteen meer): daarna kan je direct weer boeken. Je bestaande sessies blijven gewoon staan.
               </p>
@@ -265,7 +265,7 @@ export default async function CoachDashboard({ searchParams }) {
               </SubmitButton>
             </ActionForm>
           </div>
-          <p className="mt-2 text-xs text-brand/50">Tip: koop hieronder bij <a href="#tegoed" className="font-bold text-accentdark hover:underline">Coach-sessies kopen</a> meteen méér — de eerste {sess(Math.abs(creditBalance))} dekken je achterstand, de rest is nieuw tegoed.</p>
+          <p className="mt-2 text-xs text-ink/50">Tip: koop hieronder bij <a href="#tegoed" className="font-bold text-accentdark hover:underline">Coach-sessies kopen</a> meteen méér — de eerste {sess(Math.abs(creditBalance))} dekken je achterstand, de rest is nieuw tegoed.</p>
         </div>
       )}
       {/* Factuur-coach met openstaand bedrag (0124): de database weigert nieuwe boekingen, dus dat
@@ -273,7 +273,7 @@ export default async function CoachDashboard({ searchParams }) {
       {invoiceBlocked && (
         <div className="mt-4 rounded-2xl border-2 border-red-300 bg-red-50 p-4">
           <p className="font-black text-red-600">⛔ Boeken staat op pauze — er staat {euro(owedCents)} open</p>
-          <p className="mt-0.5 text-sm text-brand/70">
+          <p className="mt-0.5 text-sm text-ink/70">
             Dit is een openstaand bedrag van vroeger, toen sessies achteraf gefactureerd werden.
             Sessies worden nu vooraf betaald met sessietegoed. Zolang dit openstaat kan je niets boeken; je bestaande sessies blijven gewoon staan.
             {owedInvoices > 0 && owedSessions > 0
@@ -282,7 +282,7 @@ export default async function CoachDashboard({ searchParams }) {
                 ? " Dat bedrag is al gefactureerd."
                 : " Dat bedrag is nog niet gefactureerd."}
           </p>
-          <p className="mt-2 text-xs text-brand/50">
+          <p className="mt-2 text-xs text-ink/50">
             Betaal je openstaande factuur, of spreek de gym aan — zodra de betaling geregistreerd is, kan je meteen weer boeken.
           </p>
         </div>
@@ -291,7 +291,7 @@ export default async function CoachDashboard({ searchParams }) {
       {/* Saldo exact 0 (geen schuld, wel op): zachtere melding, zelfde regel. */}
       {mode === "credit" && creditBalance === 0 && (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
-          <p className="text-sm font-bold text-brand">Je sessietegoed is op — koop bij om nieuwe sessies te kunnen boeken.</p>
+          <p className="text-sm font-bold text-ink">Je sessietegoed is op — koop bij om nieuwe sessies te kunnen boeken.</p>
           <a href="#tegoed" className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Tegoed kopen ↓</a>
         </div>
       )}
@@ -311,12 +311,12 @@ export default async function CoachDashboard({ searchParams }) {
       )}
 
       {/* PRIMARY ACTION — book a session with a client */}
-      <section id="boeken" className="mt-6 scroll-mt-8 rounded-3xl border-2 border-accent bg-white p-6 shadow-sm shadow-accent/10">
+      <section id="boeken" className="mt-6 scroll-mt-8 rounded-3xl border-2 border-accent bg-surface p-6 shadow-sm shadow-accent/10">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-xl font-black text-brand">Sessie boeken met een client</h2>
+          <h2 className="text-xl font-black text-ink">Sessie boeken met een client</h2>
           <span className="rounded-full bg-accent/15 px-3 py-1 text-xs font-black text-accentdark">Hoofdactie</span>
         </div>
-        <p className="mt-1 text-sm text-brand/60">
+        <p className="mt-1 text-sm text-ink/60">
           Kies je client en moment.{" "}
           {mode === "invoice"
             ? <>Elke boeking kost jou <strong>1 sessietegoed ({euro(profile.coach_session_price_cents || 1200)} aan de gym)</strong>, vooraf te kopen, ongeacht het aantal personen.</>
@@ -339,8 +339,8 @@ export default async function CoachDashboard({ searchParams }) {
         )}
         {members.length === 0 && (
           <div className="mt-3 rounded-2xl border-2 border-dashed border-accent/50 bg-accent/5 p-4 text-sm">
-            <p className="font-bold text-brand">Je hebt nog geen verbonden clienten.</p>
-            <p className="mt-0.5 text-brand/60">Verbind eerst een client via <Link href="/coach/clienten" className="font-bold text-accentdark underline">Mijn clienten</Link> — pas daarna kan je hier een sessie met hen boeken.</p>
+            <p className="font-bold text-ink">Je hebt nog geen verbonden clienten.</p>
+            <p className="mt-0.5 text-ink/60">Verbind eerst een client via <Link href="/coach/clienten" className="font-bold text-accentdark underline">Mijn clienten</Link> — pas daarna kan je hier een sessie met hen boeken.</p>
           </div>
         )}
         <ActionForm action={coachBookSession} success="Sessie geboekt ✓" className="mt-4 space-y-3">
@@ -353,7 +353,7 @@ export default async function CoachDashboard({ searchParams }) {
                 <div className="min-w-[13rem] flex-1">
                   <SearchSelect name="clientId" placeholder="Zoek een lid… (leeg = uur reserveren)" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
                 </div>
-                <span className="text-xs font-bold text-brand/40">of</span>
+                <span className="text-xs font-bold text-ink/40">of</span>
                 <input name="clientName" placeholder="naam (niet op platform)" className="w-44 rounded-lg border-2 border-borderc px-2 py-1.5 text-sm" />
               </div>
             </div>
@@ -374,7 +374,7 @@ export default async function CoachDashboard({ searchParams }) {
             </div>
           </div>
         </ActionForm>
-        <p className="mt-2 text-xs text-brand/45">
+        <p className="mt-2 text-xs text-ink/45">
           Client leeg = uur reserveren (later koppelen kan altijd) · externe client? vul de naam in, zo weet de gym met wie je traint ·
           groep? verhoog <b>Pers</b> — blijft {mode === "invoice" ? "één gefactureerde sessie" : mode === "free" ? "gratis" : "1 sessietegoed (€ 12)"}. Liever visueel? Kies een vrij uur in de <a href="#planning" className="font-bold text-accentdark hover:underline">Planning ↓</a>.
         </p>
@@ -382,8 +382,8 @@ export default async function CoachDashboard({ searchParams }) {
 
         {/* Recurring series — book the same weekday+hour for N weeks (with a client, or reserve-only). */}
         <details className="mt-4 rounded-2xl border border-borderc bg-paper/50 p-4">
-          <summary className="cursor-pointer text-sm font-black text-brand">🔁 Reeks inplannen (elke week hetzelfde uur)</summary>
-          <p className="mt-2 text-xs text-brand/55">Boekt dezelfde weekdag + uur voor een aantal weken. Laat <b>Client</b> leeg om enkel de slots te reserveren. Elke sessie kost 1 sessietegoed (€ 12) — bezette of voorbije weken worden overgeslagen, en het stopt zodra je tegoed op is.</p>
+          <summary className="cursor-pointer text-sm font-black text-ink">🔁 Reeks inplannen (elke week hetzelfde uur)</summary>
+          <p className="mt-2 text-xs text-ink/55">Boekt dezelfde weekdag + uur voor een aantal weken. Laat <b>Client</b> leeg om enkel de slots te reserveren. Elke sessie kost 1 sessietegoed (€ 12) — bezette of voorbije weken worden overgeslagen, en het stopt zodra je tegoed op is.</p>
           <ActionForm action={coachBulkBook} success="Reeks ingepland ✓" className="mt-3 flex flex-wrap items-end gap-3">
             <input type="hidden" name="serviceId" value={ptService?.id || ""} />
             <Lbl t="Client (optioneel)">
@@ -413,14 +413,14 @@ export default async function CoachDashboard({ searchParams }) {
 
       {/* How payment works — the two money flows (buy credits vs. invoice clients) confuse new coaches. */}
       <details className="mt-6 rounded-2xl border border-borderc bg-paper/50 p-4">
-        <summary className="cursor-pointer text-sm font-black text-brand">💰 Zo werkt betalen als coach</summary>
-        <div className="mt-3 grid gap-3 text-sm text-brand/70 sm:grid-cols-2">
-          <div className="rounded-xl bg-white p-4">
-            <p className="font-bold text-brand">1. Jij betaalt de gym</p>
+        <summary className="cursor-pointer text-sm font-black text-ink">💰 Zo werkt betalen als coach</summary>
+        <div className="mt-3 grid gap-3 text-sm text-ink/70 sm:grid-cols-2">
+          <div className="rounded-xl bg-surface p-4">
+            <p className="font-bold text-ink">1. Jij betaalt de gym</p>
             <p className="mt-1 text-xs leading-relaxed">Elke sessie die je met een client boekt kost jou <b>1 sessietegoed (€ 12)</b>. Koop tegoed vooraf hieronder bij <b>Coach-sessies kopen</b>, of vraag het aan de beheerder.</p>
           </div>
-          <div className="rounded-xl bg-white p-4">
-            <p className="font-bold text-brand">2. Je client betaalt jou</p>
+          <div className="rounded-xl bg-surface p-4">
+            <p className="font-bold text-ink">2. Je client betaalt jou</p>
             <p className="mt-1 text-xs leading-relaxed">De prijs die je je client aanrekent, spreek je zelf af. Stuur een <b>betaalverzoek</b> vanaf de clientpagina (die betaalt via de app), of laat je client je rechtstreeks betalen (bv. Bancontact).</p>
           </div>
         </div>
@@ -445,10 +445,10 @@ export default async function CoachDashboard({ searchParams }) {
           <div className="rounded-2xl border-2 border-accent bg-accent/5 p-5">
             <div className="flex items-center gap-2">
               <span className="text-xl">💳</span>
-              <p className="text-lg font-black text-brand">Coach-sessies kopen</p>
+              <p className="text-lg font-black text-ink">Coach-sessies kopen</p>
             </div>
-            <p className="mt-1 text-sm text-brand/60">
-              Coaches betalen altijd <strong className="text-brand">€ 12 per sessie</strong>. Koop 1 tot 100 sessies vooraf en boek daarna je clienten met dit saldo.
+            <p className="mt-1 text-sm text-ink/60">
+              Coaches betalen altijd <strong className="text-ink">€ 12 per sessie</strong>. Koop 1 tot 100 sessies vooraf en boek daarna je clienten met dit saldo.
             </p>
             <ActionForm action={buyCoachCredits} className="mt-3 flex flex-wrap items-end gap-3">
               <label className="block text-xs font-bold text-lav">Aantal sessies (1–100)
@@ -459,7 +459,7 @@ export default async function CoachDashboard({ searchParams }) {
             {/* De vraag naar btw-gegevens hoort hier, op het moment dat er geld gaat — niet pas op de
                 factuur achteraf. Wie ze al ingevuld heeft, hoeft er niets over te lezen. */}
             {!profile.bill_vat && (
-              <p className="mt-3 border-t border-accent/30 pt-3 text-xs leading-relaxed text-brand/60">
+              <p className="mt-3 border-t border-accent/30 pt-3 text-xs leading-relaxed text-ink/60">
                 Factuur op je bedrijfsnaam nodig? Vink bij het afrekenen <b>&ldquo;Ik koop als bedrijf&rdquo;</b> aan en
                 geef je btw-nummer in — we nemen het daarna automatisch over. Of vul het eenmalig in bij{" "}
                 <Link href="/coach/profiel" className="font-bold text-accentdark hover:underline">je profiel</Link>.
@@ -470,13 +470,13 @@ export default async function CoachDashboard({ searchParams }) {
               Die weg is bewust geschrapt (2026-08-07): ze schreef tegoed bij vóór er betaald was,
               waardoor een coach kon trainen op sessies die nooit betaald raakten. Nu geldt één
               regel — je koopt vooraf, of je betaalt ter plekke en de gym schrijft het bij. */}
-          <div className="rounded-2xl border border-borderc bg-white p-5">
-            <p className="font-bold text-brand">Liever ter plekke betalen?</p>
-            <p className="mt-1 text-sm text-brand/60">
+          <div className="rounded-2xl border border-borderc bg-surface p-5">
+            <p className="font-bold text-ink">Liever ter plekke betalen?</p>
+            <p className="mt-1 text-sm text-ink/60">
               Kan ook: betaal cash of via overschrijving aan de gym, dan schrijft de beheerder je
               sessies meteen bij. Zodra ze op je saldo staan, kan je boeken.
             </p>
-            <a href="mailto:info@fittin.be?subject=Sessietegoed%20aankopen" className="mt-3 inline-block rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-brand transition hover:border-accent">
+            <a href="mailto:info@fittin.be?subject=Sessietegoed%20aankopen" className="mt-3 inline-block rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-ink transition hover:border-accent">
               Contacteer de gym →
             </a>
           </div>
@@ -485,16 +485,16 @@ export default async function CoachDashboard({ searchParams }) {
 
       {/* Notifications */}
       {(notifs || []).length > 0 && (
-        <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
+        <div className="mt-4 rounded-2xl border border-borderc bg-surface p-5">
           <div className="flex items-center justify-between">
-            <p className="font-bold text-brand">🔔 Notificaties</p>
+            <p className="font-bold text-ink">🔔 Notificaties</p>
             <Link href="/coach/notificaties" className="text-xs font-bold text-accentdark">Alles bekijken →</Link>
           </div>
           <div className="mt-3 space-y-1.5">
             {notifs.map((n) => (
               <Link key={n.id} href="/coach/notificaties" className={"block rounded-xl px-3 py-2 text-sm transition hover:bg-paper " + (n.read ? "" : "bg-accent/5")}>
-                <span className="font-bold text-brand">{n.title}</span>
-                {n.body && <span className="text-brand/50"> · {n.body}</span>}
+                <span className="font-bold text-ink">{n.title}</span>
+                {n.body && <span className="text-ink/50"> · {n.body}</span>}
               </Link>
             ))}
           </div>
@@ -504,14 +504,14 @@ export default async function CoachDashboard({ searchParams }) {
       {/* Interactive schedule — dagelijks werk, dus vóór referral/activiteit/tools (belangrijk eerst). */}
       <div id="planning" className="mt-6 scroll-mt-8">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xl font-black text-brand">Planning</h2>
+          <h2 className="text-xl font-black text-ink">Planning</h2>
           <div className="flex items-center gap-2 text-sm font-bold">
             {planW > 0 ? (
               <Link href={`/coach?w=${planW - 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">←</Link>
             ) : (
               <span className="rounded-full border-2 border-borderc px-4 py-1.5 opacity-30">←</span>
             )}
-            <span className="text-brand/60">{schedDays[0].dayMonth} – {schedDays[13].dayMonth}</span>
+            <span className="text-ink/60">{schedDays[0].dayMonth} – {schedDays[13].dayMonth}</span>
             <Link href={`/coach?w=${planW + 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">→</Link>
           </div>
         </div>
@@ -521,24 +521,24 @@ export default async function CoachDashboard({ searchParams }) {
       {/* Upcoming sessions */}
       <section className="mt-6">
         <div className="flex items-center justify-between">
-          <h2 className="text-xl font-black text-brand">Aankomende sessies</h2>
+          <h2 className="text-xl font-black text-ink">Aankomende sessies</h2>
           <Link href="/coach/agenda" className="text-sm font-bold text-accentdark">Volledige agenda →</Link>
         </div>
         {upcoming.length === 0 ? (
-          <p className="mt-4 text-sm text-brand/50">Nog geen geplande sessies.</p>
+          <p className="mt-4 text-sm text-ink/50">Nog geen geplande sessies.</p>
         ) : (
           <div className="mt-4 space-y-2">
             {upcoming.slice(0, 8).map((b) => {
               const own = b.user_id === userId && !b.coach_id;       // zelf geboekt (eigen training)
               const reserved = b.user_id === userId && !!b.coach_id; // slot zonder client, via coach-flow
               return (
-              <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
+              <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-surface p-4">
                 <div>
-                  <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{own ? "🏋️ Mijn eigen training" : whoOf(b)}</BookingDetail></p>
-                  <p className="mt-0.5 text-sm capitalize text-brand/50">{fmt(b.starts_at)} · {b.services?.name}{own ? " · zelf geboekt" : ""}</p>
+                  <p className="font-bold text-ink"><BookingDetail bookingId={b.id} className="font-bold text-ink">{own ? "🏋️ Mijn eigen training" : whoOf(b)}</BookingDetail></p>
+                  <p className="mt-0.5 text-sm capitalize text-ink/50">{fmt(b.starts_at)} · {b.services?.name}{own ? " · zelf geboekt" : ""}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
+                  <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink/60">
                     {own ? "eigen boeking" : b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                   </span>
                   {!own && <ShareSession text={shareTextFor(b)} />}
@@ -553,33 +553,33 @@ export default async function CoachDashboard({ searchParams }) {
 
       {/* Coaching tools — build your own exercises + program templates, assign to clients */}
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <Link href="/coach/programmas" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
+        <Link href="/coach/programmas" className="flex items-center justify-between rounded-2xl border border-borderc bg-surface p-5 transition hover:border-accent">
           <div>
-            <p className="font-bold text-brand">Programma's</p>
-            <p className="mt-0.5 text-xs text-brand/50">Maak je eigen templates en wijs ze toe aan clienten.</p>
+            <p className="font-bold text-ink">Programma's</p>
+            <p className="mt-0.5 text-xs text-ink/50">Maak je eigen templates en wijs ze toe aan clienten.</p>
           </div>
           <span className="text-accentdark">→</span>
         </Link>
-        <Link href="/coach/oefeningen" className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent">
+        <Link href="/coach/oefeningen" className="flex items-center justify-between rounded-2xl border border-borderc bg-surface p-5 transition hover:border-accent">
           <div>
-            <p className="font-bold text-brand">Oefeningen</p>
-            <p className="mt-0.5 text-xs text-brand/50">Bouw je eigen oefeningenbibliotheek op.</p>
+            <p className="font-bold text-ink">Oefeningen</p>
+            <p className="mt-0.5 text-xs text-ink/50">Bouw je eigen oefeningenbibliotheek op.</p>
           </div>
           <span className="text-accentdark">→</span>
         </Link>
       </div>
 
       {/* Referral — bring members along, earn a free invite session (no cash commission) */}
-      <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
+      <div className="mt-4 rounded-2xl border border-borderc bg-surface p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="font-bold text-brand">Breng leden aan</p>
+            <p className="font-bold text-ink">Breng leden aan</p>
             {/* Stond: "dat zijn eerste sessie boekt". De beloning valt pas ná die sessie (0147) —
                 een boeking kan afgezegd of niet nagekomen worden. De tekst zegt nu wat er gebeurt. */}
             <p className="mt-0.5 text-xs text-ink-soft">Deel je code. Zodra een nieuw lid via jou zijn eerste sessie gedaan heeft, krijgen jullie allebei een gratis sessie.</p>
           </div>
           <div className="flex gap-4 text-center">
-            <div><p className="text-2xl font-black text-brand">{referredCount || 0}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Aangebracht</p></div>
+            <div><p className="text-2xl font-black text-ink">{referredCount || 0}</p><p className="text-[10px] font-bold uppercase tracking-wide text-lav">Aangebracht</p></div>
           </div>
         </div>
         {/* Invite by e-mail — auto-sends the invite with your referral code */}
@@ -593,21 +593,21 @@ export default async function CoachDashboard({ searchParams }) {
         {meRef?.referral_code && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-paper p-3">
             <span className="text-xs font-bold uppercase tracking-wide text-lav">Of deel je code</span>
-            <span className="rounded-lg bg-white px-3 py-1 font-black text-brand">{meRef.referral_code}</span>
-            <span className="truncate text-xs text-brand/50">{refLink}</span>
+            <span className="rounded-lg bg-surface px-3 py-1 font-black text-ink">{meRef.referral_code}</span>
+            <span className="truncate text-xs text-ink/50">{refLink}</span>
           </div>
         )}
       </div>
 
       {/* Recent activity log */}
       {(activity || []).length > 0 && (
-        <div className="mt-4 rounded-2xl border border-borderc bg-white p-5">
-          <p className="font-bold text-brand">Recente activiteit</p>
+        <div className="mt-4 rounded-2xl border border-borderc bg-surface p-5">
+          <p className="font-bold text-ink">Recente activiteit</p>
           <div className="mt-3 space-y-1.5 text-sm">
             {activity.map((a, i) => (
               <div key={i} className="flex items-center justify-between gap-3">
-                <span className="text-brand/70">{a.summary}</span>
-                <span className="shrink-0 text-xs text-brand/40">{new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(a.created_at))}</span>
+                <span className="text-ink/70">{a.summary}</span>
+                <span className="shrink-0 text-xs text-ink/40">{new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(a.created_at))}</span>
               </div>
             ))}
           </div>
@@ -619,9 +619,9 @@ export default async function CoachDashboard({ searchParams }) {
 
 function Stat({ label, value, accent, danger }) {
   return (
-    <div className={"rounded-2xl border bg-white p-5 " + (danger ? "border-red-300 bg-red-50/50" : "border-borderc")}>
+    <div className={"rounded-2xl border bg-surface p-5 " + (danger ? "border-red-300 bg-red-50/50" : "border-borderc")}>
       <p className={"text-xs font-bold uppercase tracking-widest " + (danger ? "text-red-500" : "text-lav")}>{label}</p>
-      <p className={"mt-2 text-2xl font-black " + (danger ? "text-red-600" : accent ? "text-accentdark" : "text-brand")}>{value}</p>
+      <p className={"mt-2 text-2xl font-black " + (danger ? "text-red-600" : accent ? "text-accentdark" : "text-ink")}>{value}</p>
     </div>
   );
 }

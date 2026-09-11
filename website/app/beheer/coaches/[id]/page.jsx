@@ -80,14 +80,14 @@ export default async function CoachDetail({ params }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/beheer/coaches" className="text-sm font-semibold text-ink-soft hover:text-brand">← Coaches</Link>
+      <Link href="/beheer/coaches" className="text-sm font-semibold text-ink-soft hover:text-ink">← Coaches</Link>
 
       <div className="mt-3 flex flex-wrap items-start gap-4">
         {c.coach_photo_url
           ? <Image src={c.coach_photo_url} alt="" width={72} height={72} sizes="72px" className="h-18 w-18 rounded-2xl object-cover" style={{ height: 72, width: 72 }} />
-          : <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-borderc text-2xl font-black text-brand/40">{(c.full_name || "?").slice(0, 1)}</div>}
+          : <div className="flex h-[72px] w-[72px] items-center justify-center rounded-2xl bg-borderc text-2xl font-black text-ink/40">{(c.full_name || "?").slice(0, 1)}</div>}
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-black text-brand md:text-3xl">{c.full_name || c.email}</h1>
+          <h1 className="text-2xl font-black text-ink md:text-3xl">{c.full_name || c.email}</h1>
           <p className="text-sm text-ink-soft">{c.email}{c.role === "beheerder" && " · beheerder"}{c.is_test && " · 🧪 testaccount"}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {/* Enige schrijver van coach_public. De checkbox in het profielformulier is weg: die
@@ -104,7 +104,7 @@ export default async function CoachDetail({ params }) {
                 binnen een ActionForm. */}
             <form action={startViewAsCoach}>
               <input type="hidden" name="coachId" value={c.id} />
-              <button className="rounded-full border-2 border-brand px-4 py-2 text-sm font-bold text-brand transition hover:bg-brand hover:text-white">👁️ Bekijk als coach →</button>
+              <button className="rounded-full border-2 border-brand px-4 py-2 text-sm font-bold text-ink transition hover:bg-brand hover:text-white">👁️ Bekijk als coach →</button>
             </form>
           </div>
         </div>
@@ -128,7 +128,7 @@ export default async function CoachDetail({ params }) {
               <input type="hidden" name="coachId" value={c.id} />
               <input type="hidden" name="betaling" value="betaald" />
               <Lbl t="Beurten à € 12">
-                <input name="delta" type="number" step="0.5" defaultValue={nodig} className="w-24 rounded-lg border-2 border-borderc bg-white px-2 py-1.5 text-sm" />
+                <input name="delta" type="number" step="0.5" defaultValue={nodig} className="w-24 rounded-lg border-2 border-borderc bg-surface px-2 py-1.5 text-sm" />
               </Lbl>
               {/* Het bedrag staat in de KNOP: naast een euro-bedrag typt iedereen ooit 12 in plaats
                   van 1, en dat schrijft 12 beurten én € 144 echte omzet weg. */}
@@ -145,12 +145,12 @@ export default async function CoachDetail({ params }) {
 
       <div className="mt-6 grid gap-5 lg:grid-cols-2">
         {/* Sessies */}
-        <div className="rounded-2xl border border-borderc bg-white p-5">
+        <div className="rounded-2xl border border-borderc bg-surface p-5">
           <p className="text-xs font-bold uppercase tracking-wide text-lav">Sessies</p>
           <div className="mt-3 space-y-1">
             {(sessies || []).filter(isCoachSessie).slice(0, 12).map((s) => (
               <div key={s.id} className="flex items-center justify-between gap-3 border-b border-borderc py-2 text-sm last:border-b-0">
-                <span className="min-w-0 truncate font-semibold text-brand">{clientLabel(s)}</span>
+                <span className="min-w-0 truncate font-semibold text-ink">{clientLabel(s)}</span>
                 <span className="shrink-0 text-xs text-ink-soft">{fmt(s.starts_at)}</span>
               </div>
             ))}
@@ -159,7 +159,7 @@ export default async function CoachDetail({ params }) {
         </div>
 
         {/* Clients */}
-        <div className="rounded-2xl border border-borderc bg-white p-5">
+        <div className="rounded-2xl border border-borderc bg-surface p-5">
           <p className="text-xs font-bold uppercase tracking-wide text-lav">Toegewezen clients</p>
           <p className="mt-1 text-xs leading-relaxed text-ink-soft">
             Dit is een koppeling in de app, geen maat voor hoeveel er getraind wordt — coaches brengen
@@ -167,7 +167,7 @@ export default async function CoachDetail({ params }) {
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {cls.map((l) => (
-              <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">
+              <span key={l.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink">
                 <Link href={`/beheer/leden/${l.client_id}`} className="hover:text-accentdark">{naamVan(l.client_id)}</Link>
                 <ActionForm action={unassignCoachClient} success="Verwijderd ✓" className="inline">
                   <input type="hidden" name="id" value={l.id} />
@@ -189,13 +189,13 @@ export default async function CoachDetail({ params }) {
       {/* Profiel & foto — ALLE velden in ÉÉN form. adminSaveCoachProfile schrijft altijd alle
           velden met `formData.get(x) || null`; een veld dat buiten dit form valt wordt bij elke
           opslag stilzwijgend op NULL gezet (btw-nummer, facturatieadres). Niet opsplitsen. */}
-      <details className="mt-5 rounded-2xl border border-borderc bg-white">
-        <summary className="cursor-pointer px-5 py-4 text-sm font-bold text-brand">Profiel &amp; foto</summary>
+      <details className="mt-5 rounded-2xl border border-borderc bg-surface">
+        <summary className="cursor-pointer px-5 py-4 text-sm font-bold text-ink">Profiel &amp; foto</summary>
         <div className="flex flex-wrap items-start gap-5 border-t border-borderc p-5">
           <div className="text-center">
             {c.coach_photo_url
               ? <Image src={c.coach_photo_url} alt="" width={96} height={96} sizes="96px" className="rounded-2xl object-cover" style={{ height: 96, width: 96 }} />
-              : <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-borderc text-2xl font-black text-brand/40">{(c.full_name || "?").slice(0, 1)}</div>}
+              : <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-borderc text-2xl font-black text-ink/40">{(c.full_name || "?").slice(0, 1)}</div>}
             <ActionForm action={adminUploadCoachPhoto} success="Foto geüpload ✓" className="mt-2">
               <input type="hidden" name="coachId" value={c.id} />
               <input type="file" name="photo" accept="image/*" className="block w-32 text-[10px]" />
@@ -231,23 +231,23 @@ export default async function CoachDetail({ params }) {
       </details>
 
       {/* Facturatie, tegoed & beschikbaarheid */}
-      <details className="mt-3 rounded-2xl border border-borderc bg-white">
-        <summary className="cursor-pointer px-5 py-4 text-sm font-bold text-brand">Facturatie, tegoed &amp; beschikbaarheid</summary>
+      <details className="mt-3 rounded-2xl border border-borderc bg-surface">
+        <summary className="cursor-pointer px-5 py-4 text-sm font-bold text-ink">Facturatie, tegoed &amp; beschikbaarheid</summary>
         <div className="border-t border-borderc p-5">
           <div className="grid gap-4 md:grid-cols-2">
             <ActionForm action={setCoachBilling} success="Facturatie opgeslagen ✓" className="rounded-xl bg-paper/60 p-4">
               <input type="hidden" name="coachId" value={c.id} />
-              <p className="text-sm text-ink-soft">Facturatie: <strong className="text-brand">vast € 12 / sessie</strong> via sessietegoed.</p>
+              <p className="text-sm text-ink-soft">Facturatie: <strong className="text-ink">vast € 12 / sessie</strong> via sessietegoed.</p>
               {(c.coach_billing_mode !== "credit" || c.coach_session_price_cents !== 1200) && (
-                <button className="mt-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-brand">Standaard toepassen (€ 12 / sessietegoed)</button>
+                <button className="mt-2 rounded-full bg-surface px-4 py-2 text-sm font-bold text-ink">Standaard toepassen (€ 12 / sessietegoed)</button>
               )}
             </ActionForm>
             <ActionForm action={grantCoachCredits} success="Sessietegoed bijgeschreven ✓" className="rounded-xl bg-paper/60 p-4">
               <input type="hidden" name="coachId" value={c.id} />
               <div className="flex flex-wrap items-end gap-2">
-                <Lbl t="Beurten ±"><input name="delta" type="number" step="0.5" placeholder="bv. 10" className="w-24 rounded-lg border-2 border-borderc bg-white px-2 py-1.5 text-sm" /></Lbl>
+                <Lbl t="Beurten ±"><input name="delta" type="number" step="0.5" placeholder="bv. 10" className="w-24 rounded-lg border-2 border-borderc bg-surface px-2 py-1.5 text-sm" /></Lbl>
                 <Lbl t="Afrekening">
-                  <select name="betaling" className="rounded-lg border-2 border-borderc bg-white px-2 py-1.5 text-sm">
+                  <select name="betaling" className="rounded-lg border-2 border-borderc bg-surface px-2 py-1.5 text-sm">
                     <option value="betaald">Betaald (cash/overschrijving ontvangen)</option>
                     <option value="gratis">Gratis gegeven (niets aanrekenen)</option>
                   </select>
@@ -261,7 +261,7 @@ export default async function CoachDetail({ params }) {
           <p className="mt-5 text-xs font-bold uppercase tracking-wide text-lav">Beschikbaarheid</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {(avail || []).map((a) => (
-              <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">
+              <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink">
                 {WD_FULL[a.weekday].slice(0, 2)} {fmtHour(a.from_hour)}–{fmtHour(a.to_hour)}
                 <ActionForm action={deleteCoachAvailability} success="Verwijderd ✓" className="inline">
                   <input type="hidden" name="id" value={a.id} />
@@ -297,8 +297,8 @@ export default async function CoachDetail({ params }) {
 
       {/* Activiteitenlog */}
       {(activity || []).length > 0 && (
-        <details className="mt-3 rounded-2xl border border-borderc bg-white">
-          <summary className="cursor-pointer px-5 py-4 text-sm font-bold text-brand">Activiteitenlog ({activity.length})</summary>
+        <details className="mt-3 rounded-2xl border border-borderc bg-surface">
+          <summary className="cursor-pointer px-5 py-4 text-sm font-bold text-ink">Activiteitenlog ({activity.length})</summary>
           <div className="max-h-72 space-y-1 overflow-y-auto border-t border-borderc p-5">
             {activity.map((a, i) => (
               <div key={i} className="flex justify-between gap-3 text-xs">
@@ -315,9 +315,9 @@ export default async function CoachDetail({ params }) {
 
 function Cijfer({ label, waarde, sub, rood = false }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-4">
+    <div className="rounded-2xl border border-borderc bg-surface p-4">
       <p className="text-[10px] font-bold uppercase tracking-wide text-lav">{label}</p>
-      <p className={"mt-1 text-2xl font-black " + (rood ? "text-red-600" : "text-brand")}>{waarde}</p>
+      <p className={"mt-1 text-2xl font-black " + (rood ? "text-red-600" : "text-ink")}>{waarde}</p>
       <p className="mt-0.5 text-xs text-ink-soft">{sub}</p>
     </div>
   );

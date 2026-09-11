@@ -14,9 +14,9 @@ const ago = (iso) => {
 };
 // Disengagement at a glance: red >30d, amber >14d, normal recent, grey never.
 const tone = (iso) => {
-  if (!iso) return "text-brand/30";
+  if (!iso) return "text-ink/30";
   const d = (Date.now() - new Date(iso).getTime()) / 86400000;
-  return d > 30 ? "font-bold text-red-500" : d > 14 ? "font-semibold text-amber-500" : "text-brand/70";
+  return d > 30 ? "font-bold text-red-500" : d > 14 ? "font-semibold text-amber-500" : "text-ink/70";
 };
 // How long someone has held the abo, in whole months (min "1 mnd").
 const tenure = (iso) => {
@@ -26,12 +26,12 @@ const tenure = (iso) => {
 };
 
 function SubBadge({ sub }) {
-  if (!sub) return <span className="text-xs text-brand/25">—</span>;
+  if (!sub) return <span className="text-xs text-ink/25">—</span>;
   // Failing renewal payment (Stripe retries) — the member books at € 15 again until it clears.
   if (sub.status === "past_due") {
     return <span className="inline-flex w-fit items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-600" title="De maandbetaling mislukte; Stripe probeert opnieuw. Tot dan geen € 12-tarief.">⚠ Abo · betaling mislukt</span>;
   }
-  if (sub.status !== "actief") return <span className="text-xs text-brand/25">—</span>;
+  if (sub.status !== "actief") return <span className="text-xs text-ink/25">—</span>;
   return (
     <span className="inline-flex flex-col gap-0.5">
       <span className="inline-flex w-fit items-center gap-1 rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-bold text-accentdark">
@@ -50,7 +50,7 @@ function SortTh({ k, sort, onSort, children, title }) {
   const active = sort.key === k;
   return (
     <th className="px-5 py-3" title={title}>
-      <button onClick={() => onSort(k)} className={"group inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-brand " + (active ? "text-brand" : "")}>
+      <button onClick={() => onSort(k)} className={"group inline-flex items-center gap-1 uppercase tracking-wide transition hover:text-ink " + (active ? "text-ink" : "")}>
         {children}
         <span className={active ? "text-accentdark" : "opacity-0 transition group-hover:opacity-40"}>{active ? (sort.dir === "asc" ? "▲" : "▼") : "↕"}</span>
       </button>
@@ -105,16 +105,16 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Zoek op naam of e-mail…"
-          className="w-full max-w-sm rounded-full border-2 border-borderc bg-white px-5 py-2.5 text-sm text-brand outline-none transition focus:border-accent"
+          className="w-full max-w-sm rounded-full border-2 border-borderc bg-surface px-5 py-2.5 text-sm text-ink outline-none transition focus:border-accent"
         />
         {sort.key && (
-          <button onClick={() => setSort({ key: null, dir: "asc" })} className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-brand/60 transition hover:border-lav hover:text-brand">
+          <button onClick={() => setSort({ key: null, dir: "asc" })} className="rounded-full border-2 border-borderc px-4 py-2 text-xs font-bold text-ink/60 transition hover:border-lav hover:text-ink">
             ↺ Sortering wissen
           </button>
         )}
       </div>
 
-      <div className="mt-4 overflow-x-auto rounded-2xl border border-borderc bg-white">
+      <div className="mt-4 overflow-x-auto rounded-2xl border border-borderc bg-surface">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -133,7 +133,7 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
               <tr key={m.id} className="align-top">
                 <td className="px-5 py-4">
                   <OpenMemberButton id={m.id} name={m.full_name} email={m.email} />
-                  <p className="text-xs text-brand/50">{m.email}</p>
+                  <p className="text-xs text-ink/50">{m.email}</p>
                   {/* At-risk-modus: het inzicht ("komt niet meer") krijgt meteen zijn handeling.
                       Enkel voor leden — een coach die niet traint is geen churn-risico. */}
                   {winback && m.role === "lid" && (
@@ -156,20 +156,20 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
                       <button className="rounded-lg bg-brand px-3 py-1 text-xs font-bold text-white">OK</button>
                     </ActionForm>
                   ) : (
-                    <span className="font-semibold capitalize text-brand/70">{m.role}</span>
+                    <span className="font-semibold capitalize text-ink/70">{m.role}</span>
                   )}
                 </td>
                 <td className="px-5 py-4"><SubBadge sub={subOf[m.id]} /></td>
                 <td className="px-5 py-4">
                   {(coachOf[m.id] || []).length ? (
-                    <span className="text-xs font-semibold text-brand/70">{coachOf[m.id].join(", ")}</span>
+                    <span className="text-xs font-semibold text-ink/70">{coachOf[m.id].join(", ")}</span>
                   ) : (
-                    <span className="text-xs text-brand/30">—</span>
+                    <span className="text-xs text-ink/30">—</span>
                   )}
                 </td>
                 <td className="px-5 py-4">
-                  <span className="font-black text-brand">{String(credits[m.id] || 0).replace(".", ",")}</span>
-                  <span className="ml-1 text-[10px] text-brand/40">sess.</span>
+                  <span className="font-black text-ink">{String(credits[m.id] || 0).replace(".", ",")}</span>
+                  <span className="ml-1 text-[10px] text-ink/40">sess.</span>
                 </td>
                 <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastLogin[m.id])}>{ago(lastLogin[m.id])}</span></td>
                 <td className="px-5 py-4 whitespace-nowrap"><span className={"text-xs " + tone(lastVisit[m.id])}>{ago(lastVisit[m.id])}</span></td>
@@ -186,7 +186,7 @@ export default function MembersTable({ members = [], credits = {}, coachOf = {},
           </tbody>
         </table>
       </div>
-      {rows.length === 0 && <p className="mt-3 text-sm text-brand/50">Geen leden gevonden{q ? ` voor “${q}”` : ""}.</p>}
+      {rows.length === 0 && <p className="mt-3 text-sm text-ink/50">Geen leden gevonden{q ? ` voor “${q}”` : ""}.</p>}
     </>
   );
 }

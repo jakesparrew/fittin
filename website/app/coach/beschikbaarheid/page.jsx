@@ -24,13 +24,13 @@ export default async function Beschikbaarheid() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Beschikbaarheid</h1>
-      <p className="mt-1 text-sm text-brand/50">
+      <h1 className="text-3xl font-black text-ink">Beschikbaarheid</h1>
+      <p className="mt-1 text-sm text-ink/50">
         Deze uren verschijnen op je <b>publieke coachprofiel</b> zodat leden weten wanneer je werkt.
         Boeken gebeurt niet rechtstreeks — geïnteresseerden vragen een gratis proeftraining aan of contacteren je.
       </p>
 
-      <ActionForm action={addOwnAvailability} success="Beschikbaarheid toegevoegd ✓" className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-5">
+      <ActionForm action={addOwnAvailability} success="Beschikbaarheid toegevoegd ✓" className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-surface p-5">
         <Lbl t="Dag">
           <select name="weekday" className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">
             {WD_FULL.map((d, i) => <option key={i} value={i}>{d}</option>)}
@@ -43,19 +43,19 @@ export default async function Beschikbaarheid() {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3, 4, 5, 6, 0].map((wd) => (
-          <div key={wd} className="rounded-2xl border border-borderc bg-white p-5">
-            <p className="font-black capitalize text-brand">{WD_FULL[wd]}</p>
+          <div key={wd} className="rounded-2xl border border-borderc bg-surface p-5">
+            <p className="font-black capitalize text-ink">{WD_FULL[wd]}</p>
             <div className="mt-2 space-y-2">
               {(byDay[wd] || []).map((a) => (
                 <div key={a.id} className="flex items-center justify-between rounded-lg bg-paper px-3 py-1.5 text-sm">
-                  <span className="font-bold text-brand">{fmtHour(a.from_hour)} – {fmtHour(a.to_hour)}</span>
+                  <span className="font-bold text-ink">{fmtHour(a.from_hour)} – {fmtHour(a.to_hour)}</span>
                   <ActionForm action={deleteOwnAvailability} success="Verwijderd ✓">
                     <input type="hidden" name="id" value={a.id} />
                     <button className="text-xs font-bold text-red-500 hover:underline">×</button>
                   </ActionForm>
                 </div>
               ))}
-              {(byDay[wd] || []).length === 0 && <p className="text-xs text-brand/30">Niet beschikbaar</p>}
+              {(byDay[wd] || []).length === 0 && <p className="text-xs text-ink/30">Niet beschikbaar</p>}
             </div>
           </div>
         ))}

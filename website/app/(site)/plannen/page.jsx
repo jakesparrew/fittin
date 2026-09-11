@@ -41,13 +41,13 @@ export default async function Plannen() {
   return (
     <main className="bg-paper min-h-screen">
       <div className="mx-auto max-w-3xl px-5 py-16">
-        <Link href="/training" className="text-sm font-bold text-brand/60 hover:text-brand">← Mijn training</Link>
+        <Link href="/training" className="text-sm font-bold text-ink/60 hover:text-ink">← Mijn training</Link>
         <h1 className="mt-4 text-3xl font-black md:text-4xl">Mijn trainingsplannen</h1>
-        <p className="mt-2 text-brand/60">Bouw je eigen plan of kies een sjabloon. Het actieve plan verschijnt in “Mijn training”.</p>
+        <p className="mt-2 text-ink/60">Bouw je eigen plan of kies een sjabloon. Het actieve plan verschijnt in “Mijn training”.</p>
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
           <form action={createPlan} className="flex gap-2">
-            <input name="name" placeholder="Naam van je plan" aria-label="Naam van je plan" className="rounded-full border-2 border-borderc bg-white px-4 py-2.5 text-sm text-brand outline-none focus:border-accent" />
+            <input name="name" placeholder="Naam van je plan" aria-label="Naam van je plan" className="rounded-full border-2 border-borderc bg-surface px-4 py-2.5 text-sm text-ink outline-none focus:border-accent" />
             <SubmitButton className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand">+ Nieuw plan</SubmitButton>
           </form>
           {/* Hier stond "🪄 Laat een schema voor je maken", de knop naar de AI-generator. Die is
@@ -59,28 +59,28 @@ export default async function Plannen() {
         {/* Member's plans */}
         <div className="mt-8 space-y-3">
           {(plans || []).map((p) => (
-            <div key={p.id} className={"rounded-2xl border bg-white p-5 " + (p.is_active ? "border-accent ring-1 ring-accent/40" : "border-borderc")}>
+            <div key={p.id} className={"rounded-2xl border bg-surface p-5 " + (p.is_active ? "border-accent ring-1 ring-accent/40" : "border-borderc")}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="font-black text-brand">{p.name}</p>
+                    <p className="font-black text-ink">{p.name}</p>
                     {p.is_active && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-black text-brand">ACTIEF</span>}
-                    {p.coach && <span className="rounded-full bg-paper px-2 py-0.5 text-[10px] font-bold text-brand/50">van {p.coach.full_name}</span>}
+                    {p.coach && <span className="rounded-full bg-paper px-2 py-0.5 text-[10px] font-bold text-ink/50">van {p.coach.full_name}</span>}
                   </div>
-                  <p className="mt-0.5 text-xs text-brand/50">{(p.program_days || []).length} dagen · {exCount(p)} oefeningen</p>
+                  <p className="mt-0.5 text-xs text-ink/50">{(p.program_days || []).length} dagen · {exCount(p)} oefeningen</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {!p.is_active && (
-                    <form action={setActivePlan}><input type="hidden" name="id" value={p.id} /><button className="rounded-full border-2 border-borderc px-3.5 py-1.5 text-xs font-bold text-brand hover:border-accent">Maak actief</button></form>
+                    <form action={setActivePlan}><input type="hidden" name="id" value={p.id} /><button className="rounded-full border-2 border-borderc px-3.5 py-1.5 text-xs font-bold text-ink hover:border-accent">Maak actief</button></form>
                   )}
-                  <Link href={`/plannen/${p.id}`} className="rounded-full bg-paper px-3.5 py-1.5 text-xs font-bold text-brand hover:bg-accent/15">Bewerk</Link>
+                  <Link href={`/plannen/${p.id}`} className="rounded-full bg-paper px-3.5 py-1.5 text-xs font-bold text-ink hover:bg-accent/15">Bewerk</Link>
                   <form action={deletePlan}><input type="hidden" name="id" value={p.id} /><button className="text-xs font-bold text-red-400 hover:text-red-600">verwijder</button></form>
                 </div>
               </div>
             </div>
           ))}
           {(!plans || plans.length === 0) && (
-            <div className="rounded-3xl border border-dashed border-borderc bg-white p-8 text-center text-sm text-brand/60">
+            <div className="rounded-3xl border border-dashed border-borderc bg-surface p-8 text-center text-sm text-ink/60">
               Nog geen plan. Maak er een of kies een sjabloon hieronder.
             </div>
           )}
@@ -92,10 +92,10 @@ export default async function Plannen() {
             <h2 className="mt-10 text-sm font-bold uppercase tracking-widest text-lav">Kies een sjabloon</h2>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               {templates.map((t) => (
-                <div key={t.id} className="flex items-center justify-between rounded-2xl border border-borderc bg-white p-5">
+                <div key={t.id} className="flex items-center justify-between rounded-2xl border border-borderc bg-surface p-5">
                   <div>
-                    <p className="font-black text-brand">{t.name}</p>
-                    <p className="text-xs text-brand/50">{(t.program_days || []).length} dagen · {exCount(t)} oefeningen</p>
+                    <p className="font-black text-ink">{t.name}</p>
+                    <p className="text-xs text-ink/50">{(t.program_days || []).length} dagen · {exCount(t)} oefeningen</p>
                   </div>
                   <form action={copyTemplate}><input type="hidden" name="templateId" value={t.id} /><SubmitButton className="rounded-full bg-accent px-4 py-2 text-xs font-black text-brand">Gebruik dit</SubmitButton></form>
                 </div>

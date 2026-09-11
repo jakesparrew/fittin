@@ -18,7 +18,7 @@ export function VolumeBars({ weeks }) {
             <div className={"w-full rounded-t " + (w.volume ? "bg-accent" : "bg-borderc")}
               style={{ height: w.volume ? `${Math.max(4, (w.volume / max) * 100)}%` : "3px" }} />
           </div>
-          <span className="text-[8px] leading-none text-brand/40">{w.label.split(" ")[0]}</span>
+          <span className="text-[8px] leading-none text-ink/40">{w.label.split(" ")[0]}</span>
         </div>
       ))}
     </div>

@@ -60,13 +60,13 @@ export default async function GedeeldSchema({ params }) {
     <main className="min-h-screen bg-paper">
       <div className="mx-auto max-w-2xl px-5 py-12">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Gedeeld schema</p>
-        <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">{schema.naam}</h1>
-        {schema.door && <p className="mt-1 text-sm text-brand/55">Gedeeld door {schema.door}</p>}
+        <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">{schema.naam}</h1>
+        {schema.door && <p className="mt-1 text-sm text-ink/55">Gedeeld door {schema.door}</p>}
 
         <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
-          {schema.niveau && <span className="rounded-full bg-white px-3 py-1.5 capitalize text-brand/70">{schema.niveau}</span>}
-          {schema.minuten && <span className="rounded-full bg-white px-3 py-1.5 text-brand/70">± {schema.minuten} min</span>}
-          <span className="rounded-full bg-white px-3 py-1.5 text-brand/70">{schema.dagen.length} {schema.dagen.length === 1 ? "dag" : "dagen"} · {totaalOefeningen} oefeningen</span>
+          {schema.niveau && <span className="rounded-full bg-surface px-3 py-1.5 capitalize text-ink/70">{schema.niveau}</span>}
+          {schema.minuten && <span className="rounded-full bg-surface px-3 py-1.5 text-ink/70">± {schema.minuten} min</span>}
+          <span className="rounded-full bg-surface px-3 py-1.5 text-ink/70">{schema.dagen.length} {schema.dagen.length === 1 ? "dag" : "dagen"} · {totaalOefeningen} oefeningen</span>
         </div>
 
         {/* De overneemknop staat BOVEN het schema én eronder: wie overtuigd is door de kop hoeft
@@ -75,23 +75,23 @@ export default async function GedeeldSchema({ params }) {
 
         <div className="mt-8 space-y-4">
           {schema.dagen.map((d, i) => (
-            <section key={i} className="rounded-3xl border border-borderc bg-white p-5">
-              <h2 className="font-black text-brand">{d.naam}</h2>
+            <section key={i} className="rounded-3xl border border-borderc bg-surface p-5">
+              <h2 className="font-black text-ink">{d.naam}</h2>
               <ol className="mt-3 space-y-2">
                 {d.oefeningen.map((o, j) => (
                   <li key={j} className="flex items-center gap-3 rounded-2xl bg-paper/60 p-3">
-                    <span className="w-6 shrink-0 text-center font-black text-brand/35">{j + 1}</span>
+                    <span className="w-6 shrink-0 text-center font-black text-ink/35">{j + 1}</span>
                     <span className="min-w-0 flex-1">
-                      <span className="block break-words font-bold text-brand">
+                      <span className="block break-words font-bold text-ink">
                         {o.slug ? <Link href={`/oefeningen/${o.slug}`} className="hover:text-accentdark hover:underline">{o.naam}</Link> : o.naam}
                       </span>
-                      <span className="text-xs text-brand/55">
+                      <span className="text-xs text-ink/55">
                         {o.sets ? `${o.sets} × ` : ""}{o.reps || "—"}{o.rust ? ` · rust ${o.rust}s` : ""}
                       </span>
                     </span>
                   </li>
                 ))}
-                {d.oefeningen.length === 0 && <li className="text-sm text-brand/40">Nog geen oefeningen op deze dag.</li>}
+                {d.oefeningen.length === 0 && <li className="text-sm text-ink/40">Nog geen oefeningen op deze dag.</li>}
               </ol>
             </section>
           ))}

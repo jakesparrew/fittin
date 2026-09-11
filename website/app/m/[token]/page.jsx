@@ -17,9 +17,9 @@ export default async function Melden({ params }) {
   if (!b) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-paper px-5">
-        <div className="w-full max-w-md rounded-3xl border border-borderc bg-white p-8 text-center">
+        <div className="w-full max-w-md rounded-3xl border border-borderc bg-surface p-8 text-center">
           <p className="text-3xl">🕓</p>
-          <h1 className="mt-3 text-2xl font-black text-brand">Deze link is verlopen</h1>
+          <h1 className="mt-3 text-2xl font-black text-ink">Deze link is verlopen</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">
             Een meldlink werkt tot een paar dagen na je sessie. Wil je nog iets kwijt, mail dan naar{" "}
             <a href="mailto:info@fittin.be" className="font-bold text-accentdark hover:underline">info@fittin.be</a>{" "}
@@ -33,8 +33,8 @@ export default async function Melden({ params }) {
   return (
     <main className="min-h-screen bg-paper px-5 py-10">
       <div className="mx-auto max-w-md">
-        <p className="text-2xl font-black text-brand">Fittin<span className="text-accent">&rsquo;</span></p>
-        <h1 className="mt-4 text-2xl font-black text-brand">Wat is er mis?</h1>
+        <p className="text-2xl font-black text-ink">Fittin<span className="text-accent">&rsquo;</span></p>
+        <h1 className="mt-4 text-2xl font-black text-ink">Wat is er mis?</h1>
         <p className="mt-1 text-sm text-ink-soft">Je sessie van {tijd(b.starts_at)}.</p>
         <MeldForm token={token} />
       </div>

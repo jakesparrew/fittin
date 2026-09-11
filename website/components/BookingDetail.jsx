@@ -43,12 +43,12 @@ export default function BookingDetail({ bookingId, children, className = "", coa
       <button type="button" onClick={openPanel} className={"cursor-pointer text-left hover:underline " + className}>{children}</button>
       {open && (
         <div className="anim-fade fixed inset-0 z-[60] flex justify-end bg-black/40" onClick={() => setOpen(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Boekingsdetails" className="anim-zij h-full w-full max-w-sm overflow-y-auto bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Boekingsdetails" className="anim-zij h-full w-full max-w-sm overflow-y-auto bg-surface p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-black text-brand">Boekingsdetails</h3>
-              <button onClick={() => setOpen(false)} aria-label="Sluiten" className="rounded-lg px-2 py-1 text-xl leading-none text-brand/40 hover:text-brand">✕</button>
+              <h3 className="text-lg font-black text-ink">Boekingsdetails</h3>
+              <button onClick={() => setOpen(false)} aria-label="Sluiten" className="rounded-lg px-2 py-1 text-xl leading-none text-ink/40 hover:text-ink">✕</button>
             </div>
-            {loading && <p className="mt-6 text-sm text-brand/50">Laden…</p>}
+            {loading && <p className="mt-6 text-sm text-ink/50">Laden…</p>}
             {res?.error && <p className="mt-6 text-sm font-semibold text-red-600">{res.error}</p>}
             {res?.booking && <Detail b={res.booking} bookingId={bookingId} coaches={coaches} assignAction={assignAction} />}
           </div>
@@ -64,8 +64,8 @@ function Detail({ b, bookingId, coaches, assignAction }) {
   return (
     <div className="mt-5 space-y-3 text-sm">
       <div className="pb-1">
-        <p className="text-2xl font-black text-brand">{b.reserved ? "Gereserveerd" : (b.memberName || "Lid")}</p>
-        <p className="mt-0.5 capitalize text-brand/60">{fmt(b.startsAt)} – {time(b.endsAt)}</p>
+        <p className="text-2xl font-black text-ink">{b.reserved ? "Gereserveerd" : (b.memberName || "Lid")}</p>
+        <p className="mt-0.5 capitalize text-ink/60">{fmt(b.startsAt)} – {time(b.endsAt)}</p>
       </div>
       <Row label="Sessie" value={b.serviceName} />
       <Row label="Personen" value={b.persons} />
@@ -98,8 +98,8 @@ function Detail({ b, bookingId, coaches, assignAction }) {
 function Row({ label, value }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-borderc/60 pb-2">
-      <span className="text-brand/50">{label}</span>
-      <span className="text-right font-semibold text-brand">{value}</span>
+      <span className="text-ink/50">{label}</span>
+      <span className="text-right font-semibold text-ink">{value}</span>
     </div>
   );
 }

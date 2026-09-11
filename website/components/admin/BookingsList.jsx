@@ -21,16 +21,16 @@ const isUnpaid = (b) => b.status === "bevestigd" && !isSettled(b) && (b.payment_
 // abonnee is, dus die twee krijgen een eigen kleur + icoon en hun resterende tegoed erbij.
 const SRC_STYLE = {
   "Abonnement": { icon: "★", cls: "bg-accent/20 text-accentdark" },
-  "Beurtenkaart": { icon: "🎟", cls: "bg-lav/30 text-brand" },
-  "Gratis code": { icon: "🎁", cls: "bg-paper text-brand/55" },
-  "Uitgenodigd": { icon: "👥", cls: "bg-paper text-brand/55" },
-  "Coach · vooraf betaald": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
-  "Coach-factuur": { icon: "🧾", cls: "bg-brand/10 text-brand" },
-  "Coach · gratis": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
-  "Ingepland door beheer": { icon: "🏠", cls: "bg-paper text-brand/55" },
+  "Beurtenkaart": { icon: "🎟", cls: "bg-lav/30 text-ink" },
+  "Gratis code": { icon: "🎁", cls: "bg-paper text-ink/55" },
+  "Uitgenodigd": { icon: "👥", cls: "bg-paper text-ink/55" },
+  "Coach · vooraf betaald": { icon: "🧑‍🏫", cls: "bg-brand/10 text-ink" },
+  "Coach-factuur": { icon: "🧾", cls: "bg-brand/10 text-ink" },
+  "Coach · gratis": { icon: "🧑‍🏫", cls: "bg-brand/10 text-ink" },
+  "Ingepland door beheer": { icon: "🏠", cls: "bg-paper text-ink/55" },
   "Gratis gegeven": { icon: "🎁", cls: "bg-amber-100 text-amber-700" },
-  "Via coach": { icon: "🧑‍🏫", cls: "bg-brand/10 text-brand" },
-  "Online": { icon: "💳", cls: "bg-paper text-brand/55" },
+  "Via coach": { icon: "🧑‍🏫", cls: "bg-brand/10 text-ink" },
+  "Online": { icon: "💳", cls: "bg-paper text-ink/55" },
 };
 
 function SourceChip({ b }) {
@@ -92,14 +92,14 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
   return (
     <div className="mt-10">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-black text-brand">Alle boekingen <span className="text-base font-bold text-brand/40">({rows.length})</span></h2>
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek lid, sessie of coach…" className="w-64 max-w-full rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm text-brand outline-none transition focus:border-accent" />
+        <h2 className="text-2xl font-black text-ink">Alle boekingen <span className="text-base font-bold text-ink/40">({rows.length})</span></h2>
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek lid, sessie of coach…" className="w-64 max-w-full rounded-full border-2 border-borderc bg-surface px-4 py-2 text-sm text-ink outline-none transition focus:border-accent" />
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        <div className="inline-flex rounded-full border border-borderc bg-white p-1 text-sm font-bold">
+        <div className="inline-flex rounded-full border border-borderc bg-surface p-1 text-sm font-bold">
           {[["upcoming", "Komende"], ["past", "Verleden"], ["all", "Alle"], ["onbetaald", `Onbetaald${unpaidCount ? ` (${unpaidCount})` : ""}`]].map(([k, l]) => (
-            <button key={k} onClick={() => setTab(k)} className={"rounded-full px-4 py-1.5 transition " + (tab === k ? (k === "onbetaald" ? "bg-red-500 text-white" : "bg-brand text-white") : "text-brand/60 hover:text-brand")}>{l}</button>
+            <button key={k} onClick={() => setTab(k)} className={"rounded-full px-4 py-1.5 transition " + (tab === k ? (k === "onbetaald" ? "bg-red-500 text-white" : "bg-brand text-white") : "text-ink/60 hover:text-ink")}>{l}</button>
           ))}
         </div>
         {tab === "onbetaald" && unpaidCount > 0 && (
@@ -108,7 +108,7 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
       </div>
 
       {/* Per render bijhouden van welke leden het kaartsaldo al getoond is (zie hieronder). */}
-      <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-white">
+      <div className="mt-3 overflow-x-auto rounded-2xl border border-borderc bg-surface">
         <table className="w-full min-w-[720px] text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -126,24 +126,24 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
               return (
                 <tr key={b.id} className={b.status !== "bevestigd" ? "opacity-50" : ""}>
                   <td className="whitespace-nowrap px-4 py-3">
-                    <span className="block capitalize text-brand/80">{fmt(b.starts_at)}</span>
-                    {b.created_at && <span className="block text-[10px] text-brand/35">geboekt {ago(b.created_at)}</span>}
+                    <span className="block capitalize text-ink/80">{fmt(b.starts_at)}</span>
+                    {b.created_at && <span className="block text-[10px] text-ink/35">geboekt {ago(b.created_at)}</span>}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-brand">
+                  <td className="px-4 py-3 font-semibold text-ink">
                     {b.reserved ? (
                       // Coach blokkeert gymtijd voor een eigen (externe) PT-client — de "lid"-kolom is
                       // dan de coach zelf, dus dat expliciet tonen i.p.v. het als gewoon lid te laten lezen.
                       <span className="block">
                         <span className="flex items-center gap-1.5 whitespace-nowrap">
-                          <BookingDetail bookingId={b.id} coaches={coaches} assignAction={adminAssignCoach} className="font-semibold text-brand">{b.coach_name || "Coach"}</BookingDetail>
+                          <BookingDetail bookingId={b.id} coaches={coaches} assignAction={adminAssignCoach} className="font-semibold text-ink">{b.coach_name || "Coach"}</BookingDetail>
                           <span className="rounded bg-brand px-1.5 py-0.5 text-[9px] font-black text-white">COACH</span>
                         </span>
-                        <span className="block text-[11px] font-normal text-brand/45">{b.notes ? `PT · ${b.notes}` : "PT · nog geen client"}</span>
+                        <span className="block text-[11px] font-normal text-ink/45">{b.notes ? `PT · ${b.notes}` : "PT · nog geen client"}</span>
                         {/* Ook bij een coach hoort het saldo bij de persoon. Zonder dit getal leest
                             "Coach · vooraf betaald" als een gunst, terwijl het gewoon zijn vooraf
                             gekochte sessies zijn die per boeking afgaan — net als een beurtenkaart. */}
                         {b.coach_credits_left != null && (
-                          <span className={"mt-0.5 block text-[11px] font-bold " + (b.coach_credits_left <= 0 ? "text-red-600" : "text-brand/45")}>
+                          <span className={"mt-0.5 block text-[11px] font-bold " + (b.coach_credits_left <= 0 ? "text-red-600" : "text-ink/45")}>
                             {b.coach_credits_left <= 0
                               ? `🎟 tegoed op — € ${Math.ceil(Math.abs(b.coach_credits_left) * 12)} te innen`
                               : `🎟 nog ${String(b.coach_credits_left).replace(".", ",")} vooraf betaalde ${b.coach_credits_left === 1 ? "sessie" : "sessies"}`}
@@ -152,13 +152,13 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                       </span>
                     ) : (
                       <span className="block">
-                        <BookingDetail bookingId={b.id} coaches={coaches} assignAction={adminAssignCoach} className="whitespace-nowrap font-semibold text-brand">{b.member_name || "—"}</BookingDetail>
+                        <BookingDetail bookingId={b.id} coaches={coaches} assignAction={adminAssignCoach} className="whitespace-nowrap font-semibold text-ink">{b.member_name || "—"}</BookingDetail>
                         {/* Kaartsaldo hoort bij de PERSOON, dus staat het bij de naam en niet in de
                             betaalwijze-kolom. Daar had het al eens voor verwarring gezorgd: vier
                             rijen die alle vier het eindsaldo toonden lazen alsof één beurt vier
                             sessies betaalde. Hier is het ondubbelzinnig "dit lid heeft nog X". */}
                         {b.credits_left != null && (
-                          <span className={"mt-0.5 block text-[11px] font-bold " + (b.credits_left <= 0 ? "text-amber-600" : "text-brand/45")}>
+                          <span className={"mt-0.5 block text-[11px] font-bold " + (b.credits_left <= 0 ? "text-amber-600" : "text-ink/45")}>
                             {b.credits_left <= 0
                               ? "🎟 kaart is op"
                               : `🎟 nog ${String(b.credits_left).replace(".", ",")} ${b.credits_left === 1 ? "beurt" : "beurten"}`}
@@ -168,20 +168,20 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                             altijd "— geen —" en dus vooral ruis; nu enkel tonen als er echt een
                             coach aan hangt. Toewijzen kan nog steeds via het boekingsdetail. */}
                         {b.coach_name && (
-                          <span className="mt-0.5 block text-[11px] font-normal text-brand/45">🧑‍🏫 {b.coach_name}</span>
+                          <span className="mt-0.5 block text-[11px] font-normal text-ink/45">🧑‍🏫 {b.coach_name}</span>
                         )}
                       </span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-brand/70">
-                    {b.service_name || "Sessie"}{b.persons > 1 && <span className="ml-1 text-xs font-bold text-brand/40">· {b.persons}p</span>}
+                  <td className="whitespace-nowrap px-4 py-3 text-ink/70">
+                    {b.service_name || "Sessie"}{b.persons > 1 && <span className="ml-1 text-xs font-bold text-ink/40">· {b.persons}p</span>}
                   </td>
                   <td className="px-4 py-3"><SourceChip b={b} /></td>
                   {/* Betaald + status + annuleren samengevoegd tot één compacte icoon-cel. */}
                   <td className="whitespace-nowrap px-4 py-3 text-right">
                     <span className="inline-flex items-center justify-end gap-1.5">
                       {b.status !== "bevestigd" ? (
-                        <span className="rounded-full bg-paper px-2 py-0.5 text-[10px] font-bold capitalize text-brand/50">{b.status}</span>
+                        <span className="rounded-full bg-paper px-2 py-0.5 text-[10px] font-bold capitalize text-ink/50">{b.status}</span>
                       ) : paid ? (
                         <span className="text-base leading-none text-accentdark" title="Betaald · bevestigd">✓</span>
                       ) : (
@@ -189,7 +189,7 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                           <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-600" title="Nog niet betaald">€ open</span>
                           <ActionForm action={adminMarkBookingPaid} success="Gemarkeerd als betaald ✓" className="inline" onSubmit={(e) => { if (!confirm("Markeer als betaald (cash/overschrijving aan de balie)?")) e.preventDefault(); }}>
                             <input type="hidden" name="bookingId" value={b.id} />
-                            <button className="rounded-full border border-borderc px-1.5 py-0.5 text-[10px] font-bold text-brand/60 transition hover:border-accent hover:text-brand" title="Cash/overschrijving ontvangen aan de balie">✓ cash</button>
+                            <button className="rounded-full border border-borderc px-1.5 py-0.5 text-[10px] font-bold text-ink/60 transition hover:border-accent hover:text-ink" title="Cash/overschrijving ontvangen aan de balie">✓ cash</button>
                           </ActionForm>
                         </>
                       )}
@@ -207,7 +207,7 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
           </tbody>
         </table>
       </div>
-      {rows.length === 0 && <p className="mt-3 text-sm text-brand/50">Geen boekingen{q ? ` voor “${q}”` : ""}.</p>}
+      {rows.length === 0 && <p className="mt-3 text-sm text-ink/50">Geen boekingen{q ? ` voor “${q}”` : ""}.</p>}
     </div>
   );
 }

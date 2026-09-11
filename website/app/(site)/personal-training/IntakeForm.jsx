@@ -19,15 +19,15 @@ import { track } from "@/lib/track";
 //   Gevolg: net na je klik, met de cursor nog op de chip, sprong de rand terug naar grijs.
 // · focus krijgt een RING, niet dezelfde rand als "gekozen". Anders valt de toetsenbordfocus samen
 //   met de selectie en verandert er niets zichtbaars als je met de pijltjes door de groep gaat.
-// · `text-ink-soft` i.p.v. `text-brand/55`: dat laatste haalt 3,7:1 op wit en zakt onder AA voor
+// · `text-ink-soft` i.p.v. `text-ink/55`: dat laatste haalt 3,7:1 op wit en zakt onder AA voor
 //   vette 12px-tekst. globals.css wijst ink-soft hier zelf voor aan.
 // · `flex h-full items-center justify-center` i.p.v. `block`: de chips staan in een grid, dus een
 //   label dat wél wikkelt maakt zijn buren niet mee hoger — dan stond er één chip van 58px naast
 //   twee van 41px. Met h-full vullen ze de rijhoogte en blijft de tekst gecentreerd.
 const CHIP =
-  "flex h-full cursor-pointer select-none items-center justify-center rounded-xl border-2 border-borderc bg-white text-center font-bold " +
+  "flex h-full cursor-pointer select-none items-center justify-center rounded-xl border-2 border-borderc bg-surface text-center font-bold " +
   "text-ink-soft transition hover:border-lav peer-checked:border-accent peer-checked:bg-accent/10 " +
-  "peer-checked:text-brand peer-checked:hover:border-accent " +
+  "peer-checked:text-ink peer-checked:hover:border-accent " +
   "peer-focus-visible:ring-2 peer-focus-visible:ring-brand peer-focus-visible:ring-offset-2";
 
 // De enige conversieroute van personal training. Zelfde patroon als hulp/HelpForm.jsx: een eigen
@@ -94,8 +94,8 @@ export default function IntakeForm({ coaches = [] }) {
   if (klaar) {
     return (
       <div className="mt-10 rounded-3xl border-2 border-accent bg-accent/10 p-8 text-center">
-        <p className="text-xl font-black text-brand">Aanvraag verstuurd 🙌</p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-brand/70">
+        <p className="text-xl font-black text-ink">Aanvraag verstuurd 🙌</p>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink/70">
           {klaar.msg}{" "}
           {!klaar.already && "Je krijgt meteen een bevestigingsmail; we mailen je binnen 1 werkdag om een moment te prikken. "}
           Hoor je niets? Mail{" "}
@@ -112,52 +112,52 @@ export default function IntakeForm({ coaches = [] }) {
     // native GET, waarna naam, e-mail en doel in de URL en dus in de browsergeschiedenis en de
     // Referer-header van de volgende klik belandden. Verzenden werkt zonder JS sowieso niet — maar
     // de gegevens horen dan ook niet in de adresbalk te staan.
-    <form ref={formRef} method="post" onSubmit={verstuur} className="mt-10 rounded-3xl border border-borderc bg-white p-6 md:p-8">
+    <form ref={formRef} method="post" onSubmit={verstuur} className="mt-10 rounded-3xl border border-borderc bg-surface p-6 md:p-8">
       {/* Honeypot — verborgen voor mensen, ingevuld door bots. */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
       {coaches.length < 2 && <input type="hidden" name="coachId" value={coachId} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Naam
-          <input name="name" required maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="name" required maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           E-mail
-          <input name="email" type="email" required maxLength={200} autoComplete="email" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="email" type="email" required maxLength={200} autoComplete="email" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand">
-          Telefoon <span className="font-normal text-brand/40">(optioneel)</span>
-          <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+        <label className="block text-sm font-bold text-ink">
+          Telefoon <span className="font-normal text-ink/40">(optioneel)</span>
+          <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
         {/* Geboortedatum en niet leeftijd: een leeftijd veroudert in de inbox, een datum niet.
             Bewust GEEN dynamische max op dit veld — die zou de klok tijdens het renderen lezen en
             dat is in dit project al een bron van hydratatiefouten geweest. De server keurt de
             datum (toekomst, onmogelijke dag, typfout) in lib/aanmelding-velden.js. */}
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Geboortedatum
-          <input name="geboortedatum" type="date" required min="1920-01-01" autoComplete="bday" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="geboortedatum" type="date" required min="1920-01-01" autoComplete="bday" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand">
-          Geslacht <span className="font-normal text-brand/40">(optioneel)</span>
+        <label className="block text-sm font-bold text-ink">
+          Geslacht <span className="font-normal text-ink/40">(optioneel)</span>
           {/* Leeg is een volwaardig antwoord, geen ontbrekend antwoord. Daarom staat het als eerste
               optie mét eigen tekst, in plaats van een lege regel die als vergeten leest. */}
-          <select name="geslacht" defaultValue="" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-white px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent">
+          <select name="geslacht" defaultValue="" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-surface px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent">
             <option value="">Zeg ik liever niet</option>
             {GESLACHTEN.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
         </label>
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Formule
-          <select name="formule" defaultValue="Weet ik nog niet" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-white px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent">
+          <select name="formule" defaultValue="Weet ik nog niet" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-surface px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent">
             {FORMULES.map((f) => <option key={f} value={f}>{f}</option>)}
           </select>
         </label>
 
         {coaches.length >= 2 && (
-          <label className="block text-sm font-bold text-brand sm:col-span-2">
-            Voorkeurcoach <span className="font-normal text-brand/40">(optioneel)</span>
-            <select name="coachId" value={coachId} onChange={(e) => setCoachId(e.target.value)} className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-white px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent">
+          <label className="block text-sm font-bold text-ink sm:col-span-2">
+            Voorkeurcoach <span className="font-normal text-ink/40">(optioneel)</span>
+            <select name="coachId" value={coachId} onChange={(e) => setCoachId(e.target.value)} className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-surface px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent">
               <option value="">Geen voorkeur — kies samen tijdens de intake</option>
               {coaches.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
@@ -173,7 +173,7 @@ export default function IntakeForm({ coaches = [] }) {
             zonder uitweg zit je daar dan aan vast, en die waarde belandt in het mailonderwerp. */}
         <div className="sm:col-span-2" role="radiogroup" aria-labelledby="lbl-dagdeel">
           <div className="flex items-baseline justify-between gap-3">
-            <p id="lbl-dagdeel" className="text-sm font-bold text-brand">
+            <p id="lbl-dagdeel" className="text-sm font-bold text-ink">
               Wanneer kan je meestal? <span className="font-normal text-ink-soft">(optioneel)</span>
             </p>
             {dagdeel && (
@@ -213,7 +213,7 @@ export default function IntakeForm({ coaches = [] }) {
             verstuurt hij het formulier. */}
         <div className="sm:col-span-2" role="group" aria-labelledby="lbl-dagen">
           <div className="flex items-baseline justify-between gap-3">
-            <p id="lbl-dagen" className="text-sm font-bold text-brand">
+            <p id="lbl-dagen" className="text-sm font-bold text-ink">
               Welke dagen? <span className="font-normal text-ink-soft">(optioneel)</span>
             </p>
             <button
@@ -247,31 +247,31 @@ export default function IntakeForm({ coaches = [] }) {
             Het stond hier eerst zonder label, met enkel een placeholder als uitleg — maar die
             verdwijnt bij de eerste toetsaanslag, en dan staat er een bak tekst zonder vraag erboven.
             Nu een gewoon label, zoals elk ander veld hier. */}
-        <label className="block text-sm font-bold text-brand sm:col-span-2">
+        <label className="block text-sm font-bold text-ink sm:col-span-2">
           Iets specifieker? <span className="font-normal text-ink-soft">(optioneel)</span>
           <input
             name="when"
             maxLength={200}
             placeholder="Bv. na 18u, of enkel om de week"
-            className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent"
+            className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent"
           />
         </label>
 
-        <label className="block text-sm font-bold text-brand sm:col-span-2">
-          Wat is je doel? <span className="font-normal text-brand/40">(optioneel)</span>
-          <textarea name="goal" rows={4} maxLength={2000} placeholder="Bv. sterker worden, afvallen, terug in conditie komen…" className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+        <label className="block text-sm font-bold text-ink sm:col-span-2">
+          Wat is je doel? <span className="font-normal text-ink/40">(optioneel)</span>
+          <textarea name="goal" rows={4} maxLength={2000} placeholder="Bv. sterker worden, afvallen, terug in conditie komen…" className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
       </div>
 
       {coaches.length < 2 && gekozenCoach && (
-        <p className="mt-4 text-sm font-semibold text-brand/70">Je aanvraag gaat naar {gekozenCoach.name}.</p>
+        <p className="mt-4 text-sm font-semibold text-ink/70">Je aanvraag gaat naar {gekozenCoach.name}.</p>
       )}
       {fout && <p className="mt-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-semibold text-red-600">{fout}</p>}
 
       <button disabled={pending} className="mt-6 w-full rounded-full bg-accent py-4 text-lg font-black text-brand transition hover:opacity-90 disabled:opacity-50 sm:w-auto sm:px-10">
         {pending ? "Versturen…" : "Vraag gratis intake aan"}
       </button>
-      <p className="mt-3 text-xs text-brand/40">
+      <p className="mt-3 text-xs text-ink/40">
         We gebruiken je gegevens enkel om je intake in te plannen — zie ons{" "}
         <Link href="/privacy" className="font-semibold text-accentdark hover:underline">privacybeleid</Link>.
       </p>

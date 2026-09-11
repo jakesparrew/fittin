@@ -9,7 +9,7 @@ import { zetVerplichteClient } from "@/app/beheer/aanbreng-actions";
 //
 // De zoekbalk verschijnt pas vanaf acht coaches. Een zoekbalk boven vier namen is meubilair.
 
-const invoer = "rounded-lg border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none transition focus:border-accent";
+const invoer = "rounded-lg border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-accent";
 
 export default function AanbrengCoaches({ coaches }) {
   const [zoek, setZoek] = useState("");
@@ -23,18 +23,18 @@ export default function AanbrengCoaches({ coaches }) {
   const verplicht = coaches.filter((c) => c.coach_require_client).length;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-borderc bg-white">
+    <div className="overflow-hidden rounded-2xl border border-borderc bg-surface">
       <div className="border-b border-borderc px-5 py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-sm font-black text-brand">Naam van de klant verplicht</p>
-            <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-brand/55">
+            <p className="text-sm font-black text-ink">Naam van de klant verplicht</p>
+            <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-ink/55">
               Zonder naam bij een sessie valt niet te zien of het om een aangebrachte klant gaat. Daarom
               gaat dit vanzelf aan zodra een coach zijn eerste aangebrachte klant aanvaardt. Je kan het
               hier per coach weer uitzetten.
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/55">
+          <span className="shrink-0 rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink/55">
             {verplicht} van {coaches.length} verplicht
           </span>
         </div>
@@ -45,27 +45,27 @@ export default function AanbrengCoaches({ coaches }) {
       </div>
 
       {zichtbaar.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-brand/50">Geen coach gevonden voor &ldquo;{zoek.trim()}&rdquo;.</p>
+        <p className="px-5 py-6 text-sm text-ink/50">Geen coach gevonden voor &ldquo;{zoek.trim()}&rdquo;.</p>
       ) : (
         zichtbaar.map((c) => (
           <div key={c.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-borderc px-5 py-3 last:border-0">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-brand">{c.full_name || c.email}</p>
-              <p className="truncate text-xs text-brand/45">{c.email}</p>
+              <p className="truncate text-sm font-bold text-ink">{c.full_name || c.email}</p>
+              <p className="truncate text-xs text-ink/45">{c.email}</p>
             </div>
 
-            <span className={"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold " + (c.coach_accepting_clients ? "bg-accent/15 text-accentdark" : "bg-paper text-brand/45")}>
+            <span className={"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold " + (c.coach_accepting_clients ? "bg-accent/15 text-accentdark" : "bg-paper text-ink/45")}>
               {c.coach_accepting_clients ? "neemt klanten aan" : "neemt niets aan"}
             </span>
 
             <div className="flex shrink-0 items-center gap-3">
-              <span className={"rounded-full px-2.5 py-0.5 text-[11px] font-bold " + (c.coach_require_client ? "bg-brand text-white" : "bg-paper text-brand/45")}>
+              <span className={"rounded-full px-2.5 py-0.5 text-[11px] font-bold " + (c.coach_require_client ? "bg-brand text-white" : "bg-paper text-ink/45")}>
                 {c.coach_require_client ? "naam verplicht" : "naam vrij"}
               </span>
               <ActionForm action={zetVerplichteClient} success="Aangepast ✓">
                 <input type="hidden" name="coachId" value={c.id} />
                 <input type="hidden" name="aan" value={c.coach_require_client ? "0" : "1"} />
-                <button className="rounded-full border-2 border-borderc bg-white px-4 py-2 text-xs font-bold text-brand transition hover:border-lav">
+                <button className="rounded-full border-2 border-borderc bg-surface px-4 py-2 text-xs font-bold text-ink transition hover:border-lav">
                   {c.coach_require_client ? "Uitzetten" : "Aanzetten"}
                 </button>
               </ActionForm>

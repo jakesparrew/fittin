@@ -25,12 +25,12 @@ export default async function Notificaties() {
   return (
     <main className="bg-paper min-h-screen">
       <div className="mx-auto max-w-2xl px-5 py-16">
-        <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand">← Mijn account</Link>
+        <Link href="/account" className="text-sm font-semibold text-ink/50 hover:text-ink">← Mijn account</Link>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-3xl font-black text-brand">Notificaties</h1>
+          <h1 className="text-3xl font-black text-ink">Notificaties</h1>
           {unread > 0 && (
             <form action={markAllRead}>
-              <button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">Alles gelezen</button>
+              <button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-accent/15">Alles gelezen</button>
             </form>
           )}
         </div>
@@ -38,9 +38,9 @@ export default async function Notificaties() {
         <div className="mt-6 space-y-2">
           {(notifs || []).map((n) => <NotifItem key={n.id} n={n} />)}
           {(!notifs || notifs.length === 0) && (
-            <div className="rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
-              <p className="font-semibold text-brand/70">Nog geen notificaties.</p>
-              <p className="mt-1 text-sm text-brand/50">Hier zie je buddy-aanvragen, uitnodigingen, betaalverzoeken en meer.</p>
+            <div className="rounded-3xl border border-dashed border-borderc bg-surface p-10 text-center">
+              <p className="font-semibold text-ink/70">Nog geen notificaties.</p>
+              <p className="mt-1 text-sm text-ink/50">Hier zie je buddy-aanvragen, uitnodigingen, betaalverzoeken en meer.</p>
             </div>
           )}
         </div>

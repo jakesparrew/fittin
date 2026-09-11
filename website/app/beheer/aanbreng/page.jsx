@@ -47,13 +47,13 @@ const REDEN_LABEL = {
 };
 const REDEN_TOON = {
   "naam-match": "bg-amber-100 text-amber-700",
-  "geen-naam": "bg-paper text-brand/60",
-  "andere-naam": "bg-paper text-brand/45",
+  "geen-naam": "bg-paper text-ink/60",
+  "andere-naam": "bg-paper text-ink/45",
 };
 
-const invoer = "rounded-lg border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none transition focus:border-accent";
+const invoer = "rounded-lg border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-accent";
 const knopGroen = "rounded-full bg-accent px-4 py-2 text-xs font-black text-brand transition hover:opacity-90";
-const knopWit = "rounded-full border-2 border-borderc bg-white px-4 py-2 text-xs font-bold text-brand transition hover:border-lav";
+const knopWit = "rounded-full border-2 border-borderc bg-surface px-4 py-2 text-xs font-bold text-ink transition hover:border-lav";
 const komma = (cents) => String(cents / 100).replace(".", ",");
 
 export default async function Aanbreng() {
@@ -61,7 +61,7 @@ export default async function Aanbreng() {
   if (!ctx) return null;
   const { gym, profile } = ctx;
   if (profile.role !== "beheerder") {
-    return <div className="px-8 py-8 text-brand/60">Enkel de beheerder kan de aanbreng bekijken.</div>;
+    return <div className="px-8 py-8 text-ink/60">Enkel de beheerder kan de aanbreng bekijken.</div>;
   }
 
   const admin = createAdminClient();
@@ -161,8 +161,8 @@ export default async function Aanbreng() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Aanbreng</h1>
-      <p className="mt-1 max-w-3xl text-sm leading-relaxed text-brand/55">
+      <h1 className="text-3xl font-black text-ink">Aanbreng</h1>
+      <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">
         Klanten die Fittin&rsquo; aan een coach doorgeeft. Vanaf de aanvaarding kost elke boeking die de coach met
         die klant maakt {feeZin(standaardCents)} bovenop de gewone zaalhuur. Dat loopt volledig via het tegoed
         van de coach — het lid betaalt exact hetzelfde als anders.
@@ -189,8 +189,8 @@ export default async function Aanbreng() {
           "Niets open" geen geruststelling maar het eerste wat je leest, en dat verwart. */}
       {!nooitGebruikt && (
       <section className="mt-8">
-        <h2 className="text-xl font-black text-brand">Te controleren</h2>
-        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-brand/55">
+        <h2 className="text-xl font-black text-ink">Te controleren</h2>
+        <p className="mt-1 max-w-3xl text-sm leading-relaxed text-ink/55">
           Hangt een coach geen client aan zijn uur, dan staat de sessie als een gereserveerd uur op zijn eigen naam
           en ziet de databank geen aangebrachte klant. Hieronder staan precies die uren, van coaches met een lopende
           doorgave. Het systeem rekent hier bewust niets zelf aan: een coach mag op datzelfde uur met een eigen klant
@@ -198,11 +198,11 @@ export default async function Aanbreng() {
         </p>
 
         {controle.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/60">
+          <p className="mt-3 rounded-2xl border border-borderc bg-surface p-5 text-sm text-ink/60">
             Niets open. Elke voorbije sessie heeft een client, of is al nagekeken.
           </p>
         ) : (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-white">
+          <div className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-surface">
             {controle.map((rij) => {
               // Bij een naam-match tonen we alleen de kandidaten; zonder match alle lopende doorgaven
               // van die coach, want de beheerder weet vaak wél met wie er getraind is.
@@ -212,16 +212,16 @@ export default async function Aanbreng() {
                 <div key={rij.bookingId} className="border-b border-borderc px-5 py-4 last:border-0">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0">
-                      <p className="text-sm font-black text-brand">
+                      <p className="text-sm font-black text-ink">
                         {fmt(rij.startsAt)} · {naamVan.get(rij.coachId) || "Coach"}
                       </p>
-                      <p className="mt-0.5 text-sm text-brand/60">
+                      <p className="mt-0.5 text-sm text-ink/60">
                         {rij.naam ? (
                           <>
-                            Ingevuld: <b className="text-brand">{rij.naam}</b>
+                            Ingevuld: <b className="text-ink">{rij.naam}</b>
                           </>
                         ) : (
-                          <span className="text-brand/45">Geen naam ingevuld</span>
+                          <span className="text-ink/45">Geen naam ingevuld</span>
                         )}
                       </p>
                       <span className={"mt-1.5 inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold " + REDEN_TOON[rij.reden]}>
@@ -263,9 +263,9 @@ export default async function Aanbreng() {
         {/* Sessies die de klant zelf betaalde. Leeg = onzichtbaar: dit gebeurt zelden en hoort
             geen vaste kop op het scherm te krijgen. */}
         {zelfBetaald.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-borderc bg-white p-5">
-            <h3 className="text-sm font-black text-brand">De klant betaalde de zaal zelf</h3>
-            <p className="mt-1 text-sm text-brand/60">
+          <div className="mt-6 rounded-2xl border border-borderc bg-surface p-5">
+            <h3 className="text-sm font-black text-ink">De klant betaalde de zaal zelf</h3>
+            <p className="mt-1 text-sm text-ink/60">
               Deze sessies boekte de klant via de site, met de coach erbij gekozen. De coach betaalde dus geen
               sessietegoed en er is automatisch niets aangerekend. Of je hier iets voor vraagt, spreek je met de
               coach af — de knop staat klaar.
@@ -273,9 +273,9 @@ export default async function Aanbreng() {
             <div className="mt-3 divide-y divide-borderc">
               {zelfBetaald.map((rij) => (
                 <div key={rij.bookingId} className="flex flex-wrap items-center gap-x-3 gap-y-2 py-3">
-                  <span className="text-sm font-bold text-brand">{fmt(rij.startsAt)}</span>
-                  <span className="text-sm text-brand/60">{naamVan.get(rij.coachId) || "Coach"}</span>
-                  <span className="text-sm text-brand/60">· {rij.doorgave.client_name || rij.doorgave.client_email}</span>
+                  <span className="text-sm font-bold text-ink">{fmt(rij.startsAt)}</span>
+                  <span className="text-sm text-ink/60">{naamVan.get(rij.coachId) || "Coach"}</span>
+                  <span className="text-sm text-ink/60">· {rij.doorgave.client_name || rij.doorgave.client_email}</span>
                   <div className="ml-auto flex flex-wrap gap-2">
                     <ActionForm action={rekenAanbrengAan} success="Aangerekend ✓">
                       <input type="hidden" name="bookingId" value={rij.bookingId} />
@@ -297,17 +297,17 @@ export default async function Aanbreng() {
 
       {/* ── 3. Doorgaven ──────────────────────────────────────────────────────── */}
       <section className="mt-8">
-        <h2 className="text-xl font-black text-brand">Doorgaven</h2>
+        <h2 className="text-xl font-black text-ink">Doorgaven</h2>
 
         {/* Nog nooit iemand doorgegeven? Dan is de vraag niet "welke filter" maar "wat doe ik hier".
             Drie zinnen en één knop — de rest van het scherm heeft dan nog niets te zeggen. */}
         {nooitGebruikt ? (
-          <div className="mt-3 rounded-2xl border border-borderc bg-white p-6">
-            <p className="text-sm font-black text-brand">Je hebt nog niemand doorgegeven.</p>
-            <ol className="mt-3 max-w-2xl space-y-2.5 text-sm leading-relaxed text-brand/65">
-              <li><b className="text-brand">1.</b> Je geeft een klant door aan een coach — naam en e-mailadres volstaan.</li>
-              <li><b className="text-brand">2.</b> Die coach krijgt een mail en een melding, en moet zelf aanvaarden. Tot dan kost het hem niets.</li>
-              <li><b className="text-brand">3.</b> Vanaf de aanvaarding kost elke boeking die hij met dít lid maakt {feeZin(standaardCents)} extra, automatisch van zijn tegoed. Het lid betaalt hetzelfde als anders.</li>
+          <div className="mt-3 rounded-2xl border border-borderc bg-surface p-6">
+            <p className="text-sm font-black text-ink">Je hebt nog niemand doorgegeven.</p>
+            <ol className="mt-3 max-w-2xl space-y-2.5 text-sm leading-relaxed text-ink/65">
+              <li><b className="text-ink">1.</b> Je geeft een klant door aan een coach — naam en e-mailadres volstaan.</li>
+              <li><b className="text-ink">2.</b> Die coach krijgt een mail en een melding, en moet zelf aanvaarden. Tot dan kost het hem niets.</li>
+              <li><b className="text-ink">3.</b> Vanaf de aanvaarding kost elke boeking die hij met dít lid maakt {feeZin(standaardCents)} extra, automatisch van zijn tegoed. Het lid betaalt hetzelfde als anders.</li>
             </ol>
           </div>
         ) : (
@@ -319,20 +319,20 @@ export default async function Aanbreng() {
         {/* Het formulier. Stond hier eerder als een grijze "+ Klant handmatig doorgeven"-regel die
             eruitzag als uitgeschakelde tekst; het is de enige knop op deze pagina die iets begint. */}
         {beschikbaar.length === 0 ? (
-          <p className="mt-4 rounded-2xl border border-borderc bg-white p-4 text-sm text-brand/60">
+          <p className="mt-4 rounded-2xl border border-borderc bg-surface p-4 text-sm text-ink/60">
             Geen enkele coach staat op &ldquo;neemt nieuwe klanten aan&rdquo;. Zolang dat zo is, kan je niemand doorgeven.
           </p>
         ) : (
-          <details className="group mt-4 overflow-hidden rounded-2xl border-2 border-dashed border-borderc bg-white transition hover:border-accent">
+          <details className="group mt-4 overflow-hidden rounded-2xl border-2 border-dashed border-borderc bg-surface transition hover:border-accent">
             <summary className="cursor-pointer list-none px-5 py-4 text-center text-sm font-black text-accentdark [&::-webkit-details-marker]:hidden">
               <span className="group-open:hidden">+ Klant doorgeven aan een coach</span>
-              <span className="hidden text-brand/50 group-open:inline">Sluiten</span>
+              <span className="hidden text-ink/50 group-open:inline">Sluiten</span>
             </summary>
             <ActionForm action={geefDoorAanCoach} success="Doorgegeven ✓" className="border-t border-borderc p-5">
               <input type="hidden" name="source" value="manueel" />
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <label className="block">
-                  <span className="mb-1 block text-sm font-bold text-brand">Coach</span>
+                  <span className="mb-1 block text-sm font-bold text-ink">Coach</span>
                   <SearchSelect
                     name="coachId"
                     required
@@ -341,35 +341,35 @@ export default async function Aanbreng() {
                   />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-bold text-brand">E-mail van de klant</span>
+                  <span className="mb-1 block text-sm font-bold text-ink">E-mail van de klant</span>
                   <input name="clientEmail" type="email" required placeholder="naam@voorbeeld.be" className={invoer + " w-full"} />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-bold text-brand">Naam van de klant</span>
+                  <span className="mb-1 block text-sm font-bold text-ink">Naam van de klant</span>
                   <input name="clientName" placeholder="Sarah Declerck" className={invoer + " w-full"} />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-bold text-brand">Tarief per sessie (€)</span>
+                  <span className="mb-1 block text-sm font-bold text-ink">Tarief per sessie (€)</span>
                   <input name="feeEur" inputMode="decimal" defaultValue={komma(standaardCents)} className={invoer + " w-full"} />
-                  <span className="mt-1 block text-xs text-brand/45">Maximum € {maxEur}. Ligt vast zodra de coach aanvaardt.</span>
+                  <span className="mt-1 block text-xs text-ink/45">Maximum € {maxEur}. Ligt vast zodra de coach aanvaardt.</span>
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-bold text-brand">Max sessies (optioneel)</span>
+                  <span className="mb-1 block text-sm font-bold text-ink">Max sessies (optioneel)</span>
                   <input name="sessionsCap" inputMode="numeric" placeholder="onbeperkt" className={invoer + " w-full"} />
                 </label>
                 <label className="block">
-                  <span className="mb-1 block text-sm font-bold text-brand">Max maanden (optioneel)</span>
+                  <span className="mb-1 block text-sm font-bold text-ink">Max maanden (optioneel)</span>
                   <input name="monthsCap" inputMode="numeric" placeholder="onbeperkt" className={invoer + " w-full"} />
                 </label>
                 <label className="block lg:col-span-3">
-                  <span className="mb-1 block text-sm font-bold text-brand">Nota voor de coach (optioneel)</span>
+                  <span className="mb-1 block text-sm font-bold text-ink">Nota voor de coach (optioneel)</span>
                   <input name="note" placeholder="Wil twee keer per week trainen, revalidatie knie." className={invoer + " w-full"} />
                 </label>
               </div>
               <button className="mt-4 rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">
                 Doorgeven aan de coach
               </button>
-              <p className="mt-2 text-xs text-brand/45">
+              <p className="mt-2 text-xs text-ink/45">
                 De coach krijgt een melding en een mail, en moet zelf aanvaarden. Tot dan wordt er niets aangerekend.
               </p>
             </ActionForm>
@@ -380,25 +380,25 @@ export default async function Aanbreng() {
       {/* ── 4. Instellingen ───────────────────────────────────────────────────── */}
       {/* Ingeklapt: twee bedragen en een schakelaar per coach, drie keer per jaar aangeraakt. Ze
           stonden opengeklapt onderaan en vulden zo het halve scherm van een lege pagina. */}
-      <details className="mt-8 overflow-hidden rounded-2xl border border-borderc bg-white">
-        <summary className="cursor-pointer px-5 py-4 text-xl font-black text-brand">Instellingen</summary>
+      <details className="mt-8 overflow-hidden rounded-2xl border border-borderc bg-surface">
+        <summary className="cursor-pointer px-5 py-4 text-xl font-black text-ink">Instellingen</summary>
 
         <div className="border-t border-borderc p-5">
           <ActionForm action={bewaarAanbrengInstellingen} success="Instellingen opgeslagen ✓" className="max-w-2xl">
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm font-bold text-brand">Standaardtarief (€ per sessie)</span>
+                <span className="mb-1 block text-sm font-bold text-ink">Standaardtarief (€ per sessie)</span>
                 <input name="feeEur" inputMode="decimal" defaultValue={komma(standaardCents)} className={invoer + " w-full"} />
-                <span className="mt-1 block text-xs text-brand/50">Fittin&rsquo; zoekt de klant én kiest de coach.</span>
+                <span className="mt-1 block text-xs text-ink/50">Fittin&rsquo; zoekt de klant én kiest de coach.</span>
               </label>
               <label className="block">
-                <span className="mb-1 block text-sm font-bold text-brand">Klant koos zelf een coach (€ per sessie)</span>
+                <span className="mb-1 block text-sm font-bold text-ink">Klant koos zelf een coach (€ per sessie)</span>
                 <input name="feeVoorkeurEur" inputMode="decimal" defaultValue={komma(voorkeurCents)} className={invoer + " w-full"} />
-                <span className="mt-1 block text-xs text-brand/50">Bij een intake met een voorkeurcoach levert Fittin&rsquo; wel de klant, niet de match.</span>
+                <span className="mt-1 block text-xs text-ink/50">Bij een intake met een voorkeurcoach levert Fittin&rsquo; wel de klant, niet de match.</span>
               </label>
             </div>
             <button className="mt-5 rounded-full bg-accent px-6 py-2.5 text-sm font-black text-brand transition hover:opacity-90">Opslaan</button>
-            <p className="mt-2 text-xs text-brand/45">
+            <p className="mt-2 text-xs text-ink/45">
               Geldt voor nieuwe doorgaven. Lopende afspraken houden het tarief dat de coach aanvaardde. Maximum € {maxEur}.
             </p>
           </ActionForm>
@@ -414,10 +414,10 @@ export default async function Aanbreng() {
 
 function Tegel({ label, value, sub, accent, alarm }) {
   return (
-    <div className={"rounded-2xl border bg-white p-5 " + (alarm ? "border-amber-300" : "border-borderc")}>
+    <div className={"rounded-2xl border bg-surface p-5 " + (alarm ? "border-amber-300" : "border-borderc")}>
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-3xl font-black " + (alarm ? "text-amber-600" : accent ? "text-accentdark" : "text-brand")}>{value}</p>
-      {sub && <p className="mt-1 text-xs text-brand/40">{sub}</p>}
+      <p className={"mt-2 text-3xl font-black " + (alarm ? "text-amber-600" : accent ? "text-accentdark" : "text-ink")}>{value}</p>
+      {sub && <p className="mt-1 text-xs text-ink/40">{sub}</p>}
     </div>
   );
 }

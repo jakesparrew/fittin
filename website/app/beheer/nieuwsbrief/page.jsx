@@ -8,12 +8,12 @@ export const dynamic = "force-dynamic";
 const fmt = (iso) => (iso ? new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(iso)) : "—");
 const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) + "%" : "—");
 const STATUS = {
-  draft: ["Concept", "bg-paper text-brand/60"],
+  draft: ["Concept", "bg-paper text-ink/60"],
   scheduled: ["Gepland", "bg-accent/15 text-accentdark"],
   sending: ["Verzenden…", "bg-accent/15 text-accentdark"],
-  sent: ["Verzonden", "bg-brand/10 text-brand"],
+  sent: ["Verzonden", "bg-brand/10 text-ink"],
   active: ["Actief", "bg-accent/20 text-accentdark"],
-  paused: ["Gepauzeerd", "bg-paper text-brand/50"],
+  paused: ["Gepauzeerd", "bg-paper text-ink/50"],
 };
 
 export default async function Newsletter() {
@@ -34,10 +34,10 @@ export default async function Newsletter() {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">Nieuwsbrief & campagnes</h1>
-          <p className="mt-1 text-sm text-brand/50">Verzend nieuwsbrieven, automatiseer drips en volg de resultaten.</p>
+          <h1 className="text-3xl font-black text-ink">Nieuwsbrief & campagnes</h1>
+          <p className="mt-1 text-sm text-ink/50">Verzend nieuwsbrieven, automatiseer drips en volg de resultaten.</p>
         </div>
-        <Link href="/beheer/nieuwsbrief/abonnees" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">
+        <Link href="/beheer/nieuwsbrief/abonnees" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-accent/15">
           Abonnees beheren →
         </Link>
       </div>
@@ -57,8 +57,8 @@ export default async function Newsletter() {
       {/* Premade sequence — one click */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent/40 bg-accent/5 p-5">
         <div>
-          <p className="font-black text-brand">✨ Fittin&rsquo; onboarding-reeks</p>
-          <p className="mt-0.5 text-sm text-brand/60">5 kant-en-klare, converterende mails die nieuwe leden alle functies laten ontdekken — verspreid over ~2 weken.</p>
+          <p className="font-black text-ink">✨ Fittin&rsquo; onboarding-reeks</p>
+          <p className="mt-0.5 text-sm text-ink/60">5 kant-en-klare, converterende mails die nieuwe leden alle functies laten ontdekken — verspreid over ~2 weken.</p>
         </div>
         <form action={createOnboardingDrip}>
           <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Maak deze reeks aan</button>
@@ -66,17 +66,17 @@ export default async function Newsletter() {
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <form action={createNewsletter} className="rounded-2xl border border-borderc bg-white p-5">
-          <p className="font-black text-brand">Nieuwe nieuwsbrief</p>
-          <p className="mt-0.5 text-xs text-brand/50">Eenmalige mail naar alle abonnees.</p>
+        <form action={createNewsletter} className="rounded-2xl border border-borderc bg-surface p-5">
+          <p className="font-black text-ink">Nieuwe nieuwsbrief</p>
+          <p className="mt-0.5 text-xs text-ink/50">Eenmalige mail naar alle abonnees.</p>
           <div className="mt-3 flex gap-2">
             <input name="name" required placeholder="Titel (intern)" className="flex-1 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
             <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">Opstellen</button>
           </div>
         </form>
-        <form action={createDrip} className="rounded-2xl border border-borderc bg-white p-5">
-          <p className="font-black text-brand">Nieuwe drip-campagne</p>
-          <p className="mt-0.5 text-xs text-brand/50">Reeks mails, automatisch bij nieuwe inschrijving.</p>
+        <form action={createDrip} className="rounded-2xl border border-borderc bg-surface p-5">
+          <p className="font-black text-ink">Nieuwe drip-campagne</p>
+          <p className="mt-0.5 text-xs text-ink/50">Reeks mails, automatisch bij nieuwe inschrijving.</p>
           <div className="mt-3 flex gap-2">
             <input name="name" required placeholder="Naam (bv. Welkomstreeks)" className="flex-1 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
             <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Aanmaken</button>
@@ -84,7 +84,7 @@ export default async function Newsletter() {
         </form>
       </div>
 
-      <div className="mt-6 overflow-hidden rounded-2xl border border-borderc bg-white">
+      <div className="mt-6 overflow-hidden rounded-2xl border border-borderc bg-surface">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -103,20 +103,20 @@ export default async function Newsletter() {
               return (
                 <tr key={c.id}>
                   <td className="px-5 py-3">
-                    <Link href={`/beheer/nieuwsbrief/${c.id}`} className="font-bold text-brand hover:text-accentdark">{c.name}</Link>
-                    {c.subject && <p className="text-xs text-brand/45">{c.subject}</p>}
+                    <Link href={`/beheer/nieuwsbrief/${c.id}`} className="font-bold text-ink hover:text-accentdark">{c.name}</Link>
+                    {c.subject && <p className="text-xs text-ink/45">{c.subject}</p>}
                   </td>
-                  <td className="px-5 py-3"><span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-brand/70">{c.kind === "drip" ? "Drip" : "Nieuwsbrief"}</span></td>
+                  <td className="px-5 py-3"><span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-ink/70">{c.kind === "drip" ? "Drip" : "Nieuwsbrief"}</span></td>
                   <td className="px-5 py-3"><span className={"rounded-full px-2.5 py-0.5 text-xs font-bold " + cls}>{label}</span></td>
-                  <td className="px-5 py-3 text-right font-bold text-brand">{c.sent || 0}</td>
-                  <td className="px-5 py-3 text-right text-brand/70">{pct(c.opened, c.sent)}</td>
-                  <td className="px-5 py-3 text-right text-brand/70">{pct(c.clicked, c.sent)}</td>
-                  <td className="px-5 py-3 text-right text-xs text-brand/40">{fmt(c.sent_at || c.created_at)}</td>
+                  <td className="px-5 py-3 text-right font-bold text-ink">{c.sent || 0}</td>
+                  <td className="px-5 py-3 text-right text-ink/70">{pct(c.opened, c.sent)}</td>
+                  <td className="px-5 py-3 text-right text-ink/70">{pct(c.clicked, c.sent)}</td>
+                  <td className="px-5 py-3 text-right text-xs text-ink/40">{fmt(c.sent_at || c.created_at)}</td>
                 </tr>
               );
             })}
             {(!campaigns || campaigns.length === 0) && (
-              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-brand/40">Nog geen campagnes. Maak hierboven je eerste nieuwsbrief of drip.</td></tr>
+              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-ink/40">Nog geen campagnes. Maak hierboven je eerste nieuwsbrief of drip.</td></tr>
             )}
           </tbody>
         </table>
@@ -127,9 +127,9 @@ export default async function Newsletter() {
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className="mt-2 text-2xl font-black text-brand">{value}</p>
+      <p className="mt-2 text-2xl font-black text-ink">{value}</p>
     </div>
   );
 }

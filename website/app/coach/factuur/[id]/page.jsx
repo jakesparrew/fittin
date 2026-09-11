@@ -36,7 +36,7 @@ export default async function CoachFactuur({ params }) {
   return (
     <div className="px-4 py-8 md:px-8">
       <div className="mb-4 flex items-center justify-between print:hidden">
-        <Link href="/coach/betalingen" className="text-sm font-semibold text-brand/50 hover:text-brand">← Betalingen</Link>
+        <Link href="/coach/betalingen" className="text-sm font-semibold text-ink/50 hover:text-ink">← Betalingen</Link>
         <PrintButton />
       </div>
       {(!m.bill_company || !m.bill_vat) && (
@@ -56,5 +56,5 @@ export default async function CoachFactuur({ params }) {
 }
 
 function Missing() {
-  return <div className="px-8 py-8 text-sm text-brand/60">Factuur niet gevonden. <Link href="/coach/betalingen" className="text-accentdark">Terug</Link></div>;
+  return <div className="px-8 py-8 text-sm text-ink/60">Factuur niet gevonden. <Link href="/coach/betalingen" className="text-accentdark">Terug</Link></div>;
 }

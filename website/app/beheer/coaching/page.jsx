@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 //   3. Wie gebruikt het? Eén regel per lopend plan. Geen dossiers: het weekmenu en de check-ins van
 //      een lid zijn van dat lid, en een beheerpagina is geen reden om erin te lezen.
 
-const KAART = "rounded-2xl border border-borderc bg-white p-5";
+const KAART = "rounded-2xl border border-borderc bg-surface p-5";
 
 export default async function BeheerCoaching() {
   const ctx = await getAdminContext();
@@ -79,10 +79,10 @@ export default async function BeheerCoaching() {
     <div className="mx-auto max-w-5xl px-5 py-8 sm:px-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-black text-brand">AI-coach</h1>
+          <h1 className="font-display text-2xl font-black text-ink">AI-coach</h1>
           <p className="mt-1 text-sm text-ink-soft">Plannen, kosten en doorverwijzingen van de laatste 30 dagen.</p>
         </div>
-        <span className={"rounded-full px-3 py-1.5 text-xs font-black " + (coachAan() ? "bg-accent/15 text-accentdark" : "bg-paper text-brand/45")}>
+        <span className={"rounded-full px-3 py-1.5 text-xs font-black " + (coachAan() ? "bg-accent/15 text-accentdark" : "bg-paper text-ink/45")}>
           {coachAan() ? "Staat aan" : "Staat uit"}
         </span>
       </div>
@@ -93,7 +93,7 @@ export default async function BeheerCoaching() {
         const c = cronR?.data;
         const kleur = !c ? "bg-paper text-ink-soft"
           : c.detail?.status === "bezig" ? "bg-amber-50 text-amber-800"
-          : c.ok ? "bg-accent/10 text-brand" : "bg-amber-50 text-amber-800";
+          : c.ok ? "bg-accent/10 text-ink" : "bg-amber-50 text-amber-800";
         return (
           <div className={"mt-5 flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 text-sm " + kleur}>
             <span>
@@ -110,8 +110,8 @@ export default async function BeheerCoaching() {
       {/* 1. Waar iemand iets mee moet doen. */}
       {leads.length > 0 && (
         <section className="mt-6 rounded-2xl border-2 border-amber-300 bg-amber-50 p-5">
-          <h2 className="font-display text-lg font-black text-brand">Doorverwezen naar een echte coach ({leads.length})</h2>
-          <p className="mt-1 text-sm text-brand/70">
+          <h2 className="font-display text-lg font-black text-ink">Doorverwezen naar een echte coach ({leads.length})</h2>
+          <p className="mt-1 text-sm text-ink/70">
             Bij deze leden gaf de AI-coach het op: meerdere weken te zwaar, of pijn. Ze zagen een
             uitnodiging voor een gratis intake. Een telefoontje doet hier meer dan een e-mail.
           </p>
@@ -119,14 +119,14 @@ export default async function BeheerCoaching() {
             {leads.map((p) => {
               const l = naam.get(p.member_id);
               return (
-                <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-white px-4 py-3">
+                <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2 rounded-xl bg-surface px-4 py-3">
                   <span className="min-w-0">
-                    <Link href={`/beheer/leden/${p.member_id}`} className="text-sm font-black text-brand hover:underline">
+                    <Link href={`/beheer/leden/${p.member_id}`} className="text-sm font-black text-ink hover:underline">
                       {l?.full_name || l?.email || "Onbekend lid"}
                     </Link>
-                    <span className="ml-2 text-xs text-brand/50">{p.doorverwijs_reden || "reden onbekend"}</span>
+                    <span className="ml-2 text-xs text-ink/50">{p.doorverwijs_reden || "reden onbekend"}</span>
                   </span>
-                  <span className="text-xs text-brand/45">{fmtDate(p.doorverwezen_at)}</span>
+                  <span className="text-xs text-ink/45">{fmtDate(p.doorverwezen_at)}</span>
                 </li>
               );
             })}
@@ -137,39 +137,39 @@ export default async function BeheerCoaching() {
       {/* 2. Wat het kost. */}
       <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={KAART}>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Vandaag</p>
-          <p className={"mt-1 font-display text-2xl font-black " + (remVol ? "text-red-600" : "text-brand")}>{euroVan(dag.micro)}</p>
-          <p className="mt-1 text-xs text-brand/45">
+          <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Vandaag</p>
+          <p className={"mt-1 font-display text-2xl font-black " + (remVol ? "text-red-600" : "text-ink")}>{euroVan(dag.micro)}</p>
+          <p className="mt-1 text-xs text-ink/45">
             {dag.aanroepen} aanroep{dag.aanroepen === 1 ? "" : "en"} · rem op {euroVan(DAGBUDGET_MICRO)}
           </p>
-          <p className="mt-0.5 text-xs text-brand/35">{dag.inTokens.toLocaleString("nl-BE")} tokens in · {dag.uitTokens.toLocaleString("nl-BE")} uit</p>
+          <p className="mt-0.5 text-xs text-ink/35">{dag.inTokens.toLocaleString("nl-BE")} tokens in · {dag.uitTokens.toLocaleString("nl-BE")} uit</p>
           {dag.geweigerd > 0 && <p className="mt-1 text-xs font-bold text-amber-700">{dag.geweigerd}× geweigerd door de dagrem</p>}
           {remVol && <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-bold text-red-700">Dagrem bereikt — de coach maakt vandaag niets meer.</p>}
         </div>
         <div className={KAART}>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand/45">30 dagen</p>
-          <p className="mt-1 font-display text-2xl font-black text-brand">{euroVan(maand.micro)}</p>
-          <p className="mt-1 text-xs text-brand/45">{maand.aanroepen} aanroepen · {maand.mislukt} mislukt</p>
-          <p className="mt-0.5 text-xs text-brand/35">{maand.inTokens.toLocaleString("nl-BE")} tokens in · {maand.uitTokens.toLocaleString("nl-BE")} uit</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink/45">30 dagen</p>
+          <p className="mt-1 font-display text-2xl font-black text-ink">{euroVan(maand.micro)}</p>
+          <p className="mt-1 text-xs text-ink/45">{maand.aanroepen} aanroepen · {maand.mislukt} mislukt</p>
+          <p className="mt-0.5 text-xs text-ink/35">{maand.inTokens.toLocaleString("nl-BE")} tokens in · {maand.uitTokens.toLocaleString("nl-BE")} uit</p>
         </div>
         <div className={KAART}>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Lopende plannen</p>
-          <p className="mt-1 font-display text-2xl font-black text-brand">{lopend.length}</p>
-          <p className="mt-1 text-xs text-brand/45">{plannen.filter((p) => p.status === "afgerond").length} afgerond</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Lopende plannen</p>
+          <p className="mt-1 font-display text-2xl font-black text-ink">{lopend.length}</p>
+          <p className="mt-1 text-xs text-ink/45">{plannen.filter((p) => p.status === "afgerond").length} afgerond</p>
         </div>
         <div className={KAART}>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Weekmenu&rsquo;s</p>
-          <p className="mt-1 font-display text-2xl font-black text-brand">{(menusR.data || []).length}</p>
-          <p className="mt-1 text-xs text-brand/45">{(mijlpalenR.data || []).length} mijlpalen gehaald</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Weekmenu&rsquo;s</p>
+          <p className="mt-1 font-display text-2xl font-black text-ink">{(menusR.data || []).length}</p>
+          <p className="mt-1 text-xs text-ink/45">{(mijlpalenR.data || []).length} mijlpalen gehaald</p>
         </div>
       </section>
 
       {Object.keys(perSoort).length > 0 && (
         <section className={"mt-6 " + KAART}>
-          <h2 className="font-display text-lg font-black text-brand">Waar het geld naartoe gaat</h2>
+          <h2 className="font-display text-lg font-black text-ink">Waar het geld naartoe gaat</h2>
           <table className="mt-3 w-full text-sm">
             <thead>
-              <tr className="border-b border-borderc text-left text-xs uppercase tracking-wide text-brand/40">
+              <tr className="border-b border-borderc text-left text-xs uppercase tracking-wide text-ink/40">
                 <th className="pb-2 font-bold">Soort</th>
                 <th className="pb-2 text-right font-bold">Aanroepen</th>
                 <th className="pb-2 text-right font-bold">Mislukt</th>
@@ -179,15 +179,15 @@ export default async function BeheerCoaching() {
             <tbody>
               {Object.entries(perSoort).sort((a, b) => b[1].micro - a[1].micro).map(([soort, s]) => (
                 <tr key={soort} className="border-b border-borderc/60 last:border-0">
-                  <td className="py-2 font-bold text-brand">{soort}</td>
-                  <td className="py-2 text-right text-brand/70">{s.aanroepen}</td>
-                  <td className={"py-2 text-right " + (s.mislukt ? "font-bold text-red-600" : "text-brand/40")}>{s.mislukt}</td>
-                  <td className="py-2 text-right text-brand/70">{euroVan(s.micro)}</td>
+                  <td className="py-2 font-bold text-ink">{soort}</td>
+                  <td className="py-2 text-right text-ink/70">{s.aanroepen}</td>
+                  <td className={"py-2 text-right " + (s.mislukt ? "font-bold text-red-600" : "text-ink/40")}>{s.mislukt}</td>
+                  <td className="py-2 text-right text-ink/70">{euroVan(s.micro)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          <p className="mt-3 text-xs text-brand/40">
+          <p className="mt-3 text-xs text-ink/40">
             Omgerekend aan een vaste koers van 0,92 — ter indicatie, niet als boekhouding.
           </p>
         </section>
@@ -199,7 +199,7 @@ export default async function BeheerCoaching() {
       {(maand.zonderResultaat > 0 || maand.onbekend > 0 || maand.geweigerd > 0) && (
         <Link href="/beheer/coaching/logboek?filter=problemen"
           className="mt-3 block rounded-2xl border-2 border-amber-300 bg-amber-50 p-4 transition hover:border-amber-400">
-          <p className="text-sm font-black text-brand">
+          <p className="text-sm font-black text-ink">
             {maand.zonderResultaat > 0
               ? `${euroVan(maand.zonderResultaatMicro)} aan aanroepen zonder resultaat (${maand.zonderResultaat} van ${maand.aanroepen})`
               : "Aanroepen om na te kijken"}
@@ -216,7 +216,7 @@ export default async function BeheerCoaching() {
 
       {/* 3. Wie het gebruikt. */}
       <section className={"mt-6 " + KAART}>
-        <h2 className="font-display text-lg font-black text-brand">Lopende plannen</h2>
+        <h2 className="font-display text-lg font-black text-ink">Lopende plannen</h2>
         {!lopend.length ? (
           <p className="mt-2 text-sm text-ink-soft">Nog geen enkel lid heeft een plan lopen.</p>
         ) : (
@@ -228,15 +228,15 @@ export default async function BeheerCoaching() {
               return (
                 <li key={p.id} className="flex flex-wrap items-baseline justify-between gap-2 py-3">
                   <span className="min-w-0">
-                    <Link href={`/beheer/leden/${p.member_id}`} className="text-sm font-bold text-brand hover:underline">
+                    <Link href={`/beheer/leden/${p.member_id}`} className="text-sm font-bold text-ink hover:underline">
                       {l?.full_name || l?.email || "Onbekend lid"}
                     </Link>
-                    <span className="ml-2 text-xs text-brand/50">{p.doel}</span>
+                    <span className="ml-2 text-xs text-ink/50">{p.doel}</span>
                     {modules.map((m) => (
-                      <span key={m} className="ml-1.5 rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-brand/55">{m}</span>
+                      <span key={m} className="ml-1.5 rounded-full bg-paper px-2 py-0.5 text-[11px] font-bold text-ink/55">{m}</span>
                     ))}
                   </span>
-                  <span className="text-xs text-brand/45">
+                  <span className="text-xs text-ink/45">
                     week {nu || "?"} van {p.weken} · gestart {fmtDate(p.gestart_op)}
                   </span>
                 </li>

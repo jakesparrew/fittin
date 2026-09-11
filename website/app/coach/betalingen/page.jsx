@@ -27,20 +27,20 @@ export default async function CoachBetalingen() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand print:hidden">← Dashboard</Link>
+      <Link href="/coach" className="text-sm font-semibold text-ink/50 hover:text-ink print:hidden">← Dashboard</Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-3xl font-black text-brand">Betalingen</h1>
+        <h1 className="text-3xl font-black text-ink">Betalingen</h1>
         <div className="flex flex-wrap gap-2 print:hidden">
           {/* De export bestond al maar had nergens een link. Ze gaat over wat je clienten JOU
               betalen (betaalverzoeken), niet over de aankopen in de tabel hieronder — vandaar het
               aparte label. Geen betaalverzoeken? Dan geen knop. */}
           {(reqCount ?? 0) > 0 && (
-            <a href="/coach/betalingen/export" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">⬇ Client-betalingen (CSV)</a>
+            <a href="/coach/betalingen/export" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent">⬇ Client-betalingen (CSV)</a>
           )}
           <PrintButton label="⬇ PDF / afdrukken" />
         </div>
       </div>
-      <p className="mt-1 max-w-2xl text-sm text-brand/50">
+      <p className="mt-1 max-w-2xl text-sm text-ink/50">
         Je betalingen aan Fittin: aankopen van <b>sessietegoed (€ 12 / sessie)</b> waarmee je je clienten in de zaal boekt.
         Wat je clienten jóu betalen, reken je rechtstreeks af (bv. Bancontact) — dat loopt niet via het platform.
       </p>
@@ -52,12 +52,12 @@ export default async function CoachBetalingen() {
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-accent bg-accent/5 p-5 print:hidden">
-        <p className="text-sm font-semibold text-brand/70">Sessietegoed bijkopen? Dat doe je op je dashboard.</p>
+        <p className="text-sm font-semibold text-ink/70">Sessietegoed bijkopen? Dat doe je op je dashboard.</p>
         <Link href="/coach#tegoed" className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">Naar dashboard →</Link>
       </div>
 
-      <h2 className="mt-8 text-lg font-black text-brand">Aankoopgeschiedenis</h2>
-      <div className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-white">
+      <h2 className="mt-8 text-lg font-black text-ink">Aankoopgeschiedenis</h2>
+      <div className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-surface">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -70,18 +70,18 @@ export default async function CoachBetalingen() {
           <tbody className="divide-y divide-borderc">
             {purchases.map((p, i) => (
               <tr key={i}>
-                <td className="px-5 py-3 text-brand/60">{fmt(p.created_at)}</td>
-                <td className="px-5 py-3 font-semibold text-brand">{p.description || "Sessietegoed gekocht"}</td>
-                <td className="px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
+                <td className="px-5 py-3 text-ink/60">{fmt(p.created_at)}</td>
+                <td className="px-5 py-3 font-semibold text-ink">{p.description || "Sessietegoed gekocht"}</td>
+                <td className="px-5 py-3 text-right font-black text-ink">{euro(p.amount_cents)}</td>
                 <td className="px-5 py-3 text-right">
                   <a href={`/coach/factuur/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-accentdark hover:underline">Factuur →</a>
-                  {p.receipt_url && <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="ml-3 text-xs font-semibold text-brand/50 hover:underline">bewijs</a>}
+                  {p.receipt_url && <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="ml-3 text-xs font-semibold text-ink/50 hover:underline">bewijs</a>}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {purchases.length === 0 && <p className="p-6 text-sm text-brand/50">Nog geen aankopen — koop sessietegoed via je dashboard.</p>}
+        {purchases.length === 0 && <p className="p-6 text-sm text-ink/50">Nog geen aankopen — koop sessietegoed via je dashboard.</p>}
       </div>
     </div>
   );
@@ -89,9 +89,9 @@ export default async function CoachBetalingen() {
 
 function Stat({ label, value, accent }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-2xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
+      <p className={"mt-2 text-2xl font-black " + (accent ? "text-accentdark" : "text-ink")}>{value}</p>
     </div>
   );
 }

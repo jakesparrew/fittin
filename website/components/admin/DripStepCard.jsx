@@ -10,19 +10,19 @@ export default function DripStepCard({ step, campaignId, sent = 0, openPct = "â€
   const [editing, setEditing] = useState(false);
 
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-sm font-black text-white">{step.step_no}</span>
           <div>
-            <p className="font-bold text-brand">{step.subject}</p>
-            <p className="text-xs text-brand/45">
+            <p className="font-bold text-ink">{step.subject}</p>
+            <p className="text-xs text-ink/45">
               {step.delay_hours === 0 ? "Direct bij inschrijving" : `${step.delay_hours}u na inschrijving`}
               {step.step_no > 1 && step.delay_hours === 0 && <span className="ml-1 font-bold text-amber-600">âš  stuurt meteen mee</span>}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 text-xs font-bold text-brand/50">
+        <div className="flex items-center gap-3 text-xs font-bold text-ink/50">
           <span>{sent} verzonden</span>
           <span>{openPct} open</span>
           <button onClick={() => setEditing((e) => !e)} className="text-accentdark hover:underline">{editing ? "Sluit" : "Bewerk"}</button>
@@ -51,7 +51,7 @@ export default function DripStepCard({ step, campaignId, sent = 0, openPct = "â€
           <button className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">Opslaan</button>
         </ActionForm>
       ) : (
-        <p className="mt-2 line-clamp-2 text-sm text-brand/60">{strip(step.body_html)}</p>
+        <p className="mt-2 line-clamp-2 text-sm text-ink/60">{strip(step.body_html)}</p>
       )}
     </div>
   );

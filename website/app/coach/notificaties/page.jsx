@@ -35,12 +35,12 @@ export default async function CoachNotificaties() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Coach dashboard</Link>
+      <Link href="/coach" className="text-sm font-semibold text-ink/50 hover:text-ink">← Coach dashboard</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-black text-brand">Notificaties</h1>
+        <h1 className="text-3xl font-black text-ink">Notificaties</h1>
         {unread > 0 && (
           <ActionForm action={markAllRead} success="Alles gelezen ✓">
-            <button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">Alles gelezen</button>
+            <button className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-accent/15">Alles gelezen</button>
           </ActionForm>
         )}
       </div>
@@ -48,12 +48,12 @@ export default async function CoachNotificaties() {
       <div className="mt-6 max-w-2xl space-y-2">
         {(notifs || []).map((n) => {
           const inner = (
-            <div className={"flex items-start gap-3 rounded-2xl border border-borderc p-4 transition " + (n.read ? "bg-white" : "bg-accent/5")}>
+            <div className={"flex items-start gap-3 rounded-2xl border border-borderc p-4 transition " + (n.read ? "bg-surface" : "bg-accent/5")}>
               <span className="text-xl">{ICON[n.type] || "🔔"}</span>
               <div className="min-w-0 flex-1">
-                <p className={"text-sm " + (n.read ? "font-semibold text-brand/80" : "font-black text-brand")}>{n.title}</p>
-                {n.body && <p className="text-sm text-brand/60">{n.body}</p>}
-                <p className="mt-0.5 text-xs text-brand/40">{fmt(n.created_at)}</p>
+                <p className={"text-sm " + (n.read ? "font-semibold text-ink/80" : "font-black text-ink")}>{n.title}</p>
+                {n.body && <p className="text-sm text-ink/60">{n.body}</p>}
+                <p className="mt-0.5 text-xs text-ink/40">{fmt(n.created_at)}</p>
               </div>
               {!n.read && <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-accent" />}
             </div>
@@ -62,9 +62,9 @@ export default async function CoachNotificaties() {
           return href ? <Link key={n.id} href={href} className="block">{inner}</Link> : <div key={n.id}>{inner}</div>;
         })}
         {(!notifs || notifs.length === 0) && (
-          <div className="rounded-3xl border border-dashed border-borderc bg-white p-10 text-center">
-            <p className="font-semibold text-brand/70">Nog geen notificaties.</p>
-            <p className="mt-1 text-sm text-brand/50">Hier zie je boekingen, sessie-aanvragen, betalingen en meer.</p>
+          <div className="rounded-3xl border border-dashed border-borderc bg-surface p-10 text-center">
+            <p className="font-semibold text-ink/70">Nog geen notificaties.</p>
+            <p className="mt-1 text-sm text-ink/50">Hier zie je boekingen, sessie-aanvragen, betalingen en meer.</p>
           </div>
         )}
       </div>

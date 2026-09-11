@@ -18,7 +18,7 @@ export const metadata = { title: "Logboek AI-coach | Fittin'", robots: { index: 
 // Geen eigen item in de zijbalk: dit hangt als sublink onder /beheer/coaching en is er alleen als
 // er iets te tonen valt.
 
-const KAART = "rounded-2xl border border-borderc bg-white p-5";
+const KAART = "rounded-2xl border border-borderc bg-surface p-5";
 
 const ICOON = {
   plan: "◉", plan_af: "⏹", doorverwezen: "→", week_open: "▸", week_af: "✔",
@@ -26,7 +26,7 @@ const ICOON = {
 };
 
 function zin(r, naam) {
-  const wie = <Link href={`/beheer/leden/${r.memberId}`} className="font-bold text-brand hover:underline">{naam}</Link>;
+  const wie = <Link href={`/beheer/leden/${r.memberId}`} className="font-bold text-ink hover:underline">{naam}</Link>;
   switch (r.soort) {
     case "plan": return <>Plan gemaakt voor {wie} — {r.weken} weken, {r.doel}</>;
     case "plan_af": return <>Plan afgerond — {wie}, {r.weken} weken uit</>;
@@ -34,12 +34,12 @@ function zin(r, naam) {
     case "week_open": return <>Week {r.weeknummer} open voor {wie}{r.besluit ? ` (${r.besluit})` : ""}</>;
     case "week_af": return <>Week {r.weeknummer} afgerond — {wie}</>;
     case "sessie": return <>Sessie {r.volgnummer} afgevinkt — {wie}{r.oordeel ? ` · ${r.oordeel.replace("_", " ")}` : ""}</>;
-    case "checkin": return <>Check-in ingevuld — {wie}, week {r.weeknummer} <span className="text-brand/35">(inhoud niet getoond)</span></>;
+    case "checkin": return <>Check-in ingevuld — {wie}, week {r.weeknummer} <span className="text-ink/35">(inhoud niet getoond)</span></>;
     case "menu": return <>Weekmenu geleverd — {wie}, week {r.weeknummer}</>;
     case "mijlpaal": return <>Mijlpaal — {wie}: {r.titel}</>;
     case "geweigerd": return <>Geweigerd door de dagrem — {wie}: {r.fout}</>;
     case "aanroep":
-      return <>Aanroep &lsquo;{r.aanroepSoort}&rsquo; voor {wie}{r.probleem ? <span className="text-amber-700"> — {resultaatTekst(r.resultaat) || (r.ok ? "niets opgeleverd" : `mislukt: ${String(r.fout || "").slice(0, 120)}`)}</span> : r.resultaat == null ? <span className="text-brand/35"> — resultaat onbekend (van vóór dit logboek)</span> : ` — ${resultaatTekst(r.resultaat)}`}</>;
+      return <>Aanroep &lsquo;{r.aanroepSoort}&rsquo; voor {wie}{r.probleem ? <span className="text-amber-700"> — {resultaatTekst(r.resultaat) || (r.ok ? "niets opgeleverd" : `mislukt: ${String(r.fout || "").slice(0, 120)}`)}</span> : r.resultaat == null ? <span className="text-ink/35"> — resultaat onbekend (van vóór dit logboek)</span> : ` — ${resultaatTekst(r.resultaat)}`}</>;
     default: return <>{r.soort} — {wie}</>;
   }
 }
@@ -63,7 +63,7 @@ export default async function Logboek({ searchParams }) {
     .order("created_at", { ascending: false }).limit(1).maybeSingle();
 
   const chip = (aan) => "rounded-full px-3.5 py-1.5 text-xs font-bold transition " +
-    (aan ? "bg-brand text-white" : "bg-white text-brand/60 ring-1 ring-borderc hover:text-brand");
+    (aan ? "bg-brand text-white" : "bg-surface text-ink/60 ring-1 ring-borderc hover:text-ink");
   const q = (extra) => {
     const p = new URLSearchParams();
     if (dagen !== 30) p.set("dagen", String(dagen));
@@ -76,14 +76,14 @@ export default async function Logboek({ searchParams }) {
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8">
-      <Link href="/beheer/coaching" className="text-xs font-bold text-brand/50 hover:underline">← AI-coach</Link>
-      <h1 className="mt-2 font-display text-2xl font-black text-brand">Logboek AI-coach</h1>
+      <Link href="/beheer/coaching" className="text-xs font-bold text-ink/50 hover:underline">← AI-coach</Link>
+      <h1 className="mt-2 font-display text-2xl font-black text-ink">Logboek AI-coach</h1>
       <p className="mt-1 text-sm text-ink-soft">
         Alles wat de coach deed, nieuwste eerst. Wat het kostte staat erbij; wat erin stond niet.
       </p>
 
       {/* De zondagcron. Zonder deze regel is "er gebeurt niets" niet te onderscheiden van "hij draait niet". */}
-      <div className={"mt-5 rounded-2xl px-4 py-3 text-sm " + (!cron ? "bg-paper text-ink-soft" : cron.detail?.status === "bezig" ? "bg-amber-50 text-amber-800" : cron.ok ? "bg-accent/10 text-brand" : "bg-amber-50 text-amber-800")}>
+      <div className={"mt-5 rounded-2xl px-4 py-3 text-sm " + (!cron ? "bg-paper text-ink-soft" : cron.detail?.status === "bezig" ? "bg-amber-50 text-amber-800" : cron.ok ? "bg-accent/10 text-ink" : "bg-amber-50 text-amber-800")}>
         {!cron ? "Zondagcron: nog nooit gedraaid." : cron.detail?.status === "bezig"
           ? <>Zondagrun van {fmtDay(cron.created_at)} is nooit afgerond — de functie werd afgekapt vóór ze klaar was.</>
           : cron.detail?.uit ? <>Laatste zondagrun ({fmtDay(cron.created_at)}): de coach stond uit.</>
@@ -92,19 +92,19 @@ export default async function Logboek({ searchParams }) {
 
       <section className="mt-4 grid gap-3 sm:grid-cols-3">
         <div className={KAART}>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Kost</p>
-          <p className="mt-1 font-display text-2xl font-black text-brand">{euroVan(telling.micro)}</p>
-          <p className="mt-1 text-xs text-brand/45">over {dagen} dagen</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Kost</p>
+          <p className="mt-1 font-display text-2xl font-black text-ink">{euroVan(telling.micro)}</p>
+          <p className="mt-1 text-xs text-ink/45">over {dagen} dagen</p>
         </div>
         <div className={KAART}>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Tokens uit</p>
-          <p className="mt-1 font-display text-2xl font-black text-brand">{telling.uitTokens.toLocaleString("nl-BE")}</p>
-          <p className="mt-1 text-xs text-brand/45">de uitvoer betaalt het meeste</p>
+          <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Tokens uit</p>
+          <p className="mt-1 font-display text-2xl font-black text-ink">{telling.uitTokens.toLocaleString("nl-BE")}</p>
+          <p className="mt-1 text-xs text-ink/45">de uitvoer betaalt het meeste</p>
         </div>
         <div className={KAART}>
-          <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Zonder resultaat</p>
-          <p className={"mt-1 font-display text-2xl font-black " + (telling.problemen ? "text-amber-700" : "text-brand")}>{telling.problemen}</p>
-          <p className="mt-1 text-xs text-brand/45">
+          <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Zonder resultaat</p>
+          <p className={"mt-1 font-display text-2xl font-black " + (telling.problemen ? "text-amber-700" : "text-ink")}>{telling.problemen}</p>
+          <p className="mt-1 text-xs text-ink/45">
             {telling.problemen ? `${euroVan(telling.problemenMicro)} weg` : "alles leverde iets op"}
             {telling.onbekend ? ` · ${telling.onbekend} onbekend` : ""}
           </p>
@@ -130,19 +130,19 @@ export default async function Logboek({ searchParams }) {
           {dagenLijst.map((d) => (
             <section key={d.dag}>
               <div className="flex items-baseline justify-between border-b border-borderc pb-1.5">
-                <h2 className="text-sm font-black text-brand">{fmtDay(d.regels[0].tijd)}</h2>
+                <h2 className="text-sm font-black text-ink">{fmtDay(d.regels[0].tijd)}</h2>
                 {d.micro > 0 && (
-                  <span className="text-xs text-brand/45">{euroVan(d.micro)} · {d.aanroepen} aanroep{d.aanroepen === 1 ? "" : "en"}</span>
+                  <span className="text-xs text-ink/45">{euroVan(d.micro)} · {d.aanroepen} aanroep{d.aanroepen === 1 ? "" : "en"}</span>
                 )}
               </div>
               <ul className="mt-2 space-y-1.5">
                 {d.regels.map((r, i) => (
                   <li key={`${r.soort}-${r.tijd}-${i}`} className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 py-1 text-sm">
-                    <span className="w-10 shrink-0 tabular-nums text-xs text-brand/35">{fmtTime(r.tijd)}</span>
-                    <span className={"w-4 shrink-0 text-center " + (r.probleem ? "text-amber-600" : "text-brand/35")}>{ICOON[r.soort] || "·"}</span>
+                    <span className="w-10 shrink-0 tabular-nums text-xs text-ink/35">{fmtTime(r.tijd)}</span>
+                    <span className={"w-4 shrink-0 text-center " + (r.probleem ? "text-amber-600" : "text-ink/35")}>{ICOON[r.soort] || "·"}</span>
                     <span className="min-w-0 flex-1 text-ink-soft">{zin(r, namen.get(r.memberId) || "Onbekend lid")}</span>
                     {r.soort === "aanroep" && (
-                      <span className="shrink-0 text-xs tabular-nums text-brand/35">
+                      <span className="shrink-0 text-xs tabular-nums text-ink/35">
                         {r.model?.replace("anthropic/", "")} · {r.inTokens}/{r.uitTokens} · {euroVan(r.micro)}
                       </span>
                     )}
@@ -154,7 +154,7 @@ export default async function Logboek({ searchParams }) {
         </div>
       )}
 
-      <p className="mt-8 text-xs leading-relaxed text-brand/40">
+      <p className="mt-8 text-xs leading-relaxed text-ink/40">
         Bedragen omgerekend aan een vaste koers van 0,92 (handmatig, 10-09-2026) — ter indicatie, geen
         boekhouding. Aanroepen van vóór 11-09 dragen geen uitkomst en tellen daarom als &ldquo;onbekend&rdquo;
         in plaats van als verspilling: achteraf raden welke ervan iets opleverde, is precies de gok

@@ -36,8 +36,8 @@ export default function ExerciseActions({ exerciseId, exerciseName }) {
   if (!ctx.ingelogd) {
     return (
       <div className="mt-5 rounded-2xl border-2 border-dashed border-borderc bg-paper/60 p-4 text-center">
-        <p className="text-sm font-bold text-brand">Bewaar deze oefening of log je sets</p>
-        <p className="mt-1 text-xs text-brand/55">Met een gratis account hou je je favorieten en je voortgang bij.</p>
+        <p className="text-sm font-bold text-ink">Bewaar deze oefening of log je sets</p>
+        <p className="mt-1 text-xs text-ink/55">Met een gratis account hou je je favorieten en je voortgang bij.</p>
         <Link href="/login" className="mt-3 inline-block rounded-full bg-accent px-5 py-2 text-sm font-black text-brand transition hover:opacity-90">Inloggen of account maken →</Link>
       </div>
     );
@@ -61,11 +61,11 @@ export default function ExerciseActions({ exerciseId, exerciseName }) {
           onClick={doeFavoriet}
           disabled={pending}
           aria-pressed={fav}
-          className={"rounded-full border-2 px-4 py-2 text-sm font-bold transition disabled:opacity-50 " + (fav ? "border-accent bg-accent/10 text-accentdark" : "border-borderc text-brand hover:border-accent")}
+          className={"rounded-full border-2 px-4 py-2 text-sm font-bold transition disabled:opacity-50 " + (fav ? "border-accent bg-accent/10 text-accentdark" : "border-borderc text-ink hover:border-accent")}
         >
           {fav ? "❤ Bewaard" : "♡ Bewaar"}
         </button>
-        <button type="button" onClick={() => setOpen(open === "plan" ? null : "plan")} className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-accent">
+        <button type="button" onClick={() => setOpen(open === "plan" ? null : "plan")} className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-ink transition hover:border-accent">
           ＋ In mijn schema
         </button>
         <button type="button" onClick={() => setOpen(open === "log" ? null : "log")} className="rounded-full bg-accent px-4 py-2 text-sm font-black text-brand transition hover:opacity-90">
@@ -96,7 +96,7 @@ function PlanKiezer({ exerciseId, dagen, onKlaar }) {
     <div className="mt-3 rounded-2xl bg-paper p-4">
       {dagen.length === 0 ? (
         <>
-          <p className="text-sm text-brand/70">Je hebt nog geen schema. We maken er meteen één voor je aan.</p>
+          <p className="text-sm text-ink/70">Je hebt nog geen schema. We maken er meteen één voor je aan.</p>
           <button onClick={() => voeg(null)} disabled={pending} className="mt-2 rounded-full bg-brand px-4 py-2 text-sm font-bold text-white disabled:opacity-50">
             {pending ? "Bezig…" : "Maak schema + voeg toe"}
           </button>
@@ -106,7 +106,7 @@ function PlanKiezer({ exerciseId, dagen, onKlaar }) {
           <p className="text-xs font-bold uppercase tracking-wide text-lav">Aan welke dag?</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {dagen.map((d) => (
-              <button key={d.id} onClick={() => voeg(d.id)} disabled={pending} className="rounded-full border-2 border-borderc bg-white px-4 py-2 text-sm font-bold text-brand transition hover:border-accent disabled:opacity-50">
+              <button key={d.id} onClick={() => voeg(d.id)} disabled={pending} className="rounded-full border-2 border-borderc bg-surface px-4 py-2 text-sm font-bold text-ink transition hover:border-accent disabled:opacity-50">
                 {d.planNaam} · {d.naam}
               </button>
             ))}
@@ -141,16 +141,16 @@ function LosLoggen({ exerciseId, exerciseName, onKlaar }) {
       <p className="text-xs font-bold uppercase tracking-wide text-lav">{exerciseName}</p>
       {/* minmax(0,1fr): een 1fr-kolom krimpt niet onder de eigen breedte van een invoerveld en
           duwt op een telefoon de laatste kolom buiten beeld — precies de bug van 16 augustus. */}
-      <div className="mt-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-brand/40">
+      <div className="mt-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 text-[11px] font-bold uppercase tracking-wide text-ink/40">
         <span>Set</span><span>Reps</span><span>Kg</span><span />
       </div>
       {rows.map((row, i) => (
         <div key={i} className="mt-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2">
-          <span className="text-center font-black text-brand/50">{i + 1}</span>
-          <input inputMode="numeric" value={row.reps} onChange={(e) => zet(i, "reps", e.target.value)} placeholder="reps" className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-brand" />
-          <input inputMode="decimal" value={row.weight_kg} onChange={(e) => zet(i, "weight_kg", e.target.value)} placeholder="–" className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-brand" />
+          <span className="text-center font-black text-ink/50">{i + 1}</span>
+          <input inputMode="numeric" value={row.reps} onChange={(e) => zet(i, "reps", e.target.value)} placeholder="reps" className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-ink" />
+          <input inputMode="decimal" value={row.weight_kg} onChange={(e) => zet(i, "weight_kg", e.target.value)} placeholder="–" className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-ink" />
           {rows.length > 1
-            ? <button onClick={() => setRows((r) => r.filter((_, j) => j !== i))} aria-label={`Verwijder set ${i + 1}`} className="rounded-lg py-2 text-lg leading-none text-brand/30 transition hover:text-red-500">✕</button>
+            ? <button onClick={() => setRows((r) => r.filter((_, j) => j !== i))} aria-label={`Verwijder set ${i + 1}`} className="rounded-lg py-2 text-lg leading-none text-ink/30 transition hover:text-red-500">✕</button>
             : <span />}
         </div>
       ))}

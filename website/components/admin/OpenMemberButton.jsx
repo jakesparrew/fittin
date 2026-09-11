@@ -5,7 +5,7 @@ export default function OpenMemberButton({ id, name, email }) {
   return (
     <button
       onClick={() => window.dispatchEvent(new CustomEvent("fittin:open-member", { detail: { id } }))}
-      className="text-left font-bold text-brand transition hover:text-accentdark"
+      className="text-left font-bold text-ink transition hover:text-accentdark"
     >
       {name || "—"}
     </button>

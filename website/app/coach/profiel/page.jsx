@@ -20,35 +20,35 @@ export default async function CoachProfiel() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/coach" className="text-sm font-semibold text-brand/50 hover:text-brand">← Dashboard</Link>
+      <Link href="/coach" className="text-sm font-semibold text-ink/50 hover:text-ink">← Dashboard</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-black text-brand">Mijn profiel</h1>
-        {me?.coach_public && <Link href="/coaches" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-brand transition hover:bg-accent/15">Bekijk op de site →</Link>}
+        <h1 className="text-3xl font-black text-ink">Mijn profiel</h1>
+        {me?.coach_public && <Link href="/coaches" className="rounded-full bg-paper px-4 py-2 text-sm font-bold text-ink transition hover:bg-accent/15">Bekijk op de site →</Link>}
       </div>
-      <p className="mt-1 text-sm text-brand/50">Dit is wat (toekomstige) leden zien op de Fittin&rsquo;-site. Zet het zichtbaar als je klaar bent.</p>
+      <p className="mt-1 text-sm text-ink/50">Dit is wat (toekomstige) leden zien op de Fittin&rsquo;-site. Zet het zichtbaar als je klaar bent.</p>
 
       {/* Photo upload — compressed in the browser before upload */}
       <div className="mt-6 max-w-2xl">
         <PhotoUpload currentUrl={me?.coach_photo_url} name={me?.full_name} />
       </div>
 
-      <ActionForm action={saveCoachProfile} success="Profiel opgeslagen ✓" className="mt-4 max-w-2xl space-y-4 rounded-3xl border border-borderc bg-white p-6">
-        <label className="flex items-center gap-2 rounded-xl bg-paper p-3 text-sm font-bold text-brand">
+      <ActionForm action={saveCoachProfile} success="Profiel opgeslagen ✓" className="mt-4 max-w-2xl space-y-4 rounded-3xl border border-borderc bg-surface p-6">
+        <label className="flex items-center gap-2 rounded-xl bg-paper p-3 text-sm font-bold text-ink">
           <input type="checkbox" name="public" defaultChecked={me?.coach_public} className="h-4 w-4 accent-[#5fda6b]" />
           Toon mijn profiel publiek op fittin.be/coaches
         </label>
         {/* Standaard aan: een coach die nooit iets instelde, staat open voor nieuwe klanten — anders
             zou de intake op de site plots niemand meer voorstellen. Vandaar `?? true`. */}
         <div className="rounded-xl bg-paper p-3">
-          <label className="flex items-center gap-2 text-sm font-bold text-brand">
+          <label className="flex items-center gap-2 text-sm font-bold text-ink">
             <input type="checkbox" name="accepting" defaultChecked={me?.coach_accepting_clients ?? true} className="h-4 w-4 accent-[#5fda6b]" />
             Ik neem nieuwe klanten aan
           </label>
-          <p className="mt-1 text-xs text-brand/50">Staat dit uit, dan verdwijn je uit de keuzelijst bij een gratis intake op de site en kan niemand je nog aanvragen. Je bestaande clienten en sessies blijven gewoon.</p>
+          <p className="mt-1 text-xs text-ink/50">Staat dit uit, dan verdwijn je uit de keuzelijst bij een gratis intake op de site en kan niemand je nog aanvragen. Je bestaande clienten en sessies blijven gewoon.</p>
         </div>
         <Field name="full_name" label="Naam" defaultValue={me?.full_name} placeholder="Voornaam Naam" />
         <div>
-          <label className="mb-1.5 block text-sm font-bold text-brand">Specialiteit</label>
+          <label className="mb-1.5 block text-sm font-bold text-ink">Specialiteit</label>
           <SpecialtyPicker name="specialty" defaultValue={me?.coach_specialty || ""} />
         </div>
         <div>
@@ -58,7 +58,7 @@ export default async function CoachProfiel() {
             <Field name="pt2_eur" label="1-op-2 (€ pp)" defaultValue={eur(me?.coach_pt2_price_cents)} placeholder="bv. 40" />
             <Field name="pt3_eur" label="1-op-3 (€ pp)" defaultValue={eur(me?.coach_pt3_price_cents)} placeholder="bv. 30" />
           </div>
-          <p className="mt-1 text-xs text-brand/40">Leeg = niet aangeboden. Deze tarieven verschijnen op je profiel én in de boeking (1-op-2/1-op-3 zijn prijs per persoon).</p>
+          <p className="mt-1 text-xs text-ink/40">Leeg = niet aangeboden. Deze tarieven verschijnen op je profiel én in de boeking (1-op-2/1-op-3 zijn prijs per persoon).</p>
         </div>
         <label className="block">
           <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Over mij</span>
@@ -70,7 +70,7 @@ export default async function CoachProfiel() {
         </label>
         <div className="rounded-xl border border-borderc bg-paper/50 p-4">
           <p className="text-xs font-bold uppercase tracking-wide text-lav">Facturatiegegevens (voor je facturen)</p>
-          <p className="mt-1 text-xs text-brand/50">Nodig voor de factuur van je sessietegoed-aankopen (B2B). Vul je bedrijfsnaam, btw-nummer en adres in zodat je factuur correct is volgens de Belgische regels.</p>
+          <p className="mt-1 text-xs text-ink/50">Nodig voor de factuur van je sessietegoed-aankopen (B2B). Vul je bedrijfsnaam, btw-nummer en adres in zodat je factuur correct is volgens de Belgische regels.</p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <Field name="bill_company" label="Bedrijfsnaam" defaultValue={me?.bill_company} placeholder="bv. Coaching Jan BV" />
             <Field name="bill_vat" label="Btw-nummer" defaultValue={me?.bill_vat} placeholder="BE 0123.456.789" />

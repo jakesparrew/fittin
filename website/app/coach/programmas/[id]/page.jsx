@@ -70,9 +70,9 @@ export default async function CoachProgramBuilder({ params }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <Link href="/coach/programmas" className="text-sm font-semibold text-brand/50 hover:text-brand">← Programma's</Link>
+      <Link href="/coach/programmas" className="text-sm font-semibold text-ink/50 hover:text-ink">← Programma's</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-black text-brand">{program.name}</h1>
+        <h1 className="text-3xl font-black text-ink">{program.name}</h1>
         <form action={coachDeleteProgram}>
           <input type="hidden" name="id" value={program.id} />
           <ConfirmSubmit message={program.member_id ? "Dit programma verwijderen? De client verliest dit schema onder 'Training'." : "Dit sjabloon verwijderen?"} className="text-xs font-bold text-red-500 hover:underline">Programma verwijderen</ConfirmSubmit>
@@ -80,7 +80,7 @@ export default async function CoachProgramBuilder({ params }) {
       </div>
 
       {/* Assign to one of my clients (a copy is made — the template stays reusable) */}
-      <ActionForm action={coachAssignProgram} success="Programma toegewezen ✓" className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-white p-4">
+      <ActionForm action={coachAssignProgram} success="Programma toegewezen ✓" className="mt-4 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-surface p-4">
         <input type="hidden" name="programId" value={program.id} />
         <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Toewijzen aan client</span>
@@ -88,7 +88,7 @@ export default async function CoachProgramBuilder({ params }) {
         </label>
         <ConfirmSubmit message="Programma toewijzen? De gekozen client krijgt een kopie onder 'Training' en een melding." className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white">Opslaan</ConfirmSubmit>
         {program.member_id && (
-          <span className="ml-auto text-sm font-semibold text-brand/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
+          <span className="ml-auto text-sm font-semibold text-ink/60">Voortgang: {weekActive} actieve {weekActive === 1 ? "dag" : "dagen"} (7d)</span>
         )}
       </ActionForm>
 

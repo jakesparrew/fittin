@@ -10,9 +10,9 @@ import { STATUS_LABEL, STATUS_TOON, BRON_LABEL, euroTekst, beurtTekst, beurtenVo
 // waar namen in staan, moet meteen reageren. Een zoekopdracht die een paginabezoek kost, gebruikt
 // niemand twee keer. De rijen komen kant-en-klaar uit de server; hier gebeurt alleen filteren.
 
-const invoer = "rounded-lg border-2 border-borderc bg-white px-3 py-2 text-sm text-brand outline-none transition focus:border-accent";
+const invoer = "rounded-lg border-2 border-borderc bg-surface px-3 py-2 text-sm text-ink outline-none transition focus:border-accent";
 const knopGroen = "rounded-full bg-accent px-4 py-2 text-xs font-black text-brand transition hover:opacity-90";
-const knopWit = "rounded-full border-2 border-borderc bg-white px-4 py-2 text-xs font-bold text-brand transition hover:border-lav";
+const knopWit = "rounded-full border-2 border-borderc bg-surface px-4 py-2 text-xs font-bold text-ink transition hover:border-lav";
 const komma = (cents) => String(cents / 100).replace(".", ",");
 const datum = (iso) => (iso ? new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short", year: "numeric" }).format(new Date(iso)) : "—");
 
@@ -49,7 +49,7 @@ export default function AanbrengDoorgaven({ rijen }) {
         <div className="flex flex-wrap gap-1.5">
           {TABS.map((t) => (
             <button key={t.v} type="button" onClick={() => setTab(t.v)}
-              className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (tab === t.v ? "bg-brand text-white" : "bg-paper text-brand/60 hover:bg-accent/15")}>
+              className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (tab === t.v ? "bg-brand text-white" : "bg-paper text-ink/60 hover:bg-accent/15")}>
               {t.l} {tellers[t.v] > 0 && <span className="tabular-nums">({tellers[t.v]})</span>}
             </button>
           ))}
@@ -59,7 +59,7 @@ export default function AanbrengDoorgaven({ rijen }) {
       </div>
 
       {zichtbaar.length === 0 ? (
-        <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/55">
+        <p className="mt-3 rounded-2xl border border-borderc bg-surface p-5 text-sm text-ink/55">
           {zoek.trim()
             ? `Niets gevonden voor "${zoek.trim()}".`
             : tab === "lopend"
@@ -69,7 +69,7 @@ export default function AanbrengDoorgaven({ rijen }) {
                 : "Nog niets gestopt of geweigerd."}
         </p>
       ) : (
-        <ul className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-white">
+        <ul className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-surface">
           {zichtbaar.map((r) => {
             const uit = openId === r.id;
             const actief = r.status === "voorgesteld" || r.status === "aanvaard";
@@ -77,33 +77,33 @@ export default function AanbrengDoorgaven({ rijen }) {
               <li key={r.id} className="border-b border-borderc last:border-0">
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-4">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-black text-brand">{r.client_name || r.client_email}</p>
-                    <p className="truncate text-xs text-brand/50">
+                    <p className="truncate font-black text-ink">{r.client_name || r.client_email}</p>
+                    <p className="truncate text-xs text-ink/50">
                       {r.client_name ? `${r.client_email} · ` : ""}naar {r.coachNaam}
                       {r.client_id ? "" : " · nog geen account"}
                     </p>
                   </div>
 
-                  <span className={"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold " + (STATUS_TOON[r.status] || "bg-paper text-brand/50")}>
+                  <span className={"shrink-0 rounded-full px-2.5 py-0.5 text-[11px] font-bold " + (STATUS_TOON[r.status] || "bg-paper text-ink/50")}>
                     {STATUS_LABEL[r.status] || r.status}
                   </span>
 
                   <div className="shrink-0 text-right">
-                    <p className="text-sm font-bold text-brand">{euroTekst(r.fee_cents)}<span className="font-normal text-brand/40"> / sessie</span></p>
-                    <p className="text-xs text-brand/45">
+                    <p className="text-sm font-bold text-ink">{euroTekst(r.fee_cents)}<span className="font-normal text-ink/40"> / sessie</span></p>
+                    <p className="text-xs text-ink/45">
                       {r.sessies} sessie{r.sessies === 1 ? "" : "s"} · {euroTekst(centsVoor(r.beurten))} verdiend
                     </p>
                   </div>
 
                   <button type="button" onClick={() => setOpenId(uit ? null : r.id)}
-                    className="shrink-0 rounded-full border-2 border-borderc bg-white px-3.5 py-1.5 text-xs font-bold text-brand/70 transition hover:border-lav">
+                    className="shrink-0 rounded-full border-2 border-borderc bg-surface px-3.5 py-1.5 text-xs font-bold text-ink/70 transition hover:border-lav">
                     {uit ? "Sluiten" : "Beheren"}
                   </button>
                 </div>
 
                 {uit && (
                   <div className="anim-in border-t border-borderc bg-paper/60 px-5 py-4">
-                    <dl className="grid gap-x-8 gap-y-1 text-xs leading-relaxed text-brand/60 sm:grid-cols-2 lg:grid-cols-4">
+                    <dl className="grid gap-x-8 gap-y-1 text-xs leading-relaxed text-ink/60 sm:grid-cols-2 lg:grid-cols-4">
                       <Feit label="Doorgegeven" waarde={datum(r.referred_at)} />
                       <Feit label="Bron" waarde={BRON_LABEL[r.source] || r.source} />
                       <Feit label="Aanvaard" waarde={r.accepted_at ? datum(r.accepted_at) : "nog niet"} />
@@ -124,7 +124,7 @@ export default function AanbrengDoorgaven({ rijen }) {
                               <Veld label="Max maanden" naam="monthsCap" waarde={r.months_cap ?? ""} plaats="∞" />
                               <button className={knopGroen}>Bewaren</button>
                             </div>
-                            <p className="mt-1.5 text-[11px] text-brand/45">Geldt vanaf nu — al aangerekende beurten blijven staan.</p>
+                            <p className="mt-1.5 text-[11px] text-ink/45">Geldt vanaf nu — al aangerekende beurten blijven staan.</p>
                           </ActionForm>
                         )}
 
@@ -136,7 +136,7 @@ export default function AanbrengDoorgaven({ rijen }) {
                               <Veld label="Reden" naam="reason" plaats="Klant traint niet meer" breed />
                               <button className={knopWit}>Beëindigen</button>
                             </div>
-                            <p className="mt-1.5 text-[11px] text-brand/45">Nieuwe sessies met deze klant kosten de coach dan niets extra meer.</p>
+                            <p className="mt-1.5 text-[11px] text-ink/45">Nieuwe sessies met deze klant kosten de coach dan niets extra meer.</p>
                           </ActionForm>
                         )}
 
@@ -148,7 +148,7 @@ export default function AanbrengDoorgaven({ rijen }) {
                               <Veld label="Beurten terug" naam="beurten" plaats="0,5" />
                               <button className={knopWit}>Terugzetten</button>
                             </div>
-                            <p className="mt-1.5 text-[11px] text-brand/45">
+                            <p className="mt-1.5 text-[11px] text-ink/45">
                               Tot nu aangerekend: {beurtTekst(r.beurten)} beurt. De aanrekening blijft staan, zodat je later ziet wat er gebeurde.
                             </p>
                           </ActionForm>
@@ -169,7 +169,7 @@ export default function AanbrengDoorgaven({ rijen }) {
 function Feit({ label, waarde, breed }) {
   return (
     <div className={breed ? "sm:col-span-2 lg:col-span-4" : ""}>
-      <dt className="inline font-bold text-brand/45">{label}: </dt>
+      <dt className="inline font-bold text-ink/45">{label}: </dt>
       <dd className="inline">{waarde}</dd>
     </div>
   );
@@ -178,7 +178,7 @@ function Feit({ label, waarde, breed }) {
 function Veld({ label, naam, waarde, plaats, breed }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-[11px] font-semibold text-brand/55">{label}</span>
+      <span className="mb-1 block text-[11px] font-semibold text-ink/55">{label}</span>
       <input name={naam} defaultValue={waarde} placeholder={plaats} inputMode={naam === "reason" ? undefined : "decimal"}
         className={invoer + (breed ? " w-52" : " w-24")} />
     </label>

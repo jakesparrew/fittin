@@ -27,15 +27,15 @@ export function SendProgress({ id, initial }) {
   const pctv = total > 0 ? Math.min(100, Math.round((sent / total) * 100)) : 0;
   const sending = c.status === "sending";
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-6">
+    <div className="rounded-2xl border border-borderc bg-surface p-6">
       <div className="flex items-center justify-between">
-        <h2 className="font-black text-brand">{sending ? "Aan het verzenden…" : "Verzonden ✓"}</h2>
-        <span className="text-sm font-bold text-brand">{sent} / {total}</span>
+        <h2 className="font-black text-ink">{sending ? "Aan het verzenden…" : "Verzonden ✓"}</h2>
+        <span className="text-sm font-bold text-ink">{sent} / {total}</span>
       </div>
       <div className="mt-3 h-3 w-full overflow-hidden rounded-full bg-paper">
         <div className={"h-full rounded-full bg-accent transition-all duration-500 ease-uit" + (sending ? " animate-pulse" : "")} style={{ width: pctv + "%" }} />
       </div>
-      <p className="mt-2 text-xs text-brand/50">
+      <p className="mt-2 text-xs text-ink/50">
         {sending ? "De nieuwsbrief wordt in batches verstuurd in de achtergrond — je kan deze pagina sluiten." : "Verzending afgerond."}
       </p>
       {c.failed > 0 && (

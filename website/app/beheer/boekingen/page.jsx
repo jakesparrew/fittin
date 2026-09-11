@@ -94,17 +94,17 @@ export default async function Boekingen({ searchParams }) {
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-3xl font-black text-brand">Boekingen</h1>
+        <h1 className="text-3xl font-black text-ink">Boekingen</h1>
         <div className="flex items-center gap-2 text-sm font-bold">
           <Link href={`/beheer/boekingen?w=${weekOffset - 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">←</Link>
-          <span className="text-brand/60">{days[0].dayMonth} – {days[6].dayMonth}</span>
+          <span className="text-ink/60">{days[0].dayMonth} – {days[6].dayMonth}</span>
           <Link href={`/beheer/boekingen?w=${weekOffset + 1}`} className="rounded-full border-2 border-borderc px-4 py-1.5 hover:border-lav">→</Link>
         </div>
       </header>
 
       {/* Create booking on behalf */}
       <div className="mt-6">
-        <ActionForm action={adminCreateBooking} success="Boeking aangemaakt ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-white p-4">
+        <ActionForm action={adminCreateBooking} success="Boeking aangemaakt ✓" className="flex flex-wrap items-end gap-2 rounded-2xl border border-borderc bg-surface p-4">
           <Lbl t="Boeking voor lid">
             <SearchSelect name="memberId" required placeholder="Kies lid…" options={(members || []).map((m) => ({ value: m.id, label: m.full_name || m.email }))} />
           </Lbl>
@@ -119,7 +119,7 @@ export default async function Boekingen({ searchParams }) {
           <PayModePicker className="max-w-xs" />
           {/* Coach is rarely relevant for a normal gym session → opt-in toggle instead of an always-visible field. */}
           <details className="pb-1">
-            <summary className="cursor-pointer list-none pb-1 text-[10px] font-bold uppercase tracking-wide text-lav transition hover:text-brand">+ Coach</summary>
+            <summary className="cursor-pointer list-none pb-1 text-[10px] font-bold uppercase tracking-wide text-lav transition hover:text-ink">+ Coach</summary>
             <SearchSelect name="coachId" placeholder="Geen coach" options={coachOpts.map((c) => ({ value: c.id, label: c.label }))} />
           </details>
           <SubmitButton className="rounded-full bg-accent px-5 py-2 text-sm font-bold text-brand">+ Boeken</SubmitButton>

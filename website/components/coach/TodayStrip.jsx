@@ -11,13 +11,13 @@ export default function TodayStrip({ sessions = [], next = null }) {
 
   if (!sessions.length) {
     return (
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white px-5 py-3.5">
-        <p className="text-sm text-brand/60">
-          Geen sessies vandaag. Je volgende: <b className="capitalize text-brand">{next.when}</b> met <b className="text-brand">{next.who}</b>.
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-surface px-5 py-3.5">
+        <p className="text-sm text-ink/60">
+          Geen sessies vandaag. Je volgende: <b className="capitalize text-ink">{next.when}</b> met <b className="text-ink">{next.who}</b>.
         </p>
         <div className="flex items-center gap-2">
           {next.shareText && <ShareSession text={next.shareText} />}
-          <a href="#boeken" className="rounded-full bg-paper px-4 py-1.5 text-xs font-bold text-brand transition hover:bg-accent/15">Sessie boeken</a>
+          <a href="#boeken" className="rounded-full bg-paper px-4 py-1.5 text-xs font-bold text-ink transition hover:bg-accent/15">Sessie boeken</a>
         </div>
       </div>
     );
@@ -39,7 +39,7 @@ export default function TodayStrip({ sessions = [], next = null }) {
               <p className="truncate font-bold">{s.who}</p>
               <p className="truncate text-xs text-lav">{s.sub}</p>
             </div>
-            <span className={"rounded-full px-3 py-1 text-[11px] font-black " + (s.live ? "bg-accent text-brand" : s.done ? "bg-white/10 text-lav" : "bg-white/10 text-white")}>
+            <span className={"rounded-full px-3 py-1 text-[11px] font-black " + (s.live ? "bg-accent text-brand" : s.done ? "bg-surface/10 text-lav" : "bg-surface/10 text-white")}>
               {s.state}
             </span>
             {s.shareText && !s.done && <ShareSession text={s.shareText} />}
@@ -47,7 +47,7 @@ export default function TodayStrip({ sessions = [], next = null }) {
         ))}
       </div>
       {sessions.some((s) => s.needsClient) && (
-        <p className="bg-white/5 px-5 py-2.5 text-xs text-lav">
+        <p className="bg-surface/5 px-5 py-2.5 text-xs text-lav">
           Eén of meer slots staan nog zonder client. Voeg de naam toe bij <b className="text-white">Aankomende sessies</b> — dan weet de gym wie er binnenkomt.
         </p>
       )}

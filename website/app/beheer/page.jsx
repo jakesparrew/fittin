@@ -280,24 +280,24 @@ export default async function BeheerDashboard() {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">Dashboard</h1>
-          <p className="mt-1 text-sm capitalize text-brand/50">{dateLabel}</p>
+          <h1 className="text-3xl font-black text-ink">Dashboard</h1>
+          <p className="mt-1 text-sm capitalize text-ink/50">{dateLabel}</p>
         </div>
-        <p className="text-sm text-brand/50">{gym?.name} · {gym?.open_hour}:00–{gym?.close_hour}:00</p>
+        <p className="text-sm text-ink/50">{gym?.name} · {gym?.open_hour}:00–{gym?.close_hour}:00</p>
       </header>
 
       {/* ============ ACTIE NODIG — persoonsgericht, bovenaan ============ */}
       <section className="mt-6">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Actie nodig{personActions.length ? ` · ${personActions.length}` : ""}</h2>
         {personActions.length === 0 ? (
-          <p className="mt-3 rounded-2xl border border-borderc bg-white p-5 text-sm text-brand/50">Niets dringends — alle abo's betalen en er zijn geen opzeggingen. 🎉</p>
+          <p className="mt-3 rounded-2xl border border-borderc bg-surface p-5 text-sm text-ink/50">Niets dringends — alle abo's betalen en er zijn geen opzeggingen. 🎉</p>
         ) : (
           <div className="mt-3 space-y-2">
             {/* Cap at 3 so a long queue never buries the week/month numbers; the rest folds open. */}
             {personActions.slice(0, 3).map((a, i) => <ActionRow key={i} a={a} />)}
             {personActions.length > 3 && (
-              <details className="rounded-2xl border border-borderc bg-white">
-                <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-brand/60 transition hover:text-brand">+ nog {personActions.length - 3} actiepunten — toon alles</summary>
+              <details className="rounded-2xl border border-borderc bg-surface">
+                <summary className="cursor-pointer px-4 py-3 text-sm font-bold text-ink/60 transition hover:text-ink">+ nog {personActions.length - 3} actiepunten — toon alles</summary>
                 <div className="space-y-2 p-3 pt-0">
                   {personActions.slice(3).map((a, i) => <ActionRow key={i} a={a} />)}
                 </div>
@@ -340,15 +340,15 @@ export default async function BeheerDashboard() {
 
       {/* ============ VANDAAG — compact ============ */}
       <div className="mt-8 grid gap-6 lg:grid-cols-3">
-        <section className="rounded-2xl border border-borderc bg-white p-6 lg:col-span-2">
+        <section className="rounded-2xl border border-borderc bg-surface p-6 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-black text-brand">Vandaag in de zaal</h2>
-            <p className="text-xs font-bold text-brand/45">
+            <h2 className="font-black text-ink">Vandaag in de zaal</h2>
+            <p className="text-xs font-bold text-ink/45">
               {today.length} sessies · {euro(revenueToday)} ontvangen{nextUp ? ` · volgende ${tijd(nextUp.starts_at)} (${nextUp.member?.full_name || "Lid"})` : ""} · {memberCount ?? 0} leden
             </p>
           </div>
           {today.length === 0 ? (
-            <p className="mt-4 text-sm text-brand/50">Nog geen boekingen voor vandaag.</p>
+            <p className="mt-4 text-sm text-ink/50">Nog geen boekingen voor vandaag.</p>
           ) : (
             <div className="mt-4 space-y-2">
               {today.map((b, i) => {
@@ -357,10 +357,10 @@ export default async function BeheerDashboard() {
                   <div key={i} className="flex items-center justify-between rounded-xl bg-paper px-4 py-3 text-sm">
                     <div className="flex items-center gap-3">
                       <span className="rounded-md bg-accent px-2 py-0.5 font-black text-brand">{tijd(b.starts_at)}</span>
-                      <span className="font-bold text-brand">{b.member?.full_name || "Lid"}</span>
-                      {b.coach?.full_name && <span className="text-xs text-brand/45">· coach {b.coach.full_name}</span>}
+                      <span className="font-bold text-ink">{b.member?.full_name || "Lid"}</span>
+                      {b.coach?.full_name && <span className="text-xs text-ink/45">· coach {b.coach.full_name}</span>}
                     </div>
-                    <span className="flex items-center gap-2 text-brand/50">
+                    <span className="flex items-center gap-2 text-ink/50">
                       {b.services?.name} · {b.persons}p
                       <span className={"rounded-full px-2 py-0.5 text-[10px] font-black " + (settled ? "bg-accent/15 text-accentdark" : "bg-red-100 text-red-600")}>{settled ? "betaald" : "onbetaald"}</span>
                     </span>
@@ -371,8 +371,8 @@ export default async function BeheerDashboard() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-borderc bg-white p-6">
-          <h2 className="font-black text-brand">Snel beheren</h2>
+        <section className="rounded-2xl border border-borderc bg-surface p-6">
+          <h2 className="font-black text-ink">Snel beheren</h2>
           <div className="mt-4 grid gap-2">
             <QuickLink href="/beheer/boekingen" label="Boekingskalender" />
             <QuickLink href="/beheer/leden" label="Leden & rollen" />
@@ -390,21 +390,21 @@ export default async function BeheerDashboard() {
       <section className="mt-8">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Trend · laatste 12 weken</h2>
         <div className="mt-3 grid gap-4 lg:grid-cols-2">
-          <div className="rounded-2xl border border-borderc bg-white p-5">
-            <p className="text-sm font-black text-brand">Sessies per week</p>
-            <p className="mt-0.5 text-xs text-brand/45">Bevestigde boekingen, maandag tot zondag.</p>
+          <div className="rounded-2xl border border-borderc bg-surface p-5">
+            <p className="text-sm font-black text-ink">Sessies per week</p>
+            <p className="mt-0.5 text-xs text-ink/45">Bevestigde boekingen, maandag tot zondag.</p>
             <div className="mt-3"><TrendLine data={bookingTrend} label="deze week" /></div>
           </div>
-          <div className="rounded-2xl border border-borderc bg-white p-5">
-            <p className="text-sm font-black text-brand">Ontvangen per week</p>
-            <p className="mt-0.5 text-xs text-brand/45">Enkel effectief betaalde bedragen — open posten tellen niet mee.</p>
+          <div className="rounded-2xl border border-borderc bg-surface p-5">
+            <p className="text-sm font-black text-ink">Ontvangen per week</p>
+            <p className="mt-0.5 text-xs text-ink/45">Enkel effectief betaalde bedragen — open posten tellen niet mee.</p>
             <div className="mt-3"><TrendLine data={revenueTrend} label="deze week" format={euro} /></div>
           </div>
         </div>
       </section>
 
       {/* ============ SYSTEEM ============ */}
-      <section className="mt-8 rounded-2xl border border-borderc bg-white p-5">
+      <section className="mt-8 rounded-2xl border border-borderc bg-surface p-5">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Systeem</h2>
         <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
           <Health label="Deurcode-cron" ok={!accessBad} detail={access ? `${accessMin} min geleden` : "nog niet gedraaid"} critical />
@@ -436,13 +436,13 @@ function ActionRow({ a }) {
     <div className={"flex items-start gap-3 rounded-2xl border p-4 " + (a.tone === "warn" ? "border-amber-300 bg-amber-50" : "border-accent/40 bg-accent/5")}>
       <span className="text-xl leading-none">{a.icon}</span>
       <span className="min-w-0 flex-1">
-        <span className="block font-black text-brand">{a.title}</span>
-        <span className="mt-0.5 block text-sm text-brand/60">{a.sub}</span>
+        <span className="block font-black text-ink">{a.title}</span>
+        <span className="mt-0.5 block text-sm text-ink/60">{a.sub}</span>
         {a.memberId && a.acties?.length > 0 && (
           <InsightActions memberId={a.memberId} acties={a.acties} eindDatum={a.eindDatum || null} />
         )}
       </span>
-      <Link href={a.href} aria-label="Open de lijst" className="ml-auto self-center font-black text-brand/30 transition hover:text-brand">→</Link>
+      <Link href={a.href} aria-label="Open de lijst" className="ml-auto self-center font-black text-ink/30 transition hover:text-ink">→</Link>
     </div>
   );
 }
@@ -451,20 +451,20 @@ function BigStat({ label, value, hint, good, warn, href }) {
   const body = (
     <>
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-3xl font-black " + (warn ? "text-amber-600" : good ? "text-accentdark" : "text-brand")}>{value}</p>
-      {hint && <p className={"mt-1 text-xs " + (warn ? "font-bold text-amber-600" : "text-brand/45")}>{hint}</p>}
+      <p className={"mt-2 text-3xl font-black " + (warn ? "text-amber-600" : good ? "text-accentdark" : "text-ink")}>{value}</p>
+      {hint && <p className={"mt-1 text-xs " + (warn ? "font-bold text-amber-600" : "text-ink/45")}>{hint}</p>}
     </>
   );
   return href ? (
-    <Link href={href} className={"rounded-2xl border p-6 transition hover:-translate-y-0.5 hover:shadow-sm " + (warn ? "border-amber-300 bg-amber-50/60" : "border-borderc bg-white")}>{body}</Link>
+    <Link href={href} className={"rounded-2xl border p-6 transition hover:-translate-y-0.5 hover:shadow-sm " + (warn ? "border-amber-300 bg-amber-50/60" : "border-borderc bg-surface")}>{body}</Link>
   ) : (
-    <div className="rounded-2xl border border-borderc bg-white p-6">{body}</div>
+    <div className="rounded-2xl border border-borderc bg-surface p-6">{body}</div>
   );
 }
 
 function Chip({ href, label, warn }) {
   return (
-    <Link href={href} className={"rounded-full border px-3.5 py-1.5 text-xs font-bold transition hover:-translate-y-0.5 " + (warn ? "border-amber-300 bg-amber-50 text-amber-700" : "border-borderc bg-white text-brand/60 hover:text-brand")}>
+    <Link href={href} className={"rounded-full border px-3.5 py-1.5 text-xs font-bold transition hover:-translate-y-0.5 " + (warn ? "border-amber-300 bg-amber-50 text-amber-700" : "border-borderc bg-surface text-ink/60 hover:text-ink")}>
       {label}
     </Link>
   );
@@ -476,8 +476,8 @@ function Health({ label, ok, detail, critical, href }) {
     <>
       <span className={"h-2.5 w-2.5 shrink-0 rounded-full " + dot} />
       <div>
-        <p className="font-bold text-brand">{label}</p>
-        <p className="text-xs text-brand/50">{detail}</p>
+        <p className="font-bold text-ink">{label}</p>
+        <p className="text-xs text-ink/50">{detail}</p>
       </div>
     </>
   );
@@ -490,7 +490,7 @@ function Health({ label, ok, detail, critical, href }) {
 
 function QuickLink({ href, label }) {
   return (
-    <Link href={href} className="flex items-center justify-between rounded-xl bg-paper px-4 py-3 text-sm font-bold text-brand transition hover:bg-accent/15">
+    <Link href={href} className="flex items-center justify-between rounded-xl bg-paper px-4 py-3 text-sm font-bold text-ink transition hover:bg-accent/15">
       {label}<span className="text-accentdark">→</span>
     </Link>
   );

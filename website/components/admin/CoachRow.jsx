@@ -41,13 +41,13 @@ export default function CoachRow({ coach, stats, saldo, schuld, betaaldCents, dr
             <input type="hidden" name="on" value={c.coach_public ? "0" : "1"} />
             <button
               title={c.coach_public ? "Staat op de website — klik om te verbergen" : "Niet op de website — klik om te tonen"}
-              className={"flex h-6 w-6 items-center justify-center rounded-full text-xs transition " + (c.coach_public ? "bg-accent text-brand" : "bg-paper text-brand/35 hover:bg-brand/10")}
+              className={"flex h-6 w-6 items-center justify-center rounded-full text-xs transition " + (c.coach_public ? "bg-accent text-brand" : "bg-paper text-ink/35 hover:bg-brand/10")}
             >
               {c.coach_public ? "●" : "○"}
             </button>
           </ActionForm>
           <Link href={`/beheer/coaches/${c.id}`} className="min-w-0 flex-1">
-            <span className="block truncate font-bold text-brand hover:text-accentdark">{naam}</span>
+            <span className="block truncate font-bold text-ink hover:text-accentdark">{naam}</span>
             <span className="block truncate text-xs text-ink-soft md:hidden">
               {stats.sessies90} sessies · laatst {stats.dagenGeleden == null ? "nooit" : `${stats.dagenGeleden} d`} · {stats.gepland} gepland · {getal(saldo)} beurten
             </span>
@@ -58,7 +58,7 @@ export default function CoachRow({ coach, stats, saldo, schuld, betaaldCents, dr
 
         {/* Sessies 90 d + balkje */}
         <div className="hidden items-center gap-2 md:flex">
-          <span className="w-6 shrink-0 text-right text-sm font-black tabular-nums text-brand">{stats.sessies90}</span>
+          <span className="w-6 shrink-0 text-right text-sm font-black tabular-nums text-ink">{stats.sessies90}</span>
           <span className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-borderc" aria-hidden>
             <span className="block h-full rounded-full bg-accent" style={{ width: `${breedte}%` }} />
           </span>
@@ -69,9 +69,9 @@ export default function CoachRow({ coach, stats, saldo, schuld, betaaldCents, dr
         <div className="hidden text-sm tabular-nums md:block">
           <span className={saldo < 0 ? "font-bold text-red-600" : "text-ink-soft"}>{getal(saldo)}</span>
         </div>
-        <div className="hidden text-sm font-black tabular-nums text-brand md:block">{betaaldCents ? euro(betaaldCents) : <span className="font-normal text-ink-soft/60">—</span>}</div>
+        <div className="hidden text-sm font-black tabular-nums text-ink md:block">{betaaldCents ? euro(betaaldCents) : <span className="font-normal text-ink-soft/60">—</span>}</div>
 
-        <Link href={`/beheer/coaches/${c.id}`} className="hidden shrink-0 px-1 text-lg text-brand/30 transition hover:text-brand md:block" aria-label={`Open ${naam}`}>›</Link>
+        <Link href={`/beheer/coaches/${c.id}`} className="hidden shrink-0 px-1 text-lg text-ink/30 transition hover:text-ink md:block" aria-label={`Open ${naam}`}>›</Link>
 
         {/* Openstaand: compacte chip, geen hero. Hetzelfde bedrag staat al als actiekaart op
             /beheer en volledig uitgewerkt op /beheer/financien; een derde kopie zou van deze

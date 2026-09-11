@@ -105,14 +105,14 @@ export default function NieuwProgramma({ clients = [] }) {
   }
 
   return (
-    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label="Nieuw programma">
+    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-surface" role="dialog" aria-modal="true" aria-label="Nieuw programma">
       {/* Kop: terug, voortgang, sluiten. */}
       <div className="flex items-center gap-3 border-b border-borderc px-4 py-3">
         <button
           type="button"
           onClick={() => (stap > 1 ? setStap(stap - 1) : sluit())}
           aria-label={stap > 1 ? "Vorige vraag" : "Sluiten"}
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-brand/50 transition hover:bg-paper hover:text-brand"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-ink/50 transition hover:bg-paper hover:text-ink"
         >
           {stap > 1 ? "←" : "✕"}
         </button>
@@ -140,11 +140,11 @@ export default function NieuwProgramma({ clients = [] }) {
                 onKeyDown={(e) => { if (e.key === "Enter" && naam.trim()) { e.preventDefault(); setStap(2); } }}
                 placeholder="bv. Full body — 3x/week"
                 maxLength={80}
-                className="mt-7 w-full border-0 border-b-2 border-borderc pb-3 text-2xl font-black text-brand outline-none transition placeholder:font-normal placeholder:text-brand/25 focus:border-accent"
+                className="mt-7 w-full border-0 border-b-2 border-borderc pb-3 text-2xl font-black text-ink outline-none transition placeholder:font-normal placeholder:text-ink/25 focus:border-accent"
               />
               <div className="mt-4 flex flex-wrap gap-2">
                 {VOORBEELDEN.map((v) => (
-                  <button key={v} type="button" onClick={() => setNaam(v)} className="rounded-full border-2 border-borderc px-3.5 py-1.5 text-sm font-bold text-ink-soft transition hover:border-lav hover:text-brand">
+                  <button key={v} type="button" onClick={() => setNaam(v)} className="rounded-full border-2 border-borderc px-3.5 py-1.5 text-sm font-bold text-ink-soft transition hover:border-lav hover:text-ink">
                     {v}
                   </button>
                 ))}
@@ -172,7 +172,7 @@ export default function NieuwProgramma({ clients = [] }) {
                     }
                   >
                     <span className="flex items-baseline justify-between gap-3">
-                      <span className="font-black text-brand">{s.titel}</span>
+                      <span className="font-black text-ink">{s.titel}</span>
                       <span className="shrink-0 rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-ink-soft">{s.kort}</span>
                     </span>
                     <span className="mt-1 block text-sm leading-relaxed text-ink-soft">{s.uitleg}</span>
@@ -195,7 +195,7 @@ export default function NieuwProgramma({ clients = [] }) {
                   onClick={() => setMemberId("")}
                   className={"block w-full rounded-2xl border-2 p-4 text-left transition " + (memberId === "" ? "border-accent bg-accent/5" : "border-borderc hover:border-lav")}
                 >
-                  <span className="block font-black text-brand">Nog voor niemand — een sjabloon</span>
+                  <span className="block font-black text-ink">Nog voor niemand — een sjabloon</span>
                   <span className="mt-1 block text-sm leading-relaxed text-ink-soft">
                     Je bouwt het eerst af. Eén sjabloon kan je daarna aan meerdere clienten geven; elk krijgt zijn eigen kopie, dus jouw sjabloon blijft ongewijzigd.
                   </span>
@@ -207,7 +207,7 @@ export default function NieuwProgramma({ clients = [] }) {
                   </p>
                 ) : (
                   <div className="rounded-2xl border-2 border-borderc p-4">
-                    <p className="font-black text-brand">Meteen aan een client</p>
+                    <p className="font-black text-ink">Meteen aan een client</p>
                     <p className="mt-1 text-sm leading-relaxed text-ink-soft">
                       Hij ziet het onmiddellijk onder “Training” en krijgt een melding. Kies dit als het schema al af is.
                     </p>
@@ -219,7 +219,7 @@ export default function NieuwProgramma({ clients = [] }) {
                           onClick={() => setMemberId(c.id)}
                           className={
                             "rounded-full border-2 px-4 py-2 text-sm font-bold transition " +
-                            (memberId === c.id ? "border-accent bg-accent/10 text-brand" : "border-borderc text-ink-soft hover:border-lav hover:text-brand")
+                            (memberId === c.id ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink-soft hover:border-lav hover:text-ink")
                           }
                         >
                           {c.full_name || c.email}
@@ -231,11 +231,11 @@ export default function NieuwProgramma({ clients = [] }) {
               </div>
 
               {/* Samenvatting: wat gaat er precies gebeuren als je nu bevestigt. */}
-              <div className="mt-6 rounded-2xl bg-paper p-4 text-sm leading-relaxed text-brand">
+              <div className="mt-6 rounded-2xl bg-paper p-4 text-sm leading-relaxed text-ink">
                 <p className="font-bold">Je maakt aan:</p>
                 <p className="mt-1 text-ink-soft">
-                  <strong className="text-brand">{naam.trim() || "Naamloos"}</strong> — {startpunt?.titel.toLowerCase() || "leeg"} ({startpunt?.kort || "1 dag"}),{" "}
-                  {client ? <>meteen voor <strong className="text-brand">{client.full_name || client.email}</strong></> : "nog niet toegewezen"}.
+                  <strong className="text-ink">{naam.trim() || "Naamloos"}</strong> — {startpunt?.titel.toLowerCase() || "leeg"} ({startpunt?.kort || "1 dag"}),{" "}
+                  {client ? <>meteen voor <strong className="text-ink">{client.full_name || client.email}</strong></> : "nog niet toegewezen"}.
                 </p>
               </div>
 
@@ -261,7 +261,7 @@ function Vraag({ nr, titel, uitleg }) {
   return (
     <>
       <p className="text-xs font-bold uppercase tracking-[0.25em] text-accentdark">{nr}</p>
-      <h2 className="mt-2 text-2xl font-black leading-tight text-brand sm:text-3xl">{titel}</h2>
+      <h2 className="mt-2 text-2xl font-black leading-tight text-ink sm:text-3xl">{titel}</h2>
       <p className="mt-3 text-base leading-relaxed text-ink-soft">{uitleg}</p>
     </>
   );

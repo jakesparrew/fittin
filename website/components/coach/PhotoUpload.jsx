@@ -49,19 +49,19 @@ export default function PhotoUpload({ currentUrl, name }) {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-4 rounded-3xl border border-borderc bg-white p-6">
+    <div className="flex flex-wrap items-center gap-4 rounded-3xl border border-borderc bg-surface p-6">
       <div className="h-24 w-24 shrink-0 overflow-hidden rounded-2xl bg-paper">
         {preview ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={preview} alt="Profielfoto" className="h-full w-full object-cover" />
         ) : (
-          <div className="flex h-full items-center justify-center text-3xl font-black text-brand/20">{(name || "C").slice(0, 1)}</div>
+          <div className="flex h-full items-center justify-center text-3xl font-black text-ink/20">{(name || "C").slice(0, 1)}</div>
         )}
       </div>
       <div className="flex-1">
         <span className="block text-xs font-bold uppercase tracking-wide text-lav">Profielfoto</span>
-        <input ref={inputRef} type="file" accept="image/*" disabled={busy} onChange={onChange} className="mt-2 block w-full text-sm text-brand file:mr-3 file:rounded-full file:border-0 file:bg-paper file:px-4 file:py-2 file:text-sm file:font-bold file:text-brand" />
-        <p className="mt-1 text-xs text-brand/40">{busy ? "Uploaden…" : "Max 5 MB — wordt automatisch gecomprimeerd."}</p>
+        <input ref={inputRef} type="file" accept="image/*" disabled={busy} onChange={onChange} className="mt-2 block w-full text-sm text-ink file:mr-3 file:rounded-full file:border-0 file:bg-paper file:px-4 file:py-2 file:text-sm file:font-bold file:text-ink" />
+        <p className="mt-1 text-xs text-ink/40">{busy ? "Uploaden…" : "Max 5 MB — wordt automatisch gecomprimeerd."}</p>
       </div>
     </div>
   );

@@ -38,19 +38,19 @@ export default function ActivationWizard({ segments }) {
   }
 
   return (
-    <div className="mt-6 overflow-hidden rounded-3xl border border-borderc bg-white">
+    <div className="mt-6 overflow-hidden rounded-3xl border border-borderc bg-surface">
       {/* progress */}
       <div className="flex items-center gap-2 border-b border-borderc px-6 py-4">
         {[1, 2, 3].map((n) => (
           <div key={n} className="flex items-center gap-2">
-            <span className={"flex h-7 w-7 items-center justify-center rounded-full text-xs font-black " + (step >= n ? "bg-accent text-brand" : "bg-paper text-brand/40")}>{n}</span>
+            <span className={"flex h-7 w-7 items-center justify-center rounded-full text-xs font-black " + (step >= n ? "bg-accent text-brand" : "bg-paper text-ink/40")}>{n}</span>
             {n < 3 && <span className={"h-0.5 w-8 " + (step > n ? "bg-accent" : "bg-paper")} />}
           </div>
         ))}
-        <span className="ml-2 text-sm font-bold text-brand/60">
+        <span className="ml-2 text-sm font-bold text-ink/60">
           {step === 1 ? "Wie wil je activeren?" : step === 2 ? "Wat bied je aan?" : "Bericht & bevestigen"}
         </span>
-        <button onClick={() => setOpen(false)} className="ml-auto text-brand/40 hover:text-brand">✕</button>
+        <button onClick={() => setOpen(false)} className="ml-auto text-ink/40 hover:text-ink">✕</button>
       </div>
 
       <form action={action} className="p-6">
@@ -67,18 +67,18 @@ export default function ActivationWizard({ segments }) {
 
         {step === 1 && (
           <div className="space-y-3">
-            <p className="text-sm text-brand/60">Kies de groep leden die de campagne automatisch krijgt.</p>
+            <p className="text-sm text-ink/60">Kies de groep leden die de campagne automatisch krijgt.</p>
             <div className="grid gap-3 sm:grid-cols-2">
               {segments.map((s) => (
                 <button type="button" key={s.key} onClick={() => pickTrigger(s)} className={"rounded-2xl border-2 p-4 text-left transition " + (trigger === s.key ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
-                  <p className="font-black text-brand">{s.label}</p>
-                  <p className="mt-1 text-xs text-brand/55">{s.desc}</p>
+                  <p className="font-black text-ink">{s.label}</p>
+                  <p className="mt-1 text-xs text-ink/55">{s.desc}</p>
                 </button>
               ))}
             </div>
             {seg?.param && (
               <label className="mt-2 flex items-center gap-3 rounded-2xl bg-paper p-4">
-                <span className="text-sm font-bold text-brand">{seg.param.label}</span>
+                <span className="text-sm font-bold text-ink">{seg.param.label}</span>
                 <input type="number" min="0" value={paramValue} onChange={(e) => setParamValue(parseInt(e.target.value, 10) || 0)} className="w-24 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </label>
             )}
@@ -87,11 +87,11 @@ export default function ActivationWizard({ segments }) {
 
         {step === 2 && (
           <div className="space-y-4">
-            <p className="text-sm text-brand/60">Geef ze een reden om terug te komen. Je mag beide combineren of leeg laten.</p>
+            <p className="text-sm text-ink/60">Geef ze een reden om terug te komen. Je mag beide combineren of leeg laten.</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-2xl border-2 border-borderc p-4">
-                <p className="font-black text-brand">🎁 Gratis sessie(s)</p>
-                <p className="mt-1 text-xs text-brand/55">Wordt automatisch als tegoed op hun account gezet.</p>
+                <p className="font-black text-ink">🎁 Gratis sessie(s)</p>
+                <p className="mt-1 text-xs text-ink/55">Wordt automatisch als tegoed op hun account gezet.</p>
                 <div className="mt-3 flex items-center gap-2">
                   {[0, 1, 2].map((n) => (
                     <button type="button" key={n} onClick={() => setCredits(n)} className={"h-10 w-12 rounded-xl border-2 font-black transition " + (credits === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n}</button>
@@ -99,8 +99,8 @@ export default function ActivationWizard({ segments }) {
                 </div>
               </div>
               <div className="rounded-2xl border-2 border-borderc p-4">
-                <p className="font-black text-brand">🏷️ Korting</p>
-                <p className="mt-1 text-xs text-brand/55">Persoonlijke kortingscode in de mail (% op een boeking).</p>
+                <p className="font-black text-ink">🏷️ Korting</p>
+                <p className="mt-1 text-xs text-ink/55">Persoonlijke kortingscode in de mail (% op een boeking).</p>
                 <div className="mt-3 flex items-center gap-2">
                   {[0, 25, 50].map((n) => (
                     <button type="button" key={n} onClick={() => setDiscount(n)} className={"h-10 rounded-xl border-2 px-3 font-black transition " + (discount === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>{n === 0 ? "—" : n + "%"}</button>
@@ -122,15 +122,15 @@ export default function ActivationWizard({ segments }) {
               <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="We missen je bij Fittin' 💚" className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
             </label>
             <label className="block">
-              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Bericht <span className="text-brand/40">— gebruik {"{{naam}}"} voor de voornaam</span></span>
+              <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Bericht <span className="text-ink/40">— gebruik {"{{naam}}"} voor de voornaam</span></span>
               <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={5} placeholder={"Hey {{naam}}, het is al even geleden! Kom terug en pak je gratis sessie."} className="w-full rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
             </label>
-            <label className="flex items-center gap-2 rounded-2xl bg-paper p-3 text-sm font-bold text-brand">
+            <label className="flex items-center gap-2 rounded-2xl bg-paper p-3 text-sm font-bold text-ink">
               <input type="checkbox" checked={activate} onChange={(e) => setActivate(e.target.checked)} className="h-4 w-4 accent-[#5fda6b]" />
               Meteen activeren (draait dagelijks automatisch)
             </label>
-            <div className="rounded-2xl bg-accent/5 p-4 text-sm text-brand/70">
-              <p className="font-bold text-brand">Samenvatting</p>
+            <div className="rounded-2xl bg-accent/5 p-4 text-sm text-ink/70">
+              <p className="font-bold text-ink">Samenvatting</p>
               <p className="mt-1">Doel: <b>{seg?.label}</b>{seg?.param ? ` (${seg.param.label.toLowerCase()}: ${paramValue})` : ""}</p>
               <p>Aanbod: {credits > 0 ? `${credits} gratis sessie${credits > 1 ? "s" : ""}` : "geen tegoed"}{discount > 0 ? ` · ${discount}% korting` : ""}</p>
             </div>
@@ -140,7 +140,7 @@ export default function ActivationWizard({ segments }) {
 
         {/* nav */}
         <div className="mt-6 flex items-center justify-between">
-          <button type="button" onClick={() => (step === 1 ? setOpen(false) : setStep(step - 1))} className="rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-brand transition hover:border-lav">
+          <button type="button" onClick={() => (step === 1 ? setOpen(false) : setStep(step - 1))} className="rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-ink transition hover:border-lav">
             {step === 1 ? "Annuleer" : "← Terug"}
           </button>
           {step < 3 ? (

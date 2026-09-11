@@ -24,13 +24,13 @@ export default function DoorCodeCard({ code, leadMin = 5, dark = false, personal
 
   if (!code) {
     return (
-      <div className={"mt-3 flex items-start gap-3 rounded-xl px-4 py-3 " + (dark ? "bg-white/10" : "bg-paper")}>
+      <div className={"mt-3 flex items-start gap-3 rounded-xl px-4 py-3 " + (dark ? "bg-surface/10" : "bg-paper")}>
         <span className="text-xl leading-none">🔑</span>
         <div className="min-w-0">
-          <p className={"text-sm font-bold " + (dark ? "text-white" : "text-brand")}>
+          <p className={"text-sm font-bold " + (dark ? "text-white" : "text-ink")}>
             Je deurcode verschijnt hier én in je mailbox ±{leadMin} min vóór de start.
           </p>
-          <p className={"mt-0.5 text-xs " + (dark ? "text-lav" : "text-brand/55")}>
+          <p className={"mt-0.5 text-xs " + (dark ? "text-lav" : "text-ink/55")}>
             Je staat dus nooit voor een gesloten deur. Tijdens je sessie kan je de deur ook met één tik openen vanuit je account.
           </p>
         </div>
@@ -39,19 +39,19 @@ export default function DoorCodeCard({ code, leadMin = 5, dark = false, personal
   }
 
   return (
-    <div className={"mt-3 rounded-xl px-4 py-3 " + (dark ? "bg-white/10" : "bg-accent/10")}>
+    <div className={"mt-3 rounded-xl px-4 py-3 " + (dark ? "bg-surface/10" : "bg-accent/10")}>
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-xl leading-none">🔑</span>
         <div>
           <p className={"text-[11px] font-bold uppercase tracking-wide " + (dark ? "text-accent" : "text-accentdark")}>
             {personal ? "Jouw deurcode" : "Reservecode"}
           </p>
-          <p className={"text-3xl font-black tabular-nums tracking-[0.2em] " + (dark ? "text-white" : "text-brand")}>{code}</p>
+          <p className={"text-3xl font-black tabular-nums tracking-[0.2em] " + (dark ? "text-white" : "text-ink")}>{code}</p>
         </div>
         <button
           type="button"
           onClick={copy}
-          className={"ml-auto rounded-full px-4 py-2 text-sm font-bold transition " + (dark ? "bg-accent text-brand hover:opacity-90" : "border-2 border-borderc bg-white text-brand hover:border-accent")}
+          className={"ml-auto rounded-full px-4 py-2 text-sm font-bold transition " + (dark ? "bg-accent text-brand hover:opacity-90" : "border-2 border-borderc bg-surface text-ink hover:border-accent")}
         >
           {copied ? "Gekopieerd ✓" : "📋 Kopieer"}
         </button>
@@ -60,7 +60,7 @@ export default function DoorCodeCard({ code, leadMin = 5, dark = false, personal
           Nuki-code vervalt vanzelf, de reservecode blijft eeuwig geldig. "Werkt enkel tijdens jouw
           tijdslot" bij die tweede zou mensen zorgeloos maken met een sleutel die nooit verandert. */}
       {personal ? (
-        <p className={"mt-2 text-xs " + (dark ? "text-lav" : "text-brand/55")}>
+        <p className={"mt-2 text-xs " + (dark ? "text-lav" : "text-ink/55")}>
           Toets hem in op het paneel naast de voordeur. Deze code is enkel voor jouw sessie en vervalt daarna vanzelf.
         </p>
       ) : (

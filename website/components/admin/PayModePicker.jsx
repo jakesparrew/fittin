@@ -21,20 +21,20 @@ export default function PayModePicker({ className = "" }) {
     <div className={"w-full " + className}>
       <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Betaalwijze</span>
       <input type="hidden" name="payMode" value={mode} />
-      <div className="inline-flex flex-wrap rounded-full border border-borderc bg-white p-1 text-xs font-bold">
+      <div className="inline-flex flex-wrap rounded-full border border-borderc bg-surface p-1 text-xs font-bold">
         {[["credit", "🎟 Van tegoed"], ["gratis", "🎁 Gratis"]].map(([k, l]) => (
           <button
             key={k}
             type="button"
             onClick={() => setMode(k)}
-            className={"rounded-full px-3 py-1.5 transition " + (mode === k ? (k === "gratis" ? "bg-amber-500 text-white" : "bg-brand text-white") : "text-brand/60 hover:text-brand")}
+            className={"rounded-full px-3 py-1.5 transition " + (mode === k ? (k === "gratis" ? "bg-amber-500 text-white" : "bg-brand text-white") : "text-ink/60 hover:text-ink")}
           >
             {l}
           </button>
         ))}
       </div>
       {mode === "credit" && (
-        <p className="mt-1 text-[11px] text-brand/45">Wordt van het tegoed van het lid afgetrokken (90 min = 1,5 beurt). Heeft het lid te weinig tegoed, dan zegt het systeem dat — laat het dan zelf boeken via de site.</p>
+        <p className="mt-1 text-[11px] text-ink/45">Wordt van het tegoed van het lid afgetrokken (90 min = 1,5 beurt). Heeft het lid te weinig tegoed, dan zegt het systeem dat — laat het dan zelf boeken via de site.</p>
       )}
       {mode === "gratis" && (
         <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 p-3">
@@ -44,7 +44,7 @@ export default function PayModePicker({ className = "" }) {
             list={listId}
             required
             placeholder="Reden (verplicht) — bv. compensatie voor de deurcode"
-            className="mt-2 w-full rounded-lg border-2 border-amber-300 bg-white px-3 py-1.5 text-sm"
+            className="mt-2 w-full rounded-lg border-2 border-amber-300 bg-surface px-3 py-1.5 text-sm"
           />
           <datalist id={listId}>
             {REDENEN.map((r) => <option key={r} value={r} />)}

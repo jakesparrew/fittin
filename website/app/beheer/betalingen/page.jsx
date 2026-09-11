@@ -83,11 +83,11 @@ export default async function Betalingen({ searchParams }) {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">Betalingen</h1>
-          <p className="mt-1 text-sm text-brand/50">Alle Stripe-betalingen van je leden en coaches.</p>
+          <h1 className="text-3xl font-black text-ink">Betalingen</h1>
+          <p className="mt-1 text-sm text-ink/50">Alle Stripe-betalingen van je leden en coaches.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href="/beheer/financien" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-brand transition hover:border-accent">€ Financieel overzicht →</Link>
+          <Link href="/beheer/financien" className="rounded-full border-2 border-borderc px-5 py-2.5 text-sm font-bold text-ink transition hover:border-accent">€ Financieel overzicht →</Link>
           <a
             href={`/beheer/betalingen/export${filter ? `?kind=${filter}` : ""}`}
             className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90"
@@ -98,8 +98,8 @@ export default async function Betalingen({ searchParams }) {
       </div>
 
       {/* Invoice / non-profit billing details (used on generated invoices) */}
-      <details className="mt-4 rounded-2xl border border-borderc bg-white p-4">
-        <summary className="cursor-pointer text-sm font-bold text-brand">Factuurgegevens (vzw · 6% btw)</summary>
+      <details className="mt-4 rounded-2xl border border-borderc bg-surface p-4">
+        <summary className="cursor-pointer text-sm font-bold text-ink">Factuurgegevens (vzw · 6% btw)</summary>
         <ActionForm action={saveInvoiceSettings} success="Factuurgegevens opgeslagen ✓" className="mt-3 grid gap-3 sm:grid-cols-2">
           <Field name="legal_name" label="Wettelijke naam (vzw)" defaultValue={gym.legal_name} />
           <Field name="vat_number" label="Ondernemings-/btw-nummer" defaultValue={gym.vat_number} placeholder="BE0123.456.789" />
@@ -125,7 +125,7 @@ export default async function Betalingen({ searchParams }) {
             // De zoekopdracht meenemen bij het wisselen van tab: anders verlies je ze zodra je
             // van "Alles" naar "Boekingen" gaat, precies op het moment dat je aan het zoeken bent.
             href={"/beheer/betalingen?" + new URLSearchParams({ ...(t.v ? { kind: t.v } : {}), ...(zoek ? { q: zoek } : {}) }).toString()}
-            className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (filter === t.v ? "bg-brand text-white" : "bg-paper text-brand/60 hover:bg-accent/15")}
+            className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (filter === t.v ? "bg-brand text-white" : "bg-paper text-ink/60 hover:bg-accent/15")}
           >
             {t.l}
           </Link>
@@ -135,13 +135,13 @@ export default async function Betalingen({ searchParams }) {
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <ListSearch placeholder="Zoek op naam, e-mail, omschrijving of bedrag…" className="w-full max-w-md" />
         {zoek && (
-          <p className="text-sm font-bold text-brand/50">
+          <p className="text-sm font-bold text-ink/50">
             {gefilterd.length} {gefilterd.length === 1 ? "resultaat" : "resultaten"} · {euro(shownTotal)}
           </p>
         )}
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-white">
+      <div className="mt-4 overflow-hidden rounded-2xl border border-borderc bg-surface">
         <table className="w-full text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -159,12 +159,12 @@ export default async function Betalingen({ searchParams }) {
               <tr key={i}>
                 <td className="px-5 py-3">
                   {p.member ? (
-                    <Link href={`/beheer/leden/${p.member.id}`} className="font-bold text-brand hover:text-accentdark">{p.member.full_name || p.member.email}</Link>
+                    <Link href={`/beheer/leden/${p.member.id}`} className="font-bold text-ink hover:text-accentdark">{p.member.full_name || p.member.email}</Link>
                   ) : (
-                    <span className="text-brand/40">Verwijderd lid</span>
+                    <span className="text-ink/40">Verwijderd lid</span>
                   )}
                 </td>
-                <td className="px-5 py-3"><span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-brand/70">{KIND[p.kind] || p.kind}</span></td>
+                <td className="px-5 py-3"><span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-ink/70">{KIND[p.kind] || p.kind}</span></td>
                 <td className="px-5 py-3">
                   {(() => {
                     const s = p.status || "betaald";
@@ -172,47 +172,47 @@ export default async function Betalingen({ searchParams }) {
                     // "kwijtgescholden" = bewust weggegeven, geen geld te innen. Zonder deze regel
                     // viel die status in de rode "onbetaald"-tak en las een cadeau als een schuld.
                     const refund = s === "refunded" || s === "terugbetaald" || s === "kwijtgescholden";
-                    const cls = ok ? "bg-accent/15 text-accentdark" : refund ? "bg-paper text-brand/50" : "bg-red-100 text-red-600";
+                    const cls = ok ? "bg-accent/15 text-accentdark" : refund ? "bg-paper text-ink/50" : "bg-red-100 text-red-600";
                     return (
                       <span className="flex items-center gap-2">
                         <span className={"rounded-full px-2.5 py-0.5 text-xs font-bold capitalize " + cls}>{s}</span>
                         {s === "onbetaald" && (
                           <ActionForm action={markPaymentPaid} className="inline">
                             <input type="hidden" name="paymentId" value={p.id} />
-                            <button className="rounded-full border border-borderc px-2 py-0.5 text-[10px] font-bold text-brand/70 transition hover:border-accent hover:text-brand" title="Overschrijving/cash ontvangen">✓ ontvangen</button>
+                            <button className="rounded-full border border-borderc px-2 py-0.5 text-[10px] font-bold text-ink/70 transition hover:border-accent hover:text-ink" title="Overschrijving/cash ontvangen">✓ ontvangen</button>
                           </ActionForm>
                         )}
                       </span>
                     );
                   })()}
                 </td>
-                <td className="px-5 py-3 text-brand/50">
+                <td className="px-5 py-3 text-ink/50">
                   {(() => {
                     const bk = p.kind === "booking" ? sessionByStripe[p.stripe_id] : null;
                     if (bk) {
                       return (
                         <span className="flex flex-col gap-0.5">
                           <span className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-semibold text-brand/70">{bk.services?.name || "Sessie"}</span>
-                            {bk.persons > 1 && <span className="text-brand/40">· {bk.persons}p</span>}
+                            <span className="font-semibold text-ink/70">{bk.services?.name || "Sessie"}</span>
+                            {bk.persons > 1 && <span className="text-ink/40">· {bk.persons}p</span>}
                             {bk.payment_source && SRC[bk.payment_source] && (
-                              <span className={"rounded-full px-1.5 py-0.5 text-[10px] font-bold " + (bk.payment_source === "abo" ? "bg-accent/15 text-accentdark" : "bg-paper text-brand/50")}>{SRC[bk.payment_source]}</span>
+                              <span className={"rounded-full px-1.5 py-0.5 text-[10px] font-bold " + (bk.payment_source === "abo" ? "bg-accent/15 text-accentdark" : "bg-paper text-ink/50")}>{SRC[bk.payment_source]}</span>
                             )}
                           </span>
-                          <span className="text-xs text-brand/40">🗓 {fmtSession(bk.starts_at)}</span>
+                          <span className="text-xs text-ink/40">🗓 {fmtSession(bk.starts_at)}</span>
                         </span>
                       );
                     }
                     return p.description || "—";
                   })()}
                 </td>
-                <td className="px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
-                <td className="px-5 py-3 text-right text-xs text-brand/40">{fmt(p.created_at)}</td>
+                <td className="px-5 py-3 text-right font-black text-ink">{euro(p.amount_cents)}</td>
+                <td className="px-5 py-3 text-right text-xs text-ink/40">{fmt(p.created_at)}</td>
                 <td className="px-5 py-3 text-right"><Link href={`/beheer/factuur?payment=${p.id}`} className="text-xs font-bold text-accentdark hover:underline">Factuur →</Link></td>
               </tr>
             ))}
             {gefilterd.length === 0 && (
-              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-brand/40">
+              <tr><td colSpan={7} className="px-5 py-8 text-center text-sm text-ink/40">
                 {zoek ? `Geen betaling gevonden voor “${zoek}”.` : "Nog geen betalingen. Ze verschijnen hier automatisch zodra Stripe ze bevestigt."}
               </td></tr>
             )}
@@ -225,9 +225,9 @@ export default async function Betalingen({ searchParams }) {
 
 function Stat({ label, value }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className="mt-2 text-2xl font-black text-brand">{value}</p>
+      <p className="mt-2 text-2xl font-black text-ink">{value}</p>
     </div>
   );
 }

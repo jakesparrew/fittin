@@ -47,8 +47,8 @@ export default function CoachApplyForm() {
   if (klaar) {
     return (
       <div className="mt-10 rounded-3xl border-2 border-accent bg-accent/10 p-8 text-center">
-        <p className="text-xl font-black text-brand">Aanmelding verstuurd 🙌</p>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-brand/70">
+        <p className="text-xl font-black text-ink">Aanmelding verstuurd 🙌</p>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink/70">
           {klaar.msg}{" "}
           {!klaar.already && "Je krijgt meteen een bevestigingsmail; we nemen binnen enkele dagen contact op voor een kennismaking. "}
           Hoor je niets? Mail{" "}
@@ -60,53 +60,53 @@ export default function CoachApplyForm() {
 
   return (
     // method="post": zonder JavaScript mag een native submit de gegevens niet in de URL zetten.
-    <form ref={formRef} method="post" onSubmit={verstuur} className="mt-10 rounded-3xl border border-borderc bg-white p-6 md:p-8">
+    <form ref={formRef} method="post" onSubmit={verstuur} className="mt-10 rounded-3xl border border-borderc bg-surface p-6 md:p-8">
       {/* Honeypot — verborgen voor mensen, ingevuld door bots. */}
       <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="hidden" />
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Naam
-          <input name="name" required maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="name" required maxLength={120} autoComplete="name" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           E-mail
-          <input name="email" type="email" required maxLength={200} autoComplete="email" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="email" type="email" required maxLength={200} autoComplete="email" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Telefoon <span className="font-normal text-ink-soft">(optioneel)</span>
-          <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="phone" type="tel" maxLength={40} autoComplete="tel" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
         {/* Zie lib/aanmelding-velden.js: geboortedatum in plaats van leeftijd, en de keuring
             (toekomst, onbestaande dag, typfout) gebeurt op de server. */}
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Geboortedatum
-          <input name="geboortedatum" type="date" required min="1920-01-01" autoComplete="bday" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="geboortedatum" type="date" required min="1920-01-01" autoComplete="bday" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Geslacht <span className="font-normal text-ink-soft">(optioneel)</span>
-          <select name="geslacht" defaultValue="" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-white px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent">
+          <select name="geslacht" defaultValue="" className="mt-1.5 w-full rounded-xl border-2 border-borderc bg-surface px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent">
             <option value="">Zeg ik liever niet</option>
             {GESLACHTEN.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
         </label>
-        <label className="block text-sm font-bold text-brand">
+        <label className="block text-sm font-bold text-ink">
           Specialiteit <span className="font-normal text-ink-soft">(optioneel)</span>
-          <input name="specialty" maxLength={120} placeholder="Bv. krachttraining, afvallen, revalidatie" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="specialty" maxLength={120} placeholder="Bv. krachttraining, afvallen, revalidatie" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand sm:col-span-2">
+        <label className="block text-sm font-bold text-ink sm:col-span-2">
           Website of Instagram <span className="font-normal text-ink-soft">(optioneel)</span>
-          <input name="socials" maxLength={300} placeholder="Zo krijgen we meteen een beeld van je werk" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <input name="socials" maxLength={300} placeholder="Zo krijgen we meteen een beeld van je werk" className="mt-1.5 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
-        <label className="block text-sm font-bold text-brand sm:col-span-2">
+        <label className="block text-sm font-bold text-ink sm:col-span-2">
           Vertel iets over jezelf
-          <textarea name="about" rows={5} required maxLength={2000} placeholder="Je ervaring, je aanpak, eventuele certificaten — en of je al eigen klanten hebt." className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-brand outline-none transition focus:border-accent" />
+          <textarea name="about" rows={5} required maxLength={2000} placeholder="Je ervaring, je aanpak, eventuele certificaten — en of je al eigen klanten hebt." className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-sm font-normal text-ink outline-none transition focus:border-accent" />
         </label>
 
         {/* Bijlagen. Optioneel en bewust onderaan: wie snel wil aanmelden hoeft niets te zoeken,
             wie een cv klaar heeft staan, kan het meteen meesturen. */}
         <div className="sm:col-span-2">
-          <p className="text-sm font-bold text-brand">Cv en foto <span className="font-normal text-ink-soft">(optioneel)</span></p>
+          <p className="text-sm font-bold text-ink">Cv en foto <span className="font-normal text-ink-soft">(optioneel)</span></p>
           <p className="mt-1 text-xs text-ink-soft">Max {MAX_MB} MB per bestand. Alleen wij zien ze — ze komen niet op de site.</p>
           <div className="mt-2 grid gap-3 sm:grid-cols-2">
             <Bijlage
@@ -153,8 +153,8 @@ function Bijlage({ naam, label, accept, gekozen, onKies }) {
         className="sr-only"
         onChange={(e) => onKies(e.currentTarget.files?.[0] || null)}
       />
-      <span className="shrink-0 rounded-full bg-paper px-3 py-1.5 text-xs font-black text-brand">Kies</span>
-      <span className={"min-w-0 flex-1 truncate text-sm " + (gekozen ? "font-semibold text-brand" : "text-ink-soft")}>
+      <span className="shrink-0 rounded-full bg-paper px-3 py-1.5 text-xs font-black text-ink">Kies</span>
+      <span className={"min-w-0 flex-1 truncate text-sm " + (gekozen ? "font-semibold text-ink" : "text-ink-soft")}>
         {gekozen || label}
       </span>
       {gekozen && <span className="shrink-0 text-sm font-black text-accentdark">✓</span>}

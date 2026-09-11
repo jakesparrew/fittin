@@ -56,15 +56,15 @@ export default function Nav() {
   const navLinks = !account ? links : isStaff ? staffLinks : memberLinks;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-borderc/70 bg-white/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-borderc/70 bg-surface/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
         <Link href="/" className="group flex items-center" aria-label="Fittin' — home">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="Fittin'" width={150} height={40} className="h-8 w-auto transition group-hover:opacity-80" />
         </Link>
-        <nav className="hidden items-center gap-7 text-sm font-semibold text-brand/70 md:flex">
+        <nav className="hidden items-center gap-7 text-sm font-semibold text-ink/70 md:flex">
           {navLinks.map((l) => (
-            <Link key={l.href} href={l.href} className="relative transition hover:text-brand">
+            <Link key={l.href} href={l.href} className="relative transition hover:text-ink">
               {l.label}
             </Link>
           ))}
@@ -72,14 +72,14 @@ export default function Nav() {
         <div className="flex items-center gap-3">
           {!account && (
             <>
-              <Link href="/login" className="hidden text-sm font-bold text-brand/70 transition hover:text-brand sm:block">Inloggen</Link>
+              <Link href="/login" className="hidden text-sm font-bold text-ink/70 transition hover:text-ink sm:block">Inloggen</Link>
               <Link href="/login?mode=signup" className="hidden rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand shadow-sm shadow-accent/30 transition hover:-translate-y-0.5 hover:shadow-md hover:shadow-accent/40 sm:block">
                 Word lid
               </Link>
             </>
           )}
           {account && (
-            <Link href="/notificaties" className="relative hidden rounded-full p-2 text-brand/70 transition hover:bg-paper hover:text-brand sm:block" aria-label="Notificaties">
+            <Link href="/notificaties" className="relative hidden rounded-full p-2 text-ink/70 transition hover:bg-paper hover:text-ink sm:block" aria-label="Notificaties">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
               {account.unread > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-black text-brand">{account.unread > 9 ? "9+" : account.unread}</span>
@@ -89,7 +89,7 @@ export default function Nav() {
           {account && isStaff && (
             <>
               <form action="/auth/signout" method="post" className="hidden sm:block">
-                <button className="text-sm font-bold text-brand/60 transition hover:text-brand">Uitloggen</button>
+                <button className="text-sm font-bold text-ink/60 transition hover:text-ink">Uitloggen</button>
               </form>
               <Link href={home} className="hidden rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:opacity-90 sm:block">
                 {staffLabel} →
@@ -117,25 +117,25 @@ export default function Nav() {
         </div>
       </div>
       {open && (
-        <nav id="mobile-menu" className="border-t border-borderc bg-white px-5 py-4 md:hidden">
+        <nav id="mobile-menu" className="border-t border-borderc bg-surface px-5 py-4 md:hidden">
           {navLinks.map((l) => (
-            <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">{l.label}</Link>
+            <Link key={l.href} href={l.href} onClick={() => setOpen(false)} className="block py-2 font-semibold text-ink">{l.label}</Link>
           ))}
           <div className="mt-2 border-t border-borderc pt-2">
             {account && (
-              <Link href="/notificaties" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">
+              <Link href="/notificaties" onClick={() => setOpen(false)} className="block py-2 font-semibold text-ink">
                 Notificaties{account.unread > 0 ? ` (${account.unread > 9 ? "9+" : account.unread})` : ""}
               </Link>
             )}
             {/* Hulp staat bewust in dit onderste blok, naast Notificaties en Mijn account: wie
                 vastloopt zoekt daar. Bereikbaar zónder login — juist wie niet binnen raakt,
                 heeft de hulppagina nodig. */}
-            <Link href="/hulp" onClick={() => setOpen(false)} className="block py-2 font-semibold text-brand">🛟 Hulp &amp; contact</Link>
+            <Link href="/hulp" onClick={() => setOpen(false)} className="block py-2 font-semibold text-ink">🛟 Hulp &amp; contact</Link>
             {isStaff && <Link href={home} onClick={() => setOpen(false)} className="block py-2 font-bold text-accentdark">{staffLabel} →</Link>}
             {account && isStaff ? (
-              <form action="/auth/signout" method="post"><button className="block py-2 font-bold text-brand">Uitloggen</button></form>
+              <form action="/auth/signout" method="post"><button className="block py-2 font-bold text-ink">Uitloggen</button></form>
             ) : (
-              <Link href={account ? "/account" : "/login?mode=signup"} onClick={() => setOpen(false)} className="block py-2 font-bold text-brand">
+              <Link href={account ? "/account" : "/login?mode=signup"} onClick={() => setOpen(false)} className="block py-2 font-bold text-ink">
                 {account ? "Mijn account" : "Inloggen / word lid"}
               </Link>
             )}

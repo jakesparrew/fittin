@@ -31,9 +31,9 @@ export default function MeldForm({ token }) {
 
   if (klaar) {
     return (
-      <div className="mt-8 rounded-3xl border border-borderc bg-white p-8 text-center">
+      <div className="mt-8 rounded-3xl border border-borderc bg-surface p-8 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent/15 text-3xl">✓</div>
-        <h2 className="mt-4 text-2xl font-black text-brand">Bedankt</h2>
+        <h2 className="mt-4 text-2xl font-black text-ink">Bedankt</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
           Je melding staat bij de zaakvoerder. Je krijgt bericht zodra hij ernaar kijkt — en nog eens
           wanneer het opgelost is.
@@ -53,7 +53,7 @@ export default function MeldForm({ token }) {
             onClick={() => { setCat(c.v); setFout(null); }}
             className={
               "flex min-h-[64px] items-center gap-2 rounded-2xl border-2 p-3 text-left text-sm font-bold transition " +
-              (cat === c.v ? "border-accent bg-accent/10 text-brand" : "border-borderc bg-white text-ink-soft hover:border-lav")
+              (cat === c.v ? "border-accent bg-accent/10 text-ink" : "border-borderc bg-surface text-ink-soft hover:border-lav")
             }
           >
             <span className="text-lg" aria-hidden>{c.emoji}</span>
@@ -72,11 +72,11 @@ export default function MeldForm({ token }) {
               maxLength={2000}
               placeholder={gekozen.hint}
               /* 16px: onder die grootte zoomt iOS bij het focussen in en springt de pagina. */
-              className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2.5 text-base text-brand outline-none transition placeholder:text-brand/30 focus:border-accent"
+              className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2.5 text-base text-ink outline-none transition placeholder:text-ink/30 focus:border-accent"
             />
           </label>
 
-          <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-borderc bg-white px-4 py-3 text-sm font-bold text-ink-soft transition hover:border-lav">
+          <label className="mt-3 flex cursor-pointer items-center gap-3 rounded-xl border-2 border-dashed border-borderc bg-surface px-4 py-3 text-sm font-bold text-ink-soft transition hover:border-lav">
             <span className="text-lg" aria-hidden>📷</span>
             <span className="min-w-0 flex-1 truncate">{fotoNaam || "Foto toevoegen (optioneel)"}</span>
             <input

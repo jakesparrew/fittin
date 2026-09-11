@@ -22,7 +22,7 @@ const BREEDTE = { smal: "max-w-4xl", midden: "max-w-5xl", breed: "max-w-6xl" };
 // specificiteit, dus welke wint hangt af van de volgorde in de gegenereerde CSS en niet van de
 // volgorde waarin je ze schrijft. Elke aanroep zet zijn eigen radius, één keer.
 const Balk = ({ className }) => <div className={"rounded " + className} />;
-const Vlak = ({ className }) => <div className={"border border-borderc bg-white " + className} />;
+const Vlak = ({ className }) => <div className={"border border-borderc bg-surface " + className} />;
 
 // Vuistregel voor `rijen` en `kaarten`: kies de ONDERGRENS, niet het gemiddelde. Een skelet dat
 // minder toont dan er komt, groeit gewoon naar beneden — dat leest als laden. Een skelet dat méér
@@ -76,7 +76,7 @@ export default function PageSkeleton({ wide, variant = "dashboard", breedte, rij
               {Array.from({ length: kaarten }).map((_, i) => (
                 // Beeld boven, tekst onder — dezelfde verhouding als de echte kaart, anders
                 // verspringt het raster op het moment dat de inhoud binnenkomt.
-                <div key={i} className="overflow-hidden rounded-3xl border border-borderc bg-white">
+                <div key={i} className="overflow-hidden rounded-3xl border border-borderc bg-surface">
                   <div className="aspect-[4/3] bg-borderc/50" />
                   <div className="space-y-2 p-5">
                     <Balk className="h-5 w-2/3 bg-borderc/70" />

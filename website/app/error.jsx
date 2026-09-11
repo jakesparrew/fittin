@@ -13,8 +13,8 @@ export default function Error({ error, reset }) {
   return (
     <main className="flex min-h-[70vh] items-center justify-center bg-paper px-5 py-20">
       <div className="max-w-md text-center">
-        <p className="text-5xl font-black text-brand">Oeps</p>
-        <p className="mt-3 leading-relaxed text-brand/60">
+        <p className="text-5xl font-black text-ink">Oeps</p>
+        <p className="mt-3 leading-relaxed text-ink/60">
           Er liep iets onverwacht fout. Probeer het opnieuw — blijft het misgaan, mail{" "}
           <a href="mailto:info@fittin.be" className="font-bold text-accentdark">info@fittin.be</a>.
         </p>
@@ -22,7 +22,7 @@ export default function Error({ error, reset }) {
           <button onClick={() => reset()} className="rounded-full bg-accent px-6 py-3 text-sm font-black text-brand transition hover:opacity-90">
             Probeer opnieuw
           </button>
-          <Link href="/" className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-lav">
+          <Link href="/" className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-ink transition hover:border-lav">
             Naar home
           </Link>
         </div>

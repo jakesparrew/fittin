@@ -106,7 +106,7 @@ export default async function Lidmaatschap() {
         {/* Nav, footer en deze titel noemden dezelfde pagina drie keer anders ("Prijzen",
             "Lidmaatschap", "Sessies & abonnement"). Eén naam: Prijzen. */}
         <h1 className="mt-2 text-3xl font-black md:text-4xl">Prijzen</h1>
-        <p className="mt-3 text-brand/70">
+        <p className="mt-3 text-ink/70">
           {user ? (
             <>Je saldo: <span className="font-black text-accentdark">{credits} sessies</span>.{isMember && " Je bent member — je boekt aan het voordeeltarief."}</>
           ) : (
@@ -140,8 +140,8 @@ export default async function Lidmaatschap() {
         {/* Eén keer boven het drieluik in plaats van een personen-regel in elke kaart: het geldt
             voor alle drie de formules, en zo lezen de kaarten als drie prijzen naast elkaar. */}
         {capacity ? (
-          <p className="mt-6 text-sm text-brand/60">
-            Elke prijs hieronder geldt voor de <strong className="font-bold text-brand">hele zaal</strong> — 1 tot {capacity} personen, je betaalt niet per persoon.
+          <p className="mt-6 text-sm text-ink/60">
+            Elke prijs hieronder geldt voor de <strong className="font-bold text-ink">hele zaal</strong> — 1 tot {capacity} personen, je betaalt niet per persoon.
           </p>
         ) : null}
 
@@ -149,18 +149,18 @@ export default async function Lidmaatschap() {
         <div className="mt-5 grid items-stretch gap-5 lg:grid-cols-3">
           {/* 1. Losse sessie */}
           {singleCents != null && (
-            <div className="flex flex-col rounded-3xl border border-borderc bg-white p-7">
+            <div className="flex flex-col rounded-3xl border border-borderc bg-surface p-7">
               <p className="text-xs font-bold uppercase tracking-widest text-lav">Losse sessie</p>
-              <h2 className="mt-1 text-2xl font-black text-brand">Betaal per keer</h2>
-              <p className="mt-2 text-3xl font-black text-brand">
-                {price(singleCents)}<span className="text-base font-bold text-brand/50"> / uur</span>
+              <h2 className="mt-1 text-2xl font-black text-ink">Betaal per keer</h2>
+              <p className="mt-2 text-3xl font-black text-ink">
+                {price(singleCents)}<span className="text-base font-bold text-ink/50"> / uur</span>
               </p>
-              <p className="mt-0.5 text-xs font-bold text-brand/50">geen lidgeld, geen abo</p>
-              <ul className="mt-4 flex-1 space-y-2 text-sm text-brand/70">
+              <p className="mt-0.5 text-xs font-bold text-ink/50">geen lidgeld, geen abo</p>
+              <ul className="mt-4 flex-1 space-y-2 text-sm text-ink/70">
                 <li className="flex gap-2"><span className="text-accent">✓</span> Boek 1 tot 4 uur (ook 90 minuten)</li>
                 <li className="flex gap-2"><span className="text-accent">✓</span> Verplaatsen kan tot 6 uur vooraf</li>
               </ul>
-              <Link href={user ? "/boeken" : "/login?mode=signup&next=/boeken"} className="mt-5 block w-full rounded-full border-2 border-borderc py-3 text-center font-bold text-brand transition hover:border-accent">Boek een sessie</Link>
+              <Link href={user ? "/boeken" : "/login?mode=signup&next=/boeken"} className="mt-5 block w-full rounded-full border-2 border-borderc py-3 text-center font-bold text-ink transition hover:border-accent">Boek een sessie</Link>
             </div>
           )}
 
@@ -180,24 +180,24 @@ export default async function Lidmaatschap() {
             const perSession = !isAbo && p.credits ? Math.round(p.price_cents / p.credits) : null;
             const badge = isAbo ? (aboIsCheapest ? "⭐ Beste prijs / sessie" : null) : bonus > 0 ? `${paidEquiv} + ${bonus} GRATIS` : `${p.credits} SESSIES`;
             return (
-              <div key={p.id} className={"relative flex flex-col rounded-3xl border-2 p-7 " + (isAbo ? "border-accent bg-white shadow-lg shadow-accent/10" : "border-brand/15 bg-white")}>
+              <div key={p.id} className={"relative flex flex-col rounded-3xl border-2 p-7 " + (isAbo ? "border-accent bg-surface shadow-lg shadow-accent/10" : "border-brand/15 bg-surface")}>
                 {badge && (
                   <span className={"absolute -top-3 left-7 rounded-full px-3 py-1 text-xs font-black " + (isAbo ? "bg-accent text-brand" : "bg-brand text-white")}>
                     {badge}
                   </span>
                 )}
                 <p className="text-xs font-bold uppercase tracking-widest text-lav">{isAbo ? "Abonnement" : "Voordeelkaart"}</p>
-                <h2 className="mt-1 text-2xl font-black text-brand">{p.name}</h2>
+                <h2 className="mt-1 text-2xl font-black text-ink">{p.name}</h2>
                 <p className="mt-2 text-3xl font-black text-accentdark">
                   {price(p.price_cents)}
-                  {p.period === "maand" && <span className="text-base font-bold text-brand/50"> / maand</span>}
+                  {p.period === "maand" && <span className="text-base font-bold text-ink/50"> / maand</span>}
                 </p>
-                <p className="mt-0.5 text-xs font-bold text-brand/50">
+                <p className="mt-0.5 text-xs font-bold text-ink/50">
                   {isAbo
                     ? memberCents != null ? `${price(memberCents)} per sessie` : "maandelijks opzegbaar"
                     : perSession != null ? `± ${euro(perSession)} per sessie` : `${p.credits} sessies`}
                 </p>
-                <ul className="mt-4 flex-1 space-y-2 text-sm text-brand/70">
+                <ul className="mt-4 flex-1 space-y-2 text-sm text-ink/70">
                   {isAbo ? (
                     <>
                       <li className="flex gap-2"><span className="text-accent">✓</span> <strong>{p.credits} sessie{p.credits === 1 ? "" : "s"} per maand inbegrepen</strong></li>
@@ -206,7 +206,7 @@ export default async function Lidmaatschap() {
                           components/booking/BookingClient.jsx (8 weken voor members, 2 zonder abo). */}
                       <li className="flex gap-2"><span className="text-accent">✓</span> Boek tot 8 weken vooruit (zonder abo: 2)</li>
                       <li className="flex gap-2"><span className="text-accent">✓</span> Maandelijks opzegbaar</li>
-                      <li className="flex gap-2 text-brand/45"><span className="text-brand/30">·</span> Inbegrepen sessie geldt binnen de maand (geen opsparen)</li>
+                      <li className="flex gap-2 text-ink/45"><span className="text-ink/30">·</span> Inbegrepen sessie geldt binnen de maand (geen opsparen)</li>
                     </>
                   ) : (
                     <>
@@ -232,25 +232,25 @@ export default async function Lidmaatschap() {
               </div>
             );
           })}
-          {(!packages || packages.length === 0) && <p className="text-sm text-brand/50">Nog geen pakketten beschikbaar.</p>}
+          {(!packages || packages.length === 0) && <p className="text-sm text-ink/50">Nog geen pakketten beschikbaar.</p>}
         </div>
 
         {/* Prijzen vergeleken — op de telefoon werd dit een zijwaartse scroller; daar doen de drie
             kaarten en de adviesalinea hieronder het werk al. Het cijfer dat de kaart verkoopt (prijs
             per sessie) staat sinds kort op de kaart zelf, dus mobiel mist niets meer. */}
         <div className="hidden sm:block">
-          <h2 className="mt-12 text-xl font-black text-brand">Prijzen vergeleken</h2>
-          <div className="mt-3 overflow-x-auto rounded-3xl border border-borderc bg-white">
+          <h2 className="mt-12 text-xl font-black text-ink">Prijzen vergeleken</h2>
+          <div className="mt-3 overflow-x-auto rounded-3xl border border-borderc bg-surface">
             <table className="w-full min-w-[34rem] text-left text-sm">
               <thead>
                 <tr className="border-b border-borderc text-xs font-bold uppercase tracking-wide text-lav">
                   <th className="p-4">Optie</th><th className="p-4">Prijs</th><th className="p-4">Per sessie</th><th className="p-4">Ideaal voor</th>
                 </tr>
               </thead>
-              <tbody className="text-brand/80">
+              <tbody className="text-ink/80">
                 {singleCents != null && (
                   <tr className="border-b border-borderc/60">
-                    <td className="p-4 font-bold text-brand">Losse sessie</td>
+                    <td className="p-4 font-bold text-ink">Losse sessie</td>
                     <td className="p-4">{price(singleCents)}</td>
                     <td className="p-4">{price(singleCents)}</td>
                     <td className="p-4">af en toe trainen</td>
@@ -258,7 +258,7 @@ export default async function Lidmaatschap() {
                 )}
                 {card && (
                   <tr className="border-b border-borderc/60">
-                    <td className="p-4 font-bold text-brand">{card.name}</td>
+                    <td className="p-4 font-bold text-ink">{card.name}</td>
                     <td className="p-4">{price(card.price_cents)} · {card.credits} sessies</td>
                     <td className="p-4">{cardPerSession != null ? `± ${euro(cardPerSession)}` : "—"}</td>
                     <td className="p-4">regelmatig, zonder abo</td>
@@ -267,9 +267,9 @@ export default async function Lidmaatschap() {
                 {abo && (
                   <tr className="bg-accent/10">
                     <td className="p-4 font-black text-accentdark">Abonnement {aboIsCheapest && "⭐"}</td>
-                    <td className="p-4 font-bold text-brand">{price(abo.price_cents)} / maand</td>
-                    <td className="p-4 font-bold text-brand">{memberCents != null ? price(memberCents) : "—"}</td>
-                    <td className="p-4 font-semibold text-brand">wie vast traint</td>
+                    <td className="p-4 font-bold text-ink">{price(abo.price_cents)} / maand</td>
+                    <td className="p-4 font-bold text-ink">{memberCents != null ? price(memberCents) : "—"}</td>
+                    <td className="p-4 font-semibold text-ink">wie vast traint</td>
                   </tr>
                 )}
               </tbody>
@@ -279,7 +279,7 @@ export default async function Lidmaatschap() {
 
         {/* mt-6 op mobiel: daar valt de tabel hierboven weg en zou de alinea tegen de kaarten plakken. */}
         {abo && card && singleCents != null && memberCents != null && (
-          <p className="mt-6 text-sm leading-relaxed text-brand/70 sm:mt-3">
+          <p className="mt-6 text-sm leading-relaxed text-ink/70 sm:mt-3">
             <strong className="text-accentdark">Train je minstens één keer per maand?</strong> Dan zit je met het abonnement
             het goedkoopst: je eerste sessie van de maand zit in de {price(abo.price_cents)}, elke volgende kost {price(memberCents)} in
             plaats van {price(singleCents)}. Train je een maand niets, dan betaal je dat bedrag wél — blijf dan bij losse sessies,
@@ -287,7 +287,7 @@ export default async function Lidmaatschap() {
           </p>
         )}
 
-        <p className="mt-8 text-xs text-brand/40">
+        <p className="mt-8 text-xs text-ink/40">
           Veilig betalen via Stripe. Gekochte sessies zijn 6 maanden geldig; de inbegrepen abo-sessie geldt binnen de maand.
           Abonnementen verlengen automatisch en kunnen op elk moment via "Beheer abonnement" stopgezet worden.
         </p>

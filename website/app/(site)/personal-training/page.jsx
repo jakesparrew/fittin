@@ -173,7 +173,7 @@ export default async function PersonalTraining() {
               <h1 className="mt-4 max-w-3xl text-3xl font-black leading-tight sm:text-4xl md:text-5xl">
                 Personal training in Gent — <span className="text-accentdark">je coach volgt je in de zaal én in de app</span>
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-relaxed text-brand/70 sm:mt-6 sm:text-lg">
+              <p className="mt-5 max-w-2xl text-base leading-relaxed text-ink/70 sm:mt-6 sm:text-lg">
                 Bij Fittin&rsquo; train je nooit op een eilandje. Je coach leert jou en je doel kennen,
                 bouwt je programma op maat in onze app en volgt je voortgang van dichtbij op.
               </p>
@@ -186,13 +186,13 @@ export default async function PersonalTraining() {
                 </a>
                 <a
                   href="#coaches"
-                  className="inline-block rounded-full border border-borderc px-7 py-3.5 font-bold text-brand transition hover:bg-paper"
+                  className="inline-block rounded-full border border-borderc px-7 py-3.5 font-bold text-ink transition hover:bg-paper"
                 >
                   {coaches.length === 1 ? "Maak kennis met je coach" : "Maak kennis met de coaches"}
                 </a>
               </div>
-              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-brand/60">
-                We starten altijd met een <strong className="text-brand">gratis intake en proeftraining</strong> —
+              <p className="mt-4 max-w-2xl text-sm leading-relaxed text-ink/60">
+                We starten altijd met een <strong className="text-ink">gratis intake en proeftraining</strong> —
                 zonder verplichting.
               </p>
             </div>
@@ -216,12 +216,12 @@ export default async function PersonalTraining() {
           </h2>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
             {valueProps.map((card) => (
-              <div key={card.title} className="rounded-2xl bg-white p-7">
+              <div key={card.title} className="rounded-2xl bg-surface p-7">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand text-accent">
                   <Icon name={card.icon} />
                 </div>
                 <h3 className="mt-5 text-lg font-black">{card.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand/60">{card.text}</p>
+                <p className="mt-2 text-sm leading-relaxed text-ink/60">{card.text}</p>
               </div>
             ))}
           </div>
@@ -235,7 +235,7 @@ export default async function PersonalTraining() {
           <h2 className="mt-3 max-w-2xl text-3xl font-black md:text-4xl">
             Jouw coach en de app werken samen
           </h2>
-          <p className="mt-4 max-w-2xl leading-relaxed text-brand/70">
+          <p className="mt-4 max-w-2xl leading-relaxed text-ink/70">
             Dit is wat coaching bij Fittin&rsquo; uniek maakt: je programma woont in dezelfde app waarin je
             traint. Geen losse papieren schema&rsquo;s, geen gokwerk — alles op één plek, voor jou en je coach.
           </p>
@@ -246,7 +246,7 @@ export default async function PersonalTraining() {
                   <Icon name={card.icon} />
                 </div>
                 <h3 className="mt-5 text-lg font-black">{card.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand/60">{card.text}</p>
+                <p className="mt-2 text-sm leading-relaxed text-ink/60">{card.text}</p>
               </div>
             ))}
           </div>
@@ -260,9 +260,9 @@ export default async function PersonalTraining() {
           <h2 className="mt-3 text-3xl font-black md:text-4xl">Van eerste gesprek tot blijvende vooruitgang</h2>
           <div className="mt-10 grid gap-5 sm:grid-cols-2">
             {steps.map((step) => (
-              <div key={step.title} className="rounded-2xl bg-white p-7">
-                <h3 className="text-lg font-black text-brand">{step.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand/60">{step.text}</p>
+              <div key={step.title} className="rounded-2xl bg-surface p-7">
+                <h3 className="text-lg font-black text-ink">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-ink/60">{step.text}</p>
               </div>
             ))}
           </div>
@@ -303,7 +303,7 @@ export default async function PersonalTraining() {
           <h2 className="mt-3 text-3xl font-black md:text-4xl">
             {coaches.length === 1 ? "Maak kennis met je coach" : "Misschien binnenkort jouw sportbuddy"}
           </h2>
-          <p className="mt-4 max-w-2xl leading-relaxed text-brand/70">
+          <p className="mt-4 max-w-2xl leading-relaxed text-ink/70">
             {coaches.length === 1
               ? "Tijdens je gratis intake leer je je coach kennen en ontdek je of de aanpak bij jou en je doel past."
               : "Onze ervaren coaches, elk met hun eigen specialiteit. Tijdens je gratis intake ontdek je wie het best bij jou en je doel past."}
@@ -312,12 +312,12 @@ export default async function PersonalTraining() {
             // Het kolomaantal volgt het aantal publieke coaches — anders staan er gaten naast één kaart.
             <div className={`mt-10 grid gap-5 ${coaches.length === 1 ? "max-w-sm" : coaches.length === 2 ? "sm:grid-cols-2" : "sm:grid-cols-2 lg:grid-cols-3"}`}>
               {coaches.map((coach) => (
-                <Link key={coach.id} href={`/coaches/${coachSlug(coach)}`} className="group flex flex-col overflow-hidden rounded-2xl border border-borderc bg-white transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
+                <Link key={coach.id} href={`/coaches/${coachSlug(coach)}`} className="group flex flex-col overflow-hidden rounded-2xl border border-borderc bg-surface transition hover:-translate-y-1 hover:shadow-xl hover:shadow-brand/5">
                   <div className="relative aspect-[4/3] bg-paper">
                     {coach.coach_photo_url ? (
                       <Image src={coach.coach_photo_url} alt={coach.full_name || "Coach"} fill sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw" className="object-cover" />
                     ) : (
-                      <div className="flex h-full items-center justify-center text-5xl font-black text-brand/15">{(coach.full_name || "C").slice(0, 1)}</div>
+                      <div className="flex h-full items-center justify-center text-5xl font-black text-ink/15">{(coach.full_name || "C").slice(0, 1)}</div>
                     )}
                   </div>
                   <div className="flex flex-1 flex-col p-6">
@@ -327,13 +327,13 @@ export default async function PersonalTraining() {
                     {!accepterend.has(coach.id) && (
                       <span className="mt-2 inline-flex w-fit items-center rounded-full bg-paper px-2.5 py-1 text-xs font-bold text-ink-soft">Momenteel geen nieuwe klanten</span>
                     )}
-                    <span className="mt-auto pt-4 text-sm font-bold text-brand/60 transition group-hover:text-brand">Bekijk profiel →</span>
+                    <span className="mt-auto pt-4 text-sm font-bold text-ink/60 transition group-hover:text-ink">Bekijk profiel →</span>
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
-            <p className="mt-10 rounded-2xl border border-dashed border-borderc bg-white p-8 text-center text-brand/50">Onze coaches worden binnenkort voorgesteld.</p>
+            <p className="mt-10 rounded-2xl border border-dashed border-borderc bg-surface p-8 text-center text-ink/50">Onze coaches worden binnenkort voorgesteld.</p>
           )}
         </div>
       </section>
@@ -343,10 +343,10 @@ export default async function PersonalTraining() {
         <div className="mx-auto max-w-6xl px-5 py-20">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-lav">Formules</p>
           <h2 className="mt-3 text-3xl font-black md:text-4xl">Alleen, met een buddy of in groep</h2>
-          <p className="mt-4 max-w-2xl leading-relaxed text-brand/70">
+          <p className="mt-4 max-w-2xl leading-relaxed text-ink/70">
             Je kiest zelf hoe je traint. Elke formule krijgt dezelfde persoonlijke begeleiding en
             hetzelfde plan op maat in de app.{" "}
-            <span className="font-semibold text-brand">De prijs is op aanvraag</span> — je bespreekt ze
+            <span className="font-semibold text-ink">De prijs is op aanvraag</span> — je bespreekt ze
             tijdens je gratis intake.
           </p>
           <div className="mt-10 grid gap-5 md:grid-cols-3">
@@ -359,12 +359,12 @@ export default async function PersonalTraining() {
                   ))}
                 </div>
                 <h3 className="mt-4 text-xl font-black">{f.name}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-brand/60">{f.desc}</p>
+                <p className="mt-2 text-sm leading-relaxed text-ink/60">{f.desc}</p>
               </div>
             ))}
           </div>
-          <div className="mt-8 rounded-2xl bg-paper p-6 text-sm leading-relaxed text-brand/70">
-            <strong className="text-brand">Prijs op aanvraag.</strong> Personal training is altijd op maat,
+          <div className="mt-8 rounded-2xl bg-paper p-6 text-sm leading-relaxed text-ink/70">
+            <strong className="text-ink">Prijs op aanvraag.</strong> Personal training is altijd op maat,
             dus de prijs ook. Je krijgt een helder voorstel tijdens je gratis intake — zonder verplichting.
             Train je in duo of met je drieën, dan deel je de kost van de sessie met wie je meebrengt;
             de sessie zelf kost dan wel meer dan een 1-op-1.
@@ -380,14 +380,14 @@ export default async function PersonalTraining() {
           <h2 className="mt-3 text-3xl font-black md:text-4xl">Goed om te weten</h2>
           <div className="mt-10 space-y-4">
             {faq.map((item) => (
-              <details key={item.q} className="group rounded-2xl border border-borderc bg-white p-6">
-                <summary className="flex cursor-pointer items-center justify-between gap-4 font-black text-brand marker:content-none">
+              <details key={item.q} className="group rounded-2xl border border-borderc bg-surface p-6">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 font-black text-ink marker:content-none">
                   {item.q}
                   <span className="shrink-0 text-accentdark transition group-open:rotate-45">
                     <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg>
                   </span>
                 </summary>
-                <p className="mt-3 text-sm leading-relaxed text-brand/70">{item.a}</p>
+                <p className="mt-3 text-sm leading-relaxed text-ink/70">{item.a}</p>
               </details>
             ))}
           </div>
@@ -398,12 +398,12 @@ export default async function PersonalTraining() {
       <section>
         <div className="mx-auto max-w-6xl px-5 py-20">
           <div className="relative overflow-hidden rounded-3xl bg-accent p-10 text-center md:p-16">
-            <div className="pointer-events-none absolute -left-16 -bottom-16 h-56 w-56 rounded-full bg-white/30" />
+            <div className="pointer-events-none absolute -left-16 -bottom-16 h-56 w-56 rounded-full bg-surface/30" />
             <div className="relative mx-auto max-w-2xl">
-              <h2 className="text-3xl font-black text-brand md:text-4xl">
+              <h2 className="text-3xl font-black text-ink md:text-4xl">
                 Klaar om te starten? Je eerste sessie is gratis.
               </h2>
-              <p className="mt-4 leading-relaxed text-brand/80">
+              <p className="mt-4 leading-relaxed text-ink/80">
                 Intake én proeftraining, volledig gratis en vrijblijvend. Je ontdekt meteen hoe het voelt
                 om met een coach te trainen — en wat een plan op maat in de app voor jou kan doen.
               </p>
@@ -413,7 +413,7 @@ export default async function PersonalTraining() {
               >
                 Vraag je gratis proeftraining aan
               </a>
-              <p className="mt-4 text-sm font-semibold text-brand/70">
+              <p className="mt-4 text-sm font-semibold text-ink/70">
                 Liever eerst overleggen? Mail{" "}
                 <a href="mailto:info@fittin.be?subject=Personal%20training" className="underline">info@fittin.be</a>
               </p>
@@ -426,8 +426,8 @@ export default async function PersonalTraining() {
       {/* The redeem path for every "gratis proeftraining" promise — works without account. */}
       <section id="intake" className="scroll-mt-24 bg-paper">
         <div className="mx-auto max-w-3xl px-5 py-20">
-          <h2 className="text-center text-3xl font-black text-brand md:text-4xl">Vraag je gratis intake & proeftraining aan</h2>
-          <p className="mx-auto mt-4 max-w-xl text-center text-brand/70">
+          <h2 className="text-center text-3xl font-black text-ink md:text-4xl">Vraag je gratis intake & proeftraining aan</h2>
+          <p className="mx-auto mt-4 max-w-xl text-center text-ink/70">
             Laat je gegevens achter, dan mailen we je binnen 1 werkdag om een moment te prikken —
             of bellen we je als je je nummer invult. Volledig gratis en vrijblijvend.
           </p>

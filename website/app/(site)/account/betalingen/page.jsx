@@ -28,16 +28,16 @@ export default async function AccountBetalingen() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-10 md:px-6">
-      <Link href="/account" className="text-sm font-semibold text-brand/50 hover:text-brand print:hidden">← Mijn account</Link>
+      <Link href="/account" className="text-sm font-semibold text-ink/50 hover:text-ink print:hidden">← Mijn account</Link>
       <div className="mt-2 flex flex-wrap items-start justify-between gap-3">
-        <h1 className="text-3xl font-black text-brand">Betalingen &amp; facturen</h1>
+        <h1 className="text-3xl font-black text-ink">Betalingen &amp; facturen</h1>
         <PrintButton label="⬇ Overzicht als PDF" />
       </div>
-      <p className="mt-1 max-w-2xl text-sm text-brand/60">Download je <b>betaalbewijs</b> of een <b>factuur</b> per betaling. Betaal je als bedrijf? Vink dan bij het betalen <b>&ldquo;Ik koop als bedrijf&rdquo;</b> aan en geef je btw-nummer in — of vul hieronder eenmalig je gegevens in.</p>
+      <p className="mt-1 max-w-2xl text-sm text-ink/60">Download je <b>betaalbewijs</b> of een <b>factuur</b> per betaling. Betaal je als bedrijf? Vink dan bij het betalen <b>&ldquo;Ik koop als bedrijf&rdquo;</b> aan en geef je btw-nummer in — of vul hieronder eenmalig je gegevens in.</p>
 
       {/* Billing details — optional, for an invoice on a company name */}
-      <details open={!hasBilling} className="mt-6 rounded-2xl border border-borderc bg-white p-5">
-        <summary className="cursor-pointer text-sm font-bold text-brand">🏢 Facturatiegegevens {hasBilling ? "(ingevuld ✓)" : "(optioneel — voor een factuur op bedrijfsnaam)"}</summary>
+      <details open={!hasBilling} className="mt-6 rounded-2xl border border-borderc bg-surface p-5">
+        <summary className="cursor-pointer text-sm font-bold text-ink">🏢 Facturatiegegevens {hasBilling ? "(ingevuld ✓)" : "(optioneel — voor een factuur op bedrijfsnaam)"}</summary>
         <ActionForm action={saveBillingDetails} success="Facturatiegegevens opgeslagen ✓" className="mt-4 grid gap-3 sm:grid-cols-2">
           <Field name="bill_company" label="Bedrijfsnaam" defaultValue={me?.bill_company} placeholder="bv. Mijn BV" />
           <Field name="bill_vat" label="Btw-nummer" defaultValue={me?.bill_vat} placeholder="BE 0123.456.789" />
@@ -46,7 +46,7 @@ export default async function AccountBetalingen() {
         </ActionForm>
       </details>
 
-      <div className="mt-6 overflow-x-auto rounded-2xl border border-borderc bg-white">
+      <div className="mt-6 overflow-x-auto rounded-2xl border border-borderc bg-surface">
         <table className="w-full min-w-[560px] text-sm">
           <thead className="bg-paper text-left text-xs font-bold uppercase tracking-wide text-lav">
             <tr>
@@ -60,19 +60,19 @@ export default async function AccountBetalingen() {
           <tbody className="divide-y divide-borderc">
             {payments.map((p) => (
               <tr key={p.id}>
-                <td className="whitespace-nowrap px-5 py-3 text-brand/60">{fmtDate(p.created_at)}</td>
-                <td className="px-5 py-3 font-semibold text-brand">{p.description || KIND[p.kind] || "Betaling"}</td>
-                <td className="whitespace-nowrap px-5 py-3 text-right font-black text-brand">{euro(p.amount_cents)}</td>
+                <td className="whitespace-nowrap px-5 py-3 text-ink/60">{fmtDate(p.created_at)}</td>
+                <td className="px-5 py-3 font-semibold text-ink">{p.description || KIND[p.kind] || "Betaling"}</td>
+                <td className="whitespace-nowrap px-5 py-3 text-right font-black text-ink">{euro(p.amount_cents)}</td>
                 <td className="px-5 py-3 text-right"><a href={`/account/factuur/${p.id}`} target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-accentdark hover:underline">Factuur →</a></td>
-                <td className="px-5 py-3 text-right">{p.receipt_url ? <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-brand/50 hover:underline">Download</a> : <span className="text-xs text-brand/30">—</span>}</td>
+                <td className="px-5 py-3 text-right">{p.receipt_url ? <a href={p.receipt_url} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-ink/50 hover:underline">Download</a> : <span className="text-xs text-ink/30">—</span>}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {payments.length === 0 && <p className="p-6 text-sm text-brand/50">Nog geen betalingen.</p>}
+        {payments.length === 0 && <p className="p-6 text-sm text-ink/50">Nog geen betalingen.</p>}
       </div>
-      {payments.length > 0 && <p className="mt-3 text-right text-sm text-brand/60">Totaal betaald: <span className="font-black text-brand">{euro(total)}</span></p>}
-      <p className="mt-6 text-xs text-brand/40">Facturen zijn inclusief 6% btw. Vragen? <a href="mailto:info@fittin.be" className="font-semibold text-accentdark hover:underline">info@fittin.be</a>.</p>
+      {payments.length > 0 && <p className="mt-3 text-right text-sm text-ink/60">Totaal betaald: <span className="font-black text-ink">{euro(total)}</span></p>}
+      <p className="mt-6 text-xs text-ink/40">Facturen zijn inclusief 6% btw. Vragen? <a href="mailto:info@fittin.be" className="font-semibold text-accentdark hover:underline">info@fittin.be</a>.</p>
     </div>
   );
 }

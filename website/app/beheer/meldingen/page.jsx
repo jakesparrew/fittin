@@ -94,17 +94,17 @@ export default async function Meldingen({ searchParams }) {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Meldingen</h1>
-      <p className="mt-1 text-sm text-brand/50">
+      <h1 className="text-3xl font-black text-ink">Meldingen</h1>
+      <p className="mt-1 text-sm text-ink/50">
         Problemen gemeld door leden — vanuit hun deurcodemail, met categorie en foto — én automatische foutlogs uit de app.
       </p>
 
       {/* Samenvatting bovenaan: wie via "Client-fouten" binnenkomt, ziet meteen waar de inhoud zit —
           voorheen begon de pagina met een grote lege "Van leden"-staat en leken de foutlogs onvindbaar. */}
       <div className="mt-4 flex flex-wrap gap-2 text-xs font-bold">
-        <span className={"rounded-full px-3.5 py-1.5 " + (open.length ? "bg-amber-100 text-amber-700" : "bg-white text-brand/50 border border-borderc")}>Van leden: {open.length} open</span>
-        <a href="#foutlogs" className={"rounded-full px-3.5 py-1.5 transition hover:opacity-80 " + (bugs.length ? "bg-brand text-white" : "bg-white text-brand/50 border border-borderc")}>Fouten in de app: {bugs.length} ↓</a>
-        {ruis.length > 0 && <span className="rounded-full border border-borderc bg-white px-3.5 py-1.5 text-brand/40">Omgevingsruis: {ruis.length}</span>}
+        <span className={"rounded-full px-3.5 py-1.5 " + (open.length ? "bg-amber-100 text-amber-700" : "bg-surface text-ink/50 border border-borderc")}>Van leden: {open.length} open</span>
+        <a href="#foutlogs" className={"rounded-full px-3.5 py-1.5 transition hover:opacity-80 " + (bugs.length ? "bg-brand text-white" : "bg-surface text-ink/50 border border-borderc")}>Fouten in de app: {bugs.length} ↓</a>
+        {ruis.length > 0 && <span className="rounded-full border border-borderc bg-surface px-3.5 py-1.5 text-ink/40">Omgevingsruis: {ruis.length}</span>}
       </div>
 
       <div className="mt-4">
@@ -115,7 +115,7 @@ export default async function Meldingen({ searchParams }) {
       <section className="mt-6">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Van leden{open.length ? ` · ${open.length} open` : ""}</h2>
         {alleReports.length === 0 && (
-          <p className="mt-3 text-sm text-brand/40">
+          <p className="mt-3 text-sm text-ink/40">
             {zoek
               ? `Geen melding van een lid gevonden voor “${zoek}”.`
               : "Nog geen meldingen van leden. De meldlink staat onderaan elke deurcodemail."}
@@ -126,13 +126,13 @@ export default async function Meldingen({ searchParams }) {
             <MeldingKaart key={r.id} melding={r} fotoUrl={fotoUrls[r.id]} vorige={vorigen[r.id]} />
           ))}
           {done.length > 0 && (
-            <details className="rounded-2xl border border-borderc bg-white p-4">
-              <summary className="cursor-pointer text-sm font-bold text-brand/60">Afgehandeld ({done.length})</summary>
+            <details className="rounded-2xl border border-borderc bg-surface p-4">
+              <summary className="cursor-pointer text-sm font-bold text-ink/60">Afgehandeld ({done.length})</summary>
               <div className="mt-3 space-y-2">
                 {done.map((r) => (
                   <div key={r.id} className="rounded-xl bg-paper px-4 py-3 text-sm">
-                    <p className="font-bold text-brand/70">{r.member?.full_name || "Lid"} <span className="font-semibold text-brand/40">· {fmt(r.created_at)}</span></p>
-                    <p className="mt-0.5 text-brand/60">{r.message}</p>
+                    <p className="font-bold text-ink/70">{r.member?.full_name || "Lid"} <span className="font-semibold text-ink/40">· {fmt(r.created_at)}</span></p>
+                    <p className="mt-0.5 text-ink/60">{r.message}</p>
                   </div>
                 ))}
               </div>
@@ -144,14 +144,14 @@ export default async function Meldingen({ searchParams }) {
       {/* ---- Automatic client errors ---- */}
       <section id="foutlogs" className="mt-8 scroll-mt-6">
         <h2 className="text-xs font-black uppercase tracking-widest text-lav">Fouten in de app (14 dagen) · {bugs.length}</h2>
-        <p className="mt-1 text-xs text-brand/45">
+        <p className="mt-1 text-xs text-ink/45">
           Automatisch gelogde JS-fouten waar wél iets aan te doen valt. Vink een fout af zodra ze
           gerepareerd is — komt ze daarna terug, dan verschijnt ze vanzelf opnieuw.
         </p>
         {bugs.length === 0 ? (
           <p className="mt-3 rounded-2xl border border-accent/40 bg-accent/5 p-5 text-sm font-semibold text-accentdark">Geen openstaande app-fouten. 🎉</p>
         ) : (
-          <div className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-white">
+          <div className="mt-3 overflow-hidden rounded-2xl border border-borderc bg-surface">
             {bugs.map((g, i) => <ErrGroup key={i} g={g} nameById={nameById} resolvable />)}
           </div>
         )}
@@ -159,11 +159,11 @@ export default async function Meldingen({ searchParams }) {
         {/* Ruis apart en dichtgeklapt: wegmoffelen zou een échte storing verbergen, maar tussen de
             bugs zetten zorgt ervoor dat de hele lijst genegeerd wordt. */}
         {ruis.length > 0 && (
-          <details className="mt-4 rounded-2xl border border-borderc bg-white p-4">
-            <summary className="cursor-pointer text-sm font-bold text-brand/60">
+          <details className="mt-4 rounded-2xl border border-borderc bg-surface p-4">
+            <summary className="cursor-pointer text-sm font-bold text-ink/60">
               Omgevingsruis ({ruis.length}) — verbindingsproblemen &amp; browserextensies
             </summary>
-            <p className="mt-2 text-xs text-brand/45">
+            <p className="mt-2 text-xs text-ink/45">
               Hier valt vanuit de code niets aan te repareren. Alleen een plotse golf is een signaal:
               dan is er waarschijnlijk wél iets mis met de site of de hosting.
             </p>
@@ -187,25 +187,25 @@ function ErrGroup({ g, nameById, resolvable = false, muted = false }) {
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-2">
             {g.count > 1 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">×{g.count}</span>}
-            <span className={"min-w-0 break-all font-mono text-xs " + (muted ? "text-brand/50" : "text-brand/80")}>{g.message}</span>
+            <span className={"min-w-0 break-all font-mono text-xs " + (muted ? "text-ink/50" : "text-ink/80")}>{g.message}</span>
           </p>
-          <p className="mt-0.5 text-xs text-brand/40">
+          <p className="mt-0.5 text-xs text-ink/40">
             laatst {fmt(g.last)}{g.path ? ` · ${g.path}` : ""} · {g.users.size > 0 ? `${g.users.size} ${g.users.size === 1 ? "gebruiker" : "gebruikers"}${g.users.size === 1 ? ` (${nameById[[...g.users][0]] || "ingelogd"})` : ""}` : "anoniem"}
           </p>
-          {uitleg && <p className="mt-1 text-xs text-brand/45">{uitleg}</p>}
+          {uitleg && <p className="mt-1 text-xs text-ink/45">{uitleg}</p>}
         </div>
         <ActionForm action={resolveClientError} className="shrink-0">
           <input type="hidden" name="message" value={g.message} />
           <input type="hidden" name="path" value={g.path || ""} />
-          <button className={"rounded-full px-3 py-1.5 text-xs font-bold transition " + (resolvable ? "bg-brand text-white hover:opacity-90" : "border border-borderc bg-white text-brand/50 hover:border-lav")}>
+          <button className={"rounded-full px-3 py-1.5 text-xs font-bold transition " + (resolvable ? "bg-brand text-white hover:opacity-90" : "border border-borderc bg-surface text-ink/50 hover:border-lav")}>
             {resolvable ? "✓ Opgelost" : "Verbergen"}
           </button>
         </ActionForm>
       </div>
       {g.stack && (
         <details className="mt-1">
-          <summary className="cursor-pointer text-[10px] font-bold text-brand/40 hover:text-brand">stacktrace</summary>
-          <pre className="mt-1 max-h-40 overflow-auto rounded-lg bg-paper p-2 text-[10px] leading-relaxed text-brand/60">{g.stack}</pre>
+          <summary className="cursor-pointer text-[10px] font-bold text-ink/40 hover:text-ink">stacktrace</summary>
+          <pre className="mt-1 max-h-40 overflow-auto rounded-lg bg-paper p-2 text-[10px] leading-relaxed text-ink/60">{g.stack}</pre>
         </details>
       )}
     </div>

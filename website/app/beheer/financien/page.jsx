@@ -117,45 +117,45 @@ export default async function Financien({ searchParams }) {
     <div className="px-4 py-6 md:px-8 md:py-8">
       {/* Print-only kop met de wettelijke gegevens — zo is de PDF meteen bruikbaar voor de boekhouder. */}
       <div className="hidden print:mb-6 print:block">
-        <p className="text-xl font-black text-brand">{gym.legal_name || gym.name || "Fittin'"}</p>
-        <p className="text-xs text-brand/60">
+        <p className="text-xl font-black text-ink">{gym.legal_name || gym.name || "Fittin'"}</p>
+        <p className="text-xs text-ink/60">
           {gym.vat_number ? `Ondernemingsnr. ${gym.vat_number} · ` : ""}{gym.address || ""}
           {secrets?.iban ? ` · IBAN ${secrets.iban}` : ""}
         </p>
-        <p className="mt-1 text-sm font-bold text-brand">Financieel overzicht — {label}</p>
+        <p className="mt-1 text-sm font-bold text-ink">Financieel overzicht — {label}</p>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-3 print:hidden">
         <div>
-          <h1 className="text-3xl font-black text-brand">Financiën</h1>
-          <p className="mt-1 text-sm text-brand/50">Alles voor je boekhouding: ontvangsten, btw, open posten en nog te factureren coach-sessies.</p>
+          <h1 className="text-3xl font-black text-ink">Financiën</h1>
+          <p className="mt-1 text-sm text-ink/50">Alles voor je boekhouding: ontvangsten, btw, open posten en nog te factureren coach-sessies.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <a href={`/beheer/betalingen/export`} className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-lav">⬇ CSV (alles)</a>
+          <a href={`/beheer/betalingen/export`} className="rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-ink transition hover:border-lav">⬇ CSV (alles)</a>
           <PrintButton label="⬇ PDF / afdrukken" />
         </div>
       </div>
 
       {/* Saldo bij Stripe. Verschijnt alleen als Stripe antwoordt — leeg = onzichtbaar. */}
       {stripeSaldo && (
-        <div className="mt-4 rounded-2xl border border-borderc bg-white p-5 print:hidden">
+        <div className="mt-4 rounded-2xl border border-borderc bg-surface p-5 print:hidden">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-black uppercase tracking-widest text-lav">Op je Stripe-rekening</p>
               <div className="mt-2 flex flex-wrap items-baseline gap-x-6 gap-y-2">
                 <span>
-                  <span className="text-2xl font-black text-brand">{euro(stripeSaldo.beschikbaar)}</span>
-                  <span className="ml-2 text-sm text-brand/50">klaar om uit te betalen</span>
+                  <span className="text-2xl font-black text-ink">{euro(stripeSaldo.beschikbaar)}</span>
+                  <span className="ml-2 text-sm text-ink/50">klaar om uit te betalen</span>
                 </span>
                 {stripeSaldo.onderweg > 0 && (
                   <span>
-                    <span className="text-lg font-black text-brand/70">{euro(stripeSaldo.onderweg)}</span>
-                    <span className="ml-2 text-sm text-brand/50">onderweg</span>
+                    <span className="text-lg font-black text-ink/70">{euro(stripeSaldo.onderweg)}</span>
+                    <span className="ml-2 text-sm text-ink/50">onderweg</span>
                   </span>
                 )}
               </div>
               {stripeSaldo.laatste && (
-                <p className="mt-2 text-xs text-brand/45">
+                <p className="mt-2 text-xs text-ink/45">
                   Laatste uitbetaling: {euro(stripeSaldo.laatste.amount)} op {fmtDay(new Date(stripeSaldo.laatste.arrival_date * 1000).toISOString())}
                   {stripeSaldo.laatste.status !== "paid" ? ` · ${stripeSaldo.laatste.status}` : ""}
                 </p>
@@ -165,12 +165,12 @@ export default async function Financien({ searchParams }) {
               href="https://dashboard.stripe.com/balance/overview"
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-brand transition hover:border-accent hover:text-accentdark"
+              className="shrink-0 rounded-full border-2 border-borderc px-4 py-2 text-sm font-bold text-ink transition hover:border-accent hover:text-accentdark"
             >
               Open in Stripe →
             </a>
           </div>
-          <p className="mt-3 text-xs text-brand/45">
+          <p className="mt-3 text-xs text-ink/45">
             {stripeSaldo.onderweg > 0
               ? "\"Onderweg\" zijn betalingen die nog moeten landen — een SEPA-incasso doet daar enkele dagen over."
               : "Dit is het saldo bij Stripe, niet je bankrekening. Uitbetalen doe je in Stripe zelf."}
@@ -183,7 +183,7 @@ export default async function Financien({ searchParams }) {
         <Link href={`/beheer/financien?m=${back + 1}`} className="rounded-full border-2 border-borderc px-3 py-1.5 text-sm font-bold hover:border-lav">←</Link>
         <span className="rounded-full bg-brand px-4 py-1.5 text-sm font-bold capitalize text-white">{label}</span>
         {back > 0 && <Link href={`/beheer/financien?m=${back - 1}`} className="rounded-full border-2 border-borderc px-3 py-1.5 text-sm font-bold hover:border-lav">→</Link>}
-        <Link href={jaar ? `/beheer/financien?m=${back}` : `/beheer/financien?m=${back}&jaar=1`} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (jaar ? "bg-accent text-brand" : "border-2 border-borderc text-brand/60 hover:border-lav")}>
+        <Link href={jaar ? `/beheer/financien?m=${back}` : `/beheer/financien?m=${back}&jaar=1`} className={"rounded-full px-4 py-1.5 text-sm font-bold transition " + (jaar ? "bg-accent text-brand" : "border-2 border-borderc text-ink/60 hover:border-lav")}>
           {jaar ? "✓ Heel jaar" : "Heel jaar"}
         </Link>
       </div>
@@ -199,8 +199,8 @@ export default async function Financien({ searchParams }) {
       {/* Zelf een factuur opmaken — vrije post voor alles wat niet via Stripe loopt
           (bv. sponsoring, verhuur van de zaal, een aparte afspraak met een coach of lid). */}
       <details className="mt-6 rounded-2xl border-2 border-accent bg-accent/5 p-5 print:hidden">
-        <summary className="cursor-pointer text-sm font-black text-brand">🧾 Nieuwe factuur opmaken</summary>
-        <p className="mt-2 text-xs text-brand/55">
+        <summary className="cursor-pointer text-sm font-black text-ink">🧾 Nieuwe factuur opmaken</summary>
+        <p className="mt-2 text-xs text-ink/55">
           Kies voor wie, geef een omschrijving en het bedrag <b>incl. {btwPct}% btw</b>. De factuur verschijnt bij
           <b> Open posten</b> — daar genereer je de PDF (met automatisch volgnummer) en vink je "ontvangen" aan zodra betaald.
         </p>
@@ -222,24 +222,24 @@ export default async function Financien({ searchParams }) {
       </details>
 
       {/* Omzet per soort */}
-      <section className="mt-6 rounded-2xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Ontvangsten per soort — {label}</h2>
+      <section className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
+        <h2 className="font-black text-ink">Ontvangsten per soort — {label}</h2>
         <table className="mt-3 w-full text-sm">
           <tbody className="divide-y divide-borderc">
             {Object.entries(perKind).sort((a, b) => b[1] - a[1]).map(([k, v]) => (
               <tr key={k}>
-                <td className="py-2 font-semibold text-brand">{KIND[k] || k}</td>
-                <td className="py-2 text-right text-xs text-brand/45">{Math.round((v / (totaal || 1)) * 100)}%</td>
-                <td className="py-2 text-right font-black text-brand">{euro(v)}</td>
+                <td className="py-2 font-semibold text-ink">{KIND[k] || k}</td>
+                <td className="py-2 text-right text-xs text-ink/45">{Math.round((v / (totaal || 1)) * 100)}%</td>
+                <td className="py-2 text-right font-black text-ink">{euro(v)}</td>
               </tr>
             ))}
-            {Object.keys(perKind).length === 0 && <tr><td className="py-3 text-sm text-brand/40">Geen ontvangsten in deze periode.</td></tr>}
+            {Object.keys(perKind).length === 0 && <tr><td className="py-3 text-sm text-ink/40">Geen ontvangsten in deze periode.</td></tr>}
           </tbody>
           {Object.keys(perKind).length > 0 && (
             <tfoot>
               <tr className="border-t-2 border-brand/20">
-                <td className="pt-2 font-black text-brand">Totaal</td><td />
-                <td className="pt-2 text-right font-black text-brand">{euro(totaal)}</td>
+                <td className="pt-2 font-black text-ink">Totaal</td><td />
+                <td className="pt-2 text-right font-black text-ink">{euro(totaal)}</td>
               </tr>
             </tfoot>
           )}
@@ -251,32 +251,32 @@ export default async function Financien({ searchParams }) {
           een van de andere twee wegen ontstond (onbetaalde factuur, negatief tegoedsaldo) stond
           nergens, en na de omzetting van factuur- naar tegoed-coaches verdween ook de eerste soort
           uit het coach-overzicht. Vandaar één lijst met per coach de reden erbij. */}
-      <section className="mt-6 rounded-2xl border-2 border-amber-300 bg-amber-50/60 p-6 print:border-borderc print:bg-white">
+      <section className="mt-6 rounded-2xl border-2 border-amber-300 bg-amber-50/60 p-6 print:border-borderc print:bg-surface">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-black text-brand">Openstaand bij coaches</h2>
-            <p className="mt-0.5 text-sm text-brand/60">
+            <h2 className="font-black text-ink">Openstaand bij coaches</h2>
+            <p className="mt-0.5 text-sm text-ink/60">
               Alles wat een coach nog verschuldigd is, ongeacht de periode: nog te factureren sessies,
               verstuurde facturen die niet betaald zijn, en tegoeden die onder nul staan.
             </p>
           </div>
-          <span className="text-2xl font-black text-brand">{euro(coachSchuldTotaal)}</span>
+          <span className="text-2xl font-black text-ink">{euro(coachSchuldTotaal)}</span>
         </div>
         {schuldigen.length === 0 ? (
-          <p className="mt-3 text-sm text-brand/50">Niets openstaand bij de coaches. ✓</p>
+          <p className="mt-3 text-sm text-ink/50">Niets openstaand bij de coaches. ✓</p>
         ) : (
           <div className="mt-4 space-y-2">
             {schuldigen.map((r) => (
-              <div key={r.coachId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-white p-4">
+              <div key={r.coachId} className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-surface p-4">
                 <div className="min-w-0">
-                  <p className="font-black text-brand">{r.naam}</p>
-                  <p className="text-xs text-brand/50">{debtReasons(r).join(" · ")}</p>
+                  <p className="font-black text-ink">{r.naam}</p>
+                  <p className="text-xs text-ink/50">{debtReasons(r).join(" · ")}</p>
                   {r.factuurSessies > 0 && (
-                    <p className="text-xs text-brand/40">{fmtDay(r.sessies[0].starts_at)} → {fmtDay(r.sessies[r.sessies.length - 1].starts_at)} · {euro(1200)}/sessie</p>
+                    <p className="text-xs text-ink/40">{fmtDay(r.sessies[0].starts_at)} → {fmtDay(r.sessies[r.sessies.length - 1].starts_at)} · {euro(1200)}/sessie</p>
                   )}
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-lg font-black text-brand">{euro(r.totaalCents)}</span>
+                  <span className="text-lg font-black text-ink">{euro(r.totaalCents)}</span>
                   {r.factuurCents > 0 && (
                     <ActionForm action={invoiceCoachSessions} success="Factuur opgemaakt ✓" className="print:hidden">
                       <input type="hidden" name="coachId" value={r.coachId} />
@@ -286,7 +286,7 @@ export default async function Financien({ searchParams }) {
                 </div>
               </div>
             ))}
-            <p className="text-xs text-brand/45 print:hidden">
+            <p className="text-xs text-ink/45 print:hidden">
               "Factureer" zet het bedrag als open post bij Betalingen (waar je de factuur-PDF maakt) en markeert de sessies als gefactureerd.
               Een open post verdwijnt hier pas wanneer je hem op <b>betaald</b> zet — niet bij het versturen van de factuur.
             </p>
@@ -295,11 +295,11 @@ export default async function Financien({ searchParams }) {
       </section>
 
       {/* Open posten */}
-      <section className="mt-6 rounded-2xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Open posten <span className="text-sm font-bold text-brand/40">({open.length})</span></h2>
-        <p className="mt-0.5 text-sm text-brand/50">Gefactureerd maar nog niet ontvangen (overschrijving/cash). <b>Alle periodes</b>, niet enkel de gekozen maand.</p>
+      <section className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
+        <h2 className="font-black text-ink">Open posten <span className="text-sm font-bold text-ink/40">({open.length})</span></h2>
+        <p className="mt-0.5 text-sm text-ink/50">Gefactureerd maar nog niet ontvangen (overschrijving/cash). <b>Alle periodes</b>, niet enkel de gekozen maand.</p>
         {open.length === 0 ? (
-          <p className="mt-3 text-sm text-brand/50">Alles is geïnd. ✓</p>
+          <p className="mt-3 text-sm text-ink/50">Alles is geïnd. ✓</p>
         ) : (
           <table className="mt-3 w-full text-sm">
             <thead className="text-left text-xs font-bold uppercase tracking-wide text-lav">
@@ -308,16 +308,16 @@ export default async function Financien({ searchParams }) {
             <tbody className="divide-y divide-borderc">
               {open.map((p) => (
                 <tr key={p.id}>
-                  <td className="py-2 whitespace-nowrap text-brand/60">{fmtDay(p.created_at)}</td>
-                  <td className="py-2 font-semibold text-brand">{p.member?.full_name || "—"}</td>
-                  <td className="py-2 text-brand/60">{p.description || KIND[p.kind] || p.kind}</td>
+                  <td className="py-2 whitespace-nowrap text-ink/60">{fmtDay(p.created_at)}</td>
+                  <td className="py-2 font-semibold text-ink">{p.member?.full_name || "—"}</td>
+                  <td className="py-2 text-ink/60">{p.description || KIND[p.kind] || p.kind}</td>
                   <td className="py-2 text-right font-black text-red-600">{euro(p.amount_cents)}</td>
                   <td className="py-2 text-right print:hidden">
                     <span className="inline-flex gap-2">
                       <Link href={`/beheer/factuur?payment=${p.id}`} className="text-xs font-bold text-accentdark hover:underline">Factuur</Link>
                       <ActionForm action={markPaymentPaid} success="Gemarkeerd als betaald ✓" className="inline">
                         <input type="hidden" name="paymentId" value={p.id} />
-                        <button className="text-xs font-bold text-brand/60 hover:text-brand">✓ ontvangen</button>
+                        <button className="text-xs font-bold text-ink/60 hover:text-ink">✓ ontvangen</button>
                       </ActionForm>
                     </span>
                   </td>
@@ -329,9 +329,9 @@ export default async function Financien({ searchParams }) {
       </section>
 
       {/* Volledige transactielijst — de bijlage voor de boekhouder */}
-      <section className="mt-6 rounded-2xl border border-borderc bg-white p-6">
-        <h2 className="font-black text-brand">Alle transacties — {label}</h2>
-        <p className="mt-0.5 text-sm text-brand/50 print:hidden">Bedragen zijn inclusief {btwPct}% btw.</p>
+      <section className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
+        <h2 className="font-black text-ink">Alle transacties — {label}</h2>
+        <p className="mt-0.5 text-sm text-ink/50 print:hidden">Bedragen zijn inclusief {btwPct}% btw.</p>
         <div className="mt-3 overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="text-left text-xs font-bold uppercase tracking-wide text-lav">
@@ -352,25 +352,25 @@ export default async function Financien({ searchParams }) {
                 const isRefund = p.status === "refunded" || p.status === "terugbetaald";
                 return (
                   <tr key={p.id} className={isRefund ? "opacity-60" : ""}>
-                    <td className="py-2 whitespace-nowrap text-brand/60">{fmtDay(p.created_at)}</td>
-                    <td className="py-2 font-semibold text-brand">{p.member?.full_name || "—"}</td>
-                    <td className="py-2 text-brand/60">{KIND[p.kind] || p.kind}</td>
-                    <td className="py-2 text-brand/50">{p.description || "—"}</td>
-                    <td className="py-2 text-right text-brand/60">{euro(ex)}</td>
-                    <td className="py-2 text-right text-brand/60">{euro(incl - ex)}</td>
-                    <td className={"py-2 text-right font-black " + (isRefund ? "text-brand/40 line-through" : "text-brand")}>{euro(incl)}</td>
-                    <td className={"py-2 text-xs font-bold " + (isOpen ? "text-red-600" : isRefund ? "text-brand/40" : "text-accentdark")}>{isOpen ? "open" : isRefund ? "terugbetaald" : "betaald"}</td>
+                    <td className="py-2 whitespace-nowrap text-ink/60">{fmtDay(p.created_at)}</td>
+                    <td className="py-2 font-semibold text-ink">{p.member?.full_name || "—"}</td>
+                    <td className="py-2 text-ink/60">{KIND[p.kind] || p.kind}</td>
+                    <td className="py-2 text-ink/50">{p.description || "—"}</td>
+                    <td className="py-2 text-right text-ink/60">{euro(ex)}</td>
+                    <td className="py-2 text-right text-ink/60">{euro(incl - ex)}</td>
+                    <td className={"py-2 text-right font-black " + (isRefund ? "text-ink/40 line-through" : "text-ink")}>{euro(incl)}</td>
+                    <td className={"py-2 text-xs font-bold " + (isOpen ? "text-red-600" : isRefund ? "text-ink/40" : "text-accentdark")}>{isOpen ? "open" : isRefund ? "terugbetaald" : "betaald"}</td>
                     <td className="py-2 text-right print:hidden">
                       <Link href={`/beheer/factuur?payment=${p.id}`} className="whitespace-nowrap text-xs font-bold text-accentdark hover:underline">Factuur →</Link>
                     </td>
                   </tr>
                 );
               })}
-              {rows.length === 0 && <tr><td colSpan={9} className="py-4 text-sm text-brand/40">Geen transacties in deze periode.</td></tr>}
+              {rows.length === 0 && <tr><td colSpan={9} className="py-4 text-sm text-ink/40">Geen transacties in deze periode.</td></tr>}
             </tbody>
             {rows.length > 0 && (
               <tfoot>
-                <tr className="border-t-2 border-brand/20 font-black text-brand">
+                <tr className="border-t-2 border-brand/20 font-black text-ink">
                   <td className="pt-2" colSpan={4}>Totaal ontvangen</td>
                   <td className="pt-2 text-right">{euro(exclusief)}</td>
                   <td className="pt-2 text-right">{euro(btw)}</td>
@@ -383,7 +383,7 @@ export default async function Financien({ searchParams }) {
         </div>
       </section>
 
-      <p className="mt-6 text-xs text-brand/40">
+      <p className="mt-6 text-xs text-ink/40">
         Btw-berekening: alle bedragen zijn inclusief {btwPct}% (sport-tarief vzw). Controleer het toegepaste regime met je boekhouder —
         de app rekent enkel terug vanaf de ontvangen bedragen.
       </p>
@@ -393,10 +393,10 @@ export default async function Financien({ searchParams }) {
 
 function Kpi({ label, value, sub, accent, warn }) {
   return (
-    <div className={"rounded-2xl border p-5 " + (warn ? "border-amber-300 bg-amber-50/60" : "border-borderc bg-white")}>
+    <div className={"rounded-2xl border p-5 " + (warn ? "border-amber-300 bg-amber-50/60" : "border-borderc bg-surface")}>
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-2xl font-black " + (warn ? "text-amber-600" : accent ? "text-accentdark" : "text-brand")}>{value}</p>
-      {sub && <p className="mt-1 text-xs text-brand/45">{sub}</p>}
+      <p className={"mt-2 text-2xl font-black " + (warn ? "text-amber-600" : accent ? "text-accentdark" : "text-ink")}>{value}</p>
+      {sub && <p className="mt-1 text-xs text-ink/45">{sub}</p>}
     </div>
   );
 }

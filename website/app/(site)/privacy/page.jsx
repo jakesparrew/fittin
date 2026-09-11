@@ -15,8 +15,8 @@ export const metadata = {
 //    "Zolang je een account hebt" is op zichzelf te vaag.
 const Section = ({ title, children }) => (
   <section className="mt-8">
-    <h2 className="text-xl font-black text-brand">{title}</h2>
-    <div className="mt-3 space-y-3 leading-relaxed text-brand/70">{children}</div>
+    <h2 className="text-xl font-black text-ink">{title}</h2>
+    <div className="mt-3 space-y-3 leading-relaxed text-ink/70">{children}</div>
   </section>
 );
 
@@ -26,7 +26,7 @@ const Mail = () => (
 
 const Row = ({ wat, hoelang }) => (
   <tr className="border-b border-borderc last:border-0">
-    <td className="py-2.5 pr-4 align-top font-semibold text-brand">{wat}</td>
+    <td className="py-2.5 pr-4 align-top font-semibold text-ink">{wat}</td>
     <td className="py-2.5 align-top">{hoelang}</td>
   </tr>
 );
@@ -36,10 +36,10 @@ export default function Privacy() {
     <main className="bg-paper">
       <div className="mx-auto max-w-3xl px-5 py-16">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Privacy</p>
-        <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Privacybeleid</h1>
-        <p className="mt-3 text-sm text-brand/50">Versie 4 — laatst bijgewerkt: 10 september 2026</p>
+        <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Privacybeleid</h1>
+        <p className="mt-3 text-sm text-ink/50">Versie 4 — laatst bijgewerkt: 10 september 2026</p>
 
-        <p className="mt-6 leading-relaxed text-brand/70">
+        <p className="mt-6 leading-relaxed text-ink/70">
           Fittin&rsquo; verwerkt je persoonsgegevens volgens de Algemene Verordening
           Gegevensbescherming (AVG/GDPR). Hieronder lees je precies welke gegevens we bijhouden,
           waarom we dat mogen, hoe lang we ze bewaren en wat je zelf kan doen. We verkopen je
@@ -149,7 +149,7 @@ export default function Privacy() {
         </Section>
 
         <Section title="4. Hoe lang bewaren we wat?">
-          <div className="overflow-x-auto rounded-2xl border border-borderc bg-white p-4">
+          <div className="overflow-x-auto rounded-2xl border border-borderc bg-surface p-4">
             <table className="w-full text-sm">
               <tbody>
                 <Row wat="Account en profiel" hoelang="Zolang je account bestaat. Je kan het op elk moment zelf laten verwijderen via Mijn account → Gegevens en privacy. Accounts zonder sessie in 12 maanden nemen we periodiek na en verwijderen of anonimiseren we; we doen dat met de hand, zodat een lid dat gewoon een tijd wegbleef niet ongevraagd zijn account kwijtspeelt." />

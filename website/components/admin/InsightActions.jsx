@@ -18,8 +18,8 @@ function Knop({ label, busyLabel, onClick, tone = "wit" }) {
   const cls = tone === "accent"
     ? "bg-accent text-brand hover:opacity-90"
     : tone === "stil"
-      ? "bg-transparent text-brand/40 hover:text-brand"
-      : "border border-borderc bg-white text-brand/70 hover:border-accent hover:text-brand";
+      ? "bg-transparent text-ink/40 hover:text-ink"
+      : "border border-borderc bg-surface text-ink/70 hover:border-accent hover:text-ink";
   return (
     <button
       type="button"

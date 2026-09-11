@@ -17,7 +17,7 @@ export default function BodyMetricsForm({ heightCm, goalKg, healthConsent = true
           uitdrukkelijke toestemming bewaard worden, en die toestemming moet aantoonbaar zijn.
           Daarom éénmalig een expliciet vinkje — daarna verdwijnt het en vraagt de app het niet meer. */}
       {!healthConsent && (
-        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-borderc bg-white p-3 text-xs leading-relaxed text-brand/70">
+        <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-2xl border border-borderc bg-surface p-3 text-xs leading-relaxed text-ink/70">
           <input type="checkbox" name="acceptHealth" className="mt-0.5 h-4 w-4 shrink-0 accent-[#33B24A]" />
           <span>
             Ik geef Fittin&rsquo; toestemming om mijn gewicht en lichaamsgegevens bij te houden om mijn
@@ -32,17 +32,17 @@ export default function BodyMetricsForm({ heightCm, goalKg, healthConsent = true
         <label className="block">
           <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Gewicht vandaag (kg)</span>
           <input name="weight_kg" type="number" step="0.1" inputMode="decimal" required placeholder="bv. 78.5"
-            className="w-36 rounded-xl border-2 border-accent/50 bg-white px-3 py-3 text-2xl font-black text-brand outline-none focus:border-accent" />
+            className="w-36 rounded-xl border-2 border-accent/50 bg-surface px-3 py-3 text-2xl font-black text-ink outline-none focus:border-accent" />
         </label>
         <SubmitButton className="rounded-full bg-accent px-7 py-3 text-sm font-black text-brand">Opslaan ✓</SubmitButton>
-        <p className="w-full text-xs text-brand/50">Log je gewicht regelmatig — zo zie je je evolutie en krijg je straks AI-coachingtips op maat. 💪</p>
+        <p className="w-full text-xs text-ink/50">Log je gewicht regelmatig — zo zie je je evolutie en krijg je straks AI-coachingtips op maat. 💪</p>
       </div>
 
       {/* Profile: length + goal — set once, editable */}
       {!edit ? (
-        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-brand/60">
-          <span>Lengte: <strong className="text-brand">{heightCm ? `${heightCm} cm` : "niet ingesteld"}</strong></span>
-          <span>Doelgewicht: <strong className="text-brand">{goalKg ? `${goalKg} kg` : "niet ingesteld"}</strong></span>
+        <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-ink/60">
+          <span>Lengte: <strong className="text-ink">{heightCm ? `${heightCm} cm` : "niet ingesteld"}</strong></span>
+          <span>Doelgewicht: <strong className="text-ink">{goalKg ? `${goalKg} kg` : "niet ingesteld"}</strong></span>
           <button type="button" onClick={() => setEdit(true)} className="font-bold text-accentdark hover:underline">✎ aanpassen</button>
         </div>
       ) : (
@@ -55,7 +55,7 @@ export default function BodyMetricsForm({ heightCm, goalKg, healthConsent = true
             <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Doelgewicht (kg)</span>
             <input name="goal_weight_kg" type="number" step="0.1" defaultValue={goalKg || ""} placeholder="75" className="w-28 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
           </label>
-          <span className="text-xs text-brand/40">Eénmalig instellen — wordt samen met je gewicht opgeslagen.</span>
+          <span className="text-xs text-ink/40">Eénmalig instellen — wordt samen met je gewicht opgeslagen.</span>
         </div>
       )}
     </ActionForm>

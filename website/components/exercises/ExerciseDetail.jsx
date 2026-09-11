@@ -3,7 +3,7 @@ import ExerciseMedia from "./ExerciseMedia";
 const DIFF = { beginner: "Beginner", intermediate: "Gemiddeld", gevorderd: "Gevorderd" };
 
 function Chip({ children }) {
-  return <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold capitalize text-brand/70">{children}</span>;
+  return <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold capitalize text-ink/70">{children}</span>;
 }
 
 // Full exercise detail: looping demo, target muscles, equipment/difficulty, numbered steps, tips.
@@ -19,7 +19,7 @@ export default function ExerciseDetail({ exercise, compact = false }) {
       <ExerciseMedia exercise={ex} className={compact ? "aspect-video w-full" : "aspect-[4/3] w-full"} rounded="rounded-3xl" />
 
       <div className={compact ? "mt-4" : "mt-6"}>
-        <h2 className="text-2xl font-black text-brand md:text-3xl">{ex.name}</h2>
+        <h2 className="text-2xl font-black text-ink md:text-3xl">{ex.name}</h2>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           {ex.category && <Chip>{ex.category}</Chip>}
           {ex.equipment && <Chip>{ex.equipment}</Chip>}
@@ -34,7 +34,7 @@ export default function ExerciseDetail({ exercise, compact = false }) {
                 <span key={m} className="rounded-full bg-accent/15 px-3 py-1 text-xs font-bold text-accentdark">{m}</span>
               ))}
               {secondary.map((m) => (
-                <span key={m} className="rounded-full border border-borderc px-3 py-1 text-xs font-semibold text-brand/50">{m}</span>
+                <span key={m} className="rounded-full border border-borderc px-3 py-1 text-xs font-semibold text-ink/50">{m}</span>
               ))}
             </div>
           </div>
@@ -47,7 +47,7 @@ export default function ExerciseDetail({ exercise, compact = false }) {
               {steps.map((step, i) => (
                 <li key={i} className="flex gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-black text-white">{i + 1}</span>
-                  <span className="text-sm leading-relaxed text-brand/80">{step}</span>
+                  <span className="text-sm leading-relaxed text-ink/80">{step}</span>
                 </li>
               ))}
             </ol>
@@ -57,7 +57,7 @@ export default function ExerciseDetail({ exercise, compact = false }) {
         {ex.tips && (
           <div className="mt-6 rounded-2xl border border-accent/30 bg-accent/10 p-4">
             <p className="text-xs font-bold uppercase tracking-widest text-accentdark">Tip</p>
-            <p className="mt-1 text-sm leading-relaxed text-brand/80">{ex.tips}</p>
+            <p className="mt-1 text-sm leading-relaxed text-ink/80">{ex.tips}</p>
           </div>
         )}
 

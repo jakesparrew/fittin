@@ -117,20 +117,20 @@ export default function PWAInstallPrompt() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-[60] p-3 md:hidden" role="dialog" aria-label="App installeren">
-      <div className="mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-borderc bg-white p-3 shadow-xl shadow-brand/10">
+      <div className="mx-auto flex max-w-md items-center gap-3 rounded-2xl border border-borderc bg-surface p-3 shadow-xl shadow-brand/10">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-brand">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/icon-192.png" alt="Fittin'" className="h-full w-full object-cover" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-black text-brand">Zet Fittin&rsquo; op je telefoon</p>
+          <p className="text-sm font-black text-ink">Zet Fittin&rsquo; op je telefoon</p>
           {ios ? (
-            <p className="mt-0.5 text-xs leading-snug text-brand/60">
+            <p className="mt-0.5 text-xs leading-snug text-ink/60">
               Tik op <span className="font-bold">Deel</span> <span aria-hidden>⬆️</span> en dan op{" "}
               <span className="font-bold">&ldquo;Zet op beginscherm&rdquo;</span>.
             </p>
           ) : (
-            <p className="mt-0.5 text-xs leading-snug text-brand/60">Boek en open de deur sneller — installeer de app.</p>
+            <p className="mt-0.5 text-xs leading-snug text-ink/60">Boek en open de deur sneller — installeer de app.</p>
           )}
         </div>
         {!ios && (
@@ -138,7 +138,7 @@ export default function PWAInstallPrompt() {
             Installeren
           </button>
         )}
-        <button onClick={dismiss} aria-label="Sluiten" className="shrink-0 rounded-full p-1.5 text-brand/40 transition hover:bg-paper hover:text-brand">
+        <button onClick={dismiss} aria-label="Sluiten" className="shrink-0 rounded-full p-1.5 text-ink/40 transition hover:bg-paper hover:text-ink">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
         </button>
       </div>

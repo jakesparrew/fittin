@@ -56,23 +56,23 @@ export default function MemberDrawer() {
       <div className="absolute inset-0 bg-brand/30" />
       <aside className="anim-zij relative h-full w-full max-w-xl overflow-y-auto bg-paper shadow-2xl" onClick={(e) => e.stopPropagation()}>
         {loading || !data ? (
-          <div className="flex h-full items-center justify-center text-brand/40">{loading ? "Laden…" : "Geen gegevens."}</div>
+          <div className="flex h-full items-center justify-center text-ink/40">{loading ? "Laden…" : "Geen gegevens."}</div>
         ) : (
           <div className="p-6">
             {/* Header */}
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-2xl font-black text-brand">{p.full_name || "—"}</h2>
-                <p className="text-sm text-brand/50">{p.email}{p.phone ? ` · ${p.phone}` : ""}</p>
+                <h2 className="text-2xl font-black text-ink">{p.full_name || "—"}</h2>
+                <p className="text-sm text-ink/50">{p.email}{p.phone ? ` · ${p.phone}` : ""}</p>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs font-bold">
-                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 capitalize text-brand/70">{p.role}</span>
-                  <span className="rounded-full bg-paper px-2.5 py-0.5 text-brand/50">lid sinds {day(p.created_at)}</span>
+                  <span className="rounded-full bg-brand/10 px-2.5 py-0.5 capitalize text-ink/70">{p.role}</span>
+                  <span className="rounded-full bg-paper px-2.5 py-0.5 text-ink/50">lid sinds {day(p.created_at)}</span>
                   {data.membership && <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-accentdark">member ✓</span>}
-                  {data.coach && <span className="rounded-full bg-paper px-2.5 py-0.5 text-brand/60">coach: {data.coach.full_name}</span>}
-                  {data.body?.latestWeight && <span className="rounded-full bg-paper px-2.5 py-0.5 text-brand/60">{data.body.latestWeight} kg{data.body.height_cm ? ` · ${data.body.height_cm} cm` : ""}</span>}
+                  {data.coach && <span className="rounded-full bg-paper px-2.5 py-0.5 text-ink/60">coach: {data.coach.full_name}</span>}
+                  {data.body?.latestWeight && <span className="rounded-full bg-paper px-2.5 py-0.5 text-ink/60">{data.body.latestWeight} kg{data.body.height_cm ? ` · ${data.body.height_cm} cm` : ""}</span>}
                 </div>
               </div>
-              <button onClick={() => setId(null)} className="rounded-full p-2 text-brand/40 hover:bg-white hover:text-brand">✕</button>
+              <button onClick={() => setId(null)} className="rounded-full p-2 text-ink/40 hover:bg-surface hover:text-ink">✕</button>
             </div>
 
             {/* Stats */}
@@ -98,11 +98,11 @@ export default function MemberDrawer() {
                 <form onSubmit={submit(adminSetRole)} className="flex items-end gap-2">
                   <input type="hidden" name="memberId" value={id} />
                   <L t="Rol"><select name="role" defaultValue={p.role} className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm">{ROLES.map((r) => <option key={r}>{r}</option>)}</select></L>
-                  <button disabled={busy} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">Rol opslaan</button>
+                  <button disabled={busy} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink">Rol opslaan</button>
                 </form>
                 <form onSubmit={submit(resendInviteMail)}>
                   <input type="hidden" name="memberId" value={id} />
-                  <button disabled={busy} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">✉ Uitnodiging (her)sturen</button>
+                  <button disabled={busy} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink">✉ Uitnodiging (her)sturen</button>
                 </form>
                 {/* Testaccount: telt niet meer mee in ledenaantallen, sessies, klassementen of
                     rapporten. Verwijdert niets — het account blijft gewoon werken. */}
@@ -112,7 +112,7 @@ export default function MemberDrawer() {
                   <button
                     disabled={busy}
                     title={p.is_test ? "Laat dit account weer meetellen in alle cijfers" : "Sluit dit account uit van alle tellingen en rapporten"}
-                    className={"rounded-full px-3 py-1.5 text-xs font-bold " + (p.is_test ? "bg-amber-100 text-amber-700" : "bg-paper text-brand")}
+                    className={"rounded-full px-3 py-1.5 text-xs font-bold " + (p.is_test ? "bg-amber-100 text-amber-700" : "bg-paper text-ink")}
                   >
                     {p.is_test ? "🧪 Testaccount — klik om te laten meetellen" : "Markeer als testaccount"}
                   </button>
@@ -131,14 +131,14 @@ export default function MemberDrawer() {
                   <form onSubmit={submit(unassignCoachClient)} className="flex items-end gap-2">
                     <input type="hidden" name="clientId" value={id} />
                     <input type="hidden" name="coachId" value={data.coach.id} />
-                    <span className="text-xs text-brand/60">Coach: <b>{data.coach.full_name}</b></span>
-                    <button disabled={busy} className="rounded-full border-2 border-borderc px-3 py-1.5 text-xs font-bold text-brand/60">Ontkoppel</button>
+                    <span className="text-xs text-ink/60">Coach: <b>{data.coach.full_name}</b></span>
+                    <button disabled={busy} className="rounded-full border-2 border-borderc px-3 py-1.5 text-xs font-bold text-ink/60">Ontkoppel</button>
                   </form>
                 ) : (
                   <form onSubmit={submit(assignCoachClient)} className="flex items-end gap-2">
                     <input type="hidden" name="clientId" value={id} />
                     <L t="Koppel coach"><select name="coachId" required className="rounded-lg border-2 border-borderc px-2 py-1.5 text-sm"><option value="">Kies…</option>{(data.coaches || []).map((c) => <option key={c.id} value={c.id}>{c.full_name || c.email}</option>)}</select></L>
-                    <button disabled={busy} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-brand">Koppel</button>
+                    <button disabled={busy} className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink">Koppel</button>
                   </form>
                 )}
               </div>
@@ -156,21 +156,21 @@ export default function MemberDrawer() {
             {/* Bookings */}
             <Section title={`Boekingen (${data.bookings.length})`}>
               <List items={data.bookings} empty="Geen boekingen." render={(b) => (
-                <Row key={b.id} left={`${b.services?.name || "Sessie"}${b.coach ? ` · coach ${b.coach.full_name}` : ""}`} sub={`${fmt(b.starts_at)} · ${b.persons}p`} right={<span className={b.status === "geannuleerd" ? "text-brand/40" : b.paid || b.price_cents === 0 ? "text-accentdark" : "text-red-500"}>{b.status === "geannuleerd" ? "geannuleerd" : b.paid ? euro(b.price_cents) : b.price_cents ? "onbetaald" : "gratis"}</span>} />
+                <Row key={b.id} left={`${b.services?.name || "Sessie"}${b.coach ? ` · coach ${b.coach.full_name}` : ""}`} sub={`${fmt(b.starts_at)} · ${b.persons}p`} right={<span className={b.status === "geannuleerd" ? "text-ink/40" : b.paid || b.price_cents === 0 ? "text-accentdark" : "text-red-500"}>{b.status === "geannuleerd" ? "geannuleerd" : b.paid ? euro(b.price_cents) : b.price_cents ? "onbetaald" : "gratis"}</span>} />
               )} />
             </Section>
 
             {/* Payments */}
             <Section title={`Betalingen (${data.payments.length})`}>
               <List items={data.payments} empty="Geen betalingen." render={(p2, i) => (
-                <Row key={i} left={`${KIND[p2.kind] || p2.kind}${p2.description ? ` · ${p2.description}` : ""}`} sub={fmt(p2.created_at)} right={<span className="font-black text-brand">{euro(p2.amount_cents)}</span>} />
+                <Row key={i} left={`${KIND[p2.kind] || p2.kind}${p2.description ? ` · ${p2.description}` : ""}`} sub={fmt(p2.created_at)} right={<span className="font-black text-ink">{euro(p2.amount_cents)}</span>} />
               )} />
             </Section>
 
             {/* Events */}
             <Section title={`Events (${data.events.length})`}>
               <List items={data.events} empty="Geen events." render={(e, i) => (
-                <Row key={i} left={e.title} sub={fmt(e.startsAt)} right={<span className={e.paid ? "text-accentdark" : "text-brand/40"}>{e.paid ? "ingeschreven" : "onbetaald"}</span>} />
+                <Row key={i} left={e.title} sub={fmt(e.startsAt)} right={<span className={e.paid ? "text-accentdark" : "text-ink/40"}>{e.paid ? "ingeschreven" : "onbetaald"}</span>} />
               )} />
             </Section>
 
@@ -178,7 +178,7 @@ export default function MemberDrawer() {
             {data.paymentRequests.length > 0 && (
               <Section title={`Coach-betaalverzoeken (${data.paymentRequests.length})`}>
                 <List items={data.paymentRequests} render={(r, i) => (
-                  <Row key={i} left={r.description || "Sessie"} sub={fmt(r.created_at)} right={<span className={r.status === "paid" ? "text-accentdark" : "text-brand/50"}>{euro(r.amount_cents)} · {r.status}</span>} />
+                  <Row key={i} left={r.description || "Sessie"} sub={fmt(r.created_at)} right={<span className={r.status === "paid" ? "text-accentdark" : "text-ink/50"}>{euro(r.amount_cents)} · {r.status}</span>} />
                 )} />
               </Section>
             )}
@@ -190,18 +190,18 @@ export default function MemberDrawer() {
 }
 
 function Tile({ label, value }) {
-  return <div className="rounded-xl border border-borderc bg-white p-3 text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-lav">{label}</p><p className="mt-0.5 text-lg font-black text-brand">{value ?? 0}</p></div>;
+  return <div className="rounded-xl border border-borderc bg-surface p-3 text-center"><p className="text-[10px] font-bold uppercase tracking-wide text-lav">{label}</p><p className="mt-0.5 text-lg font-black text-ink">{value ?? 0}</p></div>;
 }
 function Section({ title, children }) {
-  return <div className="mt-6 rounded-2xl border border-borderc bg-white p-5"><p className="text-xs font-bold uppercase tracking-widest text-lav">{title}</p><div className="mt-3">{children}</div></div>;
+  return <div className="mt-6 rounded-2xl border border-borderc bg-surface p-5"><p className="text-xs font-bold uppercase tracking-widest text-lav">{title}</p><div className="mt-3">{children}</div></div>;
 }
 function L({ t, children }) {
   return <label className="block"><span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">{t}</span>{children}</label>;
 }
 function List({ items, render, empty }) {
-  if (!items?.length) return <p className="text-sm text-brand/40">{empty || "—"}</p>;
+  if (!items?.length) return <p className="text-sm text-ink/40">{empty || "—"}</p>;
   return <div className="divide-y divide-borderc">{items.map(render)}</div>;
 }
 function Row({ left, sub, right }) {
-  return <div className="flex items-center justify-between gap-3 py-2 text-sm"><div className="min-w-0"><p className="truncate font-semibold text-brand">{left}</p><p className="truncate text-xs capitalize text-brand/45">{sub}</p></div><div className="shrink-0 text-xs font-bold">{right}</div></div>;
+  return <div className="flex items-center justify-between gap-3 py-2 text-sm"><div className="min-w-0"><p className="truncate font-semibold text-ink">{left}</p><p className="truncate text-xs capitalize text-ink/45">{sub}</p></div><div className="shrink-0 text-xs font-bold">{right}</div></div>;
 }

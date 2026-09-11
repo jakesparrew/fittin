@@ -19,17 +19,17 @@ export default function ProgramExerciseEditor({ pe, programId, updateAction, del
   return (
     <div className="rounded-xl bg-paper px-4 py-2.5 text-sm">
       <div className="flex items-center justify-between gap-3">
-        <span className="flex min-w-0 items-center gap-2 font-bold text-brand">
+        <span className="flex min-w-0 items-center gap-2 font-bold text-ink">
           {sup && <span className="shrink-0 rounded bg-brand px-1.5 py-0.5 text-[10px] font-black text-white" title="Superset">{sup}</span>}
           <span className="truncate">{pe.exercises?.name}</span>
         </span>
-        <div className="flex shrink-0 items-center gap-3 text-brand/60">
+        <div className="flex shrink-0 items-center gap-3 text-ink/60">
           {showProgress && (lastDate
             ? <span className="rounded-full bg-accent/15 px-2.5 py-0.5 text-xs font-bold text-accentdark">✓ {lastDate}</span>
-            : <span className="rounded-full bg-white px-2.5 py-0.5 text-xs font-bold text-brand/40">nog niet</span>)}
+            : <span className="rounded-full bg-surface px-2.5 py-0.5 text-xs font-bold text-ink/40">nog niet</span>)}
           <span className="whitespace-nowrap">{pe.sets ?? "–"} × {pe.reps ?? "–"}</span>
           <span className="whitespace-nowrap">{pe.rest_sec ?? "–"}s</span>
-          <button type="button" onClick={() => setEdit((v) => !v)} className="text-xs font-bold text-brand/50 hover:text-accentdark" title="Bewerk">✎</button>
+          <button type="button" onClick={() => setEdit((v) => !v)} className="text-xs font-bold text-ink/50 hover:text-accentdark" title="Bewerk">✎</button>
           <ActionForm action={deleteAction} success="Verwijderd ✓" className="inline">
             <input type="hidden" name="id" value={pe.id} />
             <input type="hidden" name="programId" value={programId} />
@@ -40,13 +40,13 @@ export default function ProgramExerciseEditor({ pe, programId, updateAction, del
 
       {(chips.length > 0 || pe.notes) && !edit && (
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          {chips.map((c) => <span key={c} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-brand/55">{c}</span>)}
-          {pe.notes && <span className="text-[11px] italic text-brand/50">“{pe.notes}”</span>}
+          {chips.map((c) => <span key={c} className="rounded-full bg-surface px-2 py-0.5 text-[10px] font-bold text-ink/55">{c}</span>)}
+          {pe.notes && <span className="text-[11px] italic text-ink/50">“{pe.notes}”</span>}
         </div>
       )}
 
       {edit && (
-        <ActionForm action={updateAction} success="Bijgewerkt ✓" className="mt-3 rounded-xl border border-borderc bg-white p-3">
+        <ActionForm action={updateAction} success="Bijgewerkt ✓" className="mt-3 rounded-xl border border-borderc bg-surface p-3">
           <input type="hidden" name="id" value={pe.id} />
           <input type="hidden" name="programId" value={programId} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -64,7 +64,7 @@ export default function ProgramExerciseEditor({ pe, programId, updateAction, del
           </div>
           <div className="mt-2 flex gap-2">
             <button className="rounded-full bg-accent px-4 py-1.5 text-xs font-bold text-brand">Opslaan</button>
-            <button type="button" onClick={() => setEdit(false)} className="rounded-full px-3 py-1.5 text-xs font-bold text-brand/40 hover:text-brand">Annuleer</button>
+            <button type="button" onClick={() => setEdit(false)} className="rounded-full px-3 py-1.5 text-xs font-bold text-ink/40 hover:text-ink">Annuleer</button>
           </div>
         </ActionForm>
       )}

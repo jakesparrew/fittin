@@ -21,10 +21,10 @@ export default function ComposeEmail() {
       <button onClick={() => setOpen(true)} className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white transition hover:opacity-90">+ Nieuwe e-mail</button>
       {open && (
         <div className="anim-fade fixed inset-0 z-50 flex items-start justify-center bg-brand/40 p-4 pt-16" onClick={() => setOpen(false)}>
-          <div className="anim-in w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
+          <div className="anim-in w-full max-w-lg rounded-2xl bg-surface p-6 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between">
-              <h2 className="font-black text-brand">Nieuwe e-mail</h2>
-              <button onClick={() => setOpen(false)} className="text-brand/40 hover:text-brand">✕</button>
+              <h2 className="font-black text-ink">Nieuwe e-mail</h2>
+              <button onClick={() => setOpen(false)} className="text-ink/40 hover:text-ink">✕</button>
             </div>
             <form action={action} className="mt-4 space-y-3">
               <label className="block">
@@ -34,7 +34,7 @@ export default function ComposeEmail() {
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Aan <span className="font-normal normal-case text-brand/40">— meerdere? scheid met komma's</span></span>
+                <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-lav">Aan <span className="font-normal normal-case text-ink/40">— meerdere? scheid met komma's</span></span>
                 <input name="to" type="text" required placeholder="ontvanger@email.be, tweede@email.be" className="w-full rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
               </label>
               <label className="block">

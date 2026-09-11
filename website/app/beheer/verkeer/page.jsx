@@ -83,12 +83,12 @@ export default async function Verkeer({ searchParams }) {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">Websiteverkeer</h1>
-          <p className="mt-1 text-sm text-brand/50">Eigen, privacy-vriendelijke statistieken — geen cookies, geen externe tracker.</p>
+          <h1 className="text-3xl font-black text-ink">Websiteverkeer</h1>
+          <p className="mt-1 text-sm text-ink/50">Eigen, privacy-vriendelijke statistieken — geen cookies, geen externe tracker.</p>
         </div>
-        <div className="inline-flex rounded-full border border-borderc bg-white p-1 text-sm font-bold">
+        <div className="inline-flex rounded-full border border-borderc bg-surface p-1 text-sm font-bold">
           {[7, 30, 90].map((d) => (
-            <Link key={d} href={`/beheer/verkeer?d=${d}`} className={"rounded-full px-4 py-1.5 transition " + (days === d ? "bg-brand text-white" : "text-brand/60 hover:text-brand")}>{d}d</Link>
+            <Link key={d} href={`/beheer/verkeer?d=${d}`} className={"rounded-full px-4 py-1.5 transition " + (days === d ? "bg-brand text-white" : "text-ink/60 hover:text-ink")}>{d}d</Link>
           ))}
         </div>
       </div>
@@ -100,17 +100,17 @@ export default async function Verkeer({ searchParams }) {
         <Kpi label="Weergaves / bezoeker" value={n(s.visitors) ? (n(s.views) / n(s.visitors)).toFixed(1) : "0"} />
       </div>
 
-      <div className="mt-6 rounded-2xl border border-borderc bg-white p-6">
-        <p className="font-black text-brand">Paginaweergaves per dag</p>
+      <div className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
+        <p className="font-black text-ink">Paginaweergaves per dag</p>
         <div className="mt-4"><BarChart data={chartData} height={160} /></div>
       </div>
 
       {/* Van bezoek tot boeking. De enige plek waar verkeer en omzet elkaar raken: zonder deze kaart
           is elke euro advertentiebudget onmeetbaar. Blijft volledig weg zolang er niets gebeurd is. */}
       {(heeftTrechter || camps.length > 0 || referral.gedeeld > 0 || referral.aangemeld > 0) && (
-        <div className="mt-6 rounded-2xl border border-borderc bg-white p-6">
-          <p className="font-black text-brand">Van bezoek tot boeking</p>
-          <p className="text-xs text-brand/50">Unieke bezoekers per stap ({days} dagen) — niet het aantal kliks.</p>
+        <div className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
+          <p className="font-black text-ink">Van bezoek tot boeking</p>
+          <p className="text-xs text-ink/50">Unieke bezoekers per stap ({days} dagen) — niet het aantal kliks.</p>
 
           {heeftTrechter && (
             <div className="mt-4 grid gap-3 sm:grid-cols-4">
@@ -120,10 +120,10 @@ export default async function Verkeer({ searchParams }) {
                 const uitval = i > 0 && vorige > 0 ? Math.round(((vorige - val) / vorige) * 100) : null;
                 return (
                   <div key={stap.label} className="rounded-xl bg-paper p-4">
-                    <p className="text-2xl font-black text-brand">{nl(val)}</p>
-                    <p className="text-xs font-bold text-brand/60">{stap.label}</p>
+                    <p className="text-2xl font-black text-ink">{nl(val)}</p>
+                    <p className="text-xs font-bold text-ink/60">{stap.label}</p>
                     {uitval != null && (
-                      <p className={"mt-0.5 text-[11px] font-semibold " + (uitval > 50 ? "text-amber-600" : "text-brand/40")}>
+                      <p className={"mt-0.5 text-[11px] font-semibold " + (uitval > 50 ? "text-amber-600" : "text-ink/40")}>
                         {uitval > 0 ? `− ${uitval}% haakt hier af` : "iedereen door"}
                       </p>
                     )}
@@ -147,78 +147,78 @@ export default async function Verkeer({ searchParams }) {
                 <tbody className="divide-y divide-borderc">
                   {camps.map((r, i) => (
                     <tr key={i}>
-                      <td className="py-2 pr-3 font-semibold text-brand">
+                      <td className="py-2 pr-3 font-semibold text-ink">
                         {r.utm_source}
-                        {r.utm_campaign && <span className="text-brand/40"> · {r.utm_campaign}</span>}
+                        {r.utm_campaign && <span className="text-ink/40"> · {r.utm_campaign}</span>}
                         {r.utm_content && <span className="text-accentdark"> · {advLabel[r.utm_content] || r.utm_content}</span>}
                       </td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-brand/70">{nl(r.visitors)}</td>
-                      <td className="py-2 pr-3 text-right tabular-nums text-brand/70">{nl(r.signups)}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-ink/70">{nl(r.visitors)}</td>
+                      <td className="py-2 pr-3 text-right tabular-nums text-ink/70">{nl(r.signups)}</td>
                       <td className="py-2 text-right font-bold tabular-nums text-accentdark">{nl(r.bookings)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              <p className="mt-2 text-xs text-brand/45">
+              <p className="mt-2 text-xs text-ink/45">
                 Toegeschreven zonder cookie of pixel — een klik en een boeking op verschillende dagen
                 tellen niet mee, dus dit is een ondergrens.
               </p>
             </div>
           )}
 
-          <p className="mt-5 border-t border-borderc pt-3 text-xs text-brand/50">
-            Doorverwijzingen: <b className="text-brand">{nl(referral.gedeeld)}</b> gedeeld ·{" "}
-            <b className="text-brand">{nl(referral.aangemeld)}</b> aangemeld met code ·{" "}
-            <b className="text-brand">{nl(referral.beloond)}</b> beloond
+          <p className="mt-5 border-t border-borderc pt-3 text-xs text-ink/50">
+            Doorverwijzingen: <b className="text-ink">{nl(referral.gedeeld)}</b> gedeeld ·{" "}
+            <b className="text-ink">{nl(referral.aangemeld)}</b> aangemeld met code ·{" "}
+            <b className="text-ink">{nl(referral.beloond)}</b> beloond
           </p>
         </div>
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-2xl border border-borderc bg-white p-6">
-          <p className="font-black text-brand">Populairste pagina's</p>
+        <div className="rounded-2xl border border-borderc bg-surface p-6">
+          <p className="font-black text-ink">Populairste pagina's</p>
           <div className="mt-3 space-y-1.5">
             {(paths.data || []).map((r) => (
               <div key={r.path} className="flex items-center justify-between gap-3 text-sm">
-                <span className="truncate font-semibold text-brand">{r.path}</span>
-                <span className="shrink-0 text-brand/50">{nl(r.views)} <span className="text-brand/30">· {nl(r.visitors)} bez.</span></span>
+                <span className="truncate font-semibold text-ink">{r.path}</span>
+                <span className="shrink-0 text-ink/50">{nl(r.views)} <span className="text-ink/30">· {nl(r.visitors)} bez.</span></span>
               </div>
             ))}
-            {(!paths.data || !paths.data.length) && <p className="text-sm text-brand/40">Nog geen data — verkeer verschijnt zodra bezoekers de site openen.</p>}
+            {(!paths.data || !paths.data.length) && <p className="text-sm text-ink/40">Nog geen data — verkeer verschijnt zodra bezoekers de site openen.</p>}
           </div>
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-2xl border border-borderc bg-white p-6">
-            <p className="font-black text-brand">Herkomst</p>
+          <div className="rounded-2xl border border-borderc bg-surface p-6">
+            <p className="font-black text-ink">Herkomst</p>
             <div className="mt-3 space-y-1.5">
               {(refs.data || []).map((r) => (
                 <div key={r.referrer_host} className="flex items-center justify-between gap-3 text-sm">
-                  <span className="truncate font-semibold text-brand">{r.referrer_host}</span>
-                  <span className="shrink-0 text-brand/50">{nl(r.views)}</span>
+                  <span className="truncate font-semibold text-ink">{r.referrer_host}</span>
+                  <span className="shrink-0 text-ink/50">{nl(r.views)}</span>
                 </div>
               ))}
-              {(!refs.data || !refs.data.length) && <p className="text-sm text-brand/40">Nog geen data.</p>}
+              {(!refs.data || !refs.data.length) && <p className="text-sm text-ink/40">Nog geen data.</p>}
             </div>
           </div>
-          <div className="rounded-2xl border border-borderc bg-white p-6">
-            <p className="font-black text-brand">Toestel</p>
+          <div className="rounded-2xl border border-borderc bg-surface p-6">
+            <p className="font-black text-ink">Toestel</p>
             <div className="mt-3"><Donut value={mobilePct} label="mobiel" sub={`${nl(s.mobile)} mobiel · ${nl(s.desktop)} desktop`} /></div>
           </div>
         </div>
       </div>
 
-      <p className="mt-6 text-xs text-brand/40">Privacy: geen cookies of persoonsgegevens — enkel een dagelijkse anonieme bezoeker-hash. Beheer- en coach-pagina's tellen niet mee.</p>
+      <p className="mt-6 text-xs text-ink/40">Privacy: geen cookies of persoonsgegevens — enkel een dagelijkse anonieme bezoeker-hash. Beheer- en coach-pagina's tellen niet mee.</p>
     </div>
   );
 }
 
 function Kpi({ label, value, sub, accent }) {
   return (
-    <div className="rounded-2xl border border-borderc bg-white p-5">
+    <div className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="text-xs font-bold uppercase tracking-widest text-lav">{label}</p>
-      <p className={"mt-2 text-3xl font-black " + (accent ? "text-accentdark" : "text-brand")}>{value}</p>
-      {sub && <p className="mt-1 text-xs text-brand/40">{sub}</p>}
+      <p className={"mt-2 text-3xl font-black " + (accent ? "text-accentdark" : "text-ink")}>{value}</p>
+      {sub && <p className="mt-1 text-xs text-ink/40">{sub}</p>}
     </div>
   );
 }

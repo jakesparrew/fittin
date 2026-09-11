@@ -95,16 +95,16 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
   }
 
   return (
-    <div className="mt-6 overflow-x-auto rounded-2xl border border-borderc bg-white">
-      <p className="px-4 pt-3 text-[11px] font-semibold text-brand/40">Tip: sleep over lege uren om een reeks te blokkeren · klik een uur om te plannen of blokkeren · versleep een sessie naar een vrij uur om ze te verplaatsen.</p>
+    <div className="mt-6 overflow-x-auto rounded-2xl border border-borderc bg-surface">
+      <p className="px-4 pt-3 text-[11px] font-semibold text-ink/40">Tip: sleep over lege uren om een reeks te blokkeren · klik een uur om te plannen of blokkeren · versleep een sessie naar een vrij uur om ze te verplaatsen.</p>
       <table className="w-full min-w-[760px] text-xs">
         <thead>
-          <tr className="border-b border-borderc text-brand/50">
-            <th className="sticky left-0 z-20 w-12 border-r border-borderc bg-white px-2 py-2"></th>
+          <tr className="border-b border-borderc text-ink/50">
+            <th className="sticky left-0 z-20 w-12 border-r border-borderc bg-surface px-2 py-2"></th>
             {days.map((d) => (
               <th key={d.dateStr} className="px-2 py-2 font-bold">
                 <div className="uppercase">{d.weekday}</div>
-                <div className="text-brand">{d.dayMonth}</div>
+                <div className="text-ink">{d.dayMonth}</div>
               </th>
             ))}
           </tr>
@@ -116,7 +116,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                 <td colSpan={days.length + 1} className="p-0">
                   <button
                     onClick={() => setOpenGaps((s) => new Set(s).add(row.hours[0]))}
-                    className="w-full py-1.5 text-[11px] font-bold text-brand/30 transition hover:bg-paper hover:text-brand"
+                    className="w-full py-1.5 text-[11px] font-bold text-ink/30 transition hover:bg-paper hover:text-ink"
                     title="Klik om deze uren te tonen (plannen of blokkeren)"
                   >
                     ⌄ {row.hours.length} vrije halfuren · {fmtHour(row.hours[0])}–{fmtHour(row.hours[row.hours.length - 1] + 0.5)}
@@ -127,7 +127,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
             const h = row.h;
             return (
             <tr key={h} className="border-b border-borderc/60">
-              <td className="sticky left-0 z-10 border-r border-borderc bg-white px-2 py-1 text-right font-bold text-brand/40">{fmtHour(h)}</td>
+              <td className="sticky left-0 z-10 border-r border-borderc bg-surface px-2 py-1 text-right font-bold text-ink/40">{fmtHour(h)}</td>
               {days.map((d) => {
                 const t = slotInstant(d.dateStr, h).getTime();
                 const bk = bookMap.get(t);
@@ -145,8 +145,8 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                         title="Versleep naar een vrij uur om te verplaatsen"
                         className={"flex h-full cursor-move flex-col justify-center rounded-lg px-1.5 py-1 leading-tight transition hover:ring-2 hover:ring-accent " + (reserved ? "bg-brand/10" : "bg-accent/20") + (dragBk?.id === bk.id ? " opacity-40" : "")}
                       >
-                        <BookingDetail bookingId={bk.id} className="block truncate font-bold text-brand">{reserved ? `🧑‍🏫 ${bk.coachName || "Coach"}` : (bk.name || "Lid")}</BookingDetail>
-                        <span className="truncate text-[10px] text-brand/50">
+                        <BookingDetail bookingId={bk.id} className="block truncate font-bold text-ink">{reserved ? `🧑‍🏫 ${bk.coachName || "Coach"}` : (bk.name || "Lid")}</BookingDetail>
+                        <span className="truncate text-[10px] text-ink/50">
                           {reserved ? (bk.notes ? `PT · ${bk.notes}` : "PT · nog geen client") : `${bk.serviceName} · ${bk.persons}p`}
                         </span>
                         <div className="flex items-center gap-2 leading-none">
@@ -159,8 +159,8 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                       </div>
                     ) : bl ? (
                       <div className="flex h-full flex-col justify-center rounded-lg bg-brand/10 px-1.5 py-1 leading-tight">
-                        <span className="truncate font-bold text-brand/60">Geblokkeerd</span>
-                        {bl.reason && <span className="truncate text-[10px] text-brand/40">{bl.reason}</span>}
+                        <span className="truncate font-bold text-ink/60">Geblokkeerd</span>
+                        {bl.reason && <span className="truncate text-[10px] text-ink/40">{bl.reason}</span>}
                         <form action={adminUnblock} className="leading-none">
                           <input type="hidden" name="blockId" value={bl.id} />
                           <button className="text-[10px] font-bold text-accentdark hover:underline">deblokkeer</button>
@@ -177,7 +177,7 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                         onDragOver={(e) => { if (dragBk) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setHoverCell(cellKey); } }}
                         onDragLeave={() => setHoverCell((c) => (c === cellKey ? null : c))}
                         onDrop={(e) => { e.preventDefault(); moveTo(d.dateStr, h); }}
-                        className={"flex h-full min-h-7 w-full items-center justify-center rounded text-brand/20 transition " + (hoverCell === cellKey && dragBk ? "bg-accent/40 text-brand ring-2 ring-accent" : inDrag(d.dateStr, h) ? "bg-brand/20 text-brand" : "hover:bg-accent/10 hover:text-accentdark")}
+                        className={"flex h-full min-h-7 w-full items-center justify-center rounded text-ink/20 transition " + (hoverCell === cellKey && dragBk ? "bg-accent/40 text-ink ring-2 ring-accent" : inDrag(d.dateStr, h) ? "bg-brand/20 text-ink" : "hover:bg-accent/10 hover:text-accentdark")}
                         aria-label="Plan, blokkeer of laat een sessie hier vallen"
                       >
                         {hoverCell === cellKey && dragBk ? "↓" : "+"}
@@ -193,13 +193,13 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
       </table>
       {hiddenCount > 0 && (
         <div className="flex items-center justify-between border-t border-borderc/60 px-4 py-2">
-          <span className="text-[11px] text-brand/35">{hiddenCount} lege halfuren samengevouwen</span>
+          <span className="text-[11px] text-ink/35">{hiddenCount} lege halfuren samengevouwen</span>
           <button onClick={() => { setShowAll(true); setOpenGaps(new Set()); }} className="text-[11px] font-bold text-accentdark hover:underline">Toon alle uren</button>
         </div>
       )}
       {showAll && (
         <div className="border-t border-borderc/60 px-4 py-2 text-right">
-          <button onClick={() => setShowAll(false)} className="text-[11px] font-bold text-brand/50 hover:text-brand">⌃ Vouw lege uren weer samen</button>
+          <button onClick={() => setShowAll(false)} className="text-[11px] font-bold text-ink/50 hover:text-ink">⌃ Vouw lege uren weer samen</button>
         </div>
       )}
 
@@ -229,13 +229,13 @@ function PlanModal({ modal, members, services, coaches = [], onClose, onDone }) 
 
   return (
     <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
-      <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="anim-in w-full max-w-md rounded-3xl bg-surface p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-black text-brand">Sessie inplannen</h3>
-            <p className="mt-0.5 capitalize text-brand/60">{modal.label}</p>
+            <h3 className="font-black text-ink">Sessie inplannen</h3>
+            <p className="mt-0.5 capitalize text-ink/60">{modal.label}</p>
           </div>
-          <button onClick={onClose} className="text-brand/40 hover:text-brand">✕</button>
+          <button onClick={onClose} className="text-ink/40 hover:text-ink">✕</button>
         </div>
         <form action={action} className="mt-4 space-y-3">
           <input type="hidden" name="date" value={modal.date} />
@@ -293,13 +293,13 @@ function RangeBlockModal({ modal, onClose, onDone }) {
 
   return (
     <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
-      <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="anim-in w-full max-w-md rounded-3xl bg-surface p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-black text-brand">Reeks blokkeren</h3>
-            <p className="mt-0.5 capitalize text-brand/60">{modal.label}</p>
+            <h3 className="font-black text-ink">Reeks blokkeren</h3>
+            <p className="mt-0.5 capitalize text-ink/60">{modal.label}</p>
           </div>
-          <button onClick={onClose} className="text-brand/40 hover:text-brand">✕</button>
+          <button onClick={onClose} className="text-ink/40 hover:text-ink">✕</button>
         </div>
         <form action={action} className="mt-4 space-y-3">
           <input type="hidden" name="date" value={modal.date} />
@@ -347,13 +347,13 @@ function RescheduleModal({ modal, onClose, onDone }) {
 
   return (
     <div className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-brand/40 p-4 text-sm" onClick={onClose}>
-      <div className="anim-in w-full max-w-md rounded-3xl bg-white p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="anim-in w-full max-w-md rounded-3xl bg-surface p-6 text-left shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between">
           <div>
-            <h3 className="font-black text-brand">Sessie verplaatsen</h3>
-            <p className="mt-0.5 text-brand/60">{modal.bk.reserved ? "Gereserveerd" : (modal.bk.name || "Lid")} · {modal.bk.serviceName}</p>
+            <h3 className="font-black text-ink">Sessie verplaatsen</h3>
+            <p className="mt-0.5 text-ink/60">{modal.bk.reserved ? "Gereserveerd" : (modal.bk.name || "Lid")} · {modal.bk.serviceName}</p>
           </div>
-          <button onClick={onClose} className="text-brand/40 hover:text-brand">✕</button>
+          <button onClick={onClose} className="text-ink/40 hover:text-ink">✕</button>
         </div>
         <div className="mt-4 space-y-3">
           <label className="block">

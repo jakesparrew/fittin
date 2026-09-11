@@ -12,9 +12,9 @@ const ROLES = [
 export function AddMemberForm() {
   const [state, action, pending] = useActionState(async (_prev, fd) => adminAddUser(fd), null);
   return (
-    <form action={action} className="rounded-2xl border border-borderc bg-white p-5">
-      <p className="font-black text-brand">Nieuw lid toevoegen</p>
-      <p className="mt-0.5 text-xs text-brand/50">Maakt een account aan en mailt een link om het wachtwoord in te stellen.</p>
+    <form action={action} className="rounded-2xl border border-borderc bg-surface p-5">
+      <p className="font-black text-ink">Nieuw lid toevoegen</p>
+      <p className="mt-0.5 text-xs text-ink/50">Maakt een account aan en mailt een link om het wachtwoord in te stellen.</p>
       <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
         <input name="full_name" placeholder="Naam" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm lg:col-span-1" />
         <input name="email" type="email" required placeholder="E-mailadres" className="rounded-lg border-2 border-borderc px-3 py-2 text-sm lg:col-span-2" />

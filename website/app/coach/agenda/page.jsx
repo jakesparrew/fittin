@@ -44,35 +44,35 @@ export default async function Agenda() {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-black text-brand">Mijn agenda</h1>
-          <p className="mt-1 text-sm text-brand/50">{upcoming.length} aankomende sessies.</p>
+          <h1 className="text-3xl font-black text-ink">Mijn agenda</h1>
+          <p className="mt-1 text-sm text-ink/50">{upcoming.length} aankomende sessies.</p>
         </div>
         <Link href="/coach#boeken" className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand transition hover:opacity-90">+ Nieuwe sessie</Link>
       </div>
 
       {days.length === 0 ? (
-        <p className="mt-6 text-sm text-brand/50">Nog geen geplande sessies.</p>
+        <p className="mt-6 text-sm text-ink/50">Nog geen geplande sessies.</p>
       ) : (
         <div className="mt-6 space-y-6">
           {days.map((d) => (
             <div key={d}>
-              <p className="text-sm font-black capitalize text-brand">{fmtDay(d + "T12:00:00")}</p>
+              <p className="text-sm font-black capitalize text-ink">{fmtDay(d + "T12:00:00")}</p>
               <div className="mt-2 space-y-2">
                 {byDay[d].map((b) => {
                   // Eigen training: zelf geboekt buiten de coach-flow (geen coach_id) → geen client-slot.
                   const own = b.user_id === userId && !b.coach_id;
                   const reserved = b.user_id === userId && !!b.coach_id; // slot booked without a client yet
                   return (
-                  <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-white p-4">
+                  <div key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-borderc bg-surface p-4">
                     <div className="flex items-center gap-3">
                       <span className="rounded-md bg-accent px-2 py-0.5 text-sm font-black text-brand">{fmtTime(b.starts_at)}</span>
                       <div>
-                        <p className="font-bold text-brand"><BookingDetail bookingId={b.id} className="font-bold text-brand">{own ? "🏋️ Mijn eigen training" : reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
-                        <p className="text-xs text-brand/50">{b.services?.name} · {b.persons}p{own ? " · zelf geboekt" : ""}</p>
+                        <p className="font-bold text-ink"><BookingDetail bookingId={b.id} className="font-bold text-ink">{own ? "🏋️ Mijn eigen training" : reserved ? "Gereserveerd · nog geen client" : (b.member?.full_name || "Client")}</BookingDetail></p>
+                        <p className="text-xs text-ink/50">{b.services?.name} · {b.persons}p{own ? " · zelf geboekt" : ""}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-brand/60">
+                      <span className="rounded-full bg-paper px-3 py-1 text-xs font-bold text-ink/60">
                         {b.coach_billing === "free" ? "gratis" : b.coach_billing === "credit" ? "1 sessie" : b.coach_billing === "invoice" ? euro(b.coach_charge_cents) : "—"}
                       </span>
                       {/* Eigen training: geen client-toewijzing aanbieden (het slot is van hemzelf). */}

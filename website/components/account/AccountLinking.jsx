@@ -33,9 +33,9 @@ export default function AccountLinking({ providers = [] }) {
   }
 
   return (
-    <section className="mt-12 rounded-3xl border border-borderc bg-white p-6">
-      <h2 className="font-black text-brand">Inlogmethodes</h2>
-      <p className="mt-1 text-sm text-brand/60">Koppel meerdere manieren om in te loggen — zonder dubbel account.</p>
+    <section className="mt-12 rounded-3xl border border-borderc bg-surface p-6">
+      <h2 className="font-black text-ink">Inlogmethodes</h2>
+      <p className="mt-1 text-sm text-ink/60">Koppel meerdere manieren om in te loggen — zonder dubbel account.</p>
       <div className="mt-4 space-y-2">
         <Row label="E-mail & wachtwoord" active={hasEmail} />
         <Row
@@ -58,11 +58,11 @@ export default function AccountLinking({ providers = [] }) {
 function Row({ label, active, action }) {
   return (
     <div className="flex items-center justify-between rounded-xl bg-paper px-4 py-3">
-      <span className="flex items-center gap-2 text-sm font-bold text-brand">
-        <span className={active ? "text-accentdark" : "text-brand/30"}>{active ? "●" : "○"}</span>
+      <span className="flex items-center gap-2 text-sm font-bold text-ink">
+        <span className={active ? "text-accentdark" : "text-ink/30"}>{active ? "●" : "○"}</span>
         {label}
       </span>
-      {active ? <span className="text-xs font-bold text-accentdark">Verbonden</span> : action || <span className="text-xs text-brand/40">Niet verbonden</span>}
+      {active ? <span className="text-xs font-bold text-accentdark">Verbonden</span> : action || <span className="text-xs text-ink/40">Niet verbonden</span>}
     </div>
   );
 }

@@ -38,18 +38,18 @@ export default function ExercisePicker({ name, options: initial = [], addAction 
   return (
     <div ref={ref} className="relative">
       <input type="hidden" name={name} value={value} required />
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-52 items-center justify-between gap-2 rounded-lg border-2 border-borderc bg-white px-3 py-1.5 text-left text-sm text-brand">
-        <span className={selected ? "" : "text-brand/40"}>{selected ? selected.name : "Kies oefening…"}</span>
-        <span className="text-brand/40">▾</span>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-52 items-center justify-between gap-2 rounded-lg border-2 border-borderc bg-surface px-3 py-1.5 text-left text-sm text-ink">
+        <span className={selected ? "" : "text-ink/40"}>{selected ? selected.name : "Kies oefening…"}</span>
+        <span className="text-ink/40">▾</span>
       </button>
       {open && (
-        <div className="absolute z-30 mt-1 w-64 overflow-hidden rounded-xl border border-borderc bg-white shadow-lg">
+        <div className="absolute z-30 mt-1 w-64 overflow-hidden rounded-xl border border-borderc bg-surface shadow-lg">
           <div className="p-2">
             <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Zoek of typ nieuwe…" className="w-full rounded-lg border-2 border-borderc px-3 py-1.5 text-sm outline-none focus:border-accent" />
           </div>
           <div className="max-h-52 overflow-y-auto pb-1">
             {filtered.map((o) => (
-              <button key={o.id} type="button" onClick={() => { setValue(o.id); setOpen(false); setQ(""); }} className={"block w-full px-3 py-2 text-left text-sm transition hover:bg-paper " + (o.id === value ? "bg-accent/10 font-bold text-accentdark" : "text-brand")}>
+              <button key={o.id} type="button" onClick={() => { setValue(o.id); setOpen(false); setQ(""); }} className={"block w-full px-3 py-2 text-left text-sm transition hover:bg-paper " + (o.id === value ? "bg-accent/10 font-bold text-accentdark" : "text-ink")}>
                 {o.name}
               </button>
             ))}
@@ -58,7 +58,7 @@ export default function ExercisePicker({ name, options: initial = [], addAction 
                 {busy ? "Bezig…" : `+ Nieuwe oefening "${q.trim()}"`}
               </button>
             )}
-            {filtered.length === 0 && !q.trim() && <p className="px-3 py-2 text-sm text-brand/40">Typ om te zoeken of toe te voegen.</p>}
+            {filtered.length === 0 && !q.trim() && <p className="px-3 py-2 text-sm text-ink/40">Typ om te zoeken of toe te voegen.</p>}
           </div>
         </div>
       )}

@@ -24,11 +24,11 @@ export function BarChart({ data, height = 140, format = (v) => v, accentLast = t
         })}
       </svg>
       {!dense && (
-        <div className="mt-1 flex text-center text-[10px] font-black text-brand/70">
+        <div className="mt-1 flex text-center text-[10px] font-black text-ink/70">
           {data.map((d, i) => <div key={i} style={{ width: bw + "%" }}>{d.value ? format(d.value) : ""}</div>)}
         </div>
       )}
-      <div className="mt-0.5 flex text-[10px] font-bold text-brand/40">
+      <div className="mt-0.5 flex text-[10px] font-bold text-ink/40">
         {data.map((d, i) => (
           <div key={i} style={{ width: bw + "%" }} className="overflow-visible whitespace-nowrap text-center">
             {dense ? (i % step === 0 ? d.label : "") : d.label}
@@ -48,7 +48,7 @@ export function BarChart({ data, height = 140, format = (v) => v, accentLast = t
 // lijn horizontaal uitgerekt tot een wig).
 export function TrendLine({ data, height = 120, format = (v) => v, label = "" }) {
   if (!data || data.length < 2) {
-    return <p className="py-6 text-center text-xs text-brand/40">Nog te weinig historiek voor een grafiek.</p>;
+    return <p className="py-6 text-center text-xs text-ink/40">Nog te weinig historiek voor een grafiek.</p>;
   }
   const vals = data.map((d) => d.value);
   const max = Math.max(1, ...vals);
@@ -65,8 +65,8 @@ export function TrendLine({ data, height = 120, format = (v) => v, label = "" })
     <div>
       <div className="flex items-end justify-between gap-4">
         <div>
-          <p className="text-3xl font-black text-brand">{format(laatste.value)}</p>
-          <p className="text-xs font-bold text-brand/40">{label || laatste.label}</p>
+          <p className="text-3xl font-black text-ink">{format(laatste.value)}</p>
+          <p className="text-xs font-bold text-ink/40">{label || laatste.label}</p>
         </div>
       </div>
       <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="mt-2 w-full" style={{ height }}>
@@ -80,7 +80,7 @@ export function TrendLine({ data, height = 120, format = (v) => v, label = "" })
         <path d={lijn} fill="none" stroke="#33B24A" strokeWidth="1.6" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         <circle cx={x(data.length - 1)} cy={y(laatste.value)} r="1.6" fill="#22194F" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="mt-1 flex justify-between text-[10px] font-bold text-brand/40">
+      <div className="mt-1 flex justify-between text-[10px] font-bold text-ink/40">
         <span>{data[0].label}</span>
         <span>{laatste.label}</span>
       </div>
@@ -100,9 +100,9 @@ export function Donut({ value, label, sub }) {
           strokeDasharray={`${(pct / 100) * c} ${c}`} />
       </svg>
       <div>
-        <p className="text-3xl font-black text-brand">{pct}%</p>
-        <p className="text-sm font-bold text-brand/60">{label}</p>
-        {sub && <p className="text-xs text-brand/40">{sub}</p>}
+        <p className="text-3xl font-black text-ink">{pct}%</p>
+        <p className="text-sm font-bold text-ink/60">{label}</p>
+        {sub && <p className="text-xs text-ink/40">{sub}</p>}
       </div>
     </div>
   );
@@ -118,9 +118,9 @@ export function Funnel({ steps }) {
         const conv = i === 0 ? 100 : Math.round((s.value / (steps[i - 1].value || 1)) * 100);
         return (
           <div key={i}>
-            <div className="flex items-center justify-between text-xs font-bold text-brand/60">
+            <div className="flex items-center justify-between text-xs font-bold text-ink/60">
               <span>{s.label}</span>
-              <span>{s.value}{i > 0 && <span className="ml-2 text-brand/40">{conv}%</span>}</span>
+              <span>{s.value}{i > 0 && <span className="ml-2 text-ink/40">{conv}%</span>}</span>
             </div>
             <div className="mt-1 h-7 overflow-hidden rounded-lg bg-paper">
               <div className="flex h-full items-center rounded-lg bg-gradient-to-r from-brand to-[#3a2f73] px-2 text-[10px] font-black text-white transition-all ease-uit" style={{ width: w + "%" }} />

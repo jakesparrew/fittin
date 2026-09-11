@@ -23,14 +23,14 @@ export default function CoachSidebar({ name, role }) {
   const [open, setOpen] = useState(false);
   const linkClass = (href) => {
     const active = pathname === href || (href !== "/coach" && pathname.startsWith(href));
-    return "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition " + (active ? "bg-accent text-brand" : "text-lav hover:bg-white/10 hover:text-white");
+    return "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition " + (active ? "bg-accent text-brand" : "text-lav hover:bg-surface/10 hover:text-white");
   };
   return (
     <>
       {/* Mobile top bar */}
       <div className="sticky top-0 z-30 flex items-center justify-between bg-brand px-4 py-3 text-white md:hidden">
         <Link href="/" className="text-xl font-black">Fittin<span className="text-accent">&rsquo;</span> <span className="ml-1 text-xs font-semibold uppercase tracking-widest text-lav">Coach</span></Link>
-        <button onClick={() => setOpen(true)} aria-label="Menu openen" className="rounded-lg px-3 py-1.5 text-2xl leading-none hover:bg-white/10">☰</button>
+        <button onClick={() => setOpen(true)} aria-label="Menu openen" className="rounded-lg px-3 py-1.5 text-2xl leading-none hover:bg-surface/10">☰</button>
       </div>
       {/* Backdrop (mobile, when drawer open) */}
       {open && <div onClick={() => setOpen(false)} className="anim-fade fixed inset-0 z-40 bg-black/50 md:hidden" aria-hidden />}
@@ -41,7 +41,7 @@ export default function CoachSidebar({ name, role }) {
             <Link href="/" className="text-2xl font-black">Fittin<span className="text-accent">&rsquo;</span></Link>
             <p className="mt-1 text-xs font-semibold uppercase tracking-widest text-lav">Coach</p>
           </div>
-          <button onClick={() => setOpen(false)} aria-label="Menu sluiten" className="rounded-lg px-2 py-1 text-xl leading-none text-lav hover:bg-white/10 md:hidden">✕</button>
+          <button onClick={() => setOpen(false)} aria-label="Menu sluiten" className="rounded-lg px-2 py-1 text-xl leading-none text-lav hover:bg-surface/10 md:hidden">✕</button>
         </div>
         <nav className="scrollbar-slim flex-1 space-y-1 overflow-y-auto px-3 pb-4">
           {items.map((it) => (
@@ -51,7 +51,7 @@ export default function CoachSidebar({ name, role }) {
             </Link>
           ))}
           {role === "beheerder" && (
-            <Link href="/beheer" onClick={() => setOpen(false)} className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-lav hover:bg-white/10 hover:text-white">
+            <Link href="/beheer" onClick={() => setOpen(false)} className="mt-2 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold text-lav hover:bg-surface/10 hover:text-white">
               <span className="w-4 text-center">⚙</span> Beheer
             </Link>
           )}

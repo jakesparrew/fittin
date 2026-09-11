@@ -63,20 +63,47 @@ export const metadata = {
 };
 
 export const viewport = {
-  themeColor: "#22194f",
+  // Twee waarden: de browserbalk op mobiel hoort mee te lopen met het thema. Eén vaste indigo
+  // bovenaan een bijna-zwarte pagina leest als een strook die er niet bij hoort.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#22194f" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f0e17" },
+  ],
   width: "device-width",
   initialScale: 1,
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="nl" className={`${lato.variable} ${display.variable}`}>
+    // `suppressHydrationWarning` op <html>: het scriptje hieronder zet `data-theme` vóór React
+    // begint, dus de server-HTML en de client-HTML verschillen daar met opzet. Zonder deze vlag is
+    // dat een hydratatiewaarschuwing over precies het ding dat goed gaat.
+    <html lang="nl" suppressHydrationWarning className={`${lato.variable} ${display.variable}`}>
       <head>
         {/* De oefeningdemo's staan nog op jsdelivr; zonder preconnect kost de eerste afbeelding een
             volledige DNS+TLS-ronde. Weg zodra de stills naar Supabase Storage gespiegeld zijn. */}
         <link rel="preconnect" href="https://cdn.jsdelivr.net" />
       </head>
-      <body className="bg-white font-sans text-brand antialiased">
+      <body className="bg-surface font-sans text-ink antialiased">
+        {/* VÓÓR DE EERSTE VERF. Dit moet een inline script zijn en geen useEffect: een thema dat
+            pas ná de hydratatie wordt toegepast, geeft bij élke paginalading een witte flits —
+            dezelfde soort fout als hydratatiefout #418 in deze codebase, alleen zie je hem in
+            plaats van dat hij in de console staat.
+
+            Als EERSTE kind van <body>, en dat is geen willekeurige plek. Het stond eerst als broer
+            van <body> rechtstreeks in <html>: geen geldige HTML ("`<script>` cannot be a child of
+            `<html>`"), en React brak daarop de hydratatie van de HELE pagina af — met als gevolg
+            dat geen enkele knop op de site nog werkte. Dat merk je niet aan een test en niet aan
+            een screenshot; alleen aan klikken. In <head> is het in de App Router evenmin
+            betrouwbaar, want Next hijst die inhoud zelf.
+
+            Bewust minimaal, en het faalt stil: gaat localStorage niet open (privémodus, site-data
+            geblokkeerd), dan blijft `prefers-color-scheme` gelden. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("fittin-thema");if(t==="dark"||t==="light")document.documentElement.dataset.theme=t}catch(e){}`,
+          }}
+        />
         <PWARegister />
         <ChunkErrorRecovery />
         {children}

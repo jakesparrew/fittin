@@ -81,7 +81,7 @@ export default function ClipBibliotheek({ clips = [], folders = [], onNaarOefeni
               <button
                 type="button"
                 onClick={() => setOpen(c)}
-                className="group block w-full overflow-hidden rounded-2xl border border-borderc bg-white text-left transition hover:-translate-y-0.5 hover:shadow-md"
+                className="group block w-full overflow-hidden rounded-2xl border border-borderc bg-surface text-left transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 <span className={`relative flex aspect-[4/5] items-end bg-gradient-to-br ${TEGEL[c.provider] || TEGEL.link}`}>
                   {c.poster && (
@@ -89,17 +89,17 @@ export default function ClipBibliotheek({ clips = [], folders = [], onNaarOefeni
                     // optimizer weigert (met een runtime-fout) elke host die er niet in staat.
                     <img src={c.poster} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
                   )}
-                  <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-brand">
+                  <span className="absolute left-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-ink">
                     {c.label}
                   </span>
                   <span className="absolute inset-0 flex items-center justify-center">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white/85 text-brand shadow-sm transition group-hover:scale-105">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface/85 text-ink shadow-sm transition group-hover:scale-105">
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden><path d="M6 4l14 8-14 8z" /></svg>
                     </span>
                   </span>
                 </span>
                 <span className="block p-3">
-                  <span className="line-clamp-2 block text-sm font-bold leading-snug text-brand">{c.title}</span>
+                  <span className="line-clamp-2 block text-sm font-bold leading-snug text-ink">{c.title}</span>
                 </span>
               </button>
             </li>
@@ -134,7 +134,7 @@ function Chip({ actief, op, label, n }) {
       onClick={op}
       className={
         "shrink-0 rounded-full border-2 px-4 py-2 text-sm font-bold transition " +
-        (actief ? "border-accent bg-accent/10 text-brand" : "border-borderc text-ink-soft hover:border-lav hover:text-brand")
+        (actief ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink-soft hover:border-lav hover:text-ink")
       }
     >
       {label} <span className="tabular-nums opacity-60">{n}</span>
@@ -144,8 +144,8 @@ function Chip({ actief, op, label, n }) {
 
 function Leeg({ heeftClips }) {
   return (
-    <div className="mt-6 rounded-3xl border border-dashed border-borderc bg-white p-8 text-center">
-      <p className="font-bold text-brand">{heeftClips ? "Deze map is nog leeg." : "Nog niets bewaard."}</p>
+    <div className="mt-6 rounded-3xl border border-dashed border-borderc bg-surface p-8 text-center">
+      <p className="font-bold text-ink">{heeftClips ? "Deze map is nog leeg." : "Nog niets bewaard."}</p>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-soft">
         Kom je een oefening tegen op Instagram, YouTube of TikTok? Kopieer de link en bewaar hem
         hier onder een eigen map — bijvoorbeeld “Leg day” of “Mobiliteit”.
@@ -185,15 +185,15 @@ function MapBalk({ map, aantal, na }) {
             value={naam}
             onChange={(e) => setNaam(e.target.value)}
             maxLength={40}
-            className="min-w-0 flex-1 rounded-xl border-2 border-borderc bg-white px-3 py-2 text-base text-brand outline-none focus:border-accent"
+            className="min-w-0 flex-1 rounded-xl border-2 border-borderc bg-surface px-3 py-2 text-base text-ink outline-none focus:border-accent"
           />
           <button type="button" disabled={pending} onClick={opslaan} className="rounded-full bg-accent px-4 py-2 text-sm font-black text-brand disabled:opacity-50">Bewaar</button>
           <button type="button" onClick={() => { setBewerk(false); setNaam(map.name); }} className="text-sm font-bold text-ink-soft">Annuleer</button>
         </>
       ) : (
         <>
-          <p className="min-w-0 flex-1 truncate text-sm font-bold text-brand">{map.name}</p>
-          <button type="button" onClick={() => setBewerk(true)} className="text-sm font-bold text-ink-soft hover:text-brand">Hernoem</button>
+          <p className="min-w-0 flex-1 truncate text-sm font-bold text-ink">{map.name}</p>
+          <button type="button" onClick={() => setBewerk(true)} className="text-sm font-bold text-ink-soft hover:text-ink">Hernoem</button>
           <button type="button" disabled={pending} onClick={wissen} className="text-sm font-bold text-red-500 hover:underline disabled:opacity-50">Verwijder map</button>
         </>
       )}
@@ -216,10 +216,10 @@ function ClipSheet({ clip, folders, sluit, na, onNaarOefening }) {
   });
 
   return (
-    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-white" role="dialog" aria-modal="true" aria-label={clip.title}>
+    <div className="anim-sheet fixed inset-0 z-50 flex flex-col bg-surface" role="dialog" aria-modal="true" aria-label={clip.title}>
       <div className="flex items-center gap-3 border-b border-borderc px-4 py-3">
-        <button type="button" onClick={sluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-brand/50 transition hover:bg-paper hover:text-brand">✕</button>
-        <p className="min-w-0 flex-1 truncate font-black text-brand">{clip.title}</p>
+        <button type="button" onClick={sluit} aria-label="Sluiten" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xl text-ink/50 transition hover:bg-paper hover:text-ink">✕</button>
+        <p className="min-w-0 flex-1 truncate font-black text-ink">{clip.title}</p>
         <a href={clip.url} target="_blank" rel="noreferrer nofollow" className="shrink-0 text-sm font-bold text-accentdark hover:underline">Bron ↗</a>
       </div>
 
@@ -234,7 +234,7 @@ function ClipSheet({ clip, folders, sluit, na, onNaarOefening }) {
               onChange={(e) => setTitel(e.target.value)}
               onBlur={() => titel.trim() && titel !== clip.title && doe(() => hernoemClip(clip.id, titel))}
               maxLength={120}
-              className="w-full rounded-xl border-2 border-borderc bg-white px-3 py-2.5 text-base text-brand outline-none transition focus:border-accent"
+              className="w-full rounded-xl border-2 border-borderc bg-surface px-3 py-2.5 text-base text-ink outline-none transition focus:border-accent"
             />
           </label>
 
@@ -250,7 +250,7 @@ function ClipSheet({ clip, folders, sluit, na, onNaarOefening }) {
 
           {onNaarOefening && (
             <div className="mt-6 rounded-2xl bg-paper p-4">
-              <p className="font-black text-brand">In een schema gebruiken</p>
+              <p className="font-black text-ink">In een schema gebruiken</p>
               <p className="mt-1 text-sm leading-relaxed text-ink-soft">
                 Maakt hier een oefening van met deze video, zodat je hem in de programmabouwer kan
                 kiezen. Je clienten zien de video bij die oefening.
@@ -293,7 +293,7 @@ function MapKnop({ actief, op, label }) {
       onClick={op}
       className={
         "rounded-full border-2 px-4 py-2 text-sm font-bold transition " +
-        (actief ? "border-accent bg-accent/10 text-brand" : "border-borderc text-ink-soft hover:border-lav hover:text-brand")
+        (actief ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink-soft hover:border-lav hover:text-ink")
       }
     >
       {label}

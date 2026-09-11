@@ -17,7 +17,7 @@ export default function LegalConsent({ label }) {
 
   return (
     <div className="mt-4 space-y-2.5 text-left">
-      <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-relaxed text-brand/70">
+      <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-relaxed text-ink/70">
         <input
           type="checkbox"
           name="acceptTerms"
@@ -33,7 +33,7 @@ export default function LegalConsent({ label }) {
         </span>
       </label>
 
-      <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-relaxed text-brand/70">
+      <label className="flex cursor-pointer items-start gap-2.5 text-xs leading-relaxed text-ink/70">
         <input
           type="checkbox"
           name="acceptImmediate"
@@ -55,7 +55,7 @@ export default function LegalConsent({ label }) {
         {label}
       </button>
       {!ready && (
-        <p className="text-center text-[11px] text-brand/40">Vink beide vakjes aan om verder te gaan.</p>
+        <p className="text-center text-[11px] text-ink/40">Vink beide vakjes aan om verder te gaan.</p>
       )}
     </div>
   );

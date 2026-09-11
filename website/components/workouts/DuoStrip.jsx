@@ -29,7 +29,7 @@ export default function DuoStrip({ peIds = [] }) {
       <p className="text-[11px] font-black uppercase tracking-wide text-accentdark">Ook nu bezig</p>
       <div className="mt-1.5 flex flex-wrap gap-2">
         {buddies.map((b, i) => (
-          <span key={i} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-brand">
+          <span key={i} className="rounded-full bg-surface px-3 py-1 text-xs font-bold text-ink">
             {b.naam} · {b.oefeningen} {b.oefeningen === 1 ? "oefening" : "oefeningen"}
             {b.sets ? ` · ${b.sets} sets` : ""}
           </span>

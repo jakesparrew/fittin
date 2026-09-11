@@ -15,16 +15,16 @@ export const metadata = {
 // Zie ook de toelichting bovenaan lib/track.js.
 const Section = ({ title, children }) => (
   <section className="mt-8">
-    <h2 className="text-xl font-black text-brand">{title}</h2>
-    <div className="mt-3 space-y-3 leading-relaxed text-brand/70">{children}</div>
+    <h2 className="text-xl font-black text-ink">{title}</h2>
+    <div className="mt-3 space-y-3 leading-relaxed text-ink/70">{children}</div>
   </section>
 );
 
 const Item = ({ naam, doel, duur }) => (
   <tr className="border-b border-borderc last:border-0">
-    <td className="py-2.5 pr-4 align-top font-mono text-xs font-semibold text-brand">{naam}</td>
+    <td className="py-2.5 pr-4 align-top font-mono text-xs font-semibold text-ink">{naam}</td>
     <td className="py-2.5 pr-4 align-top">{doel}</td>
-    <td className="whitespace-nowrap py-2.5 align-top text-brand/50">{duur}</td>
+    <td className="whitespace-nowrap py-2.5 align-top text-ink/50">{duur}</td>
   </tr>
 );
 
@@ -33,12 +33,12 @@ export default function Cookies() {
     <main className="bg-paper">
       <div className="mx-auto max-w-3xl px-5 py-16">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Cookies</p>
-        <h1 className="mt-2 text-3xl font-black text-brand md:text-4xl">Cookies &amp; opslag</h1>
-        <p className="mt-3 text-sm text-brand/50">Versie 1 — laatst bijgewerkt: 5 augustus 2026</p>
+        <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Cookies &amp; opslag</h1>
+        <p className="mt-3 text-sm text-ink/50">Versie 1 — laatst bijgewerkt: 5 augustus 2026</p>
 
         <div className="mt-6 rounded-3xl border-2 border-accent bg-accent/10 p-6">
-          <p className="font-black text-brand">Je krijgt hier geen cookiebanner. Dat is geen vergetelheid.</p>
-          <p className="mt-2 leading-relaxed text-brand/70">
+          <p className="font-black text-ink">Je krijgt hier geen cookiebanner. Dat is geen vergetelheid.</p>
+          <p className="mt-2 leading-relaxed text-ink/70">
             We gebruiken <strong>geen reclamecookies, geen trackingcookies en geen cookies van derden</strong>.
             Er staat niets van Google, Meta of een advertentienetwerk op deze site. Het enige dat in je
             browser terechtkomt, is wat nodig is om je ingelogd te houden en om te onthouden dat je een
@@ -48,7 +48,7 @@ export default function Cookies() {
         </div>
 
         <Section title="Wat staat er dan wél in je browser?">
-          <div className="overflow-x-auto rounded-2xl border border-borderc bg-white p-4">
+          <div className="overflow-x-auto rounded-2xl border border-borderc bg-surface p-4">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-borderc text-left text-xs font-bold uppercase tracking-wide text-lav">

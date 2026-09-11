@@ -28,8 +28,8 @@ export default async function Activatie() {
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
-      <h1 className="text-3xl font-black text-brand">Activatie</h1>
-      <p className="mt-1 text-sm text-brand/50">Motivatie-campagnes die automatisch leden activeren — bv. wie 10 dagen niet kwam, krijgt een duwtje.</p>
+      <h1 className="text-3xl font-black text-ink">Activatie</h1>
+      <p className="mt-1 text-sm text-ink/50">Motivatie-campagnes die automatisch leden activeren — bv. wie 10 dagen niet kwam, krijgt een duwtje.</p>
 
       <QuickStart title="Zo werkt een activatie-campagne" steps={[
         { title: "1. Kies wie", body: "Bv. leden die 1 of 2 weken niet kwamen, of wie nog nooit boekte." },
@@ -43,8 +43,8 @@ export default async function Activatie() {
       {/* One-click win-back prefabs (Batch 2.5) — creates two ready-to-review drafts. */}
       <form action={createWinbackPrefabs} className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-dashed border-borderc bg-paper/50 p-4">
         <div className="flex-1">
-          <p className="text-sm font-black text-brand">Snelstart: win-back sjablonen</p>
-          <p className="text-xs text-brand/50">Maakt twee kant-en-klare concepten aan — “We missen je” (14d inactief) en “Abonnement gestopt” (+1 gratis sessie). Jij leest ze na en zet ze actief.</p>
+          <p className="text-sm font-black text-ink">Snelstart: win-back sjablonen</p>
+          <p className="text-xs text-ink/50">Maakt twee kant-en-klare concepten aan — “We missen je” (14d inactief) en “Abonnement gestopt” (+1 gratis sessie). Jij leest ze na en zet ze actief.</p>
         </div>
         <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Sjablonen aanmaken</button>
       </form>
@@ -54,26 +54,26 @@ export default async function Activatie() {
           const seg = SEGMENTS[c.trigger_type];
           const on = c.status === "active";
           return (
-            <Link key={c.id} href={`/beheer/activatie/${c.id}`} className="block rounded-2xl border border-borderc bg-white p-5 transition hover:border-accent/40">
+            <Link key={c.id} href={`/beheer/activatie/${c.id}`} className="block rounded-2xl border border-borderc bg-surface p-5 transition hover:border-accent/40">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="flex items-center gap-2">
                     <span className={"inline-block h-2 w-2 rounded-full " + (on ? "bg-accent" : "bg-borderc")} />
-                    <p className="font-black text-brand">{c.name}</p>
-                    <span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-brand/60">{seg?.label || c.trigger_type}</span>
+                    <p className="font-black text-ink">{c.name}</p>
+                    <span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-ink/60">{seg?.label || c.trigger_type}</span>
                   </div>
-                  <p className="mt-1 text-xs text-brand/45">{on ? "Actief — draait dagelijks" : "Concept / gepauzeerd"} · laatste run {fmt(c.last_run_at)}{c.reward_credits > 0 ? ` · +${c.reward_credits} gratis sessie` : ""}</p>
+                  <p className="mt-1 text-xs text-ink/45">{on ? "Actief — draait dagelijks" : "Concept / gepauzeerd"} · laatste run {fmt(c.last_run_at)}{c.reward_credits > 0 ? ` · +${c.reward_credits} gratis sessie` : ""}</p>
                 </div>
                 <div className="flex gap-5 text-right text-sm">
-                  <div><p className="text-lg font-black text-accentdark">{matchCounts[c.id] ?? 0}</p><p className="text-xs text-brand/45">matcht nu</p></div>
-                  <div><p className="text-lg font-black text-brand">{c.sent || 0}</p><p className="text-xs text-brand/45">verzonden</p></div>
-                  <div><p className="text-lg font-black text-brand">{pct(c.opened, c.sent)}</p><p className="text-xs text-brand/45">open</p></div>
+                  <div><p className="text-lg font-black text-accentdark">{matchCounts[c.id] ?? 0}</p><p className="text-xs text-ink/45">matcht nu</p></div>
+                  <div><p className="text-lg font-black text-ink">{c.sent || 0}</p><p className="text-xs text-ink/45">verzonden</p></div>
+                  <div><p className="text-lg font-black text-ink">{pct(c.opened, c.sent)}</p><p className="text-xs text-ink/45">open</p></div>
                 </div>
               </div>
             </Link>
           );
         })}
-        {(!camps || camps.length === 0) && <p className="rounded-xl bg-paper p-4 text-sm text-brand/50">Nog geen activatie-campagnes. Maak hierboven je eerste — bv. een win-back voor wie 10 dagen niet kwam.</p>}
+        {(!camps || camps.length === 0) && <p className="rounded-xl bg-paper p-4 text-sm text-ink/50">Nog geen activatie-campagnes. Maak hierboven je eerste — bv. een win-back voor wie 10 dagen niet kwam.</p>}
       </div>
     </div>
   );

@@ -48,15 +48,15 @@ export default function WorkoutFollow({ workout, signupHref = "/login?mode=signu
     <div className="mx-auto max-w-2xl px-5 pb-28 pt-6">
       {ctx && !isLoggedIn && (
         <div className="mb-5 rounded-3xl border-2 border-accent/40 bg-accent/5 p-5">
-          <p className="font-bold text-brand">Log in om je sets bij te houden 💪</p>
-          <p className="mt-1 text-sm text-brand/60">Je kan de workout vrij bekijken. Maak een gratis account om je gewichten, PR&rsquo;s en voortgang te loggen.</p>
+          <p className="font-bold text-ink">Log in om je sets bij te houden 💪</p>
+          <p className="mt-1 text-sm text-ink/60">Je kan de workout vrij bekijken. Maak een gratis account om je gewichten, PR&rsquo;s en voortgang te loggen.</p>
           <Link href={signupHref} className="mt-3 inline-block rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">Maak gratis account</Link>
         </div>
       )}
 
       {/* sticky progress */}
       <div className="sticky top-16 z-20 -mx-5 mb-5 border-y border-borderc bg-paper/90 px-5 py-3 backdrop-blur">
-        <div className="flex items-center justify-between text-sm font-bold text-brand">
+        <div className="flex items-center justify-between text-sm font-bold text-ink">
           <span>Workout-voortgang</span>
           <span>{doneCount}/{total} klaar</span>
         </div>
@@ -71,7 +71,7 @@ export default function WorkoutFollow({ workout, signupHref = "/login?mode=signu
 
       {groups.map((g) => (
         <section key={g.section} className="mb-7">
-          <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-brand/50">{g.section}</h3>
+          <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-ink/50">{g.section}</h3>
           <div className="space-y-3">
             {g.items.map((e) => (
               <ExerciseCard
@@ -92,11 +92,11 @@ export default function WorkoutFollow({ workout, signupHref = "/login?mode=signu
       ))}
 
       {/* save / finish */}
-      <div className="mt-8 rounded-3xl border border-borderc bg-white p-5 text-center">
+      <div className="mt-8 rounded-3xl border border-borderc bg-surface p-5 text-center">
         {doneCount >= total && total > 0 ? (
           <p className="text-lg font-black text-accentdark">Workout voltooid! 🎉 Top gedaan.</p>
         ) : (
-          <p className="text-sm text-brand/60">Vink elke oefening af terwijl je traint — bovenaan zie je je voortgang.</p>
+          <p className="text-sm text-ink/60">Vink elke oefening af terwijl je traint — bovenaan zie je je voortgang.</p>
         )}
         {isLoggedIn && (
           <form
@@ -104,7 +104,7 @@ export default function WorkoutFollow({ workout, signupHref = "/login?mode=signu
             className="mt-4"
           >
             <input type="hidden" name="programId" value={workout.id} />
-            <button className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-brand transition hover:border-accent">＋ Bewaar in mijn plannen</button>
+            <button className="rounded-full border-2 border-borderc px-6 py-3 text-sm font-bold text-ink transition hover:border-accent">＋ Bewaar in mijn plannen</button>
           </form>
         )}
         {ctx && !isLoggedIn && (
@@ -159,18 +159,18 @@ function ExerciseCard({ pe, last, done, isLoggedIn, onToggleDone, onRest }) {
   }
 
   return (
-    <div className={"overflow-hidden rounded-3xl border bg-white transition " + (done ? "border-accent" : "border-borderc")}>
+    <div className={"overflow-hidden rounded-3xl border bg-surface transition " + (done ? "border-accent" : "border-borderc")}>
       <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-3 p-3 text-left">
         <div className="h-16 w-16 shrink-0">
           <ExerciseMedia exercise={ex} thumb rounded="rounded-2xl" className="h-16 w-16" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate font-black text-brand">{ex.name || "Oefening"}</p>
-          <p className="mt-0.5 text-sm text-brand/55">
+          <p className="truncate font-black text-ink">{ex.name || "Oefening"}</p>
+          <p className="mt-0.5 text-sm text-ink/55">
             {pe.sets} × {pe.rep_text || pe.reps} · rust {pe.rest_sec}s{pe.tempo ? ` · tempo ${pe.tempo}` : ""}
           </p>
         </div>
-        <span className={"flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-black " + (done ? "bg-accent text-brand" : "bg-paper text-brand/40")}>✓</span>
+        <span className={"flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-sm font-black " + (done ? "bg-accent text-brand" : "bg-paper text-ink/40")}>✓</span>
       </button>
 
       {open && (
@@ -178,9 +178,9 @@ function ExerciseCard({ pe, last, done, isLoggedIn, onToggleDone, onRest }) {
           <div className="overflow-hidden rounded-2xl">
             <ExerciseMedia exercise={ex} className="aspect-video w-full" rounded="rounded-2xl" />
           </div>
-          {pe.notes && <p className="mt-3 rounded-2xl bg-accent/10 p-3 text-sm font-semibold text-brand">💡 {pe.notes}</p>}
+          {pe.notes && <p className="mt-3 rounded-2xl bg-accent/10 p-3 text-sm font-semibold text-ink">💡 {pe.notes}</p>}
           {Array.isArray(ex.instructions) && ex.instructions.length > 0 && (
-            <ol className="mt-3 space-y-1.5 pl-5 text-sm text-brand/70" style={{ listStyle: "decimal" }}>
+            <ol className="mt-3 space-y-1.5 pl-5 text-sm text-ink/70" style={{ listStyle: "decimal" }}>
               {ex.instructions.slice(0, 5).map((s, i) => <li key={i}>{s}</li>)}
             </ol>
           )}
@@ -193,20 +193,20 @@ function ExerciseCard({ pe, last, done, isLoggedIn, onToggleDone, onRest }) {
                 zichzelf ~180px. Twee van die kolommen pasten dus niet op een telefoon: het raster
                 liep rechts uit beeld en duwde de laatste kolom — de verwijderknop — buiten het
                 scherm. Sets toevoegen lukte wel, wissen "niet", terwijl de knop er gewoon stond. */}
-            <div className="mb-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 text-xs font-bold uppercase tracking-wide text-brand/40">
+            <div className="mb-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2 text-xs font-bold uppercase tracking-wide text-ink/40">
               <span>Set</span><span>Reps</span><span>Kg</span><span />
             </div>
             {rows.map((row, i) => (
               <div key={i} className="mb-2 grid grid-cols-[1.75rem_minmax(0,1fr)_minmax(0,1fr)_2rem] items-center gap-2">
-                <span className="text-center font-black text-brand/50">{i + 1}</span>
+                <span className="text-center font-black text-ink/50">{i + 1}</span>
                 {/* w-full + min-w-0: zonder deze twee blijft het invoerveld zijn eigen breedte
                     opeisen en helpt minmax() op de kolom nog niets. */}
-                <input inputMode="numeric" value={row.reps} onChange={(e) => setRow(i, "reps", e.target.value)} className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-brand" />
-                <input inputMode="decimal" placeholder="–" value={row.weight_kg} onChange={(e) => setRow(i, "weight_kg", e.target.value)} className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-brand" />
+                <input inputMode="numeric" value={row.reps} onChange={(e) => setRow(i, "reps", e.target.value)} className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-ink" />
+                <input inputMode="decimal" placeholder="–" value={row.weight_kg} onChange={(e) => setRow(i, "weight_kg", e.target.value)} className="w-full min-w-0 rounded-xl border border-borderc px-2 py-2 text-center text-ink" />
                 {/* Grotere raakzone dan een kaal kruisje: dit is een knop op een telefoon.
                     Bij één set verbergen — je laatste set wissen laat een lege tabel achter. */}
                 {rows.length > 1 ? (
-                  <button onClick={() => delRow(i)} className="rounded-lg py-2 text-lg leading-none text-brand/30 transition hover:text-red-500" aria-label={`Verwijder set ${i + 1}`}>✕</button>
+                  <button onClick={() => delRow(i)} className="rounded-lg py-2 text-lg leading-none text-ink/30 transition hover:text-red-500" aria-label={`Verwijder set ${i + 1}`}>✕</button>
                 ) : <span />}
               </div>
             ))}
@@ -215,8 +215,8 @@ function ExerciseCard({ pe, last, done, isLoggedIn, onToggleDone, onRest }) {
 
           <div className="mt-3 flex flex-wrap gap-2">
             <button onClick={logSets} disabled={busy} className="flex-1 rounded-full bg-accent px-5 py-3 text-sm font-bold text-brand transition hover:opacity-90 disabled:opacity-50">{busy ? "Bezig…" : "Log sets"}</button>
-            <button onClick={quickDone} className={"rounded-full px-5 py-3 text-sm font-bold transition " + (done ? "bg-brand text-white" : "border-2 border-borderc text-brand hover:border-accent")}>{done ? "✓ Klaar" : "Klaar"}</button>
-            <button onClick={() => onRest(pe.rest_sec || 90)} className="rounded-full border-2 border-borderc px-5 py-3 text-sm font-bold text-brand transition hover:border-accent">⏱ {pe.rest_sec || 90}s</button>
+            <button onClick={quickDone} className={"rounded-full px-5 py-3 text-sm font-bold transition " + (done ? "bg-brand text-white" : "border-2 border-borderc text-ink hover:border-accent")}>{done ? "✓ Klaar" : "Klaar"}</button>
+            <button onClick={() => onRest(pe.rest_sec || 90)} className="rounded-full border-2 border-borderc px-5 py-3 text-sm font-bold text-ink transition hover:border-accent">⏱ {pe.rest_sec || 90}s</button>
           </div>
         </div>
       )}
@@ -237,7 +237,7 @@ function RestPill({ rest, onClose }) {
     <div className="fixed inset-x-0 bottom-24 z-40 mx-auto flex max-w-2xl justify-center px-5 md:bottom-6">
       <div className="flex w-full items-center gap-3 rounded-full bg-brand px-5 py-3 text-white shadow-xl shadow-brand/30">
         <span className="text-sm font-bold">Rust</span>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/20">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface/20">
           <div className="h-full rounded-full bg-accent transition-all duration-1000 ease-linear" style={{ width: `${pct}%` }} />
         </div>
         <span className="font-black tabular-nums">{left <= 0 ? "Go! 💪" : mmss(left)}</span>

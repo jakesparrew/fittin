@@ -54,12 +54,12 @@ export default function AfvinkKnoppen({ token, gedaan, oordeel }) {
         {AFVINK_OORDELEN.map((o) => (
           <button key={o.v} type="button" disabled={bezig} onClick={() => tik(o.v)}
             className={"rounded-xl border-2 px-2 py-3 text-center text-sm font-bold transition disabled:opacity-60 " +
-              (gekozen === o.v ? "border-accent bg-accent/10 text-brand" : "border-borderc text-brand/70 hover:border-accent")}>
+              (gekozen === o.v ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink/70 hover:border-accent")}>
             {o.l}
           </button>
         ))}
       </div>
-      <p className="mt-2 text-xs text-brand/45">
+      <p className="mt-2 text-xs text-ink/45">
         {af ? "Dit stuurt je volgende week: zwaarder, gelijk of lichter. Vergist? Tik gewoon een andere." : "Eén tik is genoeg. Meer vragen we niet."}
       </p>
 
@@ -67,7 +67,7 @@ export default function AfvinkKnoppen({ token, gedaan, oordeel }) {
 
       {af && (
         <button type="button" onClick={weg} disabled={bezig}
-          className="mt-4 text-xs font-bold text-brand/45 underline transition hover:text-brand disabled:opacity-60">
+          className="mt-4 text-xs font-bold text-ink/45 underline transition hover:text-ink disabled:opacity-60">
           Toch niet getraind — vinkje weghalen
         </button>
       )}

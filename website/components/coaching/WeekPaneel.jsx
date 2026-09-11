@@ -52,21 +52,21 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
         const wanneer = sessieDatum[s.id] || null;
         const nogTeGaan = wanneer ? new Date(wanneer).getTime() > nu : false;
         return (
-          <div key={s.id} className={"overflow-hidden rounded-3xl border-2 bg-white transition " + (gedaan ? "border-accent/40" : "border-borderc")}>
+          <div key={s.id} className={"overflow-hidden rounded-3xl border-2 bg-surface transition " + (gedaan ? "border-accent/40" : "border-borderc")}>
             <button type="button" onClick={() => setOpen(uitgeklapt ? null : s.id)}
               className="flex w-full items-center gap-3 p-5 text-left transition hover:bg-paper/60">
-              <span className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black transition " + (gedaan ? "bg-accent text-brand" : "bg-borderc/60 text-brand/40")}>
+              <span className={"flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-black transition " + (gedaan ? "bg-accent text-brand" : "bg-borderc/60 text-ink/40")}>
                 {gedaan ? "✓" : s.volgnummer}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block font-black text-brand">{eigen[0]?.dag?.name || `Sessie ${s.volgnummer}`}</span>
+                <span className="block font-black text-ink">{eigen[0]?.dag?.name || `Sessie ${s.volgnummer}`}</span>
                 <span className="block text-xs text-ink-soft">
                   {wanneer ? `${fmt(wanneer)} · ` : ""}
                   {eigen.length} oefening{eigen.length === 1 ? "" : "en"}
                   {gedaan && s.oordeel ? ` · ${OORDELEN.find((o) => o.v === s.oordeel)?.l.toLowerCase()}` : ""}
                 </span>
               </span>
-              <span className="shrink-0 text-brand/30">{uitgeklapt ? "▲" : "▼"}</span>
+              <span className="shrink-0 text-ink/30">{uitgeklapt ? "▲" : "▼"}</span>
             </button>
 
             {uitgeklapt && (
@@ -80,7 +80,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
                         <span className="h-11 w-11 shrink-0 rounded-lg bg-paper" />
                       )}
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-bold text-brand">
+                        <span className="block truncate text-sm font-bold text-ink">
                           {o.exercises?.slug
                             ? <Link href={`/oefeningen/${o.exercises.slug}`} className="hover:underline">{o.exercises?.name}</Link>
                             : o.exercises?.name}
@@ -109,27 +109,27 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
                           dat achter ons? Afvinken blijft altijd mogelijk — iemand kan elders
                           getraind hebben, of de koppeling kan gemist zijn. */}
                       {nogTeGaan ? (
-                        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Je traint {fmt(wanneer)} — vink daarna af</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Je traint {fmt(wanneer)} — vink daarna af</p>
                       ) : wanneer ? (
-                        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">Hoe voelde het?</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-ink/45">Hoe voelde het?</p>
                       ) : (
-                        <p className="text-xs font-bold uppercase tracking-wide text-brand/45">
+                        <p className="text-xs font-bold uppercase tracking-wide text-ink/45">
                           Nog geen moment geboekt · <Link href="/boeken" className="text-accentdark underline">kies er een</Link>
                         </p>
                       )}
                       <div className={"mt-2 grid grid-cols-3 gap-2 " + (nogTeGaan ? "opacity-60" : "")}>
                         {OORDELEN.map((o) => (
                           <button key={o.v} type="button" disabled={bezig} onClick={() => tik(s.id, o.v)}
-                            className="rounded-xl border-2 border-borderc px-3 py-2.5 text-sm font-bold text-brand transition hover:border-accent hover:bg-accent/10 disabled:opacity-50">
+                            className="rounded-xl border-2 border-borderc px-3 py-2.5 text-sm font-bold text-ink transition hover:border-accent hover:bg-accent/10 disabled:opacity-50">
                             {o.l}
                           </button>
                         ))}
                       </div>
-                      <p className="mt-2 text-xs text-brand/40">Eén tik stuurt je volgende week. Het kan ook met één tik in je deurcodemail.</p>
+                      <p className="mt-2 text-xs text-ink/40">Eén tik stuurt je volgende week. Het kan ook met één tik in je deurcodemail.</p>
                     </>
                   ) : (
                     <button type="button" disabled={bezig} onClick={() => tik(s.id, null)}
-                      className="text-xs font-bold text-brand/45 underline transition hover:text-brand">
+                      className="text-xs font-bold text-ink/45 underline transition hover:text-ink">
                       Toch niet gedaan — vinkje weghalen
                     </button>
                   )}
@@ -140,7 +140,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
         );
       })}
 
-      {melding && <p className="rounded-xl bg-paper px-4 py-3 text-sm font-bold text-brand">{melding}</p>}
+      {melding && <p className="rounded-xl bg-paper px-4 py-3 text-sm font-bold text-ink">{melding}</p>}
 
       {/* De check-in verschijnt zodra de week rond is. Niet eerder: hem vooraf tonen maakt van een
           gesprek een formulier dat er altijd staat. */}
@@ -155,7 +155,7 @@ export default function WeekPaneel({ week, sessies, oefeningen, checkin, alleSes
       )}
       {alleSessiesAf && checkin && isLaatsteWeek && (
         <div className="rounded-3xl border-2 border-accent/40 bg-accent/5 p-6 text-center">
-          <p className="font-display text-xl font-black text-brand">Je plan is uit 🎉</p>
+          <p className="font-display text-xl font-black text-ink">Je plan is uit 🎉</p>
           <p className="mt-1.5 text-sm text-ink-soft">Je hebt alle weken afgewerkt. Zin in een nieuw plan?</p>
         </div>
       )}
@@ -181,8 +181,8 @@ function Checkin({ weekId, maaltijden, alleAf }) {
   }
 
   return (
-    <form onSubmit={verstuur} className="anim-in rounded-3xl border-2 border-brand/15 bg-white p-6">
-      <h3 className="font-display text-lg font-black text-brand">{alleAf ? "Je week zit erop — hoe ging het?" : "Hoe ging je week?"}</h3>
+    <form onSubmit={verstuur} className="anim-in rounded-3xl border-2 border-brand/15 bg-surface p-6">
+      <h3 className="font-display text-lg font-black text-ink">{alleAf ? "Je week zit erop — hoe ging het?" : "Hoe ging je week?"}</h3>
       <p className="mt-1 text-sm text-ink-soft">
         {maaltijden ? "Zes tikken" : "Vier tikken"}. Je coach gebruikt dit om je volgende week samen te stellen.
       </p>
@@ -201,21 +201,21 @@ function Checkin({ weekId, maaltijden, alleAf }) {
       )}
 
       <div className="mt-5">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-bold text-brand">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-bold text-ink">
           <input type="checkbox" checked={pijn} onChange={(e) => setPijn(e.target.checked)} className="h-5 w-5 accent-accent" />
           Ik had ergens pijn
         </label>
         {pijn && (
           <input name="pijn_waar" maxLength={200} placeholder="Waar precies?"
-            className="anim-in mt-2 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-base font-normal text-brand outline-none transition focus:border-accent" />
+            className="anim-in mt-2 w-full rounded-xl border-2 border-borderc px-3.5 py-2.5 text-base font-normal text-ink outline-none transition focus:border-accent" />
         )}
         {pijn && <p className="mt-1.5 text-xs text-amber-700">Bij aanhoudende pijn stopt je coach met plannen en stelt hij een echte coach voor.</p>}
       </div>
 
-      <label className="mt-5 block text-sm font-bold text-brand">
-        Nog iets? <span className="font-normal text-brand/40">(optioneel)</span>
+      <label className="mt-5 block text-sm font-bold text-ink">
+        Nog iets? <span className="font-normal text-ink/40">(optioneel)</span>
         <textarea name="vrij" rows={2} maxLength={1000}
-          className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-base font-normal text-brand outline-none transition focus:border-accent" />
+          className="mt-1.5 w-full resize-none rounded-xl border-2 border-borderc px-3.5 py-2.5 text-base font-normal text-ink outline-none transition focus:border-accent" />
       </label>
 
       {fout && <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm font-bold text-red-700">{fout}</p>}
@@ -232,12 +232,12 @@ function Rij({ naam, label, opties }) {
   const [gekozen, setGekozen] = useState("");
   return (
     <div className="mt-5">
-      <p className="text-xs font-bold uppercase tracking-wide text-brand/45">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-ink/45">{label}</p>
       <input type="hidden" name={naam} value={gekozen} />
       <div className="mt-2 grid grid-cols-3 gap-2">
         {opties.map(([v, l]) => (
           <button key={v} type="button" onClick={() => setGekozen(v)}
-            className={"rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition " + (gekozen === v ? "border-accent bg-accent/10 text-brand" : "border-borderc text-brand/70 hover:border-lav")}>
+            className={"rounded-xl border-2 px-3 py-2.5 text-sm font-bold transition " + (gekozen === v ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink/70 hover:border-lav")}>
             {l}
           </button>
         ))}

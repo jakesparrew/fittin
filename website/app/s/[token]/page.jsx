@@ -35,7 +35,7 @@ export default async function SessieAfvinken({ params }) {
 
   return (
     <Kaart emoji={gedaan ? "✅" : "💪"} titel={gedaan ? "Afgevinkt" : "Hoe voelde het?"}>
-      <p className="text-brand">
+      <p className="text-ink">
         <b>Week {d.week?.weeknummer} · {d.naam}</b>
         {gedaan && label ? <> — je gaf aan dat het <b>{label.toLowerCase()}</b> was.</> : null}
       </p>
@@ -44,7 +44,7 @@ export default async function SessieAfvinken({ params }) {
 
       {gedaan && (
         <div className="mt-6 rounded-2xl bg-paper px-4 py-3">
-          <p className="text-sm font-bold text-brand">{d.gedaan} van {d.gepland} sessies deze week</p>
+          <p className="text-sm font-bold text-ink">{d.gedaan} van {d.gepland} sessies deze week</p>
           <div className="mt-2 flex gap-1.5">
             {Array.from({ length: d.gepland }, (_, i) => (
               <span key={i} className={"h-2 flex-1 rounded-full " + (i < d.gedaan ? "bg-accent" : "bg-borderc")} />
@@ -72,10 +72,10 @@ function Kaart({ emoji, titel, children }) {
   return (
     <main className="min-h-screen bg-paper px-5 py-10">
       <div className="mx-auto max-w-md">
-        <p className="text-2xl font-black text-brand">Fittin<span className="text-accent">&rsquo;</span></p>
-        <div className="anim-in mt-6 rounded-3xl border border-borderc bg-white p-7">
+        <p className="text-2xl font-black text-ink">Fittin<span className="text-accent">&rsquo;</span></p>
+        <div className="anim-in mt-6 rounded-3xl border border-borderc bg-surface p-7">
           <p className="text-3xl">{emoji}</p>
-          <h1 className="mt-2 font-display text-2xl font-black text-brand">{titel}</h1>
+          <h1 className="mt-2 font-display text-2xl font-black text-ink">{titel}</h1>
           <div className="mt-3 space-y-2 text-sm leading-relaxed text-ink-soft">{children}</div>
         </div>
       </div>
@@ -87,7 +87,7 @@ function Knop({ href, children, stil = false }) {
   return (
     <Link href={href}
       className={"inline-flex rounded-full px-5 py-2.5 text-sm font-bold transition hover:opacity-90 " +
-        (stil ? "border-2 border-borderc text-brand" : "bg-accent text-brand")}>
+        (stil ? "border-2 border-borderc text-ink" : "bg-accent text-brand")}>
       {children}
     </Link>
   );
