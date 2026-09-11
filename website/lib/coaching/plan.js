@@ -209,6 +209,15 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
 
   const week1 = weken1.find((w) => w.weeknummer === 1);
   const { programId, dagIds } = await schrijfWeekProgramma(admin, { gymId, memberId, planNaam, weeknummer: 1, sessies });
+  // De rest van de app gaat uit van precies ÉÉN actief programma per lid (RPC set_active_plan,
+  // 0062). `schrijfWeekProgramma` zet het nieuwe op actief, dus alles wat er al actief stond moet
+  // eruit — anders schrijft "+ in mijn schema" vanaf nu in het verkeerde programma.
+  //
+  // `openVolgendeWeek` deed dit al bij elke weekovergang; hier ontbrak het, waardoor precies het
+  // meest voorkomende geval het gat had: een tweede plan starten nadat het eerste gestopt is.
+  // Gemeten toen dat gebeurde: twee actieve programma's, met de hand rechtgezet.
+  await admin.from("programs").update({ is_active: false })
+    .eq("member_id", memberId).eq("is_active", true).neq("id", programId);
   await admin.from("coaching_weeks").update({ program_id: programId, unlocked_at: new Date().toISOString() }).eq("id", week1.id);
   await schrijfSessies(admin, { gymId, weekId: week1.id, dagIds });
 

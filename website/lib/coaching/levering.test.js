@@ -196,9 +196,17 @@ describe("de grenzen van de AI-coach", () => {
     expect(p).not.toMatch(/dagenLijst\.slice\(0, dagenLijst\.length - 1\)/);
   });
 
-  it("er blijft één actief programma per lid", () => {
+  it("er blijft één actief programma per lid — ook bij een NIEUW plan", () => {
     // De rest van de app gaat uit van precies één actief plan (RPC set_active_plan, 0062).
-    expect(lees("lib/coaching/plan.js")).toMatch(/is_active: false/);
+    // `openVolgendeWeek` regelde dit al bij elke weekovergang, maar `maakPlan` niet — en dat is
+    // juist het meest voorkomende geval: een tweede plan starten nadat het eerste gestopt is.
+    // Dan stonden er twee actieve programma's en schreef "+ in mijn schema" in het verkeerde.
+    const p = lees("lib/coaching/plan.js");
+    const maak = p.slice(p.indexOf("export async function maakPlan"), p.indexOf("export async function geschiedenisVanPlan"));
+    expect(maak).toMatch(/is_active: false/);
+    expect(maak).toMatch(/\.neq\("id", programId\)/);
+    // en de weekovergang blijft het ook doen
+    expect(p.slice(p.indexOf("export async function openVolgendeWeek"))).toMatch(/is_active: false/);
   });
 
   it("een coachingweek kan niet via /plannen weggegooid worden", () => {
