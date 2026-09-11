@@ -14,6 +14,7 @@
 //   herplan()           — alleen bij pijn of drie weken te zwaar. Dat is een keuze, geen som.
 
 import { roepMetTerugval, MODELLEN } from "./model.js";
+import { uitPlan } from "./stroomlezer.js";
 import { magNogOfBoek, boekVerbruik, boekResultaat } from "./budget.js";
 import { bouwContext, planSysteem, planVraag, analyseSysteem, analyseVraag, herplanSysteem } from "./prompt.js";
 import { kiesOefeningen, verdeelFocus, keurVoorschriften } from "./keuze.js";
@@ -111,17 +112,31 @@ async function schrijfSessies(admin, { gymId, weekId, dagIds }) {
 /**
  * Een volledig nieuw plan. Dit is de enige plek waar het slimme model werk doet.
  */
-export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessiesPerWeek }) {
+export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessiesPerWeek, melden = null }) {
+  // `melden` is de meekijker: de zondagcron geeft er geen mee en merkt van dit alles niets.
+  const zeg = typeof melden === "function" ? melden : () => {};
   const rem = await magNogOfBoek(admin, { gymId, memberId, soort: "plan" });
   if (!rem.mag) return { error: `De coach kan nu even geen plan maken (${rem.reden}). Probeer het morgen opnieuw.` };
 
   const context = bouwContext(profiel);
+  zeg({ t: "stap", sleutel: "schrijven", tekst: "Je coach schrijft je plan" });
+
+  // De bibliotheek stond hier ooit ná de modelaanroep en wachtte dus een halve minuut op zijn beurt
+  // terwijl hij nergens van afhangt. Nu loopt hij mee; de `await` staat verderop.
+  // De `catch` hoort erbij en is geen sierraad: een vrij zwevende belofte die verwerpt terwijl
+  // we hierboven al met een modelfout teruggekeerd zijn, is in Node een onbehandelde verwerping —
+  // en die zet het proces om zeep. De fout wordt bewaard en pas geworpen waar hij opgevangen wordt.
+  const bibliotheekBezig = bibliotheekVan(admin, gymId).catch((e) => ({ __fout: e }));
+
   const uit = await roepMetTerugval({
     model: MODELLEN.plan,
     system: planSysteem(),
     messages: [{ role: "user", content: planVraag(context, { weken, sessiesPerWeek }) }],
     maxTokens: 4000,
     temperatuur: 0.4,
+    // Alleen wanneer er iemand meekijkt. Zonder meekijker blijft het het gewone, niet-gestreamde
+    // pad — dat scheelt de cron een hoop gedoe zonder dat iemand er iets aan heeft.
+    ...(melden ? { onDelta: (_, alles) => zeg({ t: "concept", ...uitPlan(alles) }) } : {}),
   });
   // De tokens zijn nu betaald. Wat er UITKWAM weten we pas na lezen, keuren en opslaan — daarom
   // krijgt elke uitgang hieronder zijn eigen `boekResultaat`. Zonder dat stond 72% van alles wat de
@@ -143,7 +158,9 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
     return { error: "De coach gaf een onbruikbaar plan terug. Probeer het opnieuw." };
   }
 
-  const bibliotheek = await bibliotheekVan(admin, gymId);
+  zeg({ t: "stap", sleutel: "oefeningen", tekst: "Oefeningen kiezen uit de zaal" });
+  const bibliotheek = await bibliotheekBezig;
+  if (bibliotheek?.__fout) throw bibliotheek.__fout;
   const geldigeIds = new Set(bibliotheek.map((b) => b.id));
   const niveau = profiel.coaching_ervaring || "soms";
   const planNaam = "Coaching";
@@ -177,6 +194,7 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
     return { error: "De coach kon het plan niet controleren. Probeer het opnieuw." };
   }
 
+  zeg({ t: "stap", sleutel: "wegschrijven", tekst: "Je weekschema klaarzetten" });
   // Pas nu wegschrijven — een half plan in de databank is erger dan geen plan.
   const { data: plan, error: pe } = await admin.from("coaching_plans").insert({
     gym_id: gymId,
@@ -227,6 +245,7 @@ export async function maakPlan(admin, { gymId, memberId, profiel, weken, sessies
   await schrijfSessies(admin, { gymId, weekId: week1.id, dagIds });
 
   await boekResultaat(admin, boeking.id, "plan_geschreven");
+  zeg({ t: "stap", sleutel: "klaar", tekst: "Je plan staat klaar" });
   return { ok: true, planId: plan.id, weekId: week1.id, kostMicro: uit.kostMicro };
 }
 

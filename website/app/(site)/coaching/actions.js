@@ -1,12 +1,10 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { getSessionProfile } from "@/lib/auth";
-import { maakPlan, openVolgendeWeek } from "@/lib/coaching/plan.js";
-import { coachAan } from "@/lib/coaching/model.js";
-import { zorgVoorMenu, maakWeekmenu, maaltijdenAan, VOEDINGSVOORKEUREN } from "@/lib/coaching/maaltijd.js";
-import { magCoaching } from "@/lib/coaching/toegang.js";
+import { openVolgendeWeek } from "@/lib/coaching/plan.js";
+import { VOEDINGSVOORKEUREN } from "@/lib/coaching/maaltijd.js";
+// Één poort voor alle acties én voor de stroomroute. Zie lib/coaching/wie.js.
+import { wie as ik } from "@/lib/coaching/wie.js";
 import { keurGeboortedatum, keurGeslacht } from "@/lib/aanmelding-velden";
 
 const MODULES = ["workouts", "mealplan", "motivatie"];
@@ -18,13 +16,7 @@ const MODULES = ["workouts", "mealplan", "motivatie"];
 // coaching-tabellen. Dat is bewust — een lid mag zijn eigen dossier lezen, maar niet zelf een week
 // openzetten of een sessie van iemand anders afvinken.
 
-async function ik() {
-  const { user, profile } = await getSessionProfile();
-  if (!user || !profile) return null;
-  // Één poort voor alle acties. Hem per actie herhalen is hem ooit vergeten.
-  if (!magCoaching(profile)) return null;
-  return { user, profile, admin: createAdminClient() };
-}
+
 
 /** De intake. Eén keer per lid; nadien aanpasbaar op /coaching. */
 export async function bewaarIntake(formData) {
@@ -114,74 +106,6 @@ export async function zetVoeding(formData) {
   if (error) return { error: "Kon je voorkeuren niet bewaren." };
   revalidatePath("/coaching");
   return { ok: true, message: "Bewaard ✓ — je volgende menu houdt er rekening mee." };
-}
-
-/**
- * Het weekmenu van deze week. Het lid kan het zelf vragen; de zondagcron doet hetzelfde wanneer
- * een nieuwe week opengaat. Beide wegen komen uit op dezelfde rij (uniek op lid + weeknummer).
- */
-export async function maakMenu(formData) {
-  const mij = await ik();
-  if (!mij) return { error: "Je moet ingelogd zijn." };
-  if (!coachAan()) return { error: "De AI-coach staat momenteel uit." };
-  if (!maaltijdenAan(mij.profile)) return { error: "Zet eerst de maaltijdmodule aan." };
-
-  const { data: plan } = await mij.admin.from("coaching_plans")
-    .select("id, gym_id").eq("member_id", mij.user.id).eq("status", "lopend").maybeSingle();
-  if (!plan) return { error: "Je hebt geen lopend plan." };
-
-  const { data: weken } = await mij.admin.from("coaching_weeks")
-    .select("id, weeknummer, unlocked_at").eq("plan_id", plan.id).order("weeknummer");
-  const open = [...(weken || [])].reverse().find((w) => w.unlocked_at);
-  if (!open) return { error: "Er staat nog geen week open." };
-
-  // Opnieuw vragen mag, maar dan ook echt opnieuw: de knop "ander menu" hoort een ander menu te
-  // geven en niet stilletjes hetzelfde terug te zetten.
-  const opnieuw = String(formData?.get?.("opnieuw") || "") === "ja";
-  const { data: checkin } = await mij.admin.from("coaching_checkins")
-    .select("menu_gevolgd, honger").eq("week_id", open.id).maybeSingle();
-
-  const argumenten = {
-    gymId: plan.gym_id, memberId: mij.user.id, profiel: mij.profile,
-    weeknummer: open.weeknummer, planId: plan.id, checkin,
-  };
-  const uit = opnieuw
-    ? await maakWeekmenu(mij.admin, argumenten)
-    : await zorgVoorMenu(mij.admin, argumenten);
-  if (uit.error) return { error: uit.error };
-
-  revalidatePath("/coaching");
-  return { ok: true, message: uit.hergebruikt ? "Je menu van vorige week loopt door ✓" : "Je weekmenu staat klaar ✓" };
-}
-
-/** Het plan aanmaken. De enige plek waar het slimme model werk doet. */
-export async function startPlan(formData) {
-  const mij = await ik();
-  if (!mij) return { error: "Je moet ingelogd zijn." };
-  if (!coachAan()) return { error: "De AI-coach staat momenteel uit." };
-
-  const weken = parseInt(formData.get("weken"), 10) || 8;
-  const p = mij.profile;
-  if (!p.coaching_doel || !p.coaching_ervaring || !p.coaching_dagen) {
-    return { error: "Vul eerst de vragen in." };
-  }
-
-  const { data: bestaat } = await mij.admin.from("coaching_plans")
-    .select("id").eq("member_id", mij.user.id).eq("status", "lopend").maybeSingle();
-  if (bestaat) return { error: "Je hebt al een lopend plan." };
-
-  const uit = await maakPlan(mij.admin, {
-    gymId: p.gym_id,
-    memberId: mij.user.id,
-    profiel: p,
-    weken: [6, 8, 12].includes(weken) ? weken : 8,
-    sessiesPerWeek: p.coaching_dagen,
-  });
-  if (uit.error) return { error: uit.error };
-
-  revalidatePath("/coaching");
-  revalidatePath("/training");
-  return { ok: true, message: "Je plan staat klaar ✓" };
 }
 
 /** Eén sessie afvinken. De enige handeling die het lid elke week doet. */

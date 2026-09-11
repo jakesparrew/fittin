@@ -15,11 +15,12 @@ import { volgendeStap, dagenTeGaan } from "@/lib/coaching/volgendestap.js";
 import { fmt } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-// De serveracties van deze pagina draaien in DEZE functie, en `startPlan` doet een modelaanroep van
-// gemeten 27-41 seconden (bij een terugval naar het tweede model tot 180). Zonder deze regel hangt
-// dat aan een platformstandaard die nergens in de code te zien is — en als die onder de 41 seconden
-// ligt, wordt het plan halverwege afgekapt en houdt het lid een dossier over dat vastzit.
-// De cron die dezelfde aanroep doet, kreeg om die reden al 300.
+// De serveracties van deze pagina draaien in DEZE functie. Het maken van een plan of een menu is
+// intussen verhuisd naar /api/coaching/stroom (die zijn eigen 300 heeft), maar `openVolgendeWeek`
+// hangt hier nog wél aan vast en doet ook een modelaanroep. Zonder deze regel hangt dat aan een
+// platformstandaard die nergens in de code te zien is — en ligt die te laag, dan wordt de aanroep
+// halverwege afgekapt en houdt het lid een dossier over dat vastzit.
+// De cron die dezelfde aanroepen doet, kreeg om die reden al 300.
 export const maxDuration = 300;
 export const metadata = {
   title: "Je AI-coach | Fittin'",

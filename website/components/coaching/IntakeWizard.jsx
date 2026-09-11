@@ -1,9 +1,11 @@
 "use client";
-import { useState, useTransition } from "react";
-import { bewaarIntake, startPlan } from "@/app/(site)/coaching/actions";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { bewaarIntake } from "@/app/(site)/coaching/actions";
 import { VOEDINGSVOORKEUREN } from "@/lib/coaching/voeding-velden.js";
 import { GESLACHTEN } from "@/lib/aanmelding-velden";
-import PlanBezig from "./PlanBezig";
+import Voortgang from "./Voortgang";
+import { useStroom } from "./stroom";
 
 // Eén vraag per scherm, met bij elke vraag waarom we het vragen. Dat laatste is geen beleefdheid:
 // wie niet weet waarom je zijn gewicht vraagt, vult iets in of haakt af. En de gezondheidsvraag
@@ -34,14 +36,46 @@ const ERVARING = [
   { v: "vaak", l: "Regelmatig", u: "Je bent vertrouwd met vrije gewichten." },
 ];
 
+// Spoor dat er een plan onderweg is. Dit staat in localStorage en niet in de databank, omdat het
+// alleen dient om DIT venster iets zinnigs te tonen wanneer het lid terugkomt — het werk zelf hangt
+// er niet van af. Zie de stroomroute: dat loopt door met `after()`, ongeacht wat de browser weet.
+const SPOOR = "fittin.coach.plan-bezig";
+// Ouder dan dit is geen lopende opdracht meer maar een vergeten spoor. Ruim boven de gemeten 41
+// seconden plus de terugval naar het tweede model.
+const SPOOR_GELDIG_MS = 5 * 60_000;
+
+const zetSpoor = (aan) => {
+  try { aan ? localStorage.setItem(SPOOR, String(Date.now())) : localStorage.removeItem(SPOOR); } catch { /* privémodus */ }
+};
+
 export default function IntakeWizard({ profiel }) {
+  const router = useRouter();
   const [stap, setStap] = useState(1);
-  const [bezig, start] = useTransition();
   const [fout, setFout] = useState(null);
-  // Hoe ver het wachtscherm ECHT staat. Alleen stap 1 kennen we met zekerheid (bewaarIntake is een
-  // aparte serveractie); de rest schat PlanBezig. Zie daar waarom we geen percentage verzinnen.
   const [maken, setMaken] = useState(false);
-  const [stapAf, setStapAf] = useState(0);
+  // Losgekoppeld = de verbinding viel weg terwijl je coach nog schreef. Geen fout: het werk loopt door.
+  const [los, setLos] = useState(false);
+  const stroom = useStroom();
+  const bezig = stroom.bezig;
+
+  // Teruggekomen terwijl er nog iets liep. Zonder dit kreeg het lid het intakeformulier opnieuw te
+  // zien en kon het een tweede plan starten terwijl het eerste nog geschreven werd.
+  useEffect(() => {
+    let t = 0;
+    try { t = Number(localStorage.getItem(SPOOR)) || 0; } catch { /* privémodus */ }
+    if (!t) return;
+    if (Date.now() - t < SPOOR_GELDIG_MS) { setMaken(true); setLos(true); }
+    else zetSpoor(false);
+  }, []);
+
+  // Zolang we losgekoppeld wachten: kijken of het plan er intussen staat. Is het er, dan rendert de
+  // pagina deze wizard niet meer en stopt dit vanzelf.
+  useEffect(() => {
+    if (!los) return undefined;
+    const tik = setInterval(() => router.refresh(), 5000);
+    const stop = setTimeout(() => { setLos(false); setMaken(false); zetSpoor(false); }, SPOOR_GELDIG_MS);
+    return () => { clearInterval(tik); clearTimeout(stop); };
+  }, [los, router]);
 
   const [doel, setDoel] = useState(profiel?.coaching_doel || "");
   const [ervaring, setErvaring] = useState(profiel?.coaching_ervaring || "");
@@ -67,59 +101,67 @@ export default function IntakeWizard({ profiel }) {
   const verder = () => { setFout(null); setStap((s) => Math.min(LAATSTE, s + 1)); };
   const terug = () => { setFout(null); setStap((s) => Math.max(1, s - 1)); };
 
-  function afronden() {
+  async function afronden() {
     setFout(null);
-    setStapAf(0);
     setMaken(true);
-    start(async () => {
-      const fd = new FormData();
-      fd.set("doel", doel);
-      fd.set("ervaring", ervaring);
-      fd.set("dagen", String(dagen));
-      fd.set("weken", String(weken));
-      fd.set("toon", toon);
-      for (const m of modules) fd.append("modules", m);
-      if (modules.includes("mealplan")) {
-        for (const v of voeding) fd.append("voeding", v);
-        fd.set("voeding_vrij", voedingVrij);
-      }
-      fd.set("toestemming", toestemming ? "ja" : "nee");
-      if (toestemming) {
-        if (geboortedatum) fd.set("geboortedatum", geboortedatum);
-        if (geslacht) fd.set("geslacht", geslacht);
-        if (gewicht) fd.set("gewicht", String(gewicht));
-        if (lengte) fd.set("lengte", String(lengte));
-        if (beperkingen) fd.set("beperkingen", beperkingen);
-      }
-      // ALLES in een try: `maakPlan` gooit op vier plekken (de bibliotheek, het wegschrijven van
-      // een week, van de dagen en van de sessies). Niets ving dat op, en dan bleef het wachtscherm
-      // eeuwig draaien — een tweede, volledig onafhankelijke oorzaak van "het blijft laden" die
-      // geen enkele voortgangsweergave oplost.
-      try {
-        const bewaard = await bewaarIntake(fd);
-        if (bewaard?.error) { setFout(bewaard.error); setMaken(false); return; }
-        // De enige grens die we echt kennen: de antwoorden staan opgeslagen.
-        setStapAf(1);
 
-        const planFd = new FormData();
-        planFd.set("weken", String(weken));
-        const gemaakt = await startPlan(planFd);
-        // Terug naar het formulier bij een fout: het wachtscherm laten staan met een rode balk
-        // eronder zou suggereren dat er nog iets loopt.
-        if (gemaakt?.error) { setFout(gemaakt.error); setMaken(false); return; }
-      } catch (e) {
-        setFout(`Er liep iets mis bij het maken van je plan: ${e?.message || "onbekende fout"}. Probeer het opnieuw — is je plan half aangemaakt, dan kan je het stoppen bij "Je plan en je gegevens".`);
-        setMaken(false);
-        return;
-      }
-      // De pagina herlaadt zichzelf via revalidatePath; hier hoeft niets meer te gebeuren.
+    const fd = new FormData();
+    fd.set("doel", doel);
+    fd.set("ervaring", ervaring);
+    fd.set("dagen", String(dagen));
+    fd.set("weken", String(weken));
+    fd.set("toon", toon);
+    for (const m of modules) fd.append("modules", m);
+    if (modules.includes("mealplan")) {
+      for (const v of voeding) fd.append("voeding", v);
+      fd.set("voeding_vrij", voedingVrij);
+    }
+    fd.set("toestemming", toestemming ? "ja" : "nee");
+    if (toestemming) {
+      if (geboortedatum) fd.set("geboortedatum", geboortedatum);
+      if (geslacht) fd.set("geslacht", geslacht);
+      if (gewicht) fd.set("gewicht", String(gewicht));
+      if (lengte) fd.set("lengte", String(lengte));
+      if (beperkingen) fd.set("beperkingen", beperkingen);
+    }
+
+    // De antwoorden eerst, en apart. Dit is één snelle schrijfronde; het lange werk begint daarna.
+    try {
+      const bewaard = await bewaarIntake(fd);
+      if (bewaard?.error) { setFout(bewaard.error); setMaken(false); return; }
+    } catch (e) {
+      setFout(`Je antwoorden konden niet bewaard worden: ${e?.message || "onbekende fout"}.`);
+      setMaken(false);
+      return;
+    }
+
+    // Vanaf hier mag het scherm dicht: de stroomroute maakt het plan af met `after()`, ook zonder
+    // meelezer. Het spoor is er alleen om bij terugkomst niet opnieuw te laten beginnen.
+    zetSpoor(true);
+    const uit = await stroom.start({ wat: "plan", weken });
+
+    if (uit?.ok) {
+      zetSpoor(false);
       window.location.href = "/coaching";
-    });
+      return;
+    }
+    if (uit?.losgekoppeld) {
+      // NIET opruimen en NIET terug naar het formulier: er wordt nog gewerkt.
+      setLos(true);
+      return;
+    }
+    zetSpoor(false);
+    setFout(uit?.error || "Er liep iets mis bij het maken van je plan.");
+    setMaken(false);
   }
 
   // Tijdens het maken verdwijnt de wizard. Een knop met "bezig…" onder zeven ingevulde stappen leest
   // als "er gebeurt niets", en dan klikt iemand opnieuw.
-  if (maken) return <PlanBezig stapAf={stapAf} />;
+  if (maken) {
+    return los
+      ? <Losgekoppeld />
+      : <Voortgang wat="plan" stap={stroom.stap} concept={stroom.concept} />;
+  }
 
   return (
     <div className="anim-in rounded-3xl border border-borderc bg-surface p-6 sm:p-8">
@@ -343,6 +385,28 @@ function Vraag({ titel, uitleg, children }) {
       <h2 className="font-display text-xl font-black leading-tight text-ink sm:text-2xl">{titel}</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-ink-soft">{uitleg}</p>
       <div className="mt-5">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * De verbinding viel weg terwijl je coach nog schreef — of je bent teruggekomen op een tabblad dat
+ * je eerder sloot. In beide gevallen is er niets misgegaan en is er niets te doen. Dit scherm zegt
+ * dat, en kijkt intussen elke vijf seconden of het plan er al staat.
+ */
+function Losgekoppeld() {
+  return (
+    <div className="anim-in rounded-3xl border border-borderc bg-surface p-6 text-left sm:p-8">
+      <p className="text-[11px] font-bold uppercase tracking-widest text-accentdark">Onderweg</p>
+      <h2 className="mt-2 font-display text-2xl font-black leading-tight text-ink">Je plan wordt afgemaakt</h2>
+      <p className="mt-2 max-w-lg text-sm leading-relaxed text-ink-soft">
+        Je coach is nog bezig. Dat gebeurt op onze servers, dus je hoeft hier niets voor te doen en
+        niets open te houden — deze pagina springt vanzelf om zodra je plan klaar is.
+      </p>
+      <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-borderc">
+        <div className="h-full w-1/3 rounded-full bg-accent"
+          style={{ animation: "shimmer 1.6s var(--ease-in-uit) infinite", transform: "translateX(-100%)" }} />
+      </div>
     </div>
   );
 }

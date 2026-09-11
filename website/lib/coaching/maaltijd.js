@@ -12,6 +12,7 @@
 //      menu maar een verwijzing naar een diëtist.
 
 import { roepMetTerugval, MODELLEN } from "./model.js";
+import { uitMenu } from "./stroomlezer.js";
 import { magNogOfBoek, boekVerbruik, boekResultaat } from "./budget.js";
 import { bouwContext, contextTekst } from "./prompt.js";
 import { leesJson } from "./plan.js";
@@ -162,7 +163,9 @@ Geef ALLEEN geldige JSON terug, zonder uitleg eromheen en zonder codeblok:
 /**
  * Maakt het weekmenu. Geeft { error } terug wanneer het niet mag of niet lukt — nooit een half menu.
  */
-export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer, planId = null, checkin = null }) {
+export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer, planId = null, checkin = null, melden = null }) {
+  // Zie maakPlan: zonder meekijker verandert er niets en blijft het het gewone, niet-gestreamde pad.
+  const zeg = typeof melden === "function" ? melden : () => {};
   // ---- 1. Mag het, en hoeveel? Toestemming, stopwoorden en ondergrens zitten hier samen. ----
   const grens = richtlijnVoor(profiel);
   if (grens.error) return grens;
@@ -184,10 +187,12 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
     checkin?.honger === "nee" ? "Het lid had geen honger — de porties mogen blijven." : "",
   ].filter(Boolean).join("\n");
 
+  zeg({ t: "stap", sleutel: "schrijven", tekst: "Je coach stelt je week samen" });
   const uit = await roepMetTerugval({
     model: MODELLEN.plan,
     system: menuSysteem(),
     messages: [{ role: "user", content: vraag }],
+    ...(melden ? { onDelta: (_, alles) => zeg({ t: "concept", ...uitMenu(alles) }) } : {}),
     // Zeven dagen × vier momenten plus een boodschappenlijst is veel uitvoer. Bij 4.000 tokens
     // werd het antwoord afgekapt en viel het menu ongeldig terug — gemeten, niet vermoed.
     maxTokens: 8000,
@@ -212,6 +217,7 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
     return { error: "Het menu kwam onvolledig terug. Probeer het opnieuw." };
   }
 
+  zeg({ t: "stap", sleutel: "wegschrijven", tekst: "Je boodschappenlijst klaarzetten" });
   const { data, error } = await admin.from("coaching_mealweeks").upsert({
     gym_id: gymId, member_id: memberId, plan_id: planId, weeknummer,
     menu, boodschappen: schoonBoodschappen(json?.boodschappen),
@@ -225,6 +231,7 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
   }
 
   await boekResultaat(admin, boeking.id, "menu_geschreven");
+  zeg({ t: "stap", sleutel: "klaar", tekst: "Je weekmenu staat klaar" });
   return { ok: true, mealweekId: data.id, richtlijn, kostMicro: uit.kostMicro };
 }
 
@@ -236,7 +243,7 @@ export async function maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer
  * of het niet volgehouden kreeg, krijgt een nieuw. Dat scheelt niet alleen tokens — het is ook
  * gewoon eerlijker dan elke maandag doen alsof er iets veranderd is.
  */
-export async function zorgVoorMenu(admin, { gymId, memberId, profiel, weeknummer, planId = null, checkin = null }) {
+export async function zorgVoorMenu(admin, { gymId, memberId, profiel, weeknummer, planId = null, checkin = null, melden = null }) {
   const grens = richtlijnVoor(profiel);
   if (grens.error) return grens;
 
@@ -264,7 +271,7 @@ export async function zorgVoorMenu(admin, { gymId, memberId, profiel, weeknummer
     return { ok: true, mealweekId: data.id, hergebruikt: true, richtlijn: vorige.kcal_richtlijn };
   }
 
-  const uit = await maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer, planId, checkin });
+  const uit = await maakWeekmenu(admin, { gymId, memberId, profiel, weeknummer, planId, checkin, melden });
   return uit.ok ? { ...uit, reden: beslis.reden } : uit;
 }
 

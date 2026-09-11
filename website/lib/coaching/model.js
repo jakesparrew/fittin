@@ -68,12 +68,17 @@ export function kostMicro(model, inTokens, uitTokens) {
  * @returns {{ok:true, tekst:string, gereedschap:object[], model:string, kostMicro:number, inTokens:number, uitTokens:number}
  *          | {ok:false, fout:string, status:number|null}}
  */
-export async function roepModel({ model, system, messages, tools, maxTokens = 4000, temperatuur = 0.3, timeoutMs = 90_000 }) {
+export async function roepModel({ model, system, messages, tools, maxTokens = 4000, temperatuur = 0.3, timeoutMs = 90_000, onDelta = null }) {
   if (!coachAan()) return { ok: false, fout: "De AI-coach staat uit.", status: null };
   if (!isGeprijsd(model)) {
     // Liever hier stoppen dan stilletjes aan een onbekend tarief afrekenen.
     return { ok: false, fout: `Model ${model} staat niet in PRIJZEN — voeg de prijs toe vóór je het gebruikt.`, status: null };
   }
+
+  // Streamen gebeurt alleen wanneer iemand meekijkt, en alleen bij een antwoord in tekst.
+  // Bij gereedschap komen de brokken als `input_json_delta`: half afgemaakte argumenten waar niets
+  // leesbaars in zit om door te sturen.
+  const stroom = typeof onDelta === "function" && !tools?.length;
 
   const body = {
     model,
@@ -82,6 +87,7 @@ export async function roepModel({ model, system, messages, tools, maxTokens = 40
     ...(system ? { system } : {}),
     messages,
     ...(tools?.length ? { tools } : {}),
+    ...(stroom ? { stream: true } : {}),
   };
 
   const afbreker = new AbortController();
@@ -98,6 +104,14 @@ export async function roepModel({ model, system, messages, tools, maxTokens = 40
       body: JSON.stringify(body),
       signal: afbreker.signal,
     });
+
+    if (stroom) {
+      if (!res.ok) {
+        const configuratieFout = res.status === 401 || res.status === 403;
+        return { ok: false, fout: `gateway ${res.status}: ${(await res.text()).slice(0, 300)}`, status: res.status, configuratieFout };
+      }
+      return await leesStroom(res, { model, onDelta });
+    }
 
     const tekstBody = await res.text();
     if (!res.ok) {
@@ -130,6 +144,60 @@ export async function roepModel({ model, system, messages, tools, maxTokens = 40
   } finally {
     clearTimeout(wekker);
   }
+}
+
+/**
+ * Leest een server-sent-eventsstroom van de gateway en geeft exact hetzelfde vormpje terug als het
+ * gewone pad. Dat is met opzet: `roepMetTerugval`, `boekVerbruik`, de prijsberekening en alle
+ * aanroepers verderop hoeven niet te weten of er gestreamd werd.
+ *
+ * GEMETEN op 11-09-2026: met `stream: true` komt de eerste tekst na 1,6 seconden in plaats van na
+ * het volledige antwoord. Een eerdere meting hier concludeerde dat de gateway niet streamt — die
+ * was gedaan ZONDER `stream: true`, en dan komt alles per definitie in één keer.
+ */
+export async function leesStroom(res, { model, onDelta }) {
+  const lezer = res.body.getReader();
+  const dec = new TextDecoder();
+  let buffer = "", tekst = "", inTokens = 0, uitTokens = 0, stopReden = null;
+
+  while (true) {
+    const { done, value } = await lezer.read();
+    if (done) break;
+    buffer += dec.decode(value, { stream: true });
+    // Een netwerkstuk eindigt zelden op een regelgrens: de laatste, halve regel blijft staan.
+    const regels = buffer.split("\n");
+    buffer = regels.pop();
+    for (const regel of regels) {
+      if (!regel.startsWith("data:")) continue;
+      const rauw = regel.slice(5).trim();
+      if (!rauw || rauw === "[DONE]") continue;
+      let g;
+      try { g = JSON.parse(rauw); } catch { continue; }
+
+      if (g.type === "message_start") inTokens = g.message?.usage?.input_tokens || inTokens;
+      else if (g.type === "content_block_delta" && g.delta?.type === "text_delta") {
+        tekst += g.delta.text;
+        // Wie meekijkt mag dit niet kunnen breken: een fout in de meekijker hoort het antwoord
+        // niet weg te gooien waar al voor betaald is.
+        try { onDelta(g.delta.text, tekst); } catch { /* stil */ }
+      } else if (g.type === "message_delta") {
+        // 🔑 GEMETEN 11-09: de gateway zet ALLEBEI de tellingen hier, en stuurt in `message_start`
+        // een usage van nul. De eigen API van Anthropic doet het omgekeerd — daar staat het
+        // invoergetal in `message_start` en alleen het uitvoergetal hier. Lees je enkel de ene
+        // plek, dan boekt elke gestreamde aanroep zijn invoer op NUL: geen foutmelding, geen
+        // waarschuwing, gewoon een rekening die niet klopt. Vandaar allebei, laatste wint.
+        inTokens = g.usage?.input_tokens || inTokens;
+        uitTokens = g.usage?.output_tokens || uitTokens;
+        stopReden = g.delta?.stop_reason || stopReden;
+      } else if (g.type === "error") {
+        return { ok: false, fout: `gateway-stroom: ${g.error?.message || "onbekend"}`, status: 200 };
+      }
+    }
+  }
+
+  tekst = tekst.trim();
+  if (!tekst) return { ok: false, fout: `model gaf niets bruikbaars terug (${uitTokens} tokens, stop: ${stopReden || "?"})`, status: 200 };
+  return { ok: true, tekst, gereedschap: [], model, kostMicro: kostMicro(model, inTokens, uitTokens), inTokens, uitTokens };
 }
 
 /**

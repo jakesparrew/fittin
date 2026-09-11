@@ -55,8 +55,10 @@ describe("de grenzen van de AI-coach", () => {
   it("schrijven gebeurt met de service-role, niet met de sessie van het lid", () => {
     // 0157 geeft `authenticated` alleen SELECT. Een actie die met de gewone client zou schrijven,
     // faalt stil met 0 rijen — het bekende PostgREST-gedrag uit dit project.
-    const a = lees("app/(site)/coaching/actions.js");
-    expect(a).toMatch(/createAdminClient/);
+    // De admin-client komt uit wie.js, samen met de toegangspoort: wie langs de poort mag, krijgt
+    // de sleutel. Ze los van elkaar kunnen krijgen is precies de fout die je niet wil kunnen maken.
+    expect(lees("lib/coaching/wie.js")).toMatch(/admin: createAdminClient\(\)/);
+    expect(lees("app/(site)/coaching/actions.js")).toMatch(/mij\.admin\./);
   });
 
   it("elke actie controleert dat het dossier van de ingelogde gebruiker is", () => {
@@ -139,24 +141,32 @@ describe("de grenzen van de AI-coach", () => {
   });
 
   it("de proefgroep-poort staat op elke ingang", () => {
-    // Vijf plekken kunnen de AI-coach zichtbaar maken. Vergeet er één, en de functie lekt naar
-    // 86 leden terwijl ze voor twee bedoeld is.
+    // Zes plekken kunnen de AI-coach zichtbaar maken of laten werken. Vergeet er één, en de functie
+    // lekt naar 86 leden terwijl ze voor twee bedoeld is.
     for (const bestand of [
       "app/(site)/coaching/page.jsx",
-      "app/(site)/coaching/actions.js",
       "app/(site)/account/page.jsx",
       "app/(site)/training/page.jsx",
       "app/api/cron/coaching/route.js",
     ]) {
       expect(lees(bestand), `${bestand} mist de poort`).toMatch(/magCoaching\(/);
     }
+    // De twee SCHRIJFingangen — de serveracties en de stroomroute — doen het niet zelf maar via
+    // wie.js. Dat is met opzet: zie de volgende test.
+    for (const bestand of ["app/(site)/coaching/actions.js", "app/api/coaching/stroom/route.js"]) {
+      expect(lees(bestand), `${bestand} gaat niet via wie.js`).toMatch(/from "@\/lib\/coaching\/wie\.js"/);
+    }
   });
 
-  it("de poort zit in één plek voor alle server actions, niet per actie herhaald", () => {
-    // Per actie herhalen is hem ooit vergeten. De controle hoort in ik().
-    const a = lees("app/(site)/coaching/actions.js");
-    const inIk = /async function ik\(\)[\s\S]{0,400}?magCoaching\(profile\)/.test(a);
-    expect(inIk).toBe(true);
+  it("de poort zit in één plek, niet per actie en niet per ingang herhaald", () => {
+    // Per actie herhalen is hem ooit vergeten. Sinds er een tweede ingang bij kwam (de stroomroute,
+    // die exact hetzelfde werk doet mét meekijker) geldt datzelfde tussen bestanden.
+    expect(lees("lib/coaching/wie.js")).toMatch(/export async function wie\(\)[\s\S]{0,400}?magCoaching\(profile\)/);
+    // En niemand bouwt zijn eigen versie: wie zelf `getSessionProfile` ophaalt, kan `magCoaching`
+    // vergeten zonder dat iets het merkt.
+    for (const bestand of ["app/(site)/coaching/actions.js", "app/api/coaching/stroom/route.js", "lib/coaching/opdracht.js"]) {
+      expect(lees(bestand), `${bestand} bouwt zijn eigen poort`).not.toMatch(/getSessionProfile\(/);
+    }
   });
 
   // ---- Wat de review van 10-09 boven water haalde. Elke test hieronder is een fout die er echt
@@ -353,41 +363,83 @@ describe("de landingspagina van het afvinken", () => {
 });
 
 describe("wachten op de coach", () => {
-  // Gemeten op productie: de modelaanroep voor een plan duurt 27 tot 41 seconden, en bij een
-  // terugval naar het tweede model tot 180. Alles wat maakPlan daarnaast doet — bibliotheek
-  // ophalen, oefeningen kiezen, vijftien schrijfrondes — is samen ongeveer één seconde.
-  // Er is dus precies ÉÉN echte grens te tonen, en die valt in de laatste seconde.
+  // Gemeten op 11-09-2026: de gateway STREAMT wél. Met `stream: true` komt de eerste tekst na
+  // 1.596 ms; zonder komt alles na het volledige antwoord (27-50 s). De eerdere conclusie hier —
+  // "er valt niets door te sturen" — was gemeten zonder die vlag en dus fout. Daarop stond een
+  // heel wachtscherm gebouwd dat niets kon tonen omdat er niets binnenkwam.
+
+  it("de stroomroute houdt het werk in leven als het tabblad weggaat", () => {
+    // DIT is wat "je mag wegklikken" waar maakt. Zonder after() stopt het werk zodra de verbinding
+    // wegvalt, en dan is de belofte op het scherm een leugen.
+    const r = lees("app/api/coaching/stroom/route.js");
+    expect(r).toMatch(/import \{ after \} from "next\/server"/);
+    expect(r).toMatch(/after\(werk\)/);
+    // En ze mag lang genoeg duren; anders wordt ze halverwege afgekapt.
+    expect(r).toMatch(/export const maxDuration = 300;/);
+  });
+
+  it("de route heeft geen eigen kopie van de toegangspoort", () => {
+    // Twee ingangen naar hetzelfde werk is precies hoe voorwaarden uit elkaar gaan lopen.
+    const r = lees("app/api/coaching/stroom/route.js");
+    expect(r).toMatch(/from "@\/lib\/coaching\/wie\.js"/);
+    expect(r).toMatch(/from "@\/lib\/coaching\/opdracht\.js"/);
+    // En de serveracties gebruiken diezelfde poort.
+    expect(lees("app/(site)/coaching/actions.js")).toMatch(/wie as ik/);
+  });
 
   it("het wachtscherm verzint geen percentage", () => {
     // De eerste versie telde uit tot 10,2 seconden en bleef daarna op 88% staan, met stap 4 aan het
     // draaien terwijl in werkelijkheid het model nog schreef. Een balk die stilstaat leest als
     // "het hangt", en een stap die draait terwijl een andere bezig is, is gewoon onwaar.
-    const b = lees("components/coaching/PlanBezig.jsx");
+    const b = lees("components/coaching/Voortgang.jsx");
     expect(b).not.toMatch(/const DUUR/);
     expect(b).not.toMatch(/%`/);
-    expect(b).toMatch(/shimmer/);
+  });
+
+  it("de stappen komen van de server, niet van een timer", () => {
+    const b = lees("components/coaching/Voortgang.jsx");
+    expect(b).not.toMatch(/setTimeout/);
+    // De huidige stap wordt uit de gemelde sleutel afgeleid.
+    expect(b).toMatch(/s\.sleutel === stap\?\.sleutel/);
+    // En die sleutels worden ook echt gemeld, aan allebei de kanten van het werk.
+    expect(lees("lib/coaching/plan.js")).toMatch(/sleutel: "oefeningen"/);
+    expect(lees("lib/coaching/maaltijd.js")).toMatch(/sleutel: "wegschrijven"/);
   });
 
   it("toont het enige getal dat wél waar is: de verstreken tijd", () => {
-    const b = lees("components/coaching/PlanBezig.jsx");
+    const b = lees("components/coaching/Voortgang.jsx");
     expect(b).toMatch(/\{seconden\}s bezig/);
     // En de teller start ná de hydratatie — de klok tijdens het renderen gaf hier ooit fout #418.
     expect(b).toMatch(/useEffect\(\(\) => \{[\s\S]{0,120}setInterval/);
   });
 
-  it("belooft niet langer dat je plan afgemaakt wordt als je wegklikt", () => {
-    // Dat was onwaar: de wizard doet twee serveracties na elkaar, dus wie tijdens de eerste sluit,
-    // verstuurt `startPlan` nooit. Er is geen after(), geen wachtrij en geen cron die overneemt.
-    const b = lees("components/coaching/PlanBezig.jsx");
-    expect(b).not.toMatch(/alsnog afgemaakt/);
-    expect(b).toMatch(/Laat dit scherm openstaan/);
+  it("zegt nu dat je WEL mag wegklikken, want dat klopt nu", () => {
+    const b = lees("components/coaching/Voortgang.jsx");
+    expect(b).toMatch(/mag gerust wegklikken/);
+    expect(b).not.toMatch(/Laat dit scherm openstaan/);
   });
 
-  it("het menu heeft dezelfde terugkoppeling — het is de traagste aanroep van allemaal", () => {
+  it("een weggevallen verbinding is geen mislukte opdracht — maar alleen als ze aankwam", () => {
+    // Het verschil tussen "er wordt gewerkt, je mag wegklikken" en "er is niets gestart". Zonder
+    // dat onderscheid geeft een mislukte fetch hetzelfde geruststellende scherm, en dat is dan een
+    // leugen tegen iemand die staat te wachten op iets dat nooit begonnen is.
+    const h = lees("components/coaching/stroom.js");
+    expect(h).toMatch(/begonnen = true/);
+    expect(h).toMatch(/begonnen\s*\?\s*\{ losgekoppeld: true \}/);
+  });
+
+  it("het menu deelt hetzelfde scherm — het is de traagste aanroep van allemaal", () => {
     const m = lees("components/coaching/MaaltijdPaneel.jsx");
-    expect(m).toMatch(/<Bezig/);
-    // De knop verdwijnt tijdens het wachten in plaats van "bezig…" te tonen.
+    expect(m).toMatch(/<Voortgang wat="menu"/);
     expect(m).not.toMatch(/Je menu wordt samengesteld/);
+  });
+
+  it("streamen gebeurt alleen wanneer er iemand meekijkt, en nooit met gereedschap", () => {
+    // Bij gereedschap komen de brokken als `input_json_delta`: half afgemaakte argumenten waar
+    // niets leesbaars in zit. En de zondagcron geeft geen meekijker mee, dus die verandert niet.
+    const m = lees("lib/coaching/model.js");
+    expect(m).toMatch(/const stroom = typeof onDelta === "function" && !tools\?\.length;/);
+    expect(m).toMatch(/\.\.\.\(stroom \? \{ stream: true \} : \{\}\)/);
   });
 
   it("de coachingroute verklaart hoe lang ze mag duren", () => {
@@ -401,8 +453,6 @@ describe("wachten op de coach", () => {
     // De zes schrijfacties van maakPlan staan niet in één transactie. Valt het ertussenin stil, dan
     // bestaat er een plan zonder geopende week: de cron slaat het over (`if (!open) continue`) en
     // een nieuw plan wordt geweigerd. Daar stond "Ververs deze pagina zo dadelijk", wat niet helpt.
-    // Commentaar eruit: dit bestand legt in proza uit wat er eerst stond, en een test die daarop
-    // aanslaat toetst de uitleg in plaats van de code. Zelfde les als bij de CSS-test.
     const p = lees("app/(site)/coaching/page.jsx")
       .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
     expect(p).toMatch(/halverwege blijven steken/);
@@ -410,9 +460,10 @@ describe("wachten op de coach", () => {
   });
 
   it("een exceptie tijdens het maken laat het scherm niet eeuwig draaien", () => {
-    // maakPlan gooit op vier plekken en niets ving dat op.
-    const w = lees("components/coaching/IntakeWizard.jsx");
-    expect(w).toMatch(/catch \(e\) \{[\s\S]{0,300}setMaken\(false\)/);
+    // maakPlan gooit op vier plekken; de route vangt dat op en stuurt een foutbericht.
+    expect(lees("app/api/coaching/stroom/route.js")).toMatch(/\.catch\(\(e\) => \{[\s\S]{0,300}t: "fout"/);
+    // En de wizard vangt het bewaren van de antwoorden apart op.
+    expect(lees("components/coaching/IntakeWizard.jsx")).toMatch(/catch \(e\) \{[\s\S]{0,200}setMaken\(false\)/);
   });
 });
 

@@ -1,8 +1,10 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import { maakMenu, zetVoeding } from "@/app/(site)/coaching/actions";
+import { useRouter } from "next/navigation";
+import { zetVoeding } from "@/app/(site)/coaching/actions";
 import { VOEDINGSVOORKEUREN } from "@/lib/coaching/voeding-velden.js";
-import Bezig from "./Bezig";
+import Voortgang from "./Voortgang";
+import { useStroom } from "./stroom";
 
 // Het weekmenu. Één week, zeven dagen, vier momenten — en een boodschappenlijst die je meeneemt
 // naar de winkel.
@@ -20,8 +22,10 @@ const MOMENTEN = [
 const DAGNAMEN = ["zondag", "maandag", "dinsdag", "woensdag", "donderdag", "vrijdag", "zaterdag"];
 
 export default function MaaltijdPaneel({ menu, profiel, kanMaken }) {
+  const router = useRouter();
   const [bezig, start] = useTransition();
   const [melding, setMelding] = useState(null);
+  const stroom = useStroom();
   const [open, setOpen] = useState(null);
   const [voorkeuren, setVoorkeuren] = useState(profiel?.coaching_voeding || []);
   const [vrij, setVrij] = useState(profiel?.coaching_voeding_vrij || "");
@@ -30,14 +34,18 @@ export default function MaaltijdPaneel({ menu, profiel, kanMaken }) {
   // deze app ooit aan een reeks #418-hydratatiefouten kwam: de server staat in UTC, de bezoeker niet.
   useEffect(() => { setOpen(DAGNAMEN[new Date().getDay()]); }, []);
 
-  function vraagMenu(opnieuw) {
+  // Het menu komt via de stroomroute en niet via de serveractie: die laatste gaf 27 tot 50 seconden
+  // lang niets terug en hield het lid aan het scherm vast. Nu komt de week binnen terwijl ze
+  // geschreven wordt, en loopt het werk door als je wegklikt.
+  async function vraagMenu(opnieuw) {
     setMelding(null);
-    start(async () => {
-      const fd = new FormData();
-      if (opnieuw) fd.set("opnieuw", "ja");
-      const r = await maakMenu(fd);
-      setMelding(r?.error || r?.message || null);
-    });
+    const uit = await stroom.start({ wat: "menu", opnieuw: !!opnieuw });
+    if (uit?.losgekoppeld) {
+      setMelding("De verbinding viel weg, maar je coach werkt door. Ververs deze pagina zo dadelijk.");
+      return;
+    }
+    setMelding(uit?.error || uit?.message || null);
+    if (uit?.ok) router.refresh();
   }
 
   function bewaarVoorkeuren() {
@@ -53,6 +61,10 @@ export default function MaaltijdPaneel({ menu, profiel, kanMaken }) {
 
   const dagen = Array.isArray(menu?.menu) ? menu.menu : [];
 
+  // Tijdens het samenstellen vervangt de voortgang het paneel. Ook bij "liever iets anders": dan
+  // kijk je naar het nieuwe menu dat geschreven wordt in plaats van naar het oude dat weggaat.
+  if (stroom.bezig) return <Voortgang wat="menu" stap={stroom.stap} concept={stroom.concept} />;
+
   return (
     <div className="space-y-4">
       {!dagen.length ? (
@@ -63,20 +75,10 @@ export default function MaaltijdPaneel({ menu, profiel, kanMaken }) {
             boodschappenlijst erbij. Elke zondag loopt het mee met je nieuwe week.
           </p>
           {kanMaken ? (
-            // Tijdens het wachten verdwijnt de knop. Een knop met "bezig…" die verder niets doet, is
-            // niet te onderscheiden van een knop die vastzit — en dit is met afstand de traagste
-            // aanroep van het systeem.
-            bezig ? (
-              <div className="mx-auto mt-4 max-w-md">
-                <Bezig titel="Je coach stelt je weekmenu samen"
-                  uitleg="Zeven dagen, vier momenten en een boodschappenlijst. Dit duurt meestal een halve minuut — laat dit scherm openstaan." />
-              </div>
-            ) : (
-              <button type="button" onClick={() => vraagMenu(false)}
-                className="mt-4 rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">
-                Stel mijn weekmenu samen
-              </button>
-            )
+            <button type="button" onClick={() => vraagMenu(false)}
+              className="mt-4 rounded-full bg-accent px-6 py-3 text-sm font-bold text-brand transition hover:opacity-90">
+              Stel mijn weekmenu samen
+            </button>
           ) : (
             <p className="mt-4 rounded-2xl bg-paper px-4 py-3 text-sm text-ink-soft">
               Vul eerst je gewicht, lengte en geboortedatum in bij je gegevens — zonder die drie kan
