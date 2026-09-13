@@ -1,14 +1,12 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useActie, meld } from "@/components/ui/useActie";
 import { updateNukiSettings, testNukiConnection, adminOpenDoor } from "@/app/beheer/actions";
 
 // Superadmin settings for the Nuki smart lock + per-booking keypad codes.
 // The API token is write-only: the field shows whether one is stored, never the value.
 export default function NukiSettings({ initial, tokenSet, envToken, readOnly }) {
-  const [state, action, pending] = useActionState(async (_p, fd) => {
-    const r = await updateNukiSettings(fd);
-    return r?.error ? { error: r.error } : { ok: true };
-  }, null);
+  const [state, action, pending] = useActie(updateNukiSettings, { stil: true });
   const [test, setTest] = useState(null);
   const [testing, setTesting] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -17,14 +15,18 @@ export default function NukiSettings({ initial, tokenSet, envToken, readOnly }) 
   async function runTest() {
     setTesting(true);
     setTest(null);
-    try { setTest(await testNukiConnection()); } catch { setTest({ error: "Test mislukt." }); }
+    try { setTest(await testNukiConnection()); } catch { setTest({ error: "Test mislukt — de server reageerde niet." }); }
     setTesting(false);
   }
 
   async function runOpen() {
     setOpening(true);
     setDoorMsg(null);
-    try { setDoorMsg(await adminOpenDoor()); } catch { setDoorMsg({ error: "Openen mislukt." }); }
+    // De deur openen is de handeling waar je het MEEST wil weten of ze lukte — ook als je al weggescrold bent.
+    let r;
+    try { r = await adminOpenDoor(); } catch { r = { error: "Openen mislukt — de server reageerde niet." }; }
+    setDoorMsg(r);
+    meld(r?.error ? "error" : "success", r?.error || r?.message || "Deur geopend ✓");
     setOpening(false);
   }
 

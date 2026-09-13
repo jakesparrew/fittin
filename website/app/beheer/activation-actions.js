@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { nagekeken, leesbareFout } from "@/lib/uitkomst";
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
 import { runActivationCampaign } from "@/lib/activation";
@@ -28,7 +29,7 @@ export async function createActivation(formData) {
     })
     .select("id")
     .single();
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Campagne aanmaken") };
   redirect(`/beheer/activatie/${data.id}`);
 }
 
@@ -61,7 +62,7 @@ export async function createActivationFull(formData) {
     })
     .select("id")
     .single();
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Campagne aanmaken") };
   redirect(`/beheer/activatie/${data.id}`);
 }
 
@@ -72,7 +73,7 @@ export async function updateActivation(formData) {
   const paramKey = formData.get("param_key"); // days | min | max | (none)
   const params = {};
   if (paramKey) params[paramKey] = num(formData.get("param_value"), 0);
-  await supabase
+  const res = await supabase
     .from("campaigns")
     .update({
       name: formData.get("name"),
@@ -83,21 +84,25 @@ export async function updateActivation(formData) {
       reward_credits: num(formData.get("reward_credits"), 0),
       discount_percent: Math.max(0, Math.min(100, num(formData.get("discount_percent"), 0))),
       ...(paramKey ? { trigger_params: params } : {}),
-    })
+    }, { count: "exact" })
     .eq("id", id)
     .eq("kind", "activation");
+  const fout = nagekeken(res, "Campagne opslaan");
+  if (fout) return fout;
   revalidatePath(`/beheer/activatie/${id}`);
-  return { ok: true };
+  return { ok: true, message: "Campagne opgeslagen ✓" };
 }
 
 export async function setActivationStatus(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
   const id = formData.get("id");
-  await supabase.from("campaigns").update({ status: formData.get("status") }).eq("id", id).eq("kind", "activation");
+  const status = formData.get("status");
+  const fout = nagekeken(await supabase.from("campaigns").update({ status }, { count: "exact" }).eq("id", id).eq("kind", "activation"), "Campagne wijzigen");
+  if (fout) return fout;
   revalidatePath(`/beheer/activatie/${id}`);
   revalidatePath("/beheer/activatie");
-  return { ok: true };
+  return { ok: true, message: status === "active" ? "Campagne staat aan — de dagelijkse ronde stuurt vanaf nu mee ✓" : "Campagne gepauzeerd — er vertrekt niets meer ✓" };
 }
 
 export async function runActivationNow(formData) {
@@ -109,13 +114,19 @@ export async function runActivationNow(formData) {
   const res = await runActivationCampaign(id);
   revalidatePath(`/beheer/activatie/${id}`);
   revalidatePath("/beheer/activatie");
-  return res;
+  if (res?.error || res?.message) return res;
+  // Nul verstuurd is geen fout, maar zonder uitleg leest het als een knop die niets deed.
+  const n = res?.sent || 0, m = res?.matched || 0, t = res?.targets ?? n;
+  // Mislukt versturen is wél een fout: die leden kregen niets, en hun eventuele gratis sessie ook niet.
+  if (t > n) return { error: `${t - n} van de ${t} mails zijn NIET vertrokken (e-mailfout)${n ? ` — ${n} wel` : ""}. Probeer later opnieuw; wie al een mail kreeg, krijgt er geen tweede.` };
+  return { ...res, message: n ? `${n} mail${n === 1 ? "" : "s"} verstuurd (van ${m} leden die matchen) ✓` : m ? `${m} leden matchen, maar ze kregen deze campagne al binnen de wachttijd — niets verstuurd.` : "Er is op dit moment niemand die matcht — niets verstuurd." };
 }
 
 export async function deleteActivation(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("campaigns").delete().eq("id", formData.get("id")).eq("kind", "activation");
+  const fout = nagekeken(await supabase.from("campaigns").delete({ count: "exact" }).eq("id", formData.get("id")).eq("kind", "activation"), "Campagne verwijderen");
+  if (fout) return fout;
   revalidatePath("/beheer/activatie");
   redirect("/beheer/activatie");
 }
@@ -147,6 +158,7 @@ export async function createWinbackPrefabs() {
     },
   ];
   let created = 0;
+  const fouten = [];
   for (const d of drafts) {
     // Skip if a prefab with this exact name already exists for the gym (idempotent — no duplicates).
     const { data: existing } = await supabase.from("campaigns").select("id").eq("gym_id", profile.gym_id).eq("kind", "activation").eq("name", d.name).maybeSingle();
@@ -165,8 +177,13 @@ export async function createWinbackPrefabs() {
       status: "draft",
       created_by: userId,
     });
-    if (!e) created++;
+    if (e) fouten.push(leesbareFout(e, `"${d.name}"`));
+    else created++;
   }
   revalidatePath("/beheer/activatie");
-  return { ok: true, created };
+  // Drie uitkomsten die er vroeger allemaal hetzelfde uitzagen (niets): aangemaakt, stonden er al,
+  // of mislukt. Wie op "Sjablonen aanmaken" drukt en niets ziet verschijnen, wil weten welke.
+  if (fouten.length) return { error: fouten.join(" ") };
+  if (!created) return { ok: true, message: "Beide sjablonen stonden er al — er is niets dubbel aangemaakt ✓" };
+  return { ok: true, created, message: `${created} sjabloon${created === 1 ? "" : "en"} aangemaakt als concept — lees ze na en zet ze aan ✓` };
 }

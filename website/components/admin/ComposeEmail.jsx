@@ -1,5 +1,6 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useActie } from "@/components/ui/useActie";
 import { sendNewEmail } from "@/app/beheer/inbox-actions";
 
 const FROMS = [
@@ -10,11 +11,11 @@ const FROMS = [
 
 export default function ComposeEmail() {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(async (_p, fd) => {
+  const [state, action, pending] = useActie(async (fd) => {
     const r = await sendNewEmail(fd);
     if (r?.ok) setTimeout(() => setOpen(false), 1200);
     return r;
-  }, null);
+  });
 
   return (
     <>
@@ -48,7 +49,7 @@ export default function ComposeEmail() {
               <div className="flex items-center gap-3">
                 <button disabled={pending} className="rounded-full bg-accent px-5 py-2.5 text-sm font-black text-brand disabled:opacity-60">{pending ? "Verzenden…" : "Verstuur"}</button>
                 {state?.error && <span className="text-sm font-semibold text-red-500">{state.error}</span>}
-                {state?.ok && <span className="text-sm font-semibold text-accentdark">Verzonden ✓</span>}
+                {state?.ok && <span className="text-sm font-semibold text-accentdark">{state.message || "Verzonden ✓"}</span>}
               </div>
             </form>
           </div>

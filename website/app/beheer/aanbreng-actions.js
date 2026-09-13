@@ -207,6 +207,9 @@ export async function rekenAanbrengAan(formData) {
     gym_id: profile.gym_id, coach_id: bk.coach_id, delta: -beurten, reason: "aanbreng", ref_id: bookingId, referral_id: referralId,
   });
   if (e) return { error: e.message };
+  // Bewust niet hard: de aanrekening hierboven is gelukt. Deze rij haalt de sessie enkel uit de lijst
+  // "Te controleren"; lukt dat niet, dan blijft ze daar staan en kan er nog eens op geklikt worden —
+  // en dan weigert de nettostand-controle bovenaan een dubbele aanrekening.
   await admin.from("gym_referral_checks").upsert(
     { booking_id: bookingId, gym_id: profile.gym_id, checked_by: profile.id, note: "handmatig aangerekend" },
     { onConflict: "booking_id" }

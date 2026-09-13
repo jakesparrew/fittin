@@ -1,5 +1,6 @@
 "use client";
-import { useState, useActionState } from "react";
+import { useState } from "react";
+import { useActie } from "@/components/ui/useActie";
 import { createChallenge } from "@/app/beheer/community-actions";
 
 const GOALS = [
@@ -23,11 +24,13 @@ export default function ChallengeWizard() {
   const [startsOn, setStartsOn] = useState("");
   const [endsOn, setEndsOn] = useState("");
 
-  const [, action, pending] = useActionState(async (_p, fd) => {
+  // Hier werd het resultaat weggegooid (`const [, action]`): bij een fout bleef de wizard gewoon open
+  // staan zonder één woord uitleg. Nu komt elke uitkomst als melding.
+  const [, action, pending] = useActie(async (fd) => {
     const r = await createChallenge(fd);
     if (!r?.error) setOpen(false);
-    return r || { ok: true };
-  }, null);
+    return r;
+  });
 
   const goal = GOALS.find((g) => g.key === goalType);
 

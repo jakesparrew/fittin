@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { nagekeken } from "@/lib/uitkomst";
 import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,15 +22,16 @@ export async function sendNewEmail(formData) {
   if (!recipients.length || recipients.some((r) => !r.includes("@"))) return { error: "Geef geldige e-mailadressen op (gescheiden door komma's)." };
   if (!subject) return { error: "Onderwerp vereist." };
   const r = await sendEmail({ from, to: recipients, subject, body });
-  if (r?.error) return { error: r.error.message };
-  // Log to the Sent view.
+  if (r?.error) return { error: `Mail niet verstuurd: ${r.error.message}` };
+  // Log to the Sent view. Bewust stil bij een fout: de mail is op dit punt al WEG, en een
+  // foutmelding zou de beheerder hem een tweede keer laten sturen.
   try {
     await createAdminClient().from("sent_emails").insert({
       gym_id: profile.gym_id, from_email: from, to_email: recipients.join(", "), subject, body, sent_by: profile.id,
     });
   } catch {}
   revalidatePath("/beheer/inbox");
-  return { ok: true };
+  return { ok: true, message: `Mail verstuurd naar ${recipients.join(", ")} ✓` };
 }
 
 export async function syncInboxAction() {
@@ -37,7 +39,8 @@ export async function syncInboxAction() {
   if (error) return { error };
   const res = await syncInbox(profile.gym_id);
   revalidatePath("/beheer/inbox");
-  return res;
+  if (res?.error) return res;
+  return { ...res, message: res?.added ? `${res.added} nieuw${res.added === 1 ? " bericht" : "e berichten"} opgehaald ✓` : "Geen nieuwe post ✓" };
 }
 
 export async function markRead(id, read = true) {
@@ -74,7 +77,8 @@ export async function markAllRead() {
 export async function archiveInbox(formData) {
   const { profile, error } = await requireStaff(true);
   if (error) return { error };
-  await createAdminClient().from("inbound_emails").update({ archived: true }).eq("id", formData.get("id")).eq("gym_id", profile.gym_id);
+  const fout = nagekeken(await createAdminClient().from("inbound_emails").update({ archived: true }, { count: "exact" }).eq("id", formData.get("id")).eq("gym_id", profile.gym_id), "Archiveren");
+  if (fout) return fout;
   revalidatePath("/beheer/inbox");
   redirect("/beheer/inbox");
 }
@@ -89,7 +93,9 @@ export async function replyInboxAction(formData) {
   const { data: m } = await admin.from("inbound_emails").select("*").eq("id", id).eq("gym_id", profile.gym_id).single();
   if (!m) return { error: "Bericht niet gevonden." };
   const r = await sendReply({ fromEmail: m.to_email, toEmail: m.from_email, subject: m.subject, body, inReplyTo: m.message_id });
-  if (r?.error) return { error: r.error.message };
+  if (r?.error) return { error: `Antwoord niet verstuurd: ${r.error.message}` };
+  // Vanaf hier is de mail WEG. Een fout bij het bijwerken mag dat niet overschrijven met een
+  // foutmelding, anders stuurt de beheerder hetzelfde antwoord een tweede keer.
   await admin.from("inbound_emails").update({ read: true }).eq("id", id);
   try {
     await admin.from("sent_emails").insert({
@@ -98,5 +104,5 @@ export async function replyInboxAction(formData) {
     });
   } catch {}
   revalidatePath(`/beheer/inbox/${id}`);
-  return { ok: true };
+  return { ok: true, message: `Antwoord verstuurd naar ${m.from_email} ✓` };
 }

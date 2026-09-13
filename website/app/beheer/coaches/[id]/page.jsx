@@ -102,10 +102,10 @@ export default async function CoachDetail({ params }) {
             </ActionForm>
             {/* Bewust een kale <form>: startViewAsCoach eindigt in redirect('/coach') en dat breekt
                 binnen een ActionForm. */}
-            <form action={startViewAsCoach}>
+            <ActionForm action={startViewAsCoach}>
               <input type="hidden" name="coachId" value={c.id} />
               <button className="rounded-full border-2 border-brand px-4 py-2 text-sm font-bold text-ink transition hover:bg-brand hover:text-white">👁️ Bekijk als coach →</button>
-            </form>
+            </ActionForm>
           </div>
         </div>
       </div>

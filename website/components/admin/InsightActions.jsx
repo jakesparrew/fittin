@@ -41,6 +41,7 @@ export default function InsightActions({ memberId, acties = [], eindDatum = null
     const fd = new FormData();
     fd.set("memberId", memberId);
     let r;
+    try {
     if (actie.type === "preset") {
       fd.set("preset", actie.preset);
       if (eindDatum) fd.set("eindDatum", eindDatum);
@@ -52,6 +53,10 @@ export default function InsightActions({ memberId, acties = [], eindDatum = null
       fd.set("kind", actie.kind);
       fd.set("dagen", String(actie.dagen || 60));
       r = await snoozeInsight(fd);
+    }
+    } catch {
+      // Zelfde reden als in ActionForm: een gooiende actie mag geen foutpagina worden.
+      r = { error: "Er liep iets mis op de server — niets bevestigd. Probeer opnieuw." };
     }
     if (r?.error) toast("error", r.error);
     else { setKlaar(r?.message || "Gedaan ✓"); toast("success", r?.message || "Gedaan ✓"); }

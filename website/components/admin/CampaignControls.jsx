@@ -1,5 +1,6 @@
 "use client";
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useActie } from "@/components/ui/useActie";
 import { useRouter } from "next/navigation";
 import { sendNewsletter } from "@/app/beheer/newsletter-actions";
 import { runActivationNow } from "@/app/beheer/activation-actions";
@@ -50,7 +51,7 @@ export function SendProgress({ id, initial }) {
 
 // Run an activation campaign now (confirm + inline result).
 export function RunActivationButton({ id, matches }) {
-  const [state, action, pending] = useActionState(async (_p, fd) => runActivationNow(fd), null);
+  const [state, action, pending] = useActie(runActivationNow, { stil: true });
   return (
     <form action={action} onSubmit={(e) => bevestigSubmit(e, `Nu versturen naar de leden die matchen (max ${matches})?`, { ok: "Versturen" })}>
       <input type="hidden" name="id" value={id} />
@@ -58,7 +59,7 @@ export function RunActivationButton({ id, matches }) {
         {pending ? "Versturen…" : "Nu versturen"}
       </button>
       {state?.error && <p className="mt-2 text-sm font-semibold text-red-500">{state.error}</p>}
-      {state?.ok && <p className="mt-2 text-sm font-semibold text-accentdark">Verzonden naar {state.sent} leden ({state.matched} matchten).</p>}
+      {state?.ok && <p className="mt-2 text-sm font-semibold text-accentdark">{state.message || `Verzonden naar ${state.sent} leden (${state.matched} matchten).`}</p>}
     </form>
   );
 }
@@ -66,11 +67,11 @@ export function RunActivationButton({ id, matches }) {
 // Queue a newsletter (drains in the background) — confirm, then refresh into the progress view.
 export function SendNewsletterButton({ id, count }) {
   const router = useRouter();
-  const [state, action, pending] = useActionState(async (_p, fd) => {
+  const [state, action, pending] = useActie(async (fd) => {
     const r = await sendNewsletter(fd);
     if (r?.ok) router.refresh();
     return r;
-  }, null);
+  }, { stil: true });
   return (
     <form
       action={action}
@@ -89,7 +90,9 @@ export function SendNewsletterButton({ id, count }) {
 
 // Generic confirm-before-submit button bound to a server action that takes { id }.
 export function ConfirmSubmit({ action, id, confirm: msg, label, danger }) {
-  const [, formAction, pending] = useActionState(async (_p, fd) => action(fd), null);
+  // Hier werd het resultaat volledig weggegooid — "Verwijderen", "Pauzeren", "Alle abonnees
+  // inschrijven": een fout was onzichtbaar, een succes ook.
+  const [, formAction, pending] = useActie(action);
   return (
     <form action={formAction} onSubmit={(e) => bevestigSubmit(e, msg)}>
       <input type="hidden" name="id" value={id} />

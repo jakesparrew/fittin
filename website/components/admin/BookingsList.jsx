@@ -195,10 +195,10 @@ export default function BookingsList({ bookings = [], coaches = [], initialTab =
                         </>
                       )}
                       {upcoming && b.status === "bevestigd" && (
-                        <form action={adminCancelBooking} className="inline" onSubmit={(e) => bevestigSubmit(e, "Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.", { ok: "Annuleer boeking", cancel: "Terug" })}>
+                        <ActionForm action={adminCancelBooking} className="inline" onSubmit={(e) => bevestigSubmit(e, "Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.", { ok: "Annuleer boeking", cancel: "Terug" })}>
                           <input type="hidden" name="bookingId" value={b.id} />
                           <button className="rounded-full px-1.5 py-0.5 text-xs font-bold text-ink/30 transition hover:bg-red-50 hover:text-red-600" title="Annuleer deze boeking">✕</button>
-                        </form>
+                        </ActionForm>
                       )}
                     </span>
                   </td>

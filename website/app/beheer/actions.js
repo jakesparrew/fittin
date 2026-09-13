@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { nagekeken, leesbareFout } from "@/lib/uitkomst";
 import { sendCoachAssigned, sendRoleChanged, sendWelcomeNewAccount, sendCreditsAdjusted, sendBookingCancelled, sendWeekReport } from "@/lib/email";
 import { buildWeekReport } from "@/lib/weekreport";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
@@ -60,17 +61,17 @@ export async function updateGymSettings(formData) {
     daluur_until_hour: 0, // daluur disabled for now
   };
   const { error: e } = await supabase.from("gyms").update(patch).eq("id", profile.gym_id);
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Instellingen opslaan") };
   // The static door code is a SECRET → gym_integrations (service-role only), not the world-readable
   // gyms row. Written via the admin client (requireStaff already confirmed beheerder above).
   try {
     const { setGymSecrets } = await import("@/lib/gym-secrets");
     await setGymSecrets(createAdminClient(), profile.gym_id, { access_code: (formData.get("access_code") || "").trim() || null });
-  } catch (err) { return { error: err.message }; }
+  } catch (err) { return { error: `De gyminstellingen zijn bewaard, maar de deurcode niet: ${err.message}` }; }
   revalidateTag("gym");
   revalidatePath("/beheer/instellingen");
   revalidatePath("/boeken");
-  return { ok: true };
+  return { ok: true, message: `Instellingen opgeslagen — boekbaar van ${openH}:00 tot ${closeH}:00 ✓` };
 }
 
 // ---- Nuki smart lock (per-booking keypad codes) ----
@@ -92,9 +93,9 @@ export async function updateNukiSettings(formData) {
   const token = (formData.get("nuki_api_token") || "").trim();
   if (token) patch.nuki_api_token = token;
   const { error: e } = await admin.from("gym_integrations").upsert(patch, { onConflict: "gym_id" });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Nuki-instellingen opslaan") };
   revalidatePath("/beheer/instellingen");
-  return { ok: true };
+  return { ok: true, message: "Nuki-instellingen opgeslagen ✓" };
 }
 
 // Manual door open by a beheerder (override — no booking required). Logs to door_log.
@@ -108,7 +109,7 @@ export async function adminOpenDoor() {
     const r = await openDoorViaNuki(cfg);
     if (!r.ok) return { error: "De deur reageerde niet. Is het slot online?" };
     try { await admin.from("door_log").insert({ gym_id: profile.gym_id, user_id: profile.id, result: "ok" }); } catch {}
-    return { ok: true };
+    return { ok: true, message: "Deur geopend ✓" };
   } catch {
     return { error: "Kon het deursysteem niet bereiken." };
   }
@@ -146,14 +147,14 @@ export async function upsertService(formData) {
     active: formData.get("active") === "on" || formData.get("active") === "true",
   };
   const q = id
-    ? supabase.from("services").update(row).eq("id", id)
+    ? supabase.from("services").update(row, { count: "exact" }).eq("id", id)
     : supabase.from("services").insert(row);
-  const { error: e } = await q;
-  if (e) return { error: e.message };
+  const fout = nagekeken(await q, "Dienst opslaan");
+  if (fout) return fout;
   revalidateTag("services");
   revalidatePath("/beheer/diensten");
   revalidatePath("/boeken");
-  return { ok: true };
+  return { ok: true, message: `${row.name || "Dienst"} opgeslagen — € ${(priceCents / 100).toFixed(2).replace(".", ",")} ✓` };
 }
 
 export async function toggleService(formData) {
@@ -161,10 +162,12 @@ export async function toggleService(formData) {
   if (error) return { error };
   const id = formData.get("id");
   const active = formData.get("active") === "true";
-  await supabase.from("services").update({ active: !active }).eq("id", id);
+  const fout = nagekeken(await supabase.from("services").update({ active: !active }, { count: "exact" }).eq("id", id), "Dienst wijzigen");
+  if (fout) return fout;
   revalidateTag("services");
   revalidatePath("/beheer/diensten");
   revalidatePath("/boeken");
+  return { ok: true, message: active ? "Dienst uitgezet — niet meer boekbaar ✓" : "Dienst staat aan — weer boekbaar ✓" };
 }
 
 // ---- Bookings ----
@@ -252,16 +255,21 @@ export async function adminCreateBooking(formData) {
     p_mode: payMode || null,
     p_comp_reason: payMode === "gratis" ? compReason : null,
   });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Boeken") };
   // Confirm the booking to the member by email (+ attach a coach if one was chosen).
+  let mailFout = false;
+  let coachFout = false;
+  let coach = null;
   try {
     const admin = createAdminClient();
-    let coach = null;
     if (coachId) {
       const { data: c } = await admin.from("profiles").select("id, full_name, role").eq("id", coachId).eq("gym_id", profile.gym_id).maybeSingle();
       if (c && (c.role === "coach" || c.role === "beheerder")) {
-        await admin.from("bookings").update({ coach_id: coachId }).eq("id", bookingId);
-        coach = c;
+        const koppel = await admin.from("bookings").update({ coach_id: coachId }, { count: "exact" }).eq("id", bookingId);
+        // De boeking bestaat al; een mislukte koppeling mag die niet ongedaan maken, maar mag ook
+        // niet verzwegen worden — anders staat de sessie niet in de agenda van de coach.
+        if (koppel.error || !koppel.count) coachFout = true;
+        else coach = c;
       }
     }
     const [{ data: bk }, { data: m }] = await Promise.all([
@@ -281,12 +289,14 @@ export async function adminCreateBooking(formData) {
     }
     if (bk) await notify({ gymId: bk.gym_id, userId: memberId, type: "coach_booked", title: "Er is een sessie voor je geboekt", body: bk.services?.name || "Sessie", link: "/account" });
     if (bk && coach) await notify({ gymId: bk.gym_id, userId: coachId, type: "coach_booked", title: "Een sessie is aan jou toegewezen", body: bk.services?.name || "Sessie", link: "/coach/agenda" });
-  } catch {}
+  } catch { mailFout = true; }
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
   revalidatePath("/coach");
   revalidatePath("/coach/agenda");
-  return { ok: true };
+  if (coachFout) return { ok: true, message: "Sessie geboekt ✓ — maar de coach kon er niet aan gekoppeld worden. Koppel hem bij de boeking." };
+  if (mailFout) return { ok: true, message: "Sessie geboekt ✓ — maar de bevestigingsmail of melding is niet vertrokken." };
+  return { ok: true, message: `Sessie geboekt en bevestigd per mail${coach ? ` · ${coach.full_name || "coach"} gekoppeld` : ""} ✓` };
 }
 
 // Attach (or clear) a coach on an EXISTING booking → it then appears in the coach's agenda and the
@@ -368,9 +378,10 @@ export async function adminUploadCoachPhoto(formData) {
   const path = `coaches/${coachId}-${Date.now()}.${ext}`;
   const buf = Buffer.from(await file.arrayBuffer());
   const { error: upErr } = await admin.storage.from("coach-photos").upload(path, buf, { contentType: file.type, upsert: true });
-  if (upErr) return { error: upErr.message };
+  if (upErr) return { error: `Foto uploaden mislukt: ${upErr.message}` };
   const { data: pub } = admin.storage.from("coach-photos").getPublicUrl(path);
-  await admin.from("profiles").update({ coach_photo_url: pub.publicUrl }).eq("id", coachId);
+  const fout = nagekeken(await admin.from("profiles").update({ coach_photo_url: pub.publicUrl }, { count: "exact" }).eq("id", coachId), "Foto aan de coach koppelen");
+  if (fout) return fout;
   revalidateTag("coaches");
   revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/coaches");
@@ -428,18 +439,20 @@ export async function adminBlockSlot(formData) {
     p_hour: numF(formData.get("hour")),
     p_reason: formData.get("reason") || null,
   });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Uur blokkeren") };
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
-  return { ok: true };
+  return { ok: true, message: `${formData.get("date")} om ${formData.get("hour")}u geblokkeerd — niemand kan dit uur nog boeken ✓` };
 }
 
 export async function adminUnblock(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("slot_blocks").delete().eq("id", formData.get("blockId"));
+  const fout = nagekeken(await supabase.from("slot_blocks").delete({ count: "exact" }).eq("id", formData.get("blockId")), "Blokkade opheffen");
+  if (fout) return fout;
   revalidatePath("/beheer/boekingen");
   revalidatePath("/boeken");
+  return { ok: true, message: "Blokkade opgeheven — het uur is weer boekbaar ✓" };
 }
 
 // Move a booking to a new day/hour (drag-and-drop in the planner, or the "verplaats" modal).
@@ -568,8 +581,9 @@ export async function adminAdjustCredits(formData) {
   const reason = formData.get("reason") || "correctie";
   if (!delta) return { error: "Geef een aantal (+ erbij, − eraf)." };
   const { error: e } = await supabase.rpc("admin_adjust_credits", { p_member: memberId, p_delta: delta, p_reason: reason });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Tegoed aanpassen") };
   // Notify the member of the change + reason.
+  let mailFout = false;
   try {
     const admin = createAdminClient();
     const [{ data: m }, { data: ledger }] = await Promise.all([
@@ -579,10 +593,11 @@ export async function adminAdjustCredits(formData) {
     const balance = ledger || 0;
     if (m?.email) await sendCreditsAdjusted({ to: m.email, name: m.full_name, delta, reason, balance });
     await notify({ gymId: profile.gym_id, userId: memberId, type: "credits", title: delta >= 0 ? `+${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} bijgeschreven` : `${delta} sessie${Math.abs(delta) > 1 ? "s" : ""} aangepast`, body: reason, link: "/account" });
-  } catch {}
+  } catch { mailFout = true; }
   revalidatePath("/beheer/leden");
   revalidatePath(`/beheer/leden/${memberId}`);
-  return { ok: true };
+  const n = `${delta > 0 ? "+" : ""}${String(delta).replace(".", ",")} sessie${Math.abs(delta) === 1 ? "" : "s"}`;
+  return { ok: true, message: mailFout ? `${n} geboekt ✓ — maar het lid kreeg geen mail.` : `${n} geboekt en het lid is verwittigd ✓` };
 }
 
 // ---- Coach billing config ----
@@ -601,13 +616,13 @@ export async function setCoachBilling(formData) {
     .eq("id", formData.get("coachId"))
     .eq("gym_id", profile.gym_id)
     .select("id");
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Facturatie opslaan") };
   // Vangnet: 0 rijen betekent dat er niets veranderd is (verkeerde coach, andere gym, of opnieuw
   // een ontbrekend recht). Beter een eerlijke fout dan een vinkje dat liegt.
   if (!rows?.length) return { error: "Facturatie niet opgeslagen — coach niet gevonden in deze gym." };
   revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/coach");
-  return { ok: true };
+  return { ok: true, message: "Facturatie opgeslagen — € 12 per sessie via sessietegoed ✓" };
 }
 
 export async function grantCoachCredits(formData) {
@@ -620,7 +635,7 @@ export async function grantCoachCredits(formData) {
   // coach_ledger writes are service-role only since 0081 → use the admin client after the staff check.
   const admin = createAdminClient();
   const { error: e } = await admin.from("coach_ledger").insert({ gym_id: profile.gym_id, coach_id: coachId, delta, reason: "grant" });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Sessietegoed bijschrijven") };
   // Betaald of cadeau — er is geen derde mogelijkheid meer. "Op factuur, betaal later" is
   // afgeschaft (2026-08-07): die weg schreef tegoed bij vóór er geld was, waardoor een coach kon
   // trainen op sessies die nooit betaald raakten. Wie online koopt, krijgt zijn tegoed via de
@@ -630,13 +645,20 @@ export async function grantCoachCredits(formData) {
   if (delta > 0 && !gratis) {
     // Geld is al ontvangen (cash/overschrijving), dus de post staat meteen op betaald. Hij bestaat
     // voor de boekhouding en om er een factuur van te kunnen maken, niet als openstaande vordering.
-    try {
-      await admin.from("payments").insert({
-        gym_id: profile.gym_id, user_id: coachId, amount_cents: Math.round(delta * 1200),
-        kind: "coach_credits", description: `Coach-sessietegoed · ${delta} sessies (aan de gym betaald)`, status: "betaald",
-      });
-    } catch (err) { console.error("grant payment row failed:", err?.message); }
-    resolvedNote = ` · € ${(delta * 12).toFixed(2).replace(".", ",")} als ontvangen geboekt`;
+    // Supabase GOOIT niet bij een fout, het geeft `error` terug. De try/catch die hier stond ving dus
+    // nooit iets, en de melding zei "€ … als ontvangen geboekt" ook als die betaling nergens stond.
+    // Het tegoed is op dit punt al bijgeschreven; een foutmelding zou tot een tweede klik leiden.
+    // Dus: wel slagen, maar eerlijk zeggen wat er ontbreekt.
+    const { error: payErr } = await admin.from("payments").insert({
+      gym_id: profile.gym_id, user_id: coachId, amount_cents: Math.round(delta * 1200),
+      kind: "coach_credits", description: `Coach-sessietegoed · ${delta} sessies (aan de gym betaald)`, status: "betaald",
+    });
+    if (payErr) {
+      console.error("grant payment row failed:", payErr.message);
+      resolvedNote = ` — ⚠ maar de betaling van € ${(delta * 12).toFixed(2).replace(".", ",")} kwam NIET in de boekhouding. Voeg ze toe bij Betalingen (niet opnieuw bijschrijven).`;
+    } else {
+      resolvedNote = ` · € ${(delta * 12).toFixed(2).replace(".", ",")} als ontvangen geboekt`;
+    }
   } else if (delta > 0 && gratis) {
     resolvedNote = " · gratis gegeven, niets aangerekend";
   }
@@ -670,13 +692,17 @@ export async function adminAddUser(formData) {
   });
   if (cErr) {
     if (/already|exists|registered/i.test(cErr.message)) return { error: "Er bestaat al een account met dit e-mailadres." };
-    return { error: cErr.message };
+    return { error: `Account aanmaken mislukt: ${cErr.message}` };
   }
   const uid = created.user.id;
   // The signup trigger creates the profile; patch role/phone/gym to the admin's gym.
   // day0_welcome_sent=true: admin-created accounts get sendWelcomeNewAccount, not the member welcome.
-  await admin.from("profiles").update({ gym_id: profile.gym_id, role, phone: phone || null, full_name: full_name || null, day0_welcome_sent: true }).eq("id", uid);
+  // Zonder deze controle bleef een account bij een fout als 'lid' zonder gym hangen: het bestond,
+  // kon inloggen, maar zag niets — en de beheerder kreeg geen enkel signaal.
+  const profielFout = nagekeken(await admin.from("profiles").update({ gym_id: profile.gym_id, role, phone: phone || null, full_name: full_name || null, day0_welcome_sent: true }, { count: "exact" }).eq("id", uid), "Profiel instellen");
+  if (profielFout) return { error: `Het account voor ${email} bestaat, maar ${profielFout.error.charAt(0).toLowerCase()}${profielFout.error.slice(1)} Pas het aan bij Leden.` };
 
+  let mailFout = false;
   try {
     const { data: link } = await admin.auth.admin.generateLink({
       type: "recovery",
@@ -686,13 +712,13 @@ export async function adminAddUser(formData) {
     const action = link?.properties?.action_link;
     if (action) await sendWelcomeNewAccount({ to: email, name: full_name, link: action });
     if (role !== "lid") await sendRoleChanged({ to: email, name: full_name, role });
-  } catch {}
+  } catch { mailFout = true; }
 
   await enrollUserInDrips(uid); // start any active welcome drip
 
   revalidatePath("/beheer/leden");
   revalidatePath("/beheer/coaches", "layout");
-  return { ok: true };
+  return { ok: true, message: mailFout ? `Account voor ${email} aangemaakt ✓ — maar de uitnodigingsmail is niet vertrokken.` : `Account voor ${email} aangemaakt — uitnodiging om een wachtwoord te kiezen is verstuurd ✓` };
 }
 
 // Permanently remove a user (cascades their data; payment history is kept). Guarded.
@@ -727,12 +753,12 @@ export async function setCoachPublic(formData) {
   const on = formData.get("on") === "1";
   // coach_* columns aren't writable by 'authenticated' (0015 grants) → write via service role after the staff check.
   const admin = createAdminClient();
-  const { error: e } = await admin.from("profiles").update({ coach_public: on }).eq("id", coachId).eq("gym_id", profile.gym_id);
-  if (e) return { error: e.message };
+  const fout = nagekeken(await admin.from("profiles").update({ coach_public: on }, { count: "exact" }).eq("id", coachId).eq("gym_id", profile.gym_id), "Zichtbaarheid wijzigen");
+  if (fout) return fout;
   revalidateTag("coaches");
   revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/coaches");
-  return { ok: true };
+  return { ok: true, message: on ? "Coach staat nu op /coaches ✓" : "Coach verborgen van /coaches ✓" };
 }
 
 export async function addCoach(formData) {
@@ -740,7 +766,7 @@ export async function addCoach(formData) {
   if (error) return { error };
   const memberId = formData.get("memberId");
   const { error: e } = await supabase.rpc("admin_set_role", { p_member: memberId, p_role: "coach" });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Coach maken") };
   // Publish gate (Batch 2.8): don't auto-publish a bare profile — an empty coach card on /coaches is
   // worse than none. Only make them public once they have a photo AND a bio; otherwise leave them
   // private and the coach first-run checklist walks them through it.
@@ -750,7 +776,7 @@ export async function addCoach(formData) {
   // de gebruikersclient liet deze poort stil in het niets vallen. Service role + gym-guard.
   const admin = createAdminClient();
   const { error: pErr } = await admin.from("profiles").update({ coach_public: ready }).eq("id", memberId).eq("gym_id", profile.gym_id);
-  if (pErr) return { error: pErr.message };
+  if (pErr) return { error: `Rol is coach geworden, maar de zichtbaarheid niet: ${leesbareFout(pErr, "opslaan")}` };
   try {
     const { data: m } = await supabase.from("profiles").select("email, full_name").eq("id", memberId).single();
     if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role: "coach" });
@@ -758,7 +784,7 @@ export async function addCoach(formData) {
   revalidateTag("coaches");
   revalidatePath("/beheer/coaches", "layout");
   revalidatePath("/beheer/leden");
-  return { ok: true };
+  return { ok: true, message: ready ? "Is nu coach en staat op /coaches ✓" : "Is nu coach ✓ — nog niet zichtbaar op /coaches tot er een foto en bio is." };
 }
 
 export async function assignCoachClient(formData) {
@@ -771,32 +797,35 @@ export async function assignCoachClient(formData) {
   const { error: e } = await supabase
     .from("coach_clients")
     .upsert({ gym_id: profile.gym_id, coach_id: coachId, client_id: clientId, status: "accepted", requested_by: null }, { onConflict: "gym_id,coach_id,client_id" });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Koppelen") };
+  let namen = null;
   try {
     const [{ data: client }, { data: coach }] = await Promise.all([
       supabase.from("profiles").select("email, full_name").eq("id", clientId).single(),
       supabase.from("profiles").select("full_name").eq("id", coachId).single(),
     ]);
+    namen = { client: client?.full_name, coach: coach?.full_name };
     if (client?.email) await sendCoachAssigned({ to: client.email, name: client.full_name, coachName: coach?.full_name || "een coach" });
     await notify({ gymId: profile.gym_id, userId: clientId, type: "coach_assigned", title: `${coach?.full_name || "Een coach"} is nu jouw coach`, body: "Bekijk je trainingsschema bij Mijn training.", link: "/training" });
     await notify({ gymId: profile.gym_id, userId: coachId, type: "coach_assigned", title: `${client?.full_name || "Een lid"} is aan jou toegewezen`, body: "Bekijk je client en stel een programma op.", link: "/coach/clienten" });
   } catch {}
   revalidatePath("/beheer/coaches", "layout");
   revalidatePath(`/beheer/leden/${clientId}`);
-  return { ok: true };
+  return { ok: true, message: namen?.client && namen?.coach ? `${namen.client} is gekoppeld aan ${namen.coach} — allebei verwittigd ✓` : "Gekoppeld ✓" };
 }
 
 export async function unassignCoachClient(formData) {
   const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
-  const q = supabase.from("coach_clients").delete().eq("gym_id", profile.gym_id);
+  const q = supabase.from("coach_clients").delete({ count: "exact" }).eq("gym_id", profile.gym_id);
   const id = formData.get("id");
   if (id) q.eq("id", id);
   else q.eq("coach_id", formData.get("coachId")).eq("client_id", formData.get("clientId"));
-  await q;
+  const fout = nagekeken(await q, "Ontkoppelen");
+  if (fout) return fout;
   revalidatePath("/beheer/coaches", "layout");
   if (formData.get("clientId")) revalidatePath(`/beheer/leden/${formData.get("clientId")}`);
-  return { ok: true };
+  return { ok: true, message: "Ontkoppeld — de coach ziet dit lid niet meer ✓" };
 }
 
 // De aanvraagflow "coach vraagt sessies aan, beheerder keurt goed, factuur volgt later" is
@@ -837,20 +866,23 @@ export async function upsertPackage(formData) {
     period: formData.get("period") || "once",
     sort: num(formData.get("sort"), 0),
   };
-  const q = id ? supabase.from("packages").update(row).eq("id", id) : supabase.from("packages").insert({ ...row, active: true });
-  const { error: e } = await q;
-  if (e) return { error: e.message };
+  const q = id ? supabase.from("packages").update(row, { count: "exact" }).eq("id", id) : supabase.from("packages").insert({ ...row, active: true });
+  const fout = nagekeken(await q, "Pakket opslaan");
+  if (fout) return fout;
   revalidatePath("/beheer/pakketten");
   revalidatePath("/lidmaatschap");
-  return { ok: true };
+  return { ok: true, message: `${row.name || "Pakket"} opgeslagen ✓` };
 }
 
 export async function togglePackage(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("packages").update({ active: formData.get("active") !== "true" }).eq("id", formData.get("id"));
+  const aan = formData.get("active") !== "true";
+  const fout = nagekeken(await supabase.from("packages").update({ active: aan }, { count: "exact" }).eq("id", formData.get("id")), "Pakket wijzigen");
+  if (fout) return fout;
   revalidatePath("/beheer/pakketten");
   revalidatePath("/lidmaatschap");
+  return { ok: true, message: aan ? "Pakket staat weer te koop ✓" : "Pakket uit de verkoop gehaald ✓" };
 }
 
 export async function adminSetRole(formData) {
@@ -859,14 +891,14 @@ export async function adminSetRole(formData) {
   const memberId = formData.get("memberId");
   const role = formData.get("role");
   const { error: e } = await supabase.rpc("admin_set_role", { p_member: memberId, p_role: role });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Rol wijzigen") };
   try {
     const { data: m } = await supabase.from("profiles").select("email, full_name").eq("id", memberId).single();
     if (m?.email) await sendRoleChanged({ to: m.email, name: m.full_name, role });
   } catch {}
   revalidatePath("/beheer/leden");
   revalidatePath(`/beheer/leden/${memberId}`);
-  return { ok: true };
+  return { ok: true, message: `Rol gewijzigd naar ${role} ✓` };
 }
 
 // Een probleemmelding van een lid afsluiten. Beheerder-only, net als resolveClientError hieronder:
@@ -928,7 +960,13 @@ Je melding: "${melding.message}"`;
   } catch (e) { console.error("antwoord op melding niet gelogd:", e?.message); }
 
   // Antwoorden IS de opvolging, dus de melding gaat meteen uit de open lijst.
-  await admin.from("problem_reports").update({ status: "afgehandeld" }).eq("id", id);
+  // Het antwoord is al WEG. Lukt het afsluiten niet, dan zeggen we dat — zonder foutmelding die tot
+  // een tweede verzending leidt.
+  const sluit = await admin.from("problem_reports").update({ status: "afgehandeld" }, { count: "exact" }).eq("id", id);
+  if (sluit.error || !sluit.count) {
+    revalidatePath("/beheer/meldingen");
+    return { ok: true, message: `Antwoord verstuurd naar ${lid.full_name || lid.email} ✓ — maar de melding bleef open staan. Vink ze zelf af.` };
+  }
   revalidatePath("/beheer/meldingen");
   return { ok: true, message: `Antwoord verstuurd naar ${lid.full_name || lid.email} ✓` };
 }
@@ -990,9 +1028,16 @@ export async function invoiceCoachSessions(formData) {
     gym_id: profile.gym_id, user_id: coachId, amount_cents: total, kind: "coach_credits", status: "onbetaald",
     description: `Coach-sessies op factuur · ${list.length} sessies`,
   }).select("id").single();
-  if (pe) return { error: pe.message };
+  if (pe) return { error: leesbareFout(pe, "Factuur opmaken") };
 
-  await admin.from("bookings").update({ coach_invoiced_at: new Date().toISOString() }).in("id", list.map((b) => b.id));
+  // DIT is de regel die dubbel factureren tegenhoudt: gefactureerde sessies krijgen een stempel en
+  // vallen de volgende keer uit de lijst. Mislukt hij stil, dan staat dezelfde sessie op de volgende
+  // factuur opnieuw. De factuur zelf bestaat al, dus we melden het hard maar laten ze staan.
+  const stempel = await admin.from("bookings").update({ coach_invoiced_at: new Date().toISOString() }, { count: "exact" }).in("id", list.map((b) => b.id));
+  if (stempel.error || stempel.count !== list.length) {
+    revalidatePath("/beheer/betalingen");
+    return { error: `⚠ De factuur (€ ${(total / 100).toFixed(2).replace(".", ",")}) is aangemaakt, maar ${stempel.error ? "de sessies" : `${list.length - (stempel.count || 0)} van de ${list.length} sessies`} konden niet als gefactureerd gemarkeerd worden. Factureer deze coach NIET opnieuw voor je dit nagekeken hebt.` };
+  }
   try {
     await notify({ gymId: profile.gym_id, userId: coachId, type: "system", title: "Factuur voor je coach-sessies", body: `${list.length} sessies · € ${(total / 100).toFixed(2).replace(".", ",")}`, link: "/coach/betalingen" });
   } catch {}
@@ -1042,7 +1087,8 @@ export async function sendWeekReportTest() {
   const report = await buildWeekReport(gym);
   const res = await sendWeekReport({ to: me.email, name: me.full_name, report, gymName: gym.name || "Fittin'" });
   if (!res?.ok) return { error: res?.skipped ? "E-mail is niet geconfigureerd." : "Versturen mislukt — check de e-mailinstellingen." };
-  return { ok: `Weekrapport verstuurd naar ${me.email} ✓` };
+  // `ok` droeg hier de tekst, en ActionForm leest `message` — het scherm toonde dus "Opgeslagen ✓".
+  return { ok: true, message: `Weekrapport verstuurd naar ${me.email} ✓` };
 }
 
 // ---- Meldpunt: de lus sluiten (0150) ----

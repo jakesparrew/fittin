@@ -26,7 +26,7 @@ export default function DripStepCard({ step, campaignId, sent = 0, openPct = "�
           <span>{sent} verzonden</span>
           <span>{openPct} open</span>
           <button onClick={() => setEditing((e) => !e)} className="text-accentdark hover:underline">{editing ? "Sluit" : "Bewerk"}</button>
-          <form action={deleteDripStep}><input type="hidden" name="id" value={step.id} /><input type="hidden" name="campaignId" value={campaignId} /><button className="text-red-500 hover:underline">×</button></form>
+          <ActionForm action={deleteDripStep}><input type="hidden" name="id" value={step.id} /><input type="hidden" name="campaignId" value={campaignId} /><button className="text-red-500 hover:underline">×</button></ActionForm>
         </div>
       </div>
 

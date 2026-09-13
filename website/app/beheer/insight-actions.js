@@ -129,17 +129,21 @@ export async function sendInsightPreset(formData) {
     else resendId = res?.data?.id || null;
   } catch (e) { status = "failed"; sendErr = e?.message; }
 
-  // Loggen mét to_user_id — de dedupe hierboven leunt erop.
-  try {
-    await admin.from("email_log").insert({
-      gym_id: profile.gym_id, to_email: lid.email, to_user_id: memberId,
-      kind: mail.kind, subject: mail.subject, status, resend_id: resendId,
-      error: sendErr ? String(sendErr).slice(0, 500) : null,
-    });
-  } catch {}
+  // Loggen mét to_user_id — de dedupe hierboven leunt erop. Én het dashboard: een kaart verdwijnt
+  // pas als deze rij bestaat. Een `try` rond een Supabase-aanroep vangt niets (die geeft `error`
+  // terug in plaats van te gooien), dus een mislukte log bleef onzichtbaar — en dan kon dezelfde
+  // mail een dag later opnieuw vertrekken.
+  const { error: logErr } = await admin.from("email_log").insert({
+    gym_id: profile.gym_id, to_email: lid.email, to_user_id: memberId,
+    kind: mail.kind, subject: mail.subject, status, resend_id: resendId,
+    error: sendErr ? String(sendErr).slice(0, 500) : null,
+  });
 
   if (status === "failed") return { error: `Versturen mislukt: ${sendErr}` };
   revalidatePath("/beheer");
+  if (logErr) {
+    return { ok: true, message: `${preset.succes} naar ${lid.full_name || lid.email} ✓ — ⚠ maar niet gelogd: de 30-dagenrem weet er niet van. Stuur deze mail niet opnieuw.` };
+  }
   return { ok: true, message: `${preset.succes} naar ${lid.full_name || lid.email} ✓` };
 }
 

@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { nagekeken } from "@/lib/uitkomst";
 import { requireStaff } from "@/lib/staff";
 
 const num = (v, d = null) => {
@@ -37,13 +38,20 @@ export async function createDiscount(formData) {
 export async function toggleDiscount(formData) {
   const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("discount_codes").update({ active: formData.get("active") !== "true" }).eq("id", formData.get("id")).eq("gym_id", profile.gym_id);
+  const aan = formData.get("active") !== "true";
+  const res = await supabase.from("discount_codes").update({ active: aan }, { count: "exact" }).eq("id", formData.get("id")).eq("gym_id", profile.gym_id);
+  const fout = nagekeken(res, "Code wijzigen");
+  if (fout) return fout;
   revalidatePath("/beheer/diensten");
+  return { ok: true, message: aan ? "Code staat weer aan ✓" : "Code uitgezet — niemand kan hem nog gebruiken ✓" };
 }
 
 export async function deleteDiscount(formData) {
   const { supabase, profile, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("discount_codes").delete().eq("id", formData.get("id")).eq("gym_id", profile.gym_id);
+  const res = await supabase.from("discount_codes").delete({ count: "exact" }).eq("id", formData.get("id")).eq("gym_id", profile.gym_id);
+  const fout = nagekeken(res, "Code verwijderen");
+  if (fout) return fout;
   revalidatePath("/beheer/diensten");
+  return { ok: true, message: "Code verwijderd ✓" };
 }

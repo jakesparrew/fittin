@@ -68,7 +68,7 @@ export default async function ProgramBuilder({ params }) {
       <Link href="/beheer/programmas" className="text-sm font-semibold text-ink/50 hover:text-ink">← Programma's</Link>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-3xl font-black text-ink">{program.name}</h1>
-        <form action={deleteProgram}>
+        <ActionForm action={deleteProgram}>
           <input type="hidden" name="id" value={program.id} />
           {/* Zelfde bevestiging als in de coach-versie: een toegewezen programma weghalen laat de
               client met een lege 'Training'-tab achter, en dat is niet ongedaan te maken. */}
@@ -78,7 +78,7 @@ export default async function ProgramBuilder({ params }) {
           >
             Programma verwijderen
           </ConfirmSubmit>
-        </form>
+        </ActionForm>
       </div>
 
       {/* Assign */}

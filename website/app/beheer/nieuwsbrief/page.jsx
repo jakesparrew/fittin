@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createNewsletter, createDrip, createOnboardingDrip } from "../newsletter-actions";
 import QuickStart from "@/components/admin/QuickStart";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -63,28 +64,28 @@ export default async function Newsletter() {
           <p className="font-black text-ink">✨ Fittin&rsquo; onboarding-reeks</p>
           <p className="mt-0.5 text-sm text-ink/60">5 kant-en-klare, converterende mails die nieuwe leden alle functies laten ontdekken — verspreid over ~2 weken.</p>
         </div>
-        <form action={createOnboardingDrip}>
+        <ActionForm action={createOnboardingDrip}>
           <button className="rounded-full bg-brand px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-90">Maak deze reeks aan</button>
-        </form>
+        </ActionForm>
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-2">
-        <form action={createNewsletter} className="rounded-2xl border border-borderc bg-surface p-5">
+        <ActionForm action={createNewsletter} className="rounded-2xl border border-borderc bg-surface p-5">
           <p className="font-black text-ink">Nieuwe nieuwsbrief</p>
           <p className="mt-0.5 text-xs text-ink/50">Eenmalige mail naar alle abonnees.</p>
           <div className="mt-3 flex gap-2">
             <input name="name" required placeholder="Titel (intern)" className="flex-1 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
             <button className="rounded-full bg-brand px-4 py-2 text-sm font-bold text-white">Opstellen</button>
           </div>
-        </form>
-        <form action={createDrip} className="rounded-2xl border border-borderc bg-surface p-5">
+        </ActionForm>
+        <ActionForm action={createDrip} className="rounded-2xl border border-borderc bg-surface p-5">
           <p className="font-black text-ink">Nieuwe drip-campagne</p>
           <p className="mt-0.5 text-xs text-ink/50">Reeks mails, automatisch bij nieuwe inschrijving.</p>
           <div className="mt-3 flex gap-2">
             <input name="name" required placeholder="Naam (bv. Welkomstreeks)" className="flex-1 rounded-lg border-2 border-borderc px-3 py-2 text-sm" />
             <button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Aanmaken</button>
           </div>
-        </form>
+        </ActionForm>
       </div>
 
       <div className="mt-6 overflow-hidden rounded-2xl border border-borderc bg-surface">

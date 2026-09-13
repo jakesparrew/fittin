@@ -1,5 +1,6 @@
 "use client";
-import { useActionState } from "react";
+import {} from "react";
+import { useActie } from "@/components/ui/useActie";
 import { adminAddUser, deleteUser } from "@/app/beheer/actions";
 import { bevestigSubmit } from "@/lib/native/dialogs";
 
@@ -11,7 +12,7 @@ const ROLES = [
 
 // Add a new account (any role). Emails a set-password link.
 export function AddMemberForm() {
-  const [state, action, pending] = useActionState(async (_prev, fd) => adminAddUser(fd), null);
+  const [state, action, pending] = useActie(adminAddUser);
   return (
     <form action={action} className="rounded-2xl border border-borderc bg-surface p-5">
       <p className="font-black text-ink">Nieuw lid toevoegen</p>
@@ -29,7 +30,7 @@ export function AddMemberForm() {
           {pending ? "Bezig…" : "+ Account aanmaken"}
         </button>
         {state?.error && <span className="text-sm font-semibold text-red-500">{state.error}</span>}
-        {state?.ok && <span className="text-sm font-semibold text-accentdark">Account aangemaakt — uitnodiging verstuurd ✓</span>}
+        {state?.ok && <span className="text-sm font-semibold text-accentdark">{state.message || "Account aangemaakt ✓"}</span>}
       </div>
     </form>
   );
@@ -37,7 +38,7 @@ export function AddMemberForm() {
 
 // Permanently remove a user (with confirm).
 export function DeleteUserButton({ userId, name }) {
-  const [state, action, pending] = useActionState(async (_prev, fd) => deleteUser(fd), null);
+  const [state, action, pending] = useActie(deleteUser);
   return (
     <form
       action={action}

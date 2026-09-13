@@ -83,11 +83,16 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
   const matches = await evaluateMatches(admin, c.gym_id, c.trigger_type, c.trigger_params);
 
   // Cooldown: skip members emailed by this campaign within cooldown_days.
+  //
+  // Enkel mails die ook echt VERTROKKEN. Een mislukte batch schrijft zijn rijen weg met status
+  // "failed", en die telden hier mee: wie getroffen werd, zat dertig dagen vast zonder mail — en
+  // zonder de gratis sessie die er misschien aan hing. Opnieuw proberen deed voor hen niets.
   const cutoff = new Date(Date.now() - days(c.cooldown_days || 30)).toISOString();
   const { data: recent } = await admin
     .from("campaign_sends")
     .select("subscriber_id")
     .eq("campaign_id", campaignId)
+    .neq("status", "failed")
     .gte("sent_at", cutoff);
   const skip = new Set((recent || []).map((r) => r.subscriber_id));
   const targets = force ? matches : matches.filter((m) => !skip.has(m.subscriber_id));
@@ -162,7 +167,7 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
     .from("campaigns")
     .update({ sent: (c.sent || 0) + sent, total: (c.total || 0) + targets.length, last_run_at: new Date().toISOString() })
     .eq("id", campaignId);
-  return { ok: true, matched: matches.length, sent };
+  return { ok: true, matched: matches.length, targets: targets.length, sent };
 }
 
 // Daily runner: every active activation campaign across all gyms.

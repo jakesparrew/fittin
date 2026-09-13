@@ -5,6 +5,7 @@ import { markRead, archiveInbox } from "../../inbox-actions";
 import InboxReply from "@/components/admin/InboxReply";
 import GeefDoorAanCoach from "@/components/admin/GeefDoorAanCoach";
 import { STATUS_LABEL, STATUS_TOON, feeZin } from "@/lib/aanbreng";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 const fmt = (iso) => new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
@@ -85,7 +86,7 @@ export default async function InboxItem({ params }) {
     <div className="px-4 py-6 md:px-8 md:py-8">
       <div className="flex items-center justify-between">
         <Link href="/beheer/inbox" className="text-sm font-semibold text-ink/50 hover:text-ink">← Inbox</Link>
-        <form action={archiveInbox}><input type="hidden" name="id" value={m.id} /><button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/60 hover:bg-borderc">Archiveren</button></form>
+        <ActionForm action={archiveInbox}><input type="hidden" name="id" value={m.id} /><button className="rounded-full bg-paper px-3 py-1.5 text-xs font-bold text-ink/60 hover:bg-borderc">Archiveren</button></ActionForm>
       </div>
 
       <div className="mt-4 rounded-2xl border border-borderc bg-surface p-6">

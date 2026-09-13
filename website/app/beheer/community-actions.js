@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { nagekeken, leesbareFout } from "@/lib/uitkomst";
 import { requireStaff } from "@/lib/staff";
 import { slotInstant } from "@/lib/time";
 import { notify } from "@/lib/notify";
@@ -27,16 +28,20 @@ export async function createChallenge(formData) {
     // kost. Leeg laten kan bewust — dan is er geen limiet — maar de wizard vult altijd iets in.
     max_winners: num(formData.get("max_winners"), null),
   });
-  if (e) return { error: e.message };
+  if (e) return { error: leesbareFout(e, "Challenge aanmaken") };
   revalidatePath("/beheer/challenges");
   revalidatePath("/community");
+  return { ok: true, message: `Challenge "${formData.get("name")}" staat live ✓` };
 }
 
 export async function deleteChallenge(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("challenges").delete().eq("id", formData.get("id"));
+  const res = await supabase.from("challenges").delete({ count: "exact" }).eq("id", formData.get("id"));
+  const fout = nagekeken(res, "Challenge verwijderen");
+  if (fout) return fout;
   revalidatePath("/beheer/challenges");
+  return { ok: true, message: "Challenge verwijderd ✓" };
 }
 
 // ---------------- Events ----------------
@@ -77,20 +82,28 @@ export async function approveEvent(formData) {
   const id = formData.get("id");
   const decision = formData.get("decision");
   const { data: ev } = await supabase.from("events").select("title, coach_id, gym_id").eq("id", id).maybeSingle();
+  if (!ev) return { error: "Dit event bestaat niet meer." };
   if (decision === "reject") {
-    await supabase.from("events").delete().eq("id", id).eq("status", "pending");
+    // Pas de coach verwittigen als het ook echt weg is — anders krijgt hij "afgewezen" voor een
+    // event dat gewoon blijft staan (bv. omdat het al goedgekeurd was).
+    const fout = nagekeken(await supabase.from("events").delete({ count: "exact" }).eq("id", id).eq("status", "pending"), "Event afwijzen");
+    if (fout) return fout;
     if (ev?.coach_id) await notify({ gymId: ev.gym_id || profile.gym_id, userId: ev.coach_id, type: "event", title: "Je event werd afgewezen", body: ev.title, link: "/coach/events" });
   } else {
-    await supabase.from("events").update({ status: "approved" }).eq("id", id);
+    const fout = nagekeken(await supabase.from("events").update({ status: "approved" }, { count: "exact" }).eq("id", id), "Event goedkeuren");
+    if (fout) return fout;
     if (ev?.coach_id) await notify({ gymId: ev.gym_id || profile.gym_id, userId: ev.coach_id, type: "event", title: "Je event is goedgekeurd 🎉", body: `${ev.title} staat nu live`, link: "/coach/events" });
   }
   revalidatePath("/beheer/events");
   revalidatePath("/community");
+  return { ok: true, message: decision === "reject" ? `"${ev.title}" afgewezen${ev.coach_id ? " — de coach is verwittigd" : ""} ✓` : `"${ev.title}" staat live${ev.coach_id ? " — de coach is verwittigd" : ""} ✓` };
 }
 
 export async function deleteEvent(formData) {
   const { supabase, error } = await requireStaff(true);
   if (error) return { error };
-  await supabase.from("events").delete().eq("id", formData.get("id"));
+  const fout = nagekeken(await supabase.from("events").delete({ count: "exact" }).eq("id", formData.get("id")), "Event verwijderen");
+  if (fout) return fout;
   revalidatePath("/beheer/events");
+  return { ok: true, message: "Event verwijderd ✓" };
 }

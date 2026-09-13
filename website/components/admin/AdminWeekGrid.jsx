@@ -1,5 +1,6 @@
 "use client";
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import { useActie, SERVERFOUT } from "@/components/ui/useActie";
 import { useRouter } from "next/navigation";
 import { slotInstant, fmtHour } from "@/lib/time";
 import { adminCreateBooking, adminBlockSlot, adminBlockRange, adminCancelBooking, adminUnblock, adminRescheduleBooking, adminDayAvailability } from "@/app/beheer/actions";
@@ -7,6 +8,7 @@ import SearchSelect from "@/components/admin/SearchSelect";
 import { bevestigSubmit } from "@/lib/native/dialogs";
 import BookingDetail from "@/components/BookingDetail";
 import PayModePicker from "@/components/admin/PayModePicker";
+import ActionForm from "@/components/ui/ActionForm";
 
 const toast = (type, msg) => { try { window.dispatchEvent(new CustomEvent("fittin:toast", { detail: { type, msg } })); } catch {} };
 const pad = (n) => String(n).padStart(2, "0");
@@ -89,7 +91,8 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
     if (!bk) return;
     const fd = new FormData();
     fd.set("bookingId", bk.id); fd.set("date", date); fd.set("hour", String(hour));
-    const res = await adminRescheduleBooking(fd);
+    let res;
+    try { res = await adminRescheduleBooking(fd); } catch { res = { error: SERVERFOUT }; }
     if (res?.error) { toast("error", res.error); return; }
     toast("success", res?.message || "Sessie verplaatst ✓");
     router.refresh();
@@ -152,20 +155,20 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
                         </span>
                         <div className="flex items-center gap-2 leading-none">
                           <button type="button" onClick={() => setMoveModal({ bk, date: d.dateStr })} className="text-[10px] font-bold text-accentdark hover:underline">verplaats</button>
-                          <form action={adminCancelBooking} className="leading-none" onSubmit={(e) => bevestigSubmit(e, "Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.", { ok: "Annuleer boeking", cancel: "Terug" })}>
+                          <ActionForm action={adminCancelBooking} className="leading-none" onSubmit={(e) => bevestigSubmit(e, "Deze boeking annuleren? Het lid krijgt bericht en wordt (indien online betaald) automatisch terugbetaald.", { ok: "Annuleer boeking", cancel: "Terug" })}>
                             <input type="hidden" name="bookingId" value={bk.id} />
                             <button className="text-[10px] font-bold text-red-500 hover:underline">annuleer</button>
-                          </form>
+                          </ActionForm>
                         </div>
                       </div>
                     ) : bl ? (
                       <div className="flex h-full flex-col justify-center rounded-lg bg-brand/10 px-1.5 py-1 leading-tight">
                         <span className="truncate font-bold text-ink/60">Geblokkeerd</span>
                         {bl.reason && <span className="truncate text-[10px] text-ink/40">{bl.reason}</span>}
-                        <form action={adminUnblock} className="leading-none">
+                        <ActionForm action={adminUnblock} className="leading-none">
                           <input type="hidden" name="blockId" value={bl.id} />
                           <button className="text-[10px] font-bold text-accentdark hover:underline">deblokkeer</button>
-                        </form>
+                        </ActionForm>
                       </div>
                     ) : cont ? (
                       // Continuation of a multi-cell session (e.g. the 18:30 half of an 18:00–19:00 booking).
@@ -218,14 +221,11 @@ export default function AdminWeekGrid({ days, hours, bookings = [], blocks = [],
 }
 
 function PlanModal({ modal, members, services, coaches = [], onClose, onDone }) {
-  const [state, action, pending] = useActionState(async (_p, fd) => {
-    const res = await adminCreateBooking(fd);
-    return res?.error ? { error: res.error } : { ok: true };
-  }, null);
-  const [blockState, blockAction, blocking] = useActionState(async (_p, fd) => {
-    const res = await adminBlockSlot(fd);
-    return res?.error ? { error: res.error } : { ok: true };
-  }, null);
+  // Het venster sluit bij succes (onDone). Daarom MOET de bevestiging als melding in de hoek komen:
+  // hier stond `{ ok: true }` zonder de zin, en de beheerder zag na "+ Boeken" letterlijk niets —
+  // geen "geboekt", geen "mail verstuurd", en ook niet dat de coach niet gekoppeld raakte.
+  const [state, action, pending] = useActie(adminCreateBooking);
+  const [blockState, blockAction, blocking] = useActie(adminBlockSlot);
   useEffect(() => { if (state?.ok || blockState?.ok) onDone(); }, [state, blockState]); // eslint-disable-line
 
   return (
@@ -286,10 +286,7 @@ function PlanModal({ modal, members, services, coaches = [], onClose, onDone }) 
 }
 
 function RangeBlockModal({ modal, onClose, onDone }) {
-  const [state, action, pending] = useActionState(async (_p, fd) => {
-    const res = await adminBlockRange(fd);
-    return res?.error ? { error: res.error } : { ok: true };
-  }, null);
+  const [state, action, pending] = useActie(adminBlockRange);
   useEffect(() => { if (state?.ok) onDone(); }, [state]); // eslint-disable-line
 
   return (
@@ -339,7 +336,9 @@ function RescheduleModal({ modal, onClose, onDone }) {
     setBusy(true);
     const fd = new FormData();
     fd.set("bookingId", modal.bk.id); fd.set("date", date); fd.set("hour", String(hour));
-    const res = await adminRescheduleBooking(fd);
+    // Zonder try bleef de knop eeuwig op "bezig" staan als de actie gooide.
+    let res;
+    try { res = await adminRescheduleBooking(fd); } catch { res = { error: SERVERFOUT }; }
     setBusy(false);
     if (res?.error) { toast("error", res.error); return; }
     toast("success", res?.message || "Sessie verplaatst ✓");

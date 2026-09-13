@@ -1,9 +1,11 @@
 "use client";
-import { useActionState } from "react";
+import {} from "react";
+import { useActie } from "@/components/ui/useActie";
 import { replyInboxAction } from "@/app/beheer/inbox-actions";
 
 export default function InboxReply({ id, fromEmail, toName }) {
-  const [state, action, pending] = useActionState(async (_p, fd) => replyInboxAction(fd), null);
+  // stil: het scherm vervangt zich bij succes al door een grote bevestiging; een melding erbovenop is dubbel.
+  const [state, action, pending] = useActie(replyInboxAction, { stil: true });
   if (state?.ok) return <p className="rounded-xl bg-accent/10 p-4 text-sm font-semibold text-accentdark">Antwoord verstuurd naar {toName} ✓</p>;
   return (
     <form action={action} className="rounded-2xl border border-borderc bg-surface p-5">

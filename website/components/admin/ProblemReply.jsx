@@ -1,5 +1,6 @@
 "use client";
-import { useActionState, useState } from "react";
+import { useState } from "react";
+import { useActie } from "@/components/ui/useActie";
 import { replyProblemReport } from "@/app/beheer/actions";
 
 // Antwoorden op een probleemmelding, zonder de beheerpagina te verlaten.
@@ -12,7 +13,7 @@ import { replyProblemReport } from "@/app/beheer/actions";
 // tekstvak per melding te staan. Zolang je niet antwoordt, is er niets te zien.
 export default function ProblemReply({ id, email, naam }) {
   const [open, setOpen] = useState(false);
-  const [state, action, pending] = useActionState(async (_p, fd) => replyProblemReport(fd), null);
+  const [state, action, pending] = useActie(replyProblemReport, { stil: true });
 
   if (state?.ok) {
     return <p className="mt-2 text-xs font-bold text-accentdark">{state.message || `Antwoord verstuurd naar ${naam || email} ✓`}</p>;

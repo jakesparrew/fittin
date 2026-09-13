@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useActie } from "@/components/ui/useActie";
 import { useActionState } from "react";
 import { createActivationFull } from "@/app/beheer/activation-actions";
 
@@ -17,10 +18,9 @@ export default function ActivationWizard({ segments }) {
   const [name, setName] = useState("");
   const [activate, setActivate] = useState(true);
 
-  const [state, action, pending] = useActionState(async (_p, fd) => {
-    const r = await createActivationFull(fd);
-    return r || { ok: true };
-  }, null);
+  // Bij succes stuurt de actie door naar de campagne (redirect); een fout blijft hier staan én komt
+  // als melding in de hoek.
+  const [state, action, pending] = useActie(createActivationFull);
 
   const seg = segments.find((s) => s.key === trigger) || segments[0];
 

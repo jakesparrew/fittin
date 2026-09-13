@@ -15,7 +15,9 @@ export default function ToastHost() {
         import("@/lib/native/haptics").then((h) => (t.type === "error" ? h.hapticError() : h.hapticSuccess())).catch(() => {});
       }
       setToasts((ts) => [...ts, t]);
-      setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== t.id)), 4200);
+      // Een fout blijft langer staan dan een bevestiging. Een bevestiging lees je in één blik; een
+      // fout moet je lezen, en wie net wegkeek, mistte hem vroeger na 4,2 seconden volledig.
+      setTimeout(() => setToasts((ts) => ts.filter((x) => x.id !== t.id)), t.type === "error" ? 10000 : 4200);
     };
     window.addEventListener("fittin:toast", onToast);
     return () => window.removeEventListener("fittin:toast", onToast);

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getAdminContext } from "@/lib/admin";
 import { createProgram } from "../coaching-actions";
 import ListSearch from "@/components/admin/ListSearch";
+import ActionForm from "@/components/ui/ActionForm";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function Programmas({ searchParams }) {
       </div>
       <p className="mt-1 text-sm text-ink/50">Bouw trainingsschema's en wijs ze toe aan leden. Oefeningen kun je ook rechtstreeks in de bouwer toevoegen.</p>
 
-      <form action={createProgram} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-surface p-5">
+      <ActionForm action={createProgram} className="mt-6 flex flex-wrap items-end gap-3 rounded-2xl border border-borderc bg-surface p-5">
         <label className="block">
           <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Naam</span>
           <input name="name" placeholder="Upper / Lower" required className="w-52 rounded-xl border-2 border-borderc px-3 py-2 text-sm" />
@@ -45,7 +46,7 @@ export default async function Programmas({ searchParams }) {
           </select>
         </label>
         <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand">+ Nieuw programma</button>
-      </form>
+      </ActionForm>
 
       <div className="mt-6">
         <ListSearch placeholder="Zoek op programmanaam of lid…" className="w-full max-w-md" />
