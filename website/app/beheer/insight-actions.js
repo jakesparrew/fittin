@@ -30,6 +30,15 @@ async function requireBeheerder() {
   return { profile };
 }
 
+async function zitInReeks(admin, gymId, email, key) {
+  const { TARGET_DRIPS } = await import("@/lib/insight-mails");
+  const { data } = await admin.from("drip_enrollments")
+    .select("id, subscribers!inner(email), campaigns!inner(name, kind)")
+    .eq("gym_id", gymId).eq("subscribers.email", String(email).toLowerCase())
+    .eq("campaigns.kind", "drip_target").eq("campaigns.name", TARGET_DRIPS[key].naam).limit(1);
+  return (data || []).length > 0;
+}
+
 const PRESETS = {
   abo_voorstel: { bouw: buildAboVoorstel, succes: "Abo-voorstel verstuurd" },
   winback: { bouw: buildWinback, succes: "Comeback-mail verstuurd" },
@@ -75,6 +84,13 @@ export async function sendInsightPreset(formData) {
   const { data: sub } = await admin.from("subscribers")
     .select("unsub_token, status").eq("gym_id", profile.gym_id).eq("email", lid.email.toLowerCase()).maybeSingle();
   if (sub && sub.status !== "active") return { error: "Dit lid schreef zich uit voor mails." };
+
+  // De rekensom en de abo-reeks zijn twee vormen van dezelfde vraag. Wie al in de reeks zit, krijgt
+  // anders vier mails over het abo in acht dagen. Deze knop staat ook op de ledenlijst en de
+  // abonnementenpagina, waar de dashboardkaart niet meekijkt — dus de rem hoort hier.
+  if (String(formData.get("preset")) === "abo_voorstel" && await zitInReeks(admin, profile.gym_id, lid.email, "abo_reeks")) {
+    return { error: "Zit al in de abo-reeks — die stuurt zelf al de rekensom. Geen extra mail." };
+  }
 
   const extra = await ledenCijfers(admin, profile.gym_id, memberId);
   const mail = preset.bouw({ name: lid.full_name, ...extra, eindDatum: formData.get("eindDatum") || null });
@@ -137,6 +153,15 @@ export async function enrollInsightDrip(formData) {
   const { data: lid } = await admin.from("profiles").select("full_name, is_test").eq("id", memberId).eq("gym_id", profile.gym_id).single();
   if (!lid) return { error: "Lid niet gevonden." };
   if (lid.is_test) return { error: "Testaccount — geen mails sturen." };
+  if (reeks === "abo_reeks") {
+    const { data: eerder } = await admin.from("email_log").select("created_at")
+      .eq("to_user_id", memberId).eq("kind", "insight_abo_voorstel").not("status", "in", "(failed,bounced)")
+      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    if (eerder && !magOpnieuw(eerder.created_at)) {
+      const dag = new Intl.DateTimeFormat("nl-BE", { day: "numeric", month: "long" }).format(new Date(eerder.created_at));
+      return { error: `Kreeg op ${dag} al zijn rekensom — de reeks zou daar drie mails over hetzelfde bovenop zetten.` };
+    }
+  }
   const r = await enrollMemberInTargetDrip(profile.gym_id, memberId, reeks);
   if (r.error) return r;
   revalidatePath("/beheer");

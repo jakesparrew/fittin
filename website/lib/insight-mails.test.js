@@ -106,3 +106,33 @@ describe("teltVoorAbo", () => {
     expect(teltVoorAbo(null)).toBe(false);
   });
 });
+
+describe("een overtuigingskaart komt niet terug nadat je erop handelde", () => {
+  // 13-09: de beheerder zag Julio en Arne opnieuw als "Abo-kandidaat" staan, terwijl hij ze al
+  // gemaild had. De kaart verdween alleen via "Verberg"; na een mail bleef hij staan en nodigde hij
+  // uit tot een tweede klik — en na 30 dagen gaat de mailrem open.
+  const fs = require("node:fs");
+  const path = require("node:path");
+  const lees = (p) => fs.readFileSync(path.resolve(import.meta.dirname, "..", p), "utf8");
+
+  it("het dashboard filtert op wat er echt vertrok, niet alleen op 'Verberg'", () => {
+    const p = lees("app/beheer/page.jsx");
+    for (const kaart of ["pastdue", "opzeg", "abo_kandidaat"]) {
+      expect(p.includes(`open("${kaart}"`), kaart).toBe(true);
+    }
+    expect(p).toMatch(/from\("email_log"\)[\s\S]{0,120}like\("kind", "insight_%"\)/);
+    // drip_enrollments heeft geen created_at; met die kolom gaf PostgREST een fout en vond de
+    // reeks-check stilletjes niemand.
+    expect(p).toMatch(/gte\("enrolled_at"/);
+  });
+
+  it("afkappen op vijf gebeurt NA het wegfilteren", () => {
+    expect(lees("app/beheer/page.jsx")).toMatch(/filter\(\(\[uid\]\) => open\("abo_kandidaat", uid\)\)\.slice\(0, 5\)/);
+  });
+
+  it("rekensom en abo-reeks weten van elkaar — anders vier mails over hetzelfde", () => {
+    const a = lees("app/beheer/insight-actions.js");
+    expect(a).toMatch(/zitInReeks\(admin, profile\.gym_id, lid\.email, "abo_reeks"\)/);
+    expect(a).toMatch(/reeks === "abo_reeks"[\s\S]{0,200}insight_abo_voorstel/);
+  });
+});

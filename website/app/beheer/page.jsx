@@ -73,7 +73,7 @@ export default async function BeheerDashboard() {
     // rood na een fix). De berichten komen mee zodat omgevingsruis er hieronder uit valt.
     admin.from("client_errors").select("message, stack").is("resolved_at", null).gte("created_at", new Date(Date.now() - 24 * 3600000).toISOString()).limit(200),
     // Alle profielen (niet enkel leden) — de namen zijn ook nodig voor coach-actiepunten.
-    supabase.from("profiles").select("id, full_name, role, deletion_requested_at").eq("gym_id", gym.id),
+    supabase.from("profiles").select("id, full_name, email, role, deletion_requested_at").eq("gym_id", gym.id),
     // Alle bevestigde sessies (niet enkel de laatste 30 dagen): om te weten of iemand at-risk is
     // moeten we ook weten of hij ÓÓIT getraind heeft en of er nog iets in zijn agenda staat.
     supabase.from("bookings").select("user_id, starts_at").eq("gym_id", gym.id).eq("status", "bevestigd"),
@@ -178,7 +178,9 @@ export default async function BeheerDashboard() {
     if (!b.user_id || hasAbo.has(b.user_id) || !lidIds.has(b.user_id)) continue;
     if (teltVoorAbo(b)) payCount[b.user_id] = (payCount[b.user_id] || 0) + 1;
   }
-  const candidates = Object.entries(payCount).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  // Pas NA het wegfilteren van al-behandelde leden op vijf afkappen (zie `open` hieronder) — anders
+  // krimpt de lijst in plaats van dat de volgende kandidaat naar voren schuift.
+  const candidates = Object.entries(payCount).filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]);
 
   // Coaches met een negatief sessietegoed: ze boekten meer dan ze vooraf kochten → openstaand geld.
   const coachDebt = Object.entries(coachBal)
@@ -200,6 +202,40 @@ export default async function BeheerDashboard() {
     gesnoozed = new Set((sn || []).map((s) => `${s.kind}:${s.user_id}`));
   } catch {}
 
+  // Wie AL een overtuigingsmail of -reeks kreeg, hoort niet opnieuw als actiepunt te verschijnen.
+  //
+  // Tot 13-09 bleef de kaart gewoon staan nadat je op "Stuur zijn rekensom" klikte — alleen
+  // "Verberg" haalde hem weg. De mailrem (30 dagen, insight-actions.js) hield een tweede mail wel
+  // tegen, maar de kaart nodigde elke dag opnieuw uit tot klikken, en op dag 31 gaat die rem open.
+  // Arne kreeg zo drie keer dezelfde rekensom (29/08, 30/08, 02/09 — toen werkte de rem nog niet),
+  // en de beheerder had terecht het gevoel dat "die namen terugkomen".
+  //
+  // Afgeleid uit wat er ÉCHT vertrok, niet uit een extra vinkje: email_log voor de losse mail,
+  // drip_enrollments voor de reeks. Zestig dagen, zelfde termijn als "Verberg". Een mislukte of
+  // gebouncete mail telt niet — dan is er niets aangekomen en hoort de kaart te blijven.
+  const behandeld = new Set();
+  try {
+    const d60 = new Date(now.getTime() - 60 * 86400000).toISOString();
+    const [{ data: mails }, { data: reeksen }] = await Promise.all([
+      admin.from("email_log").select("to_user_id, kind")
+        .eq("gym_id", gym.id).like("kind", "insight_%").not("to_user_id", "is", null)
+        .not("status", "in", "(failed,bounced)").gte("created_at", d60),
+      admin.from("drip_enrollments").select("subscribers!inner(email), campaigns!inner(name, kind)")
+        .eq("gym_id", gym.id).eq("campaigns.kind", "drip_target").gte("enrolled_at", d60), // enrolled_at: created_at bestaat hier niet, en PostgREST geeft dan een fout i.p.v. een lege lijst
+    ]);
+    // Eén soort overtuiging per kaart: de losse mail en de reeks gaan over hetzelfde, dus wie een
+    // van beide kreeg, is voor die kaart behandeld. (Anders: rekensom + 3 reeksmails = 4 mails.)
+    const KAART = { insight_abo_voorstel: "abo_kandidaat", insight_pastdue: "pastdue", insight_opzeg: "opzeg",
+      "Abo-reeks (gericht)": "abo_kandidaat" };
+    for (const m of mails || []) if (KAART[m.kind]) behandeld.add(`${KAART[m.kind]}:${m.to_user_id}`);
+    const uidVanMail = new Map((lidRows || []).filter((m) => m.email).map((m) => [m.email.toLowerCase(), m.id]));
+    for (const r of reeksen || []) {
+      const uid = uidVanMail.get(String(r.subscribers?.email || "").toLowerCase());
+      if (uid && KAART[r.campaigns?.name]) behandeld.add(`${KAART[r.campaigns.name]}:${uid}`);
+    }
+  } catch {}
+  const open = (kind, uid) => !gesnoozed.has(`${kind}:${uid}`) && !behandeld.has(`${kind}:${uid}`);
+
   const personActions = [
     ...deletionRequests.map((m) => {
       const dagen = Math.floor((Date.now() - new Date(m.deletion_requested_at).getTime()) / 86400000);
@@ -216,7 +252,7 @@ export default async function BeheerDashboard() {
       sub: `Nieuwe boekingen zijn voor deze coach geblokkeerd tot het saldo is aangezuiverd. Op zijn dashboard staat een "Betaal achterstand"-knop — een aankoop vult eerst de put aan.`,
       href: "/beheer/coaches",
     })),
-    ...pastDue.filter((m) => !gesnoozed.has(`pastdue:${m.user_id}`)).map((m) => ({
+    ...pastDue.filter((m) => open("pastdue", m.user_id)).map((m) => ({
       icon: "💳", tone: "warn",
       title: `Spreek ${nameOf.get(m.user_id) || "lid"} aan — abo-betaling mislukt`,
       sub: `Stripe probeert opnieuw; tot dan boekt ${nameOf.get(m.user_id) || "het lid"} weer aan € 15${bkCount[m.user_id] ? ` (${bkCount[m.user_id]} sessies in 60d)` : ""}.`,
@@ -227,7 +263,7 @@ export default async function BeheerDashboard() {
         { type: "snooze", kind: "pastdue", dagen: 14, label: "Verberg 14 d" },
       ],
     })),
-    ...ending.filter((m) => !gesnoozed.has(`opzeg:${m.user_id}`)).map((m) => ({
+    ...ending.filter((m) => open("opzeg", m.user_id)).map((m) => ({
       icon: "👋", tone: "warn",
       title: `${nameOf.get(m.user_id) || "Lid"} zegde het abo op`,
       sub: `Loopt af op ${m.current_period_end ? dag(m.current_period_end) : "einde periode"} — vraag waarom en probeer te behouden.`,
@@ -239,7 +275,7 @@ export default async function BeheerDashboard() {
         { type: "snooze", kind: "opzeg", dagen: 60, label: "Verberg" },
       ],
     })),
-    ...candidates.filter(([uid]) => !gesnoozed.has(`abo_kandidaat:${uid}`)).map(([uid, n]) => ({
+    ...candidates.filter(([uid]) => open("abo_kandidaat", uid)).slice(0, 5).map(([uid, n]) => ({
       icon: "⭐", tone: "tip",
       title: `Abo-kandidaat: ${nameOf.get(uid)}`,
       sub: `${n} sessies (los/kaart) in 60 dagen zonder abo. De mail hieronder rekent het vóór met zijn eigen cijfers; de reeks stuurt 3 mails over 8 dagen. Max. 1× per 30 dagen per lid.`,
