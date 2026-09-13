@@ -18,17 +18,22 @@ export default async function CampaignDetail({ params }) {
   const { data: c } = await supabase.from("campaigns").select("*").eq("id", id).eq("gym_id", gym.id).single();
   if (!c) return <div className="px-4 py-6 md:px-8 md:py-8">Campagne niet gevonden. <Link href="/beheer/nieuwsbrief" className="text-accentdark">Terug</Link></div>;
 
-  const isDrip = c.kind === "drip";
+  // Een gerichte reeks is een drip, met één groot verschil: je zet er mensen BEWUST in, vanaf een
+  // dashboardkaart of de ledenlijst. "Alle huidige abonnees inschrijven" zou hier honderden leden een
+  // abo-verkooppraatje sturen. Die knoppen verdwijnen dus, en in de plaats staat wíé erin zit.
+  const gericht = c.kind === "drip_target";
+  const isDrip = c.kind === "drip" || gericht;
   const { count: subCount } = await supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "active");
 
-  let steps = [], stepStats = {}, enrolled = 0, completed = 0, active = 0;
+  let steps = [], stepStats = {}, enrolled = 0, completed = 0, active = 0, deelnemers = [];
   if (isDrip) {
     const [{ data: s }, { data: sends }, { data: enrRows }] = await Promise.all([
       supabase.from("campaign_steps").select("*").eq("campaign_id", id).order("step_no"),
       supabase.from("campaign_sends").select("step_id, status, opened_at").eq("campaign_id", id),
-      supabase.from("drip_enrollments").select("status").eq("campaign_id", id),
+      supabase.from("drip_enrollments").select("status, enrolled_at, subscribers(email, name)").eq("campaign_id", id).order("enrolled_at", { ascending: false }),
     ]);
     steps = s || [];
+    deelnemers = enrRows || [];
     enrolled = (enrRows || []).length;
     completed = (enrRows || []).filter((e) => e.status === "completed").length;
     active = (enrRows || []).filter((e) => e.status === "active").length;
@@ -45,7 +50,7 @@ export default async function CampaignDetail({ params }) {
       <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-black text-ink">{c.name}</h1>
-          <p className="text-sm text-ink/50">{isDrip ? "Drip-campagne" : "Nieuwsbrief"} · status: {c.status}</p>
+          <p className="text-sm text-ink/50">{gericht ? "Gerichte reeks" : isDrip ? "Drip-campagne" : "Nieuwsbrief"} · status: {c.status}</p>
         </div>
         <ConfirmSubmit action={deleteCampaign} id={c.id} confirm="Deze campagne verwijderen?" label="Verwijderen" danger />
       </div>
@@ -118,7 +123,9 @@ export default async function CampaignDetail({ params }) {
               <Stat label="Voltooid" value={completed} bare />
             </div>
             <div className="ml-auto flex items-center gap-2">
-              {c.status !== "active" ? (
+              {gericht ? (
+                <p className="text-xs text-ink/50">Mensen komen hierin via <b>Start abo-reeks</b> of <b>Start comeback-reeks</b> op een dashboardkaart of de ledenlijst.</p>
+              ) : c.status !== "active" ? (
                 <>
                   <ActionForm action={setDripStatus} success="Bijgewerkt ✓"><input type="hidden" name="id" value={c.id} /><input type="hidden" name="status" value="active" /><button className="rounded-full bg-accent px-4 py-2 text-sm font-bold text-brand">Activeren (nieuwe inschrijvingen)</button></ActionForm>
                   <ConfirmSubmit action={enrollAllInDrip} id={c.id} confirm={`Alle ${subCount || 0} huidige abonnees nu in deze drip inschrijven?`} label="+ Alle huidige abonnees" />
@@ -128,6 +135,28 @@ export default async function CampaignDetail({ params }) {
               )}
             </div>
           </div>
+
+          {gericht && (
+            <div className="mt-6 overflow-x-auto rounded-2xl border border-borderc bg-surface p-5">
+              <p className="font-black text-ink">Wie zit erin</p>
+              {deelnemers.length === 0 ? (
+                <p className="mt-2 text-sm text-ink/50">Nog niemand.</p>
+              ) : (
+                <table className="mt-3 w-full text-sm">
+                  <tbody className="divide-y divide-borderc">
+                    {deelnemers.map((d, i) => (
+                      <tr key={i}>
+                        <td className="py-2 pr-3 font-bold text-ink">{d.subscribers?.name || "—"}</td>
+                        <td className="py-2 pr-3 text-ink/60">{d.subscribers?.email}</td>
+                        <td className="py-2 pr-3 text-xs text-ink/50">{d.status === "completed" ? "Voltooid" : d.status === "cancelled" ? "Gestopt" : "Bezig"}</td>
+                        <td className="py-2 text-right text-xs text-ink/40">{fmt(d.enrolled_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
 
           {/* Funnel — hoeveel mensen elke stap bereikten */}
           {steps.length > 0 && enrolled > 0 && (

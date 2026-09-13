@@ -23,7 +23,10 @@ export default async function Newsletter() {
 
   const [{ count: subActive }, { data: campaigns }] = await Promise.all([
     supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "active"),
-    supabase.from("campaigns").select("*").eq("gym_id", gym.id).in("kind", ["newsletter", "drip"]).order("created_at", { ascending: false }),
+    // drip_target = de abo- en comeback-reeks die je vanuit een dashboardkaart start. Die stonden
+    // nergens: niet hier, niet bij Activatie. Ze vertrokken wel (18 leden in de comeback-reeks op
+    // 13-09), maar wie erin zat, was nergens na te kijken.
+    supabase.from("campaigns").select("*").eq("gym_id", gym.id).in("kind", ["newsletter", "drip", "drip_target"]).order("created_at", { ascending: false }),
   ]);
 
   const sentCampaigns = (campaigns || []).filter((c) => c.kind === "newsletter" && c.status === "sent");
@@ -106,7 +109,7 @@ export default async function Newsletter() {
                     <Link href={`/beheer/nieuwsbrief/${c.id}`} className="font-bold text-ink hover:text-accentdark">{c.name}</Link>
                     {c.subject && <p className="text-xs text-ink/45">{c.subject}</p>}
                   </td>
-                  <td className="px-5 py-3"><span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-ink/70">{c.kind === "drip" ? "Drip" : "Nieuwsbrief"}</span></td>
+                  <td className="px-5 py-3"><span className="rounded-full bg-paper px-2.5 py-0.5 text-xs font-bold text-ink/70">{c.kind === "drip" ? "Drip" : c.kind === "drip_target" ? "Gerichte reeks" : "Nieuwsbrief"}</span></td>
                   <td className="px-5 py-3"><span className={"rounded-full px-2.5 py-0.5 text-xs font-bold " + cls}>{label}</span></td>
                   <td className="px-5 py-3 text-right font-bold text-ink">{c.sent || 0}</td>
                   <td className="px-5 py-3 text-right text-ink/70">{pct(c.opened, c.sent)}</td>
