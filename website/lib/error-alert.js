@@ -19,6 +19,8 @@ import { sendErrorAlert } from "@/lib/email";
 export const RECIPIENTS = (process.env.ERROR_ALERT_EMAILS || "gaetanjansseune@gmail.com")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
+export const MOMENT_MS = 10_000;
+
 export async function alertNewClientErrors(admin) {
   const { data: rows } = await admin
     .from("client_errors")
@@ -41,9 +43,17 @@ export async function alertNewClientErrors(admin) {
   for (const r of rows) {
     if (classifyClientError(r.message, r.stack) !== "app") continue;
     const key = `${r.message}|${r.path}`;
-    if (!groups.has(key)) groups.set(key, { message: r.message, path: r.path, stack: r.stack, count: 0, users: new Set(), first: r.created_at });
+    if (!groups.has(key)) groups.set(key, { message: r.message, path: r.path, stack: r.stack, count: 0, momenten: 0, laatst: null, users: new Set(), first: r.created_at });
     const g = groups.get(key);
     g.count++;
+    // MOMENTEN, niet rijen. Eén haperende pagina vuurt dezelfde fout vaak tientallen keren in een
+    // fractie van een seconde (webpack probeert elke module die ervan afhangt opnieuw). Op 13-09
+    // meldde de mail "Murat loopt vast — al 8×" terwijl het acht rijen binnen 0,65 s waren: één
+    // moment, en hij boekte een kwartier later gewoon. Rijen die minder dan tien seconden na de
+    // vorige komen, horen bij hetzelfde moment. (Rijen komen gesorteerd op tijd binnen.)
+    const t = new Date(r.created_at).getTime();
+    if (g.laatst === null || t - g.laatst > MOMENT_MS) g.momenten++;
+    g.laatst = t;
     if (r.user_id) g.users.add(r.user_id);
   }
 
@@ -57,7 +67,7 @@ export async function alertNewClientErrors(admin) {
   // De rest gaat niet verloren: die staat gewoon op /beheer/meldingen, en de laatste mail vertelt
   // hoeveel er nog wachten.
   const MAX_ALARMEN = 5;
-  const alle = [...groups.values()].sort((a, b) => b.count - a.count); // luidste fout eerst
+  const alle = [...groups.values()].sort((a, b) => b.momenten - a.momenten || b.count - a.count); // vaakst opnieuw eerst
   const sturen = alle.slice(0, MAX_ALARMEN);
   const rest = alle.length - sturen.length;
 
@@ -77,7 +87,7 @@ export async function alertNewClientErrors(admin) {
           message: g.message,
           path: g.path,
           stack: (g.stack || "") + staart,
-          count: g.count,
+          count: g.momenten,
           userNames: wie,
           firstSeen: g.first,
         });

@@ -68,11 +68,25 @@ describe("alarmmails bij clientfouten", () => {
 
   it("meldt de luidste fout eerst", async () => {
     const rijen = [
-      ...Array.from({ length: 9 }, (_, i) => ({ id: `veel-${i}`, message: "Veelvoorkomend", stack: "s", path: "/a", created_at: "2026-01-01", user_id: null })),
+      // Negen keer op negen verschillende minuten: negen momenten.
+      ...Array.from({ length: 9 }, (_, i) => ({ id: `veel-${i}`, message: "Veelvoorkomend", stack: "s", path: "/a", created_at: `2026-01-01T10:0${i}:00Z`, user_id: null })),
       { id: "zeldzaam", message: "Zeldzaam", stack: "s", path: "/b", created_at: "2026-01-01", user_id: null },
     ];
     await alertNewClientErrors(nepAdmin(rijen));
     expect(verstuurd[0].message).toBe("Veelvoorkomend");
     expect(verstuurd[0].count).toBe(9);
+  });
+
+  it("telt een salvo binnen enkele seconden als ÉÉN keer, niet als acht", async () => {
+    // 13-09: acht rijen binnen 0,65 s werden "Murat loopt vast — al 8×". Het was één moment, en
+    // hij boekte een kwartier later gewoon. Een teller die salvo's optelt, overdrijft het alarm.
+    const t0 = Date.parse("2026-09-13T10:13:28Z");
+    const salvo = Array.from({ length: 8 }, (_, i) => ({ id: `s-${i}`, message: "boem", stack: "s", path: "/boeken",
+      created_at: new Date(t0 + i * 90).toISOString(), user_id: null }));
+    const later = { id: "l", message: "boem", stack: "s", path: "/boeken", created_at: new Date(t0 + 60_000).toISOString(), user_id: null };
+    await alertNewClientErrors(nepAdmin(salvo));
+    expect(verstuurd.at(-1).count).toBe(1);
+    await alertNewClientErrors(nepAdmin([...salvo, later]));
+    expect(verstuurd.at(-1).count).toBe(2);
   });
 });
