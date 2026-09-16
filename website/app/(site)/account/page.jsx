@@ -14,6 +14,7 @@ import { resumeCheckoutAction } from "../boeken/actions";
 import { openBillingPortal } from "../lidmaatschap/actions";
 import DoorButton from "@/components/DoorButton";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
+import { groepeerOpenBetalingen } from "@/lib/mand";
 import NextSessionTimer from "@/components/NextSessionTimer";
 import BookingBuddies from "@/components/booking/BookingBuddies";
 import BuddyJoin from "@/components/booking/BuddyJoin";
@@ -128,7 +129,7 @@ export default async function AccountPage({ searchParams }) {
     { data: weights },
   ] = await Promise.all([
     supabase.rpc("expire_unpaid_bookings", { p_gym: profile.gym_id }),
-    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, payment_source, paid, created_at, nuki_code, nuki_cleaned, access_sent, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
+    supabase.from("bookings").select("id, starts_at, ends_at, status, persons, price_cents, charge_cents, payment_source, paid, created_at, nuki_code, nuki_cleaned, access_sent, order_id, services(name,type)").eq("user_id", user.id).order("starts_at", { ascending: true }),
     supabase.rpc("credits_balance_detail", { p_user: user.id }),
     supabase.from("memberships").select("status, current_period_end, cancel_at_period_end").eq("user_id", user.id).in("status", ["actief", "past_due"]),
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, nuki_code, nuki_cleaned, access_sent, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
@@ -245,14 +246,14 @@ export default async function AccountPage({ searchParams }) {
   const gymAddress = gym?.address || "Aannemersstraat 186, 9040 Gent";
   // Pending payment: bevestigde maar onbetaalde 'los'-boekingen. De reservering duurt 15 min
   // (0121) — daarna geeft de sweep het uur weer vrij, zodat niemand slots kan blokkeren.
-  const pendingPay = upcoming
-    .filter((b) => !b.paid && (b.payment_source === "los" || b.payment_source === "abo") && b.price_cents > 0)
-    .map((b) => ({
-      id: b.id,
-      name: b.services?.name || "Sessie",
-      price: b.price_cents,
-      deadline: new Date(new Date(b.created_at).getTime() + 15 * 60000).toISOString(),
-    }));
+  // Eén blok per MAND (0164): een mand van drie momenten is één betaling, niet drie knoppen "Betaal nu € 15" die elk
+  // de gedeelde betaling zouden splitsen.
+  // Uit ÁLLE rijen, niet uit `upcoming`: een mand met een moment dat al begon, wordt bij hervatten volledig
+  // aangerekend. Uit `upcoming` toonde de banner dan minder dan Stripe vroeg (review #12). Vervallen rijen houden de
+  // sweep bovenaan en het deadlinefilter in de banner er al uit.
+  const pendingPay = groepeerOpenBetalingen(
+    all.filter((b) => b.status === "bevestigd" && !b.paid && (b.payment_source === "los" || b.payment_source === "abo") && b.price_cents > 0)
+  );
   const history = all
     .filter((b) => !(b.status === "bevestigd" && new Date(b.starts_at).getTime() >= now))
     .reverse(); // nieuwste eerst (all staat chronologisch)
@@ -302,6 +303,13 @@ export default async function AccountPage({ searchParams }) {
             Alle cancel_urls in de app wijzen intussen naar ?betaling=afgebroken (boeken,
             lidmaatschap, community-events en coach-betaalverzoeken); coaches krijgen dezelfde
             melding op /coach, want deze pagina stuurt hen mét querystring door. */}
+        {/* Afrekenen gevraagd terwijl de vorige betaling al onderweg was (trage bank-app, webhook nog niet binnen).
+            Er wordt dan bewust GEEN tweede betaallink gemaakt — zo kon een lid vroeger twee keer betalen. */}
+        {sp.betaling === "verwerkt" && (
+          <p className="mb-6 rounded-2xl border border-borderc bg-surface p-4 text-sm text-ink/70">
+            Je betaling wordt nog verwerkt — je hoeft niets opnieuw te betalen. Ververs deze pagina over een minuutje.
+          </p>
+        )}
         {sp.betaling === "afgebroken" && (
           <p className="mb-6 rounded-2xl border border-borderc bg-surface p-4 text-sm text-ink/70">
             {pendingPay.length > 0 ? (
@@ -765,7 +773,7 @@ export default async function AccountPage({ searchParams }) {
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {!b.paid && b.payment_source !== "gratis_code" && (
+                    {!b.paid && b.payment_source !== "gratis_code" && (!b.order_id || pendingPay.some((g) => g.id === b.id)) && (
                       <form action={resumeCheckoutAction}>
                         <input type="hidden" name="bookingId" value={b.id} />
                         <button className="rounded-full bg-accent px-5 py-2.5 text-sm font-bold text-brand transition hover:opacity-90">

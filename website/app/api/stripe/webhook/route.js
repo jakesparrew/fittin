@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { stripe, isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendBookingConfirmation, sendEventSignup, sendMembershipPaymentFailed, sendMembershipCancelled, sendPaymentRefunded, sendPurchaseReceipt } from "@/lib/email";
+import { sendBookingConfirmation, sendBookingsConfirmation, sendEventSignup, sendMembershipPaymentFailed, sendMembershipCancelled, sendPaymentRefunded, sendPurchaseReceipt } from "@/lib/email";
 import { sendBookingInvites } from "@/lib/booking-invites";
 import { recordRedemption } from "@/lib/discounts";
 import { neemFacturatieOverVanStripe } from "@/lib/invoice";
 import { sess } from "@/lib/format"; // halve beurten (1,5) in Vlaamse notatie op de bon
+import { rekenMandAf, boekDeelterugbetalingen } from "@/lib/mand-afrekenen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,6 +46,33 @@ export async function POST(req) {
     return new NextResponse("handler error, will retry", { status: 500 });
   }
   return NextResponse.json({ received: true });
+}
+
+// Wat lib/mand-afrekenen.js van buitenaf nodig heeft. Daar staat de logica; hier enkel de echte databank, Stripe en mail.
+function mandDeps(admin) {
+  return {
+    admin,
+    stripe,
+    stuurBevestiging: async ({ userId, ...rest }) => {
+      const { data: m } = await admin.from("profiles").select("email, full_name").eq("id", userId).single();
+      if (m?.email) await sendBookingsConfirmation({ to: m.email, name: m.full_name, ...rest });
+    },
+    meldLid: async (gymId, userId, { titel, tekst }) => {
+      await admin.from("notifications").insert({ gym_id: gymId, user_id: userId, type: "system", title: titel, body: tekst, link: "/account" });
+    },
+    meldBeheer: async (gymId, tekst) => {
+      const { data: beheer } = await admin.from("profiles").select("id").eq("gym_id", gymId).eq("role", "beheerder");
+      for (const b of beheer || []) {
+        await admin.from("notifications").insert({ gym_id: gymId, user_id: b.id, type: "system", title: "Controleer een mandbetaling", body: tekst, link: "/beheer/betalingen" });
+      }
+    },
+    beloonAanbreng: async (userId) => { if (userId) await admin.rpc("reward_pending_referral", { p_user: userId }); },
+    registreerKorting: async (gymId, codeId, userId, bookingId) => {
+      if (!codeId || !userId || !bookingId) return;
+      const { data: al } = await admin.from("discount_redemptions").select("id").eq("code_id", codeId).eq("booking_id", bookingId).maybeSingle();
+      if (!al) await recordRedemption(gymId, codeId, userId, bookingId);
+    },
+  };
 }
 
 async function profileFromCustomer(admin, customerId) {
@@ -295,6 +323,20 @@ async function handleRefund(admin, charge) {
     // gerefund bedrag als omzet meetellen in /beheer/betalingen en /beheer/financien.
     if (refs.length) {
       try { await admin.from("payments").update({ status: "refunded" }).in("stripe_id", refs); } catch (e) { console.error("refund: payments status not updated:", e?.message); }
+      // Een betaling die eerst DEELS en daarna volledig terugbetaald werd, heeft al negatieve rijen. De oorspronkelijke
+      // rij staat nu op 'refunded' en telt niet meer mee; dan mogen de negatieve rijen ook niet meer meetellen, anders
+      // zakt de omzet onder nul. Opzoeken via de refund-id's van DÉZE betaling, niet via order_id: een losse
+      // boeking heeft geen order_id, en een mand kan meerdere betalingen hebben (review #7/#14).
+      if (pi) {
+        try {
+          const alle = await stripe.refunds.list({ payment_intent: pi, limit: 100 });
+          const ids = (alle?.data || []).map((r) => r.id);
+          if (ids.length) {
+            const { error } = await admin.from("payments").update({ status: "refunded" }).in("stripe_id", ids).lt("amount_cents", 0).eq("status", "betaald");
+            if (error) console.error("refund: negatieve rijen niet bijgewerkt:", error.message);
+          }
+        } catch (e) { console.error("refund: negatieve rijen:", e?.message); }
+      }
     }
     // Tell the member their money is on its way back (previously: nothing — they might still show up).
     try {
@@ -306,9 +348,18 @@ async function handleRefund(admin, charge) {
     } catch (e) { console.error("refund notice:", e?.message); }
   }
 
+  // Gedeeltelijk: elke refund als negatieve betaalrij boeken. Zelf niets annuleren — wie terugbetaalde (beheer of de
+  // mand-afrekening) annuleerde de boeking al. Enkel een deelrefund die niet van ons komt (via het Stripe-dashboard)
+  // vraagt nog een blik van de beheerder.
+  let vanOns = false;
+  if (!fully) {
+    const { zonderHerkomst, geboekt } = await boekDeelterugbetalingen({ admin, stripe }, charge);
+    vanOns = geboekt > 0 && zonderHerkomst === 0;
+  }
+
   try {
     const { data: gym } = await admin.from("gyms").select("id").order("created_at").limit(1).single();
-    if (gym) {
+    if (gym && !vanOns) {
       const amt = ((charge.amount_refunded || 0) / 100).toFixed(2);
       const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", gym.id).eq("role", "beheerder");
       for (const a of admins || []) {
@@ -409,6 +460,9 @@ async function handleEvent(event, admin) {
         }
       } else if (obj.metadata?.kind === "welcome" || obj.mode === "setup") {
         await handleWelcomeSetup(admin, obj);
+      } else if (obj.metadata?.kind === "booking_order") {
+        // Meerdere momenten in één betaling (0164). Gooit bij elke databankfout → 500 → Stripe probeert opnieuw.
+        await rekenMandAf(mandDeps(admin), obj);
       } else if (obj.metadata?.booking_id) {
         await markBookingPaid(admin, obj.metadata.booking_id, obj.payment_intent, obj);
       }
@@ -527,6 +581,22 @@ async function handleEvent(event, admin) {
     case "charge.refunded":
       await handleRefund(admin, obj);
       return;
+    case "charge.refund.updated": {
+      // Een terugbetaling via Bancontact of PayPal kan achteraf MISLUKKEN. Dan staat er een negatieve betaalrij voor
+      // geld dat nooit terugging, en weet niemand dat het lid nog wacht. ⚠ Dit event moet in het Stripe-dashboard
+      // aan het webhook-endpoint toegevoegd worden.
+      if (obj.status === "failed") {
+        await admin.from("payments").update({ status: "mislukt" }).eq("stripe_id", obj.id);
+        const { data: gym } = await admin.from("gyms").select("id").order("created_at").limit(1).single();
+        if (gym) {
+          const { data: beheer } = await admin.from("profiles").select("id").eq("gym_id", gym.id).eq("role", "beheerder");
+          for (const b of beheer || []) {
+            await admin.from("notifications").insert({ gym_id: gym.id, user_id: b.id, type: "system", title: `Terugbetaling € ${((obj.amount || 0) / 100).toFixed(2).replace(".", ",")} MISLUKT`, body: "Stripe kon het geld niet terugstorten. Stort het handmatig terug (overschrijving).", link: "/beheer/betalingen" });
+          }
+        }
+      }
+      return;
+    }
     case "charge.dispute.created": {
       // Chargeback opened — the owner must respond within Stripe's deadline or lose by default.
       // NOTE: this event must also be enabled on the webhook endpoint in the Stripe dashboard.

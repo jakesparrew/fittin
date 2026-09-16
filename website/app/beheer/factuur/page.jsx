@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { factuurLijnen, factuurTitel } from "@/lib/factuur-lijnen";
 import { getAdminContext } from "@/lib/admin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import PrintButton from "@/components/PrintButton";
@@ -30,7 +31,7 @@ export default async function FactuurPage({ searchParams }) {
   if (sp.payment) {
     const { data: p } = await admin
       .from("payments")
-      .select("id, amount_cents, kind, description, created_at, user_id, member:profiles!payments_user_id_fkey(full_name, email, role, bill_company, bill_vat, bill_address)")
+      .select("id, amount_cents, kind, description, created_at, user_id, stripe_id, order_id, member:profiles!payments_user_id_fkey(full_name, email, role, bill_company, bill_vat, bill_address)")
       .eq("id", sp.payment).eq("gym_id", gym.id).single();
     if (!p) return <Missing />;
     const { data: assignedNo } = await supabase.rpc("assign_invoice_no", { p_payment: sp.payment });
@@ -47,9 +48,10 @@ export default async function FactuurPage({ searchParams }) {
       };
     } else {
       props = {
-        title: "Factuur", number, dateLabel: fmtDate(p.created_at), supplyLabel: fmtShort(p.created_at),
+        title: factuurTitel(p), number, dateLabel: fmtDate(p.created_at), supplyLabel: fmtShort(p.created_at),
         billTo: { name: m.full_name || "Lid", email: m.email },
-        lines: [{ desc: p.description || KIND[p.kind] || "Dienst", sub: fmtShort(p.created_at), qty: 1, gross: p.amount_cents || 0 }],
+        // Een mand: één regel per sessie met haar datum (lib/factuur-lijnen.js).
+        lines: await factuurLijnen(admin, p, fmtShort),
         vatRate: MEMBER_VAT_RATE, vatNote: gym.invoice_footer || "Sportvereniging zonder winstoogmerk — 6% btw op sportdiensten.",
       };
     }

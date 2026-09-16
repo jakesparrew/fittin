@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { factuurLijnen, factuurTitel } from "@/lib/factuur-lijnen";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -21,7 +22,7 @@ export default async function MemberFactuur({ params }) {
   const admin = createAdminClient();
   const { data: p } = await admin
     .from("payments")
-    .select("id, amount_cents, kind, description, created_at, user_id, gym_id, member:profiles!payments_user_id_fkey(full_name, email, bill_company, bill_vat, bill_address)")
+    .select("id, amount_cents, kind, description, created_at, user_id, gym_id, stripe_id, order_id, member:profiles!payments_user_id_fkey(full_name, email, bill_company, bill_vat, bill_address)")
     .eq("id", id).single();
   if (!p || p.user_id !== user.id) return <Missing />; // only your own payment
 
@@ -31,6 +32,7 @@ export default async function MemberFactuur({ params }) {
   const { data: assignedNo } = await supabase.rpc("assign_invoice_no", { p_payment: id });
   const number = assignedNo || "F-" + String(p.id).slice(0, 8).toUpperCase();
   const m = p.member || {};
+  const lines = await factuurLijnen(admin, p, fmtShort);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 md:px-6">
@@ -39,10 +41,10 @@ export default async function MemberFactuur({ params }) {
         <PrintButton />
       </div>
       <Invoice
-        gym={gym} title="Factuur" number={number}
+        gym={gym} title={factuurTitel(p)} number={number}
         dateLabel={fmtDate(p.created_at)} supplyLabel={fmtShort(p.created_at)}
         billTo={{ name: m.full_name || "Klant", company: m.bill_company, vat: m.bill_vat, address: m.bill_address, email: m.email }}
-        lines={[{ desc: p.description || KIND[p.kind] || "Dienst", sub: fmtShort(p.created_at), qty: 1, gross: p.amount_cents || 0 }]}
+        lines={lines}
         vatRate={MEMBER_VAT_RATE} vatNote="Bedragen zijn inclusief 6% btw. Sportvereniging zonder winstoogmerk."
       />
     </div>

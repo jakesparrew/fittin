@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createBookingAction, searchMembersAction, validateDiscountAction, toggleWaitlistAction, recoverBookingAction } from "@/app/(site)/boeken/actions";
+import { createBookingAction, createBookingsAction, searchMembersAction, validateDiscountAction, toggleWaitlistAction, recoverBookingAction } from "@/app/(site)/boeken/actions";
+import { MAX_MOMENTEN } from "@/lib/mand";
 import { slotInstant, brusselsDateStr, slotRangeLabel, fmtHour } from "@/lib/time";
 import { isNetworkError, waitForNetwork } from "@/lib/net";
 // sess() formatteert halve beurten met een komma (1,5). Deze import ONTBRAK terwijl sess() al in de
@@ -58,10 +59,18 @@ export default function BookingClient({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [confirmed, setConfirmed] = useState(null);
+  // Meerdere momenten in één keer (0164). Bewust een aparte MODUS en geen omgebouwde selectie: staat ze uit, dan is
+  // dit exact het pad van één moment, met buddies, uitnodigingen en het gratis eerste uur. Staat ze aan, dan zet
+  // elke klik een moment in de mand of haalt het er weer uit.
+  const [meerdere, setMeerdere] = useState(false);
+  const [momenten, setMomenten] = useState([]); // [{ dateStr, hour }], gesorteerd op tijd
+  // Idempotentiesleutel per indiening: een retry na een weggevallen verbinding krijgt dezelfde mand terug.
+  const mandSleutel = useRef(null);
 
   const service = services.find((s) => s.id === serviceId) || services[0];
   const isFit60 = service?.type === "fit60";
   const isPT = service?.type === "pt";
+  const multi = !!isLoggedIn && isFit60 && meerdere;
   // Booking horizon (in weeks) is a membership perk: members plan up to 8 weeks out, others 2.
   // Let op: dit is een week-OFFSET vanaf de huidige week, dus 7 = de 8e week. Met 8 kon een member
   // door negen weken bladeren terwijl de hele site "8 weken" belooft.
@@ -155,12 +164,60 @@ export default function BookingClient({
     return true;
   }
 
+  // ---- de mand ----
+  const momentKey = (dateStr, h) => slotInstant(dateStr, h).getTime();
+  const DUUR_MS = duration * 3600000;
+  // Welk gekozen moment bedekt dit halfuur? Een klik óp een gekozen sessie (ook op haar tweede halfuur) haalt ze weg.
+  const dekkend = (dateStr, h) => momenten.find((m) => m.dateStr === dateStr && h >= m.hour && h < m.hour + duration);
+  // Past een nieuw moment in de mand? De halfuren van de andere gekozen momenten tellen als bezet.
+  // Eén keer per mand uitgerekend: pastInMand draait voor elke roostercel, en slotInstant bouwt telkens een
+  // Intl.DateTimeFormat — per cel alle momenten omrekenen gaf ~2.700 constructies per tik (review #13).
+  const mandStarts = useMemo(() => momenten.map((m) => slotInstant(m.dateStr, m.hour).getTime()), [momenten]);
+  function pastInMand(dateStr, h) {
+    if (!canBook(dateStr, h, duration)) return false;
+    const start = momentKey(dateStr, h);
+    return !mandStarts.some((s0) => start < s0 + DUUR_MS && s0 < start + DUUR_MS);
+  }
+  const momentTekst = (m) =>
+    `${new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short" }).format(slotInstant(m.dateStr, m.hour))} · ${slotRangeLabel(m.hour, duration * 60)}`;
+  function kies(dateStr, h) {
+    track("booking_slot_chosen");
+    if (!multi) { setSelected({ dateStr, hour: h }); return; }
+    mandSleutel.current = null; // een andere mand is een nieuwe indiening
+    setError("");
+    const al = dekkend(dateStr, h);
+    if (al) { setMomenten((l) => l.filter((m) => m !== al)); return; }
+    if (momenten.length >= MAX_MOMENTEN) { toast("error", `Maximaal ${MAX_MOMENTEN} momenten in één keer.`); return; }
+    if (!pastInMand(dateStr, h)) { toast("error", "Dat moment overlapt met een moment dat je al koos."); return; }
+    setMomenten((l) => [...l, { dateStr, hour: h }].sort((a, b) => momentKey(a.dateStr, a.hour) - momentKey(b.dateStr, b.hour)));
+  }
+  // Een langere duur kan gekozen momenten laten overlappen of voorbij sluitingstijd laten lopen. Die vallen dan weg —
+  // met een melding, nooit stil.
+  useEffect(() => {
+    if (!momenten.length) return;
+    const ok = [];
+    for (const m of momenten) {
+      const s0 = momentKey(m.dateStr, m.hour);
+      const botst = ok.some((o) => { const o0 = momentKey(o.dateStr, o.hour); return s0 < o0 + DUUR_MS && o0 < s0 + DUUR_MS; });
+      if (!botst && canBook(m.dateStr, m.hour, duration)) ok.push(m);
+    }
+    if (ok.length !== momenten.length) {
+      setMomenten(ok);
+      toast("info", `${momenten.length - ok.length} moment${momenten.length - ok.length === 1 ? "" : "en"} viel${momenten.length - ok.length === 1 ? "" : "en"} weg: niet meer vrij of past niet met deze duur.`);
+    }
+    // Ook na een refresh: een moment dat intussen door iemand anders geboekt is, mag niet in de mand blijven
+    // staan — in het rooster is die cel dan "wachtlijst" en kan het lid het niet meer weghalen (review #11).
+  }, [duration, takenSet]);
+
   // De duur waarop het ROOSTER moet toetsen. Sinds de duurkeuze bóven het rooster staat, toont het
   // rooster enkel momenten waar de gekozen duur ook echt pást — daarvoor was elk slot groen en
   // sprong de duur achteraf stilletjes terug naar 1 uur. PT boekt altijd één uur.
   const fitDur = isFit60 ? duration : 1;
-  const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1;
-  const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= duration;
+  // Het gratis eerste uur geldt NIET in een mand (ontwerp v2 §G): enkel bij één moment.
+  const welcomeApplies = isFit60 && welcomeAvailable && useWelcome && duration === 1 && !multi;
+  const aantal = multi ? Math.max(1, momenten.length) : 1;
+  const tegoedNodig = duration * aantal;
+  const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= tegoedNodig;
   const durLabel = (n) => (n % 1 ? `${Math.floor(n)}u30` : `${n} uur`);
   // Een uitgelogde bezoeker heeft nog geen profiel, dus we weten NIET of zijn gratis uur nog
   // bestaat — de meeste leden hebben het al opgebruikt. Daarom is dit enkel een voorwaardelijke
@@ -184,21 +241,26 @@ export default function BookingClient({
   const unitCents = memberRate ? service.member_price_cents : (isPT ? ptUnit : (service?.price_cents ?? 0));
   const priceCents = welcomeApplies || creditApplies ? 0
     : isPT ? Math.round(ptUnit * persons * duration)
-    : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1));
+    : Math.round(unitCents * (isFit60 ? duration : 1) * (isFit60 ? durFactor : 1)) * aantal;
+  // Een kortingscode geldt in een mand voor ÉÉN sessie (ontwerp v2 §F), dus ze wordt op die ene prijs gevalideerd.
+  const eenSessie = Math.round(unitCents * (isFit60 ? duration : 1));
+  const kortingAf = discountInfo?.ok ? Math.max(0, (multi ? eenSessie : priceCents) - discountInfo.cents) : 0;
+  const teBetalen = Math.max(0, priceCents - kortingAf);
 
   // Het bedrag onder "Totaal" en in de mobiele balk komt uit één berekening — die twee mogen nooit
   // iets anders zeggen.
   const totalValue = () =>
     welcomeApplies ? "Gratis"
-    : creditApplies ? `${sess(duration)} sessie${duration === 1 ? "" : "s"}`
-    : discountInfo?.ok ? euro(discountInfo.cents)
-    : euro(priceCents);
+    : creditApplies ? `${sess(tegoedNodig)} sessie${tegoedNodig === 1 ? "" : "s"}`
+    : euro(teBetalen);
   // Volgt er straks een Stripe-pagina? Dan moet de bezoeker het venster van 15 minuten kennen.
-  const willPay = isLoggedIn && !welcomeApplies && !creditApplies && (discountInfo?.ok ? discountInfo.cents : priceCents) > 0;
+  const willPay = isLoggedIn && !welcomeApplies && !creditApplies && teBetalen > 0;
 
   // Een kortingsweergave hoort bij één bedrag: verandert de duur of het aantal personen, dan bleef
   // het oude bedrag staan tot de bezoeker op de Stripe-pagina een ander cijfer zag.
-  useEffect(() => { setDiscountInfo(null); }, [priceCents]);
+  // In een mand hoort de korting bij één sessie: een moment erbij of eraf verandert daar niets aan.
+  const kortingBasis = multi ? eenSessie : priceCents;
+  useEffect(() => { setDiscountInfo(null); }, [kortingBasis]);
 
   // Invite slots = the booking's free spots (persons − you). Members + e-mail invites share them.
   const inviteSlots = isFit60 ? Math.max(0, persons - 1) : 0;
@@ -211,7 +273,63 @@ export default function BookingClient({
     }
   };
 
+  async function submitMand() {
+    if (momenten.length < 2 || !service) return;
+    setBusy(true);
+    setError("");
+    track("checkout_started");
+    // De sleutel hoort bij DEZE inhoud. Na een netwerkfout de duur of het tegoed wijzigen en opnieuw proberen,
+    // gaf anders de oude mand terug — 1 uur geboekt terwijl het scherm 2 uur toonde (review #10).
+    const sig = JSON.stringify([momenten.map((m) => [m.dateStr, m.hour]), service.id, duration, persons, creditApplies, creditApplies ? "" : discountCode.trim()]);
+    if (mandSleutel.current?.sig !== sig) {
+      mandSleutel.current = { sig, key: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : null };
+    }
+    const payload = {
+      serviceId: service.id,
+      slots: momenten.map((m) => ({ date: m.dateStr, hour: m.hour })),
+      hours: duration,
+      persons,
+      useCredit: creditApplies,
+      discountCode: !creditApplies ? discountCode.trim() : "",
+      clientKey: mandSleutel.current.key,
+    };
+    let res;
+    try {
+      res = await createBookingsAction(payload);
+    } catch (err) {
+      if (!isNetworkError(err)) { setBusy(false); setError("Er ging iets mis bij het boeken. Probeer het opnieuw."); return; }
+      // Met DEZELFDE sleutel: kwam de eerste poging toch aan, dan geeft de server die mand terug — nooit een tweede.
+      toast("info", "Verbinding weggevallen — we proberen het even opnieuw…");
+      await waitForNetwork();
+      try {
+        res = await createBookingsAction(payload);
+      } catch {
+        setBusy(false);
+        setError("We konden je boeking niet doorsturen — je verbinding viel weg. Probeer het opnieuw zodra je weer online bent.");
+        return;
+      }
+    }
+    if (res?.error) {
+      setBusy(false);
+      setError(res.error);
+      toast("error", res.error);
+      mandSleutel.current = null; // de server heeft niets vastgelegd; een volgende poging is een nieuwe mand
+      if (Number.isInteger(res.momentIndex)) setMomenten((l) => l.filter((_, i) => i !== res.momentIndex));
+      router.refresh();
+      return;
+    }
+    if (res?.checkoutUrl) { window.location.href = res.checkoutUrl; return; }
+    if (res?.verwerkt) { router.push("/account?betaling=verwerkt"); return; }
+    setBusy(false);
+    track("booking_completed");
+    setConfirmed({ mand: momenten.map(momentTekst), ids: res?.bookingIds || [], service: service.name, persons });
+    setMomenten([]);
+    mandSleutel.current = null;
+    router.refresh();
+  }
+
   async function submit() {
+    if (multi) return submitMand();
     if (!selected || !service) return;
     setBusy(true);
     setError("");
@@ -291,6 +409,33 @@ export default function BookingClient({
       free: welcomeApplies,
     });
     router.refresh();
+  }
+
+  if (confirmed?.mand) {
+    return (
+      <main className="mx-auto max-w-2xl px-5 py-24">
+        <div className="rounded-3xl border border-borderc bg-surface p-10 text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-accent text-3xl font-black text-brand">✓</div>
+          <h1 className="mt-6 text-3xl font-black">{confirmed.mand.length} sessies bevestigd!</h1>
+          <ul className="mx-auto mt-4 max-w-sm space-y-1.5 text-left">
+            {confirmed.mand.map((t, i) => (
+              <li key={i} className="flex items-center justify-between gap-3 rounded-xl bg-paper px-4 py-2.5 text-sm font-bold capitalize text-ink">
+                <span>{t}</span>
+                {confirmed.ids[i] && <a href={`/api/ics/${confirmed.ids[i]}`} className="shrink-0 text-xs font-bold normal-case text-accentdark hover:underline" title="Voeg toe aan je agenda">📅 Agenda</a>}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-sm leading-relaxed text-ink/55">
+            Je bevestiging staat in je mailbox. Je deurcode komt telkens automatisch ± 5 min vóór je sessie — verplaatsen
+            kan per sessie tot 6u vooraf.
+          </p>
+          <div className="mt-7 flex flex-wrap justify-center gap-3">
+            <Link href="/account" className="rounded-full bg-brand px-7 py-3.5 font-bold text-white transition hover:opacity-90">Naar mijn account</Link>
+            <button onClick={() => setConfirmed(null)} className="rounded-full border-2 border-borderc px-7 py-3.5 font-bold text-ink transition hover:border-lav">Nieuwe boeking</button>
+          </div>
+        </div>
+      </main>
+    );
   }
 
   if (confirmed) {
@@ -439,7 +584,8 @@ export default function BookingClient({
                 </div>
 
                 {/* Invite friends — members by name, or non-members straight by e-mail */}
-                {isLoggedIn && persons >= 2 && (
+                {/* Uitnodigen hoort bij één moment: in een mand zou elke genodigde acht mails krijgen. */}
+                {isLoggedIn && persons >= 2 && !multi && (
                   <div className="mt-4 rounded-2xl border border-borderc bg-paper p-4">
                     <p className="text-sm font-black text-ink">Nodig vrienden uit ({usedInvites}/{inviteSlots})</p>
                     <p className="mt-0.5 text-xs text-ink/50">Leden: hun bezoek telt mee voor hun stats. Nog geen account? Nodig ze uit via e-mail — ze krijgen een uitnodiging + link om een account te maken.</p>
@@ -508,6 +654,33 @@ export default function BookingClient({
                 <span className="text-sm font-bold text-ink/60">{weekLabel}</span>
                 <button onClick={() => setWeekOffset((w) => Math.min(maxWeek, w + 1))} disabled={weekOffset >= maxWeek} className="rounded-full border-2 border-borderc px-4 py-1.5 text-sm font-bold text-ink transition enabled:hover:border-lav disabled:opacity-30">volgende ›</button>
               </div>
+              {isLoggedIn && isFit60 && (
+                <label className="mb-3 flex cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 border-borderc bg-paper px-4 py-3 transition hover:border-lav">
+                  <span className="min-w-0">
+                    <span className="block text-sm font-black text-ink">Meerdere momenten in één keer</span>
+                    <span className="block text-xs text-ink/50">
+                      {meerdere
+                        ? `Tik momenten aan of weer uit — ${momenten.length}/${MAX_MOMENTEN} gekozen, ook over meerdere weken.`
+                        : "Bv. elke dinsdag en donderdag. Eén betaling voor alles."}
+                    </span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={meerdere}
+                    onChange={(e) => {
+                      const aan = e.target.checked;
+                      setMeerdere(aan);
+                      setError("");
+                      mandSleutel.current = null;
+                      // Wat al gekozen was, neemt de andere modus mee — niemand verliest zijn keuze door te schakelen.
+                      if (aan && selected) { setMomenten([selected]); setSelected(null); }
+                      if (!aan) { if (momenten[0]) setSelected(momenten[0]); setMomenten([]); }
+                    }}
+                    className="h-5 w-5 shrink-0 accent-[#5fda6b]"
+                  />
+                </label>
+              )}
+
               {/* Honest membership perk: members can book further ahead than non-members. */}
               {!isMember && weekOffset >= maxWeek && (
                 <div className="mb-3 rounded-xl bg-accent/10 px-4 py-3 text-sm text-ink/70">
@@ -534,14 +707,14 @@ export default function BookingClient({
                     const taken = takenSet.has(t);
                     const past = t < Date.now();
                     const closed = !coachOpen(activeDay, h);
-                    const inRange = selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
-                    const isSel = selected && selected.dateStr === activeDay && selected.hour === h;
+                    const inRange = multi ? !!dekkend(activeDay, h) : selected && selected.dateStr === activeDay && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
+                    const isSel = multi ? momenten.some((m) => m.dateStr === activeDay && m.hour === h) : selected && selected.dateStr === activeDay && selected.hour === h;
                     const label = fmtHour(h);
                     if (past || closed) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-ink/25">{label}</div>;
                     if (taken) return <WaitlistSlot key={h} date={activeDay} hour={h} label={label} isLoggedIn={isLoggedIn} />;
-                    if (!inRange && !canBook(activeDay, h, fitDur)) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-ink/20">{label}</div>;
+                    if (!inRange && !(multi ? pastInMand(activeDay, h) : canBook(activeDay, h, fitDur))) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-ink/20">{label}</div>;
                     return (
-                      <button key={h} onClick={() => { setSelected({ dateStr: activeDay, hour: h }); track("booking_slot_chosen"); }} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
+                      <button key={h} onClick={() => kies(activeDay, h)} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark")}>
                         {label}{isSel ? " ✓" : ""}
                       </button>
                     );
@@ -573,15 +746,15 @@ export default function BookingClient({
                           const taken = takenSet.has(t);
                           const past = t < Date.now();
                           const closed = !coachOpen(d.dateStr, h);
-                          const inRange = selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
-                          const isSel = selected && selected.dateStr === d.dateStr && selected.hour === h;
+                          const inRange = multi ? !!dekkend(d.dateStr, h) : selected && selected.dateStr === d.dateStr && h >= selected.hour && h < selected.hour + (isFit60 ? duration : 1);
+                          const isSel = multi ? momenten.some((m) => m.dateStr === d.dateStr && m.hour === h) : selected && selected.dateStr === d.dateStr && selected.hour === h;
                           if (past || closed) return <div key={d.dateStr} className="h-7 rounded-md bg-paper" />;
                           if (taken) return <WaitlistSlot key={d.dateStr} date={d.dateStr} hour={h} compact isLoggedIn={isLoggedIn} />;
-                          if (!inRange && !canBook(d.dateStr, h, fitDur)) return <div key={d.dateStr} className="h-7 rounded-md bg-paper/60" />;
+                          if (!inRange && !(multi ? pastInMand(d.dateStr, h) : canBook(d.dateStr, h, fitDur))) return <div key={d.dateStr} className="h-7 rounded-md bg-paper/60" />;
                           return (
                             <button
                               key={d.dateStr}
-                              onClick={() => { setSelected({ dateStr: d.dateStr, hour: h }); track("booking_slot_chosen"); }}
+                              onClick={() => kies(d.dateStr, h)}
                               className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25")}
                             >
                               {isSel ? "✓" : inRange ? "•" : ""}
@@ -645,12 +818,31 @@ export default function BookingClient({
             <dl className="mt-5 space-y-3 text-sm">
               <Row label="Sessie" value={service?.name || "—"} />
               {isPT && <Row label="Coach" value={coaches.find((c) => c.id === coachId)?.full_name || "—"} />}
-              <Row label="Moment" value={selected ? `${days.find((d) => d.dateStr === selected.dateStr)?.weekday || ""} ${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}` : "—"} />
+              {multi ? (
+                <div>
+                  <p className="text-lav">Momenten ({momenten.length})</p>
+                  {momenten.length ? (
+                    <ul className="mt-1.5 space-y-1">
+                      {momenten.map((m) => (
+                        <li key={momentKey(m.dateStr, m.hour)} className="flex items-center justify-between gap-2 font-bold">
+                          <span className="capitalize">{momentTekst(m)}</span>
+                          <button type="button" onClick={() => kies(m.dateStr, m.hour)} aria-label={`${momentTekst(m)} weghalen`} className="rounded-full px-2 text-lav transition hover:text-white">✕</button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : <p className="mt-1 font-bold">—</p>}
+                </div>
+              ) : (
+                <Row label="Moment" value={selected ? `${days.find((d) => d.dateStr === selected.dateStr)?.weekday || ""} ${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}` : "—"} />
+              )}
               {isFit60 && <Row label="Personen" value={persons} />}
               {isFit60 && <Row label="Duur" value={durLabel(duration)} />}
             </dl>
 
-            {isFit60 && welcomeAvailable && (
+            {multi && welcomeAvailable && (
+              <p className="mt-5 rounded-2xl bg-surface/10 p-3 text-sm text-lav">Je <b className="text-white">gratis eerste uur</b> geldt bij een losse boeking. Zet &ldquo;Meerdere momenten&rdquo; uit om het te gebruiken.</p>
+            )}
+            {isFit60 && welcomeAvailable && !multi && (
               <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-2xl bg-surface/10 p-3 text-sm">
                 <input type="checkbox" checked={useWelcome} onChange={(e) => setUseWelcome(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#5fda6b]" />
                 {/* Het label moet de werkelijkheid volgen: bij een langere sessie bleef hier
@@ -669,7 +861,7 @@ export default function BookingClient({
                 {/* "Sessietegoed" i.p.v. "beurtenkaart": een abo-sessie komt in hetzelfde grootboek
                     terecht en is geen kaart. En een ontoereikend saldo moet je hier lezen, niet pas
                     op de Stripe-pagina. */}
-                <span className="text-lav">Betaal met je <span className="font-bold text-accent">sessietegoed</span> — saldo: {sess(creditBalance)}{creditApplies ? ` · je gebruikt ${sess(duration)}, daarna ${sess(creditBalance - duration)}` : useCredit ? ` · je saldo volstaat niet voor ${durLabel(duration)} — je betaalt deze sessie` : " · vink uit om cash/kaart te betalen"}</span>
+                <span className="text-lav">Betaal met je <span className="font-bold text-accent">sessietegoed</span> — saldo: {sess(creditBalance)}{creditApplies ? ` · je gebruikt ${sess(tegoedNodig)}, daarna ${sess(creditBalance - tegoedNodig)}` : useCredit ? (multi ? ` · je saldo volstaat niet voor ${momenten.length} momenten (${sess(tegoedNodig)} nodig) — je betaalt ze` : ` · je saldo volstaat niet voor ${durLabel(duration)} — je betaalt deze sessie`) : " · vink uit om cash/kaart te betalen"}</span>
               </label>
             )}
 
@@ -684,7 +876,7 @@ export default function BookingClient({
                     onClick={async () => {
                       setApplyingCode(true);
                       setDiscountInfo(null);
-                      const r = await validateDiscountAction(discountCode.trim(), priceCents);
+                      const r = await validateDiscountAction(discountCode.trim(), multi ? eenSessie : priceCents);
                       setApplyingCode(false);
                       setDiscountInfo(r);
                     }}
@@ -693,7 +885,7 @@ export default function BookingClient({
                   </button>
                 </div>
                 {discountInfo?.error && <p className="mt-1.5 text-xs font-semibold text-red-200">{discountInfo.error}</p>}
-                {discountInfo?.ok && <p className="mt-1.5 text-xs font-semibold text-accent">✓ {discountInfo.label} — je betaalt {euro(discountInfo.cents)}</p>}
+                {discountInfo?.ok && <p className="mt-1.5 text-xs font-semibold text-accent">✓ {discountInfo.label}{multi ? ` op één sessie — totaal ${euro(teBetalen)}` : ` — je betaalt ${euro(discountInfo.cents)}`}</p>}
               </div>
             )}
 
@@ -707,8 +899,10 @@ export default function BookingClient({
             {error && <p className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm font-semibold text-red-100">{error}</p>}
 
             {isLoggedIn ? (
-              <button onClick={submit} disabled={!selected || busy} className="mt-6 w-full rounded-full bg-accent py-3.5 font-bold text-brand transition enabled:hover:opacity-90 disabled:opacity-40">
-                {busy ? "Even geduld…" : !selected ? "Kies eerst een moment" : "Bevestig boeking"}
+              <button onClick={submit} disabled={(multi ? momenten.length < 2 : !selected) || busy} className="mt-6 w-full rounded-full bg-accent py-3.5 font-bold text-brand transition enabled:hover:opacity-90 disabled:opacity-40">
+                {busy ? "Even geduld…"
+                  : multi ? (momenten.length < 2 ? "Kies minstens 2 momenten" : `Bevestig ${momenten.length} momenten`)
+                  : !selected ? "Kies eerst een moment" : "Bevestig boeking"}
               </button>
             ) : (
               <div className="mt-6 space-y-2">
@@ -739,17 +933,17 @@ export default function BookingClient({
 
       {/* Mobile sticky confirm bar — the summary panel is lg:sticky only, so on phones the price +
           confirm sit far below the pickers. This keeps them one tap away. Sits above the tab bar. */}
-      {selected && (
+      {(multi ? momenten.length > 0 : selected) && (
         // bottom-[4.75rem] houdt de tabbalk vrij, maar die verdwijnt al vanaf md — daarboven bleef
         // er een lege strook onder deze balk staan.
         <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-borderc bg-surface/95 px-4 py-3 shadow-[0_-6px_20px_rgba(34,25,79,0.08)] backdrop-blur md:bottom-0 lg:hidden">
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div className="min-w-0">
-              <p className="truncate text-xs font-bold text-ink">{days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · {slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}</p>
+              <p className="truncate text-xs font-bold text-ink">{multi ? `${momenten.length} moment${momenten.length === 1 ? "" : "en"}${momenten.length < 2 ? " — kies er nog een" : ""}` : `${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}`}</p>
               <p className="text-sm font-black text-accentdark">{totalValue()}</p>
             </div>
             {isLoggedIn ? (
-              <button onClick={submit} disabled={busy} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30 transition enabled:hover:-translate-y-0.5 disabled:opacity-50">
+              <button onClick={submit} disabled={busy || (multi && momenten.length < 2)} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30 transition enabled:hover:-translate-y-0.5 disabled:opacity-50">
                 {busy ? "Even geduld…" : "Bevestig"}
               </button>
             ) : (

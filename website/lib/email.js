@@ -187,6 +187,61 @@ export async function sendBookingConfirmation({ to, name, serviceName, startsAt,
   );
 }
 
+// ---- Meerdere momenten in één keer (mand, 0164) ----
+//
+// Eén mail voor de hele mand, niet acht. Elke sessie krijgt haar eigen agenda-item met een EIGEN bestandsnaam: acht
+// bijlagen die allemaal "fittin-sessie.ics" heten, overschrijven elkaar in sommige mailprogramma's bij het opslaan.
+// `teruggestortCents`: een deel van de mand kon niet meer bevestigd worden (plek vervallen) en ging terug — dat
+// hoort in dezelfde mail te staan, anders ziet het lid een bedrag op zijn rekening dat niet klopt met wat hij boekte.
+export async function sendBookingsConfirmation({ to, name, sessies, paymentSource, creditBalance, amountPaidCents, teruggestortCents, teruggestortMomenten = [], address }) {
+  if (!to || !Array.isArray(sessies) || !sessies.length) return;
+  const addr = address || "Aannemersstraat 186, 9040 Gent";
+  const lijst = sessies
+    .map((s) => `<li style="margin:0 0 4px"><b style="color:#22194F">${dayLabel(s.startsAt)}</b> · ${timeRange(s.startsAt, s.endsAt)}</li>`)
+    .join("");
+  const rows = [
+    ["Sessie", esc(sessies[0].serviceName || "Sessie")],
+    ["Aantal", `${sessies.length} sessies`],
+    ["Personen", sessies[0].persons || 1],
+    ["Adres", addr],
+  ];
+  const bal = creditBalance === null || creditBalance === undefined || creditBalance === "" ? null : Number(creditBalance);
+  if (paymentSource === "credit") {
+    rows.push(["Prijs", `<span style="color:#33B24A">Betaald met je tegoed${bal !== null && Number.isFinite(bal) ? ` (saldo: ${String(bal).replace(".", ",")})` : ""}</span>`]);
+  } else if (paymentSource === "gratis_code") {
+    rows.push(["Prijs", `<span style="color:#33B24A">Gratis met je kortingscode</span>`]);
+  } else if (amountPaidCents > 0) {
+    rows.push(["Betaald", `€ ${(amountPaidCents / 100).toFixed(2).replace(".", ",")}`]);
+  }
+  const terugHtml = teruggestortCents > 0
+    ? `<div style="margin:14px 0 0;background:#fff7e6;border-radius:14px;padding:14px 16px">
+         <p style="margin:0;font-size:14px;font-weight:bold;color:#22194F">€ ${(teruggestortCents / 100).toFixed(2).replace(".", ",")} teruggestort</p>
+         <p style="margin:6px 0 0;font-size:13px;color:#6b6685;line-height:1.5">${teruggestortMomenten.length ? esc(teruggestortMomenten.join(" · ")) + " was" : "Een deel van je boeking was"} niet meer vrij toen je betaling binnenkwam. Dat bedrag staat binnen enkele werkdagen terug op je rekening.</p>
+       </div>`
+    : "";
+  await send(
+    to,
+    `Je ${sessies.length} Fittin'-sessies zijn bevestigd ✅`,
+    shell({
+      title: `${sessies.length} sessies bevestigd ✅`,
+      intro: `Hallo ${esc(name) || "daar"}, deze momenten staan vast:`,
+      rows,
+      body: `<ul style="font-size:14px;color:#6b6685;margin:0 0 10px;padding-left:18px;line-height:1.6">${lijst}</ul>${terugHtml}
+        <p style="font-size:13px;color:#6b6685;margin-top:14px">Je krijgt voor elke sessie je <b>persoonlijke toegangscode ± 5 minuten vooraf</b> — per mail én in de app. Verplaatsen kan per sessie tot 6u vooraf in je account. De agenda-items zitten als bijlage bij deze mail.</p>`,
+      cta: { href: `${SITE}/account`, label: "Mijn sessies" },
+    }),
+    FROM_BOOKING,
+    REPLY_TO,
+    null,
+    sessies
+      .map((s, i) => {
+        const a = icsAttachment({ id: s.bookingId, startsAt: s.startsAt, endsAt: s.endsAt, serviceName: s.serviceName, address: addr });
+        return a ? { ...a, filename: `fittin-sessie-${i + 1}.ics` } : null;
+      })
+      .filter(Boolean)
+  );
+}
+
 // ---- Nieuwsbrief: bevestig je inschrijving (dubbele opt-in) ----
 // Bestaat omdat iedereen elk willekeurig adres kon inschrijven: één formulierveld en de mails van
 // Fittin' vielen bij een vreemde in de bus. Pas wie op deze link klikt, wordt 'active'.

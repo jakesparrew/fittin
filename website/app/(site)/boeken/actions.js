@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { stripe, isStripeConfigured, bizGuest, invoiceForBusiness } from "@/lib/stripe";
-import { sendBookingConfirmation } from "@/lib/email";
+import { sendBookingConfirmation, sendBookingsConfirmation } from "@/lib/email";
+import { MAX_MOMENTEN, mandLijnen, somCenten, momentLabel } from "@/lib/mand";
 import { sendBookingInvites } from "@/lib/booking-invites";
 import { validateDiscount, recordRedemption } from "@/lib/discounts";
 import { clearWaitlistEntry } from "@/lib/waitlist";
@@ -264,6 +265,283 @@ export async function createBookingAction({ serviceId, date, hour, persons, useW
   return { ok: true, checkoutUrl: session.url };
 }
 
+// ==============================================================================================================
+// Meerdere momenten in één keer — de mand (0164, ontwerp docs/plans/2026-09-13-meerdere-momenten-boeken.md v2)
+// ==============================================================================================================
+//
+// Eén moment gaat NIET hierlangs: dat blijft createBookingAction, met buddies, uitnodigingen en de welkomstsessie.
+// Hier: 2 tot 8 momenten, zelfde dienst, duur en personen, alles-of-niets in de databank, één Stripe-sessie.
+
+const OPEN_RIJ = (r) => r.status === "bevestigd" && !r.paid && (Number(r.price_cents) || 0) > 0;
+
+// Wat te doen met een mand die er al staat (zelfde clientKey). Nooit opnieuw boeken, nooit een tweede mail:
+// hooguit de betaling hervatten.
+async function hervatIndiening(admin, user, order) {
+  const orderId = order.id;
+  if (order.status === "betaald") return { ok: true, free: !order.stripe_session_id, verwerkt: !!order.stripe_session_id, orderId };
+  if (order.status !== "open") return { error: "Deze boeking is intussen verlopen. Kies je momenten opnieuw." };
+  let hervat = null;
+  try { hervat = await hervatMand(admin, user, orderId); }
+  catch (e) {
+    console.error("hervatIndiening:", e?.message);
+    return { error: "Je momenten staan vast, maar de betaallink kon niet gemaakt worden. Rond af via je account." };
+  }
+  if (hervat?.verwerkt) return { ok: true, verwerkt: true, orderId };
+  if (hervat?.url) return { ok: true, checkoutUrl: hervat.url, orderId };
+  return { error: "Deze boeking is intussen verlopen. Kies je momenten opnieuw." };
+}
+
+export async function createBookingsAction({ serviceId, slots, persons, hours, useCredit, discountCode, clientKey }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Je moet ingelogd zijn om te boeken." };
+
+  const momenten = (Array.isArray(slots) ? slots : [])
+    .map((s) => ({ date: String(s?.date || ""), hour: Number(s?.hour) }))
+    .filter((s) => /^\d{4}-\d{2}-\d{2}$/.test(s.date) && Number.isFinite(s.hour));
+  if (momenten.length < 2) return { error: "Kies minstens twee momenten." };
+  if (momenten.length > MAX_MOMENTEN) return { error: `Je kan maximaal ${MAX_MOMENTEN} momenten in één keer boeken.` };
+  const uren = Math.min(4, Math.max(1, Math.round((parseFloat(hours) || 1) * 2) / 2));
+  const key = /^[0-9a-f-]{36}$/i.test(String(clientKey || "")) ? String(clientKey) : null;
+  const admin = createAdminClient();
+
+  // Een HERHAALDE indiening herkennen aan het BESTAAN van de mand, niet aan haar leeftijd.
+  //
+  // De client probeert zelf al na ~1,2 s opnieuw als het antwoord wegvalt. Een leeftijdsdrempel van 20 s werd
+  // daardoor nooit gehaald: de hele flow liep dan een tweede keer, met een tweede bevestigingsmail en een tweede
+  // Stripe-sessie waarvan de eerste open bleef staan (review #2).
+  if (key) {
+    const { data: bestaand } = await admin.from("booking_orders")
+      .select("id, status, stripe_session_id").eq("user_id", user.id).eq("client_key", key).maybeSingle();
+    if (bestaand) return await hervatIndiening(admin, user, bestaand);
+  }
+
+  // De kortingscode VÓÓR de databank: een foute code mag geen acht momenten een kwartier laten vastzitten.
+  // Gevalideerd op de lijstprijs van één sessie; na het boeken herberekend op de echte prijs (abo/los).
+  let codeVooraf = null;
+  if (discountCode && !useCredit) {
+    const [{ data: prof }, { data: srv }] = await Promise.all([
+      supabase.from("profiles").select("gym_id").eq("id", user.id).single(),
+      supabase.from("services").select("price_cents").eq("id", serviceId).maybeSingle(),
+    ]);
+    const d = await validateDiscount(prof?.gym_id, user.id, discountCode, Math.round((srv?.price_cents || 0) * uren));
+    if (d.error) return { error: d.error };
+    if (d.ok) codeVooraf = discountCode;
+  }
+
+  const { data: orderId, error } = await supabase.rpc("create_booking_batch", {
+    p_service: serviceId,
+    p_slots: momenten,
+    p_persons: persons,
+    p_hours: uren,
+    p_use_credit: !!useCredit,
+    p_client_key: key,
+  });
+  // `hint` draagt de index van het moment dat faalde; het scherm markeert precies dat moment.
+  if (error) return { error: bookingErrorText(error), momentIndex: error.hint != null && error.hint !== "" ? Number(error.hint) : null };
+
+  // Vanaf hier geldt: wat ook misloopt, de momenten mogen niet 15 minuten blijven hangen.
+  const ruimOp = async () => {
+    await admin.from("bookings").update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
+      .eq("order_id", orderId).eq("paid", false).eq("status", "bevestigd");
+    await admin.from("booking_orders").update({ status: "geannuleerd" }).eq("id", orderId).eq("status", "open");
+  };
+
+  const { data: order } = await admin.from("booking_orders")
+    .select("id, gym_id, user_id, status, stripe_session_id, created_at").eq("id", orderId).single();
+  // De RPC sláágde, dus de momenten staan vast. Zonder opruimen blijven ze een kwartier bezet en botst het lid
+  // 15 minuten lang op de hamsterrem (review #5).
+  if (!order) { await ruimOp(); return { error: "Er liep iets mis bij het boeken. Probeer het opnieuw." }; }
+  // Een sleutel van een mand die intussen geannuleerd of verlopen is: niets bevestigen, opnieuw laten kiezen.
+  if (order.status === "geannuleerd" || order.status === "verlopen") {
+    return { error: "Deze boeking is intussen verlopen. Kies je momenten opnieuw." };
+  }
+
+  try {
+    const { data: rijen, error: re } = await admin.from("bookings")
+      .select("id, gym_id, starts_at, ends_at, persons, price_cents, charge_cents, paid, status, payment_source, services(name)")
+      .eq("order_id", orderId).order("starts_at");
+    if (re || !rijen?.length) throw new Error(re?.message || "mand zonder rijen");
+
+    for (const r of rijen) {
+      await clearWaitlistEntry(admin, { gymId: r.gym_id, userId: user.id, slotInstant: r.starts_at });
+    }
+    revalidatePath("/account");
+    revalidatePath("/boeken");
+
+    // Alles al rond (tegoed): meteen bevestigen. Op de STATUS van de mand, niet afgeleid uit de rijen — een rij die
+    // niet open is, kan ook geannuleerd zijn.
+    if (order.status === "betaald") {
+      let creditBalance = null;
+      if (rijen[0].payment_source === "credit") {
+        try { const { data: bal } = await admin.rpc("credits_balance", { p_user: user.id }); if (bal != null && Number.isFinite(Number(bal))) creditBalance = Number(bal); } catch {}
+      }
+      try {
+        await sendBookingsConfirmation({
+          to: user.email, name: user.user_metadata?.full_name, paymentSource: rijen[0].payment_source, creditBalance,
+          sessies: rijen.map((r) => ({ bookingId: r.id, startsAt: r.starts_at, endsAt: r.ends_at, serviceName: r.services?.name, persons: r.persons })),
+        });
+      } catch (e) { console.error("mand-bevestiging (tegoed):", e?.message); }
+      return { ok: true, free: true, orderId, bookingIds: rijen.map((r) => r.id) };
+    }
+
+    // Korting op ÉÉN sessie, herberekend op de echte prijs van de eerste regel.
+    let korting = null;
+    if (codeVooraf) {
+      const eerste = rijen.filter(OPEN_RIJ).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
+      const d = await validateDiscount(eerste.gym_id, user.id, codeVooraf, eerste.price_cents);
+      if (d.error) { await ruimOp(); return { error: d.error }; }
+      if (d.ok) korting = { codeId: d.codeId, cents: d.cents };
+    }
+
+    if (!isStripeConfigured) {
+      if (process.env.NODE_ENV === "production") { await ruimOp(); return { error: "Betalen is tijdelijk niet beschikbaar. Probeer het later opnieuw." }; }
+      return { ok: true, unpaid: true, orderId };
+    }
+
+    const uit = await maakMandCheckout(admin, { order, rijen: rijen.filter(OPEN_RIJ), email: user.email, korting });
+    // Volledig met een kortingscode betaald: geen Checkout, wel dezelfde bevestigingsmail als bij tegoed.
+    if (uit?.gratis) {
+      try {
+        await sendBookingsConfirmation({
+          to: user.email, name: user.user_metadata?.full_name, paymentSource: "gratis_code",
+          sessies: rijen.map((r) => ({ bookingId: r.id, startsAt: r.starts_at, endsAt: r.ends_at, serviceName: r.services?.name, persons: r.persons })),
+        });
+      } catch (e) { console.error("mand-bevestiging (korting):", e?.message); }
+      return { ok: true, free: true, orderId, bookingIds: uit.bookingIds };
+    }
+    return { ok: true, checkoutUrl: uit?.url || null, orderId };
+  } catch (e) {
+    console.error("createBookingsAction:", e?.message);
+    // Een mand die met tegoed betaald werd, is al afgeboekt en bevestigd: opruimen doet niets en "er staat niets
+    // vast" is dan gewoon onwaar (review #5). Eerst kijken hoe de mand er echt voor staat.
+    const { data: o } = await admin.from("booking_orders").select("status").eq("id", orderId).maybeSingle();
+    if (o?.status === "betaald") return { ok: true, free: true, orderId };
+    await ruimOp();
+    return { error: "Er liep iets mis bij het afrekenen. Er staat niets vast — probeer het opnieuw." };
+  }
+}
+
+// Eén Stripe-sessie voor de open rijen van een mand. De LIJNEN worden bewaard vóór de betaallink teruggaat: de
+// webhook beslist uitsluitend op wat in déze sessie aangerekend werd (ontwerp v2 §A).
+async function maakMandCheckout(admin, { order, rijen, email, korting }) {
+  const lijnen = mandLijnen(rijen, korting);
+  if (!lijnen.length) return null;
+
+  // Stripe rekent geen regel van € 0 aan. Een gratis sessie valt dus uit de Checkout, maar BLIJFT in de mand:
+  // ze staat in booking_order_lines en wordt door settle_booking_order samen met de rest bevestigd.
+  //
+  // Waarom niet meteen bevestigen (review, §A/§B): een sessie die buiten de mand om op paid gezet wordt,
+  // overleeft een afgebroken checkout (ruimOp raakt alleen paid=false), krijgt nooit een bevestigingsmail, en
+  // verbrandt de eenmalige code terwijl het lid niets geboekt heeft.
+  const teBetalen = lijnen.filter((l) => l.charge_cents > 0);
+
+  // Is de HELE mand gratis (kan alleen bij één moment), dan is er niets om af te rekenen en bevestigen we ze
+  // in haar geheel — alles-of-niets blijft gelden, want het gaat om alle regels samen.
+  if (!teBetalen.length) {
+    const ids = lijnen.map((l) => l.booking_id);
+    const bev = await admin.from("bookings").update({ paid: true, charge_cents: 0, discount_code_id: korting?.codeId || null }, { count: "exact" })
+      .in("id", ids).eq("paid", false);
+    if (bev.error) throw new Error(bev.error.message);
+    if (bev.count !== ids.length) throw new Error("gratis mand niet volledig bevestigd");
+    const ord = await admin.from("booking_orders").update({ status: "betaald", total_cents: 0, discount_code_id: korting?.codeId || null }, { count: "exact" })
+      .eq("id", order.id).eq("status", "open");
+    if (ord.error) throw new Error(ord.error.message);
+    if (korting?.codeId) await recordRedemption(order.gym_id, korting.codeId, order.user_id, ids[0]);
+    return { gratis: true, bookingIds: ids };
+  }
+
+  const perId = new Map(rijen.map((r) => [r.id, r]));
+  const params = {
+    mode: "payment",
+    customer_email: email,
+    ...bizGuest,
+    ...invoiceForBusiness,
+    line_items: teBetalen.map((l) => {
+      const r = perId.get(l.booking_id);
+      return {
+        quantity: 1,
+        price_data: {
+          currency: "eur",
+          unit_amount: l.charge_cents,
+          product_data: {
+            name: `${r?.services?.name || "Sessie"} — ${momentLabel(r?.starts_at)}${l.korting ? " (korting)" : ""}`,
+            metadata: { booking_id: l.booking_id },
+          },
+        },
+      };
+    }),
+    metadata: { kind: "booking_order", order_id: order.id, ...(korting?.codeId ? { discount_code_id: korting.codeId } : {}) },
+    payment_method_types: ["card", "bancontact", "paypal", "link"],
+    expires_at: Math.floor(Date.now() / 1000) + 32 * 60,
+    success_url: `${siteUrl()}/account?betaald=1`,
+    cancel_url: `${siteUrl()}/account?betaling=afgebroken`,
+  };
+
+  const session = await maakCheckout(params);
+  const { error: le } = await admin.from("booking_order_lines").insert(
+    lijnen.map((l) => ({ session_id: session.id, booking_id: l.booking_id, order_id: order.id, charge_cents: l.charge_cents }))
+  );
+  if (le) {
+    // Zonder lijnen kan de webhook deze betaling niet toewijzen. De link mag dus nooit bij het lid belanden.
+    try { await stripe.checkout.sessions.expire(session.id); } catch {}
+    throw new Error(`mandlijnen niet bewaard: ${le.message}`);
+  }
+  // Deze updates moeten lukken. Blijft de order zonder stripe_session_id achter, dan laat hervatten sessie A niet
+  // vervallen en zijn A en B allebei betaalbaar — twee betalingen (review #4). Supabase gooit zelf niet, dus:
+  // controleren, de sessie laten vervallen, en gooien zodat de URL nooit bij het lid belandt.
+  const mislukt = async (wat) => {
+    try { await stripe.checkout.sessions.expire(session.id); } catch {}
+    throw new Error(wat);
+  };
+  const ord = await admin.from("booking_orders")
+    .update({ stripe_session_id: session.id, total_cents: somCenten(lijnen), discount_code_id: korting?.codeId || null }, { count: "exact" })
+    .eq("id", order.id);
+  if (ord.error || !ord.count) await mislukt(`mand niet bijgewerkt: ${ord.error?.message || "0 rijen"}`);
+  for (const l of lijnen) {
+    const bk = await admin.from("bookings")
+      .update({ charge_cents: l.charge_cents, discount_code_id: l.korting ? korting?.codeId || null : null, stripe_session_id: session.id }, { count: "exact" })
+      .eq("id", l.booking_id);
+    if (bk.error || !bk.count) await mislukt(`boeking niet bijgewerkt: ${bk.error?.message || "0 rijen"}`);
+  }
+  return { url: session.url };
+}
+
+// Een mand opnieuw laten betalen. Eerst kijken hoe de VORIGE sessie ervoor staat: een sessie die al 'complete' is,
+// betekent dat er een betaling onderweg is (trage bank-app, webhook nog niet binnen). Dan geen tweede link — dat
+// was precies hoe een lid twee keer kon betalen (review #1).
+async function hervatMand(admin, user, orderId) {
+  if (!isStripeConfigured) return null;
+  const { data: order } = await admin.from("booking_orders")
+    .select("id, gym_id, user_id, status, stripe_session_id, discount_code_id").eq("id", orderId).eq("user_id", user.id).maybeSingle();
+  if (!order || order.status !== "open") return null;
+
+  if (order.stripe_session_id) {
+    const vorige = await stripe.checkout.sessions.retrieve(order.stripe_session_id);
+    if (vorige.status === "complete") return { verwerkt: true };
+    // Bewust NIET in een try: lukt het vervallen niet, dan mag er ook geen nieuwe sessie komen.
+    if (vorige.status === "open") await stripe.checkout.sessions.expire(order.stripe_session_id);
+  }
+
+  const { data: rijen } = await admin.from("bookings")
+    .select("id, gym_id, starts_at, ends_at, price_cents, charge_cents, discount_code_id, paid, status, services(name)")
+    .eq("order_id", orderId).order("starts_at");
+  const open = (rijen || []).filter(OPEN_RIJ);
+  if (!open.length) return null;
+
+  // De afgesproken korting blijft, als de code nog geldig is. Anders gewoon de volle prijs.
+  let korting = null;
+  const metKorting = open.find((r) => r.discount_code_id);
+  if (metKorting) {
+    const { data: dc } = await admin.from("discount_codes").select("active, expires_at, max_uses, used_count").eq("id", metKorting.discount_code_id).maybeSingle();
+    const geldig = dc && dc.active && !(dc.expires_at && new Date(dc.expires_at) < new Date()) && !(dc.max_uses != null && dc.used_count >= dc.max_uses);
+    if (geldig && metKorting.id === open[0].id) korting = { codeId: metKorting.discount_code_id, cents: metKorting.charge_cents ?? metKorting.price_cents };
+  }
+  const uit = await maakMandCheckout(admin, { order, rijen: open, email: user.email, korting });
+  if (uit?.gratis) return { verwerkt: true };
+  return uit?.url ? { url: uit.url } : null;
+}
+
 // Vind terug wat een afgebroken boeking heeft achtergelaten.
 //
 // Valt het netwerk weg NA het aanmaken van de boeking maar VÓÓR het antwoord, dan weet de
@@ -314,6 +592,15 @@ export async function resumeCheckoutAction(formData) {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return;
+  // Hoort deze boeking bij een mand, dan wordt de HELE mand hervat. Per sessie hervatten liet de gedeelde
+  // Stripe-sessie vervallen en rekende maar één sessie aan (review #26).
+  const { data: rij } = await supabase.from("bookings").select("order_id").eq("id", id).eq("user_id", user.id).maybeSingle();
+  if (rij?.order_id) {
+    const hervat = await hervatMand(createAdminClient(), user, rij.order_id);
+    if (hervat?.verwerkt) redirect("/account?betaling=verwerkt");
+    if (hervat?.url) redirect(hervat.url);
+    return;
+  }
   const url = await buildResumeCheckout(supabase, user, id);
   if (url) redirect(url);
 }
@@ -328,7 +615,9 @@ async function buildResumeCheckout(supabase, user, id) {
     .select("id, price_cents, charge_cents, discount_code_id, paid, status, stripe_session_id, services(name)")
     .eq("id", id)
     .eq("user_id", user.id)
-    .single();
+    // Een mandrij hervat je nooit los — dat gaat via hervatMand (zie resumeCheckoutAction).
+    .is("order_id", null)
+    .maybeSingle();
   // Only resume a still-held, unpaid booking. A cancelled/expired slot must not spawn a new checkout.
   if (!booking || booking.paid || booking.status !== "bevestigd") return null;
 

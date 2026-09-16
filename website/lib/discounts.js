@@ -31,7 +31,10 @@ export async function validateDiscount(gymId, userId, rawCode, baseCents) {
 // Record a redemption + bump the use counter (called once the discounted checkout is created).
 export async function recordRedemption(gymId, codeId, userId, bookingId) {
   const admin = createAdminClient();
-  await admin.from("discount_redemptions").insert({ gym_id: gymId, code_id: codeId, user_id: userId, booking_id: bookingId });
+  // Enkel tellen als de inschrijving ook echt bestaat. De unique-index (code_id, user_id) weigert een tweede keer
+  // stil; de teller liep daarna tóch op, waardoor een code met max_uses sneller op raakte dan hij gebruikt werd.
+  const { error } = await admin.from("discount_redemptions").insert({ gym_id: gymId, code_id: codeId, user_id: userId, booking_id: bookingId });
+  if (error) { if (error.code !== "23505") console.error("recordRedemption insert:", error.message); return; }
   // Guarded compare-and-set instead of read-modify-write, so two concurrent redemptions of a
   // max_uses=1 code can't both slip under the cap (TOCTOU race).
   for (let attempt = 0; attempt < 3; attempt++) {

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { resumeCheckoutAction } from "@/app/(site)/boeken/actions";
 import SubmitButton from "@/components/ui/SubmitButton";
+import { momentenZin } from "@/lib/mand";
 
 const euro = (c) => "€ " + ((c || 0) / 100).toFixed(2).replace(".", ",");
 
@@ -44,13 +45,14 @@ export default function PendingPaymentBanner({ items }) {
         return (
           <div key={i.id} className="flex flex-wrap items-center justify-between gap-3">
             <div className="text-sm">
-              <p className="font-black">⏳ Je boeking is nog niet betaald</p>
+              <p className="font-black">⏳ {i.momenten?.length > 1 ? `Je ${i.momenten.length} sessies zijn nog niet betaald` : "Je boeking is nog niet betaald"}</p>
+              {i.momenten?.length > 1 && <p className="text-xs capitalize text-lav">{momentenZin(i.momenten)}</p>}
               <p className="text-lav">
                 {i.name} — betaal binnen{" "}
                 <span className={"font-black tabular-nums " + (urgent ? "text-red-300" : "text-accent")}>
                   {m}:{String(s).padStart(2, "0")}
                 </span>{" "}
-                of je plek komt weer vrij.
+                of {i.momenten?.length > 1 ? "je momenten komen" : "je plek komt"} weer vrij.
               </p>
             </div>
             <form action={resumeCheckoutAction}>

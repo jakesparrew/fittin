@@ -182,16 +182,62 @@ export async function adminCancelBooking(formData) {
     .update({ status: "geannuleerd", cancelled_at: new Date().toISOString() })
     .eq("id", id)
     .eq("status", "bevestigd")
-    .select("id, gym_id, user_id, starts_at, paid, price_cents, payment_source, stripe_payment_intent, services(name)")
+    .select("id, gym_id, user_id, starts_at, paid, price_cents, charge_cents, payment_source, stripe_payment_intent, services(name)")
     .maybeSingle();
   if (!bk) { revalidatePath("/beheer/boekingen"); return { error: "Boeking niet gevonden of al geannuleerd." }; }
 
   // Refund a real online payment (a 'los'/'abo' session paid via Stripe). Credit/coach-credit
   // refunds are handled by DB triggers; a €0 admin comp needs nothing.
   let refunded = false;
+  let refundFout = null;
   if (bk.paid && bk.stripe_payment_intent && bk.price_cents > 0 && isStripeConfigured) {
-    try { await stripe.refunds.create({ payment_intent: bk.stripe_payment_intent }); refunded = true; }
-    catch (e) { console.error("admin cancel refund failed:", e?.message); }
+    // ALTIJD een bedrag. Zonder bedrag stortte Stripe de volledige betaling terug — bij een mand van drie sessies
+    // dus ook de twee die gewoon doorgaan, waarna charge.refunded ook díe nog annuleerde. Het bedrag is wat deze
+    // sessie kostte, begrensd op wat er van de betaling nog over is (een eerdere deelrefund telt mee).
+    try {
+      const piObj = await stripe.paymentIntents.retrieve(bk.stripe_payment_intent, { expand: ["latest_charge"] });
+      const ch = piObj?.latest_charge;
+      const rest = ch ? Math.max(0, (ch.amount || 0) - (ch.amount_refunded || 0)) : (bk.charge_cents ?? bk.price_cents);
+      const bedrag = Math.min(bk.charge_cents ?? bk.price_cents, rest);
+      if (bedrag > 0) {
+        await stripe.refunds.create(
+          { payment_intent: bk.stripe_payment_intent, amount: bedrag, metadata: { booking_id: bk.id, reden: "annulering" } },
+          { idempotencyKey: `annulering:${bk.id}` }
+        );
+        refunded = true;
+      }
+    } catch (e) {
+      console.error("admin cancel refund failed:", e?.message);
+      refundFout = e?.message || "onbekende fout";
+    }
+  }
+
+  // Mislukte terugbetaling: de annulering TERUGDRAAIEN, vóór iemand verwittigd wordt. Anders staat de sessie op
+  // geannuleerd zonder geld terug, gaat de plek naar de wachtlijst, en kan beheer niet opnieuw proberen
+  // ("al geannuleerd") — terwijl de idempotencyKey net een veilige herhaling mogelijk maakt (review #16).
+  if (refundFout) {
+    const bedrag = `€ ${((bk.charge_cents ?? bk.price_cents) / 100).toFixed(2).replace(".", ",")}`;
+    const terug = await createAdminClient().from("bookings")
+      .update({ status: "bevestigd", cancelled_at: null }, { count: "exact" })
+      .eq("id", bk.id).eq("status", "geannuleerd");
+    const hersteld = !terug.error && terug.count === 1;
+    try {
+      const admin = createAdminClient();
+      const { data: admins } = await admin.from("profiles").select("id").eq("gym_id", bk.gym_id).eq("role", "beheerder");
+      for (const a of admins || []) {
+        const { error: ne } = await admin.from("notifications").insert({
+          gym_id: bk.gym_id, user_id: a.id, type: "system",
+          title: `Terugbetaling ${bedrag} mislukt`,
+          body: `${bk.services?.name || "Sessie"} op ${new Date(bk.starts_at).toLocaleString("nl-BE", { timeZone: "Europe/Brussels" })} — ${hersteld ? "sessie staat weer bevestigd, probeer opnieuw te annuleren" : "sessie is geannuleerd, stort handmatig terug"}. (${refundFout})`,
+          link: "/beheer/boekingen",
+        });
+        if (ne) console.error("admin cancel: beheermelding mislukt:", ne.message);
+      }
+    } catch (e) { console.error("admin cancel: beheermelding mislukt:", e?.message); }
+    revalidatePath("/beheer/boekingen");
+    return { error: hersteld
+      ? `Terugbetaling van ${bedrag} mislukt (${refundFout}) — er is NIETS geannuleerd. Probeer opnieuw.`
+      : `Sessie geannuleerd, maar de terugbetaling van ${bedrag} is MISLUKT (${refundFout}). Stort het handmatig terug.` };
   }
 
   // Always tell the member their session was cancelled (they may otherwise show up to a locked door).

@@ -76,7 +76,10 @@ export default async function Betalingen({ searchParams }) {
       .select("stripe_session_id, starts_at, persons, payment_source, services(name)")
       .eq("gym_id", gym.id)
       .in("stripe_session_id", bookingStripeIds);
-    for (const b of bk || []) sessionByStripe[b.stripe_session_id] = b;
+    // Een lijst per sessie: sinds 0164 kan één betaling een MAND van meerdere sessies zijn. Hier stond één boeking per
+    // sessie (de laatste won), waardoor € 45 voor drie sessies als één sessie op één datum verscheen.
+    for (const b of bk || []) (sessionByStripe[b.stripe_session_id] ||= []).push(b);
+    for (const k of Object.keys(sessionByStripe)) sessionByStripe[k].sort((x, y) => new Date(x.starts_at) - new Date(y.starts_at));
   }
 
   return (
@@ -188,7 +191,8 @@ export default async function Betalingen({ searchParams }) {
                 </td>
                 <td className="px-5 py-3 text-ink/50">
                   {(() => {
-                    const bk = p.kind === "booking" ? sessionByStripe[p.stripe_id] : null;
+                    const lijst = p.kind === "booking" ? sessionByStripe[p.stripe_id] : null;
+                    const bk = lijst?.[0];
                     if (bk) {
                       return (
                         <span className="flex flex-col gap-0.5">
@@ -199,7 +203,9 @@ export default async function Betalingen({ searchParams }) {
                               <span className={"rounded-full px-1.5 py-0.5 text-[10px] font-bold " + (bk.payment_source === "abo" ? "bg-accent/15 text-accentdark" : "bg-paper text-ink/50")}>{SRC[bk.payment_source]}</span>
                             )}
                           </span>
-                          <span className="text-xs text-ink/40">🗓 {fmtSession(bk.starts_at)}</span>
+                          <span className="text-xs text-ink/40">
+                            🗓 {lijst.length > 1 ? `${lijst.length} sessies · ${lijst.map((x) => fmtSession(x.starts_at)).join(" · ")}` : fmtSession(bk.starts_at)}
+                          </span>
                         </span>
                       );
                     }
