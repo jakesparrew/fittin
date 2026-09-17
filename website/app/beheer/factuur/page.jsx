@@ -49,7 +49,8 @@ export default async function FactuurPage({ searchParams }) {
     } else {
       props = {
         title: factuurTitel(p), number, dateLabel: fmtDate(p.created_at), supplyLabel: fmtShort(p.created_at),
-        billTo: { name: m.full_name || "Lid", email: m.email },
+        // Dezelfde gegevens als de factuur die het lid zelf opent — anders zag beheer een ander document.
+        billTo: { name: m.full_name || "Lid", company: m.bill_company, vat: m.bill_vat, address: m.bill_address, email: m.email },
         // Een mand: één regel per sessie met haar datum (lib/factuur-lijnen.js).
         lines: await factuurLijnen(admin, p, fmtShort),
         vatRate: MEMBER_VAT_RATE, vatNote: gym.invoice_footer || "Sportvereniging zonder winstoogmerk — 6% btw op sportdiensten.",

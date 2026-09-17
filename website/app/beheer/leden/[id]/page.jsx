@@ -51,7 +51,7 @@ export default async function MemberDetail({ params }) {
     supabase.from("coach_clients").select("id, coach_id, coach:profiles!coach_clients_coach_id_fkey(full_name, email)").eq("gym_id", gym.id).eq("client_id", id).eq("status", "accepted"),
     supabase.from("profiles").select("id, full_name, email").eq("gym_id", gym.id).eq("role", "coach").order("full_name"),
     supabase.from("bookings").select("id, starts_at, status, coach_billing, coach:profiles!bookings_coach_id_fkey(full_name, email), services(name)").eq("user_id", id).not("coach_id", "is", null).order("starts_at", { ascending: false }).limit(20),
-    supabase.from("payments").select("amount_cents, kind, description, created_at, status").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
+    supabase.from("payments").select("id, amount_cents, kind, description, created_at, status").eq("user_id", id).order("created_at", { ascending: false }).limit(20),
     // service-role reads for the full profile: last login (auth), real gym visits (door_log), lifetime counts
     adminDb.auth.admin.getUserById(id),
     adminDb.from("door_log").select("opened_at", { count: "exact" }).eq("user_id", id).eq("result", "ok").order("opened_at", { ascending: false }).limit(1),
@@ -180,6 +180,13 @@ export default async function MemberDetail({ params }) {
             Totaal: {euro(totalSpent)}
           </span>
         </div>
+        {/* Wat er op de facturen komt: het lid vult dit zelf in op /account/betalingen. */}
+        <p className="mt-2 text-xs text-ink/55">
+          Factuur op naam van:{" "}
+          {member.bill_company || member.bill_vat
+            ? <b className="text-ink">{[member.bill_company, member.bill_vat, member.bill_address].filter(Boolean).join(" · ")}</b>
+            : <span>{member.full_name || "het lid"} (geen bedrijfsgegevens ingevuld)</span>}
+        </p>
         <div className="mt-3 space-y-1.5">
           {(payments || []).map((p, i) => (
             <div key={i} className="flex items-center justify-between rounded-lg bg-paper px-3 py-2 text-sm">
@@ -190,6 +197,7 @@ export default async function MemberDetail({ params }) {
               <div className="text-right">
                 <span className="font-black text-ink">{euro(p.amount_cents)}</span>
                 <span className="ml-2 text-xs text-ink/40">{fmt(p.created_at)}</span>
+                {p.id && <Link href={`/beheer/factuur?payment=${p.id}`} className="ml-3 text-xs font-bold text-accentdark hover:underline">Factuur →</Link>}
               </div>
             </div>
           ))}
