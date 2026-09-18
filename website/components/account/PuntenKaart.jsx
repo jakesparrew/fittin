@@ -62,7 +62,7 @@ export default function PuntenKaart({ o, compact = true }) {
           </div>
         )}
 
-        {gestart && (
+        {gestart && !compact && (
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-paper p-3">
               <p className="text-[10px] font-bold uppercase tracking-wide text-lav">Deze week</p>
@@ -90,7 +90,16 @@ export default function PuntenKaart({ o, compact = true }) {
           </div>
         )}
 
-        {instellingen.rustigAan && rustig.length > 0 && (
+        {compact && (
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs font-bold">
+            {gestart && <span className="rounded-full bg-paper px-3 py-1.5 text-ink">Deze week {week.gedaan}/{week.doel}{week.gedaan >= week.doel ? " ✓" : ""}</span>}
+            {volgendeBadge && <span className="rounded-full bg-paper px-3 py-1.5 text-ink">{volgendeBadge.badge.e} nog {volgendeBadge.nog} {volgendeBadge.wat}</span>}
+            <Link href="/community" className="rounded-full bg-accent/15 px-3 py-1.5 text-ink hover:bg-accent/25">👋 Vriend uitnodigen: tot +270</Link>
+            {instellingen.rustigAan && <Link href="/boeken?rustig=1" className="rounded-full bg-accent/15 px-3 py-1.5 text-ink hover:bg-accent/25">⚡ Rustig uur: dubbele punten</Link>}
+          </div>
+        )}
+
+        {!compact && instellingen.rustigAan && rustig.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
             <span className="font-bold text-ink">⚡ Rustig deze week:</span>
             {rustig.map((m) => (
@@ -101,7 +110,7 @@ export default function PuntenKaart({ o, compact = true }) {
         )}
       </div>
       {/* Snel punten verdienen: de acties die het meest opleveren, elk met een knop die er meteen naartoe gaat. */}
-      <div className="border-t border-borderc px-5 py-4 md:px-6">
+      {!compact && <div className="border-t border-borderc px-5 py-4 md:px-6">
         <p className="text-xs font-bold uppercase tracking-widest text-lav">Snel punten verdienen</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           <div className="rounded-2xl bg-accent/10 p-3 sm:col-span-2">
@@ -126,7 +135,7 @@ export default function PuntenKaart({ o, compact = true }) {
             <p className="text-xs text-ink/60">Eén tik in je deurcodemail bij het binnenkomen: +3</p>
           </div>
         </div>
-      </div>
+      </div>}
       {compact && (
         <Link href="/account/punten" className="block border-t border-borderc bg-paper/60 px-5 py-2.5 text-center text-xs font-bold text-ink/60 hover:text-ink">
           Hoe verdien ik punten? · Mijn badges · Geschiedenis →

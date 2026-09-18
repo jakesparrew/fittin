@@ -343,7 +343,6 @@ export default async function AccountPage({ searchParams }) {
         {/* App: meldingen aanzetten, op het scherm waar een lid het vaakst komt. Niets op de website. */}
         <PushOptIn className="mt-6" />
 
-        <div className="mt-6"><PuntenKaart o={punten} /></div>
 
         {/* Primary CTA — drive bookings */}
         <section className="mt-8 rounded-3xl bg-brand p-7 text-white md:p-8">
@@ -393,6 +392,9 @@ export default async function AccountPage({ searchParams }) {
             </Link>
           </div>
         </section>
+
+        {/* Punten onder het boeken: boeken is de hoofdactie, punten zijn de reden om terug te komen. */}
+        <div className="mt-6"><PuntenKaart o={punten} /></div>
 
         {/* Stat row — op mobiel drie smalle tegels naast elkaar i.p.v. drie brede blokken onder
             elkaar. Ze dragen elk één getal; die verdienen samen geen halve schermhoogte. */}

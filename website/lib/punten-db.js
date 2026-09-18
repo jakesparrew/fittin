@@ -1,6 +1,6 @@
 // Fittin' Punten — lezen en schrijven. De regels zelf staan in lib/punten.js (puur, getest).
 
-import { tellers, niveauVan, waarde, bereken, WAARDEN, isoWeek, promoVoor, dowUur, reeks, klassement, NIET_KLASSEMENT } from "./punten.js";
+import { tellers, niveauVan, waarde, bereken, WAARDEN, isoWeek, dowUur, reeks, klassement, NIET_KLASSEMENT } from "./punten.js";
 import { notify } from "./notify.js";
 
 export const STANDAARD_INSTELLINGEN = {
@@ -107,28 +107,30 @@ export async function laadRustigeUren(admin, gymId) {
   return { aan: s ? s.rustig_aan !== false : true, rijen: rijen || [] };
 }
 
-/** De rustigste momenten van de komende dagen, voor de accountkaart en de weekmail. */
-export function rustigsteMomenten({ aan, rijen }, { vanaf = Date.now(), dagen = 7, open = 6, dicht = 23, bezet = new Set(), max = 3 } = {}) {
+/**
+ * Rustige momenten om voor te stellen (accountkaart, weekmail). Per dag één moment: het rustige uur dat het
+ * dichtst bij 18:00 ligt, tussen 08:00 en 21:00 — anders stelt het systeem altijd 06:00 voor, en dat is niet
+ * waar mensen willen trainen.
+ */
+export function rustigsteMomenten({ aan, rijen }, { vanaf = Date.now(), dagen = 7, van = 8, tot = 21, voorkeur = 18, bezet = new Set(), max = 3 } = {}) {
   if (!aan) return [];
   const per = new Map(rijen.map((r) => [`${r.dow}:${r.hour}`, r]));
   const uit = [];
-  for (let d = 0; d < dagen && uit.length < 40; d++) {
-    for (let h = open; h < dicht; h++) {
-      const dag = new Date(vanaf + d * 86400000);
+  for (let d = 0; d < dagen && uit.length < max; d++) {
+    const dag = new Date(vanaf + d * 86400000);
+    let beste = null;
+    for (let h = van; h <= tot; h++) {
       const iso = bxlMoment(dag, h);
       const t = new Date(iso).getTime();
       if (t < vanaf + 3600000 || bezet.has(t)) continue;
       const { dow, hour } = dowUur(iso);
       const r = per.get(`${dow}:${hour}`);
-      if (promoVoor(r, t, vanaf, { aan }) !== "rustig") continue;
-      if (!r || r.klasse !== "rustig") continue; // enkel echt rustige uren tonen, niet het last-minute-vangnet
-      uit.push({ iso, weeks: r.weeks_booked ?? 0 });
+      if (!r || r.klasse !== "rustig" || r.pin === "nooit") continue; // enkel echt rustige uren, niet het last-minute-vangnet
+      if (!beste || Math.abs(h - voorkeur) < Math.abs(beste.h - voorkeur)) beste = { iso, h, weeks: r.weeks_booked ?? 0 };
     }
+    if (beste) uit.push({ iso: beste.iso, weeks: beste.weeks });
   }
-  // Liefst verspreid: één per dag, eerst de avond- en middaguren die mensen echt kunnen.
-  const perDag = new Map();
-  for (const m of uit) { const k = m.iso.slice(0, 10); if (!perDag.has(k)) perDag.set(k, m); }
-  return [...perDag.values()].slice(0, max);
+  return uit;
 }
 
 /** YYYY-MM-DD van `dag` in Brussel, uur h → ISO in UTC. */

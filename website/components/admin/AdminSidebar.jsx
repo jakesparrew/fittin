@@ -2,36 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { NAV, itemVoor } from "@/lib/beheer-nav";
 
-const groups = [
-  { items: [{ href: "/beheer", label: "Dashboard", icon: "▦" }, { href: "/beheer/analytics", label: "Analytics", icon: "▰" }, { href: "/beheer/verkeer", label: "Websiteverkeer", icon: "🌐" }, { href: "/beheer/notificaties", label: "Notificaties", icon: "🔔" }, { href: "/beheer/inbox", label: "Inbox", icon: "✉" }, { href: "/beheer/meldingen", label: "Meldingen", icon: "🛟" }] },
-  { title: "Gym", items: [
-    { href: "/beheer/boekingen", label: "Boekingen", icon: "▤" },
-    { href: "/beheer/leden", label: "Leden", icon: "◍" },
-    { href: "/beheer/netheid", label: "Netheid", icon: "🧼" },
-    { href: "/beheer/abonnementen", label: "Abonnementen", icon: "★" },
-    { href: "/beheer/coaches", label: "Coaches", icon: "♦" },
-    { href: "/beheer/aanbreng", label: "Aanbreng", icon: "🤝" },
-    { href: "/beheer/betalingen", label: "Betalingen", icon: "◈" },
-    { href: "/beheer/financien", label: "Financiën", icon: "€" },
-  ] },
-  { title: "Coaching", items: [
-    { href: "/beheer/programmas", label: "Programma's & oefeningen", icon: "✎" },
-    { href: "/beheer/coaching", label: "AI-coach", icon: "◉" },
-  ] },
-  { title: "Groei", items: [
-    { href: "/beheer/nieuwsbrief", label: "Nieuwsbrief", icon: "➤" },
-    { href: "/beheer/activatie", label: "Activatie", icon: "✦" },
-    { href: "/beheer/punten", label: "Punten", icon: "🏅" },
-    { href: "/beheer/challenges", label: "Challenges", icon: "★" },
-    { href: "/beheer/events", label: "Events", icon: "◆" },
-  ] },
-  { title: "Instellingen", items: [
-    { href: "/beheer/diensten", label: "Diensten & prijzen", icon: "€" },
-    { href: "/beheer/pakketten", label: "Pakketten & abo", icon: "▣" },
-    { href: "/beheer/instellingen", label: "Algemeen", icon: "⚙" },
-  ] },
-];
+// Het register staat in lib/beheer-nav.js (zijbalk + tabs bovenaan de pagina's).
+const groups = NAV;
 
 const STORE_KEY = "fittin_admin_nav_collapsed";
 
@@ -56,7 +30,8 @@ export default function AdminSidebar({ name, role, badges = {} }) {
     });
   };
 
-  const isActive = (href) => pathname === href || (href !== "/beheer" && pathname.startsWith(href));
+  const actief = itemVoor(pathname);
+  const isActive = (href) => actief?.href === href;
   const linkClass = (href) =>
     "flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-bold transition " +
     (isActive(href) ? "bg-accent text-brand" : "text-lav hover:bg-surface/10 hover:text-white");
