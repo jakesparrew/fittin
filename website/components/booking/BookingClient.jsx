@@ -229,7 +229,7 @@ export default function BookingClient({
   const promoOp = (dateStr, h, t = null) => {
     if (!isFit60 || !rustig?.aan) return null;
     const dow = new Date(`${dateStr}T12:00:00Z`).getUTCDay() || 7;
-    return promoVoor(vraag.get(`${dow}:${Math.floor(h)}`), t ?? slotInstant(dateStr, h).getTime(), Date.now(), { aan: rustig.aan });
+    return promoVoor(vraag.get(`${dow}:${Math.floor(h)}`), vraag.get(`${dow}:${Math.floor(h) + 1}`), t ?? slotInstant(dateStr, h).getTime(), Date.now(), { aan: rustig.aan });
   };
   // Betaalde uren per moment: 2 uur op een rustig uur = 1 uur betalen.
   const urenVoor = (dateStr, h) => (welcomeApplies ? duration : betaaldeUren(duration, promoOp(dateStr, h)));

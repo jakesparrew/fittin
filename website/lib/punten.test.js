@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   WAARDEN, waarde, tellers, niveauVan, factor, bereken, isoWeek, vorigeWeek, reeks, questStatus,
-  klasseVan, promoVoor, betaaldeUren, dowUur, klassement, gymdoel,
+  klasseVan, promoVoor, kiesRustigeUren, betaaldeUren, dowUur, klassement, gymdoel,
 } from "./punten.js";
 
 describe("waarden", () => {
@@ -113,15 +113,30 @@ describe("rustige uren", () => {
   });
   const nu = Date.parse("2026-09-18T10:00:00Z");
   const over = (u) => nu + u * 3600000;
-  it("dezelfde regel als slot_promo() in de databank", () => {
-    expect(promoVoor({ klasse: "rustig" }, over(72), nu)).toBe("rustig");
-    expect(promoVoor({ klasse: "druk" }, over(2), nu)).toBe(null); // druk: ook last minute niet
-    expect(promoVoor({ klasse: "normaal" }, over(2), nu)).toBe("rustig"); // last minute
-    expect(promoVoor({ klasse: "normaal" }, over(30), nu)).toBe(null);
-    expect(promoVoor(null, over(2), nu)).toBe("rustig");
-    expect(promoVoor({ klasse: "rustig", pin: "nooit" }, over(2), nu)).toBe(null);
-    expect(promoVoor({ klasse: "druk", pin: "altijd" }, over(72), nu)).toBe("rustig");
-    expect(promoVoor({ klasse: "rustig" }, over(72), nu, { aan: false })).toBe(null);
+  it("dezelfde regel als slot_promo() (0166): start- én volgend uur rustig, geen last minute", () => {
+    const R = { klasse: "rustig" }, N = { klasse: "normaal" }, D = { klasse: "druk" };
+    expect(promoVoor(R, R, over(72), nu)).toBe("rustig");
+    expect(promoVoor(R, D, over(72), nu)).toBe(null); // het gratis tweede uur zou in een druk uur vallen
+    expect(promoVoor(R, N, over(72), nu)).toBe(null);
+    expect(promoVoor(N, N, over(2), nu)).toBe(null); // geen last-minuteregel meer
+    expect(promoVoor(null, null, over(2), nu)).toBe(null);
+    expect(promoVoor({ klasse: "druk", pin: "altijd" }, { pin: "altijd" }, over(72), nu)).toBe("rustig");
+    expect(promoVoor(R, { klasse: "rustig", pin: "nooit" }, over(72), nu)).toBe(null);
+    expect(promoVoor(R, R, over(-1), nu)).toBe(null); // voorbij
+    expect(promoVoor(R, R, over(72), nu, { aan: false })).toBe(null);
+  });
+  it("kiest maximaal N rustige uren, in blokken van 2, de rustigste eerst", () => {
+    const uren = [];
+    for (let dow = 1; dow <= 7; dow++) for (let hour = 6; hour < 23; hour++) uren.push({ dow, hour, weeks: hour === 18 ? 8 : hour % 3 === 0 ? 0 : 1 });
+    const k = kiesRustigeUren(uren, { rustigMax: 1, max: 12 });
+    const rustig = [...k.entries()].filter(([, v]) => v === "rustig").map(([key]) => key);
+    expect(rustig.length).toBe(12);
+    // elk rustig uur heeft een rustige buur: nooit een los rustig uur zonder rustig vervolg of voorganger
+    for (const key of rustig) {
+      const [d, h] = key.split(":").map(Number);
+      expect(k.get(`${d}:${h + 1}`) === "rustig" || k.get(`${d}:${h - 1}`) === "rustig").toBe(true);
+    }
+    expect(k.get("1:18")).toBe("druk");
   });
   it("2 uur voor de prijs van 1, pas vanaf 2 uur", () => {
     expect(betaaldeUren(1, "rustig")).toBe(1);

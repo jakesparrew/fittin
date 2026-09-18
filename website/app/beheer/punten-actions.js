@@ -41,6 +41,7 @@ export async function bewaarPuntenInstellingen(formData) {
     verval_maanden: getal(formData.get("verval_maanden"), 1, 60),
     rustig_max_weken: getal(formData.get("rustig_max_weken"), 0, 8),
     druk_min_weken: getal(formData.get("druk_min_weken"), 1, 8),
+    max_rustige_uren: getal(formData.get("max_rustige_uren"), 0, 119),
   };
   for (const [k, v] of Object.entries(velden)) if (v === null) return { error: `Ongeldige waarde voor "${k}".` };
   if (velden.rustig_max_weken >= velden.druk_min_weken) return { error: "'Rustig tot' moet kleiner zijn dan 'druk vanaf'." };

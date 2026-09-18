@@ -318,7 +318,7 @@ export default async function Punten({ searchParams }) {
       <section className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
         <h2 className="font-black text-ink">Rustige uren ⚡</h2>
         <p className="mt-1 text-xs text-ink/50">
-          Elke nacht herberekend op de laatste 8 weken{berekend ? ` (laatst ${datum.format(new Date(berekend))})` : ""}: in hoeveel weken was dit uur geboekt. ≤ {s.rustig_max_weken} = rustig (dubbele punten, 2 uur voor 1) · ≥ {s.druk_min_weken} = druk (nooit promotie). Plus: elk vrij uur binnen 24 uur dat niet druk is.
+          Elke nacht herberekend op de laatste 8 weken{berekend ? ` (laatst ${datum.format(new Date(berekend))})` : ""}: in hoeveel weken was dit uur geboekt. Uren met ≤ {s.rustig_max_weken} worden kandidaat; daaruit kiezen we de {s.max_rustige_uren ?? 12} rustigste, altijd in blokken van 2 uur (het gratis tweede uur valt zo nooit in een druk uur). ≥ {s.druk_min_weken} = druk.
           Tik een vakje om het vast te pinnen: automatisch → altijd rustig → nooit → automatisch.
         </p>
         {uren.length === 0 ? <p className="mt-3 text-sm text-ink/50">Nog niet berekend — tik op “Nu bijwerken”.</p> : (
@@ -369,6 +369,7 @@ export default async function Punten({ searchParams }) {
           <Veld n="verval_maanden" l="Punten vervallen na (maanden zonder sessie)" v={s.verval_maanden} />
           <Veld n="rustig_max_weken" l="Rustig: geboekt in ≤ … van 8 weken" v={s.rustig_max_weken} />
           <Veld n="druk_min_weken" l="Druk: geboekt in ≥ … van 8 weken" v={s.druk_min_weken} />
+          <Veld n="max_rustige_uren" l="Max rustige uren per week" v={s.max_rustige_uren ?? 12} />
         </div>
         <details className="mt-5">
           <summary className="cursor-pointer text-sm font-bold text-ink">Punten per actie</summary>

@@ -252,17 +252,45 @@ export function klasseVan(weeksBooked, { rustigMax = 2, drukMin = 5 } = {}) {
 }
 
 /**
- * Dezelfde regel als public.slot_promo(), voor het rooster. De databank beslist; dit toont het vooraf.
- * @param demand  { klasse, pin } of null
+ * Dezelfde regel als public.slot_promo() (0166), voor het rooster. De databank beslist; dit toont het vooraf.
+ * Een startuur is rustig als het uur zélf én het uur erna rustig (of vastgepind) zijn: het gratis tweede uur mag
+ * nooit in een druk uur vallen. Geen last-minuteregel meer.
+ * @param demand   { klasse, pin } van het startuur, of null
+ * @param volgend  { klasse, pin } van het uur erna, of null
  */
-export function promoVoor(demand, startMs, nuMs, { aan = true } = {}) {
-  if (!aan) return null;
-  if (demand?.pin === "nooit") return null;
-  if (demand?.pin === "altijd") return "rustig";
-  if (demand?.klasse === "druk") return null;
-  if (demand?.klasse === "rustig") return "rustig";
-  if (startMs > nuMs && startMs - nuMs <= 24 * 3600000) return "rustig";
-  return null;
+export function promoVoor(demand, volgend, startMs, nuMs, { aan = true } = {}) {
+  if (!aan || startMs <= nuMs) return null;
+  const ok = (d) => d?.pin === "altijd" || (d?.klasse === "rustig" && d?.pin !== "nooit");
+  if (demand?.pin === "nooit" || volgend?.pin === "nooit") return null;
+  return ok(demand) && ok(volgend) ? "rustig" : null;
+}
+
+/**
+ * Welke uren van de week zijn rustig? Kandidaten = hoogstens `rustigMax` van 8 weken geboekt. Daaruit kiezen we
+ * blokken van 2 aaneengesloten uren (het gratis tweede uur moet ook rustig zijn), de rustigste eerst, bij gelijke
+ * stand liefst overdag (10–17u), tot `max` uren. Wat overblijft, is 'normaal'.
+ * @param uren  [{ dow, hour, weeks }]
+ * @returns Map "dow:hour" → 'rustig' | 'normaal' | 'druk'
+ */
+export function kiesRustigeUren(uren, { rustigMax = 1, drukMin = 5, max = 12 } = {}) {
+  const per = new Map(uren.map((u) => [`${u.dow}:${u.hour}`, u]));
+  const klasse = new Map(uren.map((u) => [`${u.dow}:${u.hour}`, u.weeks >= drukMin ? "druk" : "normaal"]));
+  const kand = (u) => u && u.weeks <= rustigMax;
+  const paren = [];
+  for (const u of uren) {
+    const v = per.get(`${u.dow}:${u.hour + 1}`);
+    if (kand(u) && kand(v)) paren.push({ a: u, b: v, score: u.weeks + v.weeks, dag: u.hour >= 10 && u.hour <= 16 ? 0 : 1 });
+  }
+  paren.sort((x, y) => x.score - y.score || x.dag - y.dag || x.a.dow - y.a.dow || x.a.hour - y.a.hour);
+  let gekozen = 0;
+  for (const p of paren) {
+    if (gekozen >= max) break;
+    for (const u of [p.a, p.b]) {
+      const k = `${u.dow}:${u.hour}`;
+      if (klasse.get(k) !== "rustig" && gekozen < max) { klasse.set(k, "rustig"); gekozen++; }
+    }
+  }
+  return klasse;
 }
 
 // 2 uur voor de prijs van 1: vanaf 2 uur valt er één uur weg.

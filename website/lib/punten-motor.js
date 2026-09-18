@@ -16,7 +16,7 @@
 // Niets vóór gamification_settings.gestart_op levert punten op (geen terugwerkende kracht, beslissing 2026-09-18).
 
 import {
-  waarde, bereken, tellers, isoWeek, reeks, questStatus, klasseVan, dowUur, klassement, gymdoel, dagBxl,
+  waarde, bereken, tellers, isoWeek, reeks, questStatus, kiesRustigeUren, dowUur, klassement, gymdoel, dagBxl,
 } from "./punten.js";
 import { nieuweBadges, sessieStats, BADGE, BADGE_MET_SESSIE } from "./badges.js";
 import { alles, schrijfPunten, meldVooruitgang, beginMaand, maandSleutel } from "./punten-db.js";
@@ -453,13 +453,10 @@ export async function herberekenRustigeUren(admin, s, boekingen, nu = new Date()
       weken.get(k).add(isoWeek(new Date(x).toISOString()));
     }
   }
-  const rijen = [];
-  for (let dow = 1; dow <= 7; dow++) {
-    for (let hour = open; hour < dicht; hour++) {
-      const n = weken.get(`${dow}:${hour}`)?.size || 0;
-      rijen.push({ gym_id: gym, dow, hour, weeks_booked: n, klasse: klasseVan(n, { rustigMax: s.rustig_max_weken, drukMin: s.druk_min_weken }), computed_at: nu.toISOString() });
-    }
-  }
+  const uren = [];
+  for (let dow = 1; dow <= 7; dow++) for (let hour = open; hour < dicht; hour++) uren.push({ dow, hour, weeks: weken.get(`${dow}:${hour}`)?.size || 0 });
+  const klasse = kiesRustigeUren(uren, { rustigMax: s.rustig_max_weken, drukMin: s.druk_min_weken, max: s.max_rustige_uren ?? 12 });
+  const rijen = uren.map((u) => ({ gym_id: gym, dow: u.dow, hour: u.hour, weeks_booked: u.weeks, klasse: klasse.get(`${u.dow}:${u.hour}`), computed_at: nu.toISOString() }));
   const { error } = await admin.from("slot_demand").upsert(rijen, { onConflict: "gym_id,dow,hour" });
   if (error) throw new Error(`rustige uren: ${error.message}`);
   return rijen.length;

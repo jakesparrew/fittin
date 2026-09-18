@@ -1,11 +1,11 @@
 // Fittin' Punten — lezen en schrijven. De regels zelf staan in lib/punten.js (puur, getest).
 
-import { tellers, niveauVan, waarde, bereken, WAARDEN, isoWeek, dowUur, reeks, klassement, NIET_KLASSEMENT } from "./punten.js";
+import { tellers, niveauVan, waarde, bereken, WAARDEN, isoWeek, dowUur, reeks, klassement, NIET_KLASSEMENT, promoVoor } from "./punten.js";
 import { notify } from "./notify.js";
 
 export const STANDAARD_INSTELLINGEN = {
   aan: true, gestart_op: null, waarden: {}, prijs_sessie: 300, max_gym_maand: 10, max_aanbreng_maand: 5,
-  max_per_lid_maand: 1, verval_maanden: 12, rustig_aan: true, rustig_max_weken: 2, druk_min_weken: 5,
+  max_per_lid_maand: 1, verval_maanden: 12, rustig_aan: true, rustig_max_weken: 1, druk_min_weken: 5, max_rustige_uren: 12,
 };
 
 export async function laadInstellingen(admin, gymId) {
@@ -125,7 +125,8 @@ export function rustigsteMomenten({ aan, rijen }, { vanaf = Date.now(), dagen = 
       if (t < vanaf + 3600000 || bezet.has(t)) continue;
       const { dow, hour } = dowUur(iso);
       const r = per.get(`${dow}:${hour}`);
-      if (!r || r.klasse !== "rustig" || r.pin === "nooit") continue; // enkel echt rustige uren, niet het last-minute-vangnet
+      const v = per.get(`${dow}:${hour + 1}`);
+      if (promoVoor(r, v, t, vanaf, { aan }) !== "rustig") continue; // start- én volgend uur rustig
       if (!beste || Math.abs(h - voorkeur) < Math.abs(beste.h - voorkeur)) beste = { iso, h, weeks: r.weeks_booked ?? 0 };
     }
     if (beste) uit.push({ iso: beste.iso, weeks: beste.weeks });
