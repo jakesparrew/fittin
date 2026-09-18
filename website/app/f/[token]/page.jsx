@@ -39,7 +39,7 @@ export default async function Feedback({ params, searchParams }) {
     <main className="min-h-screen bg-paper px-5 py-10">
       <div className="mx-auto max-w-md">
         <p className="text-2xl font-black text-ink">Fittin<span className="text-accent">&rsquo;</span></p>
-        <BedanktScherm token={token} score={huidig?.rating || null} opmerking={huidig?.comment || ""} />
+        <BedanktScherm token={token} score={huidig?.rating || null} opmerking={huidig?.comment || ""} alGevraagd={!!b.member?.google_review_klik_at} />
       </div>
     </main>
   );

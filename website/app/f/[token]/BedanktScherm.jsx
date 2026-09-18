@@ -1,6 +1,6 @@
 "use client";
 import { useState, useTransition } from "react";
-import { bewaarScore, zetFeedbackUit, bewaarEnergie, verklaarNetjes } from "./actions";
+import { bewaarScore, zetFeedbackUit, bewaarEnergie, verklaarNetjes, googleReviewGeklikt } from "./actions";
 
 const ENERGIE = [
   { n: 1, e: "😫", l: "Zwaar" },
@@ -26,7 +26,7 @@ const REVIEW_URL =
   // Rechtstreeks het venster "review schrijven" van het bedrijfsprofiel (place-id doorgegeven door de eigenaar, 19-09-2026).
   "https://search.google.com/local/writereview?placeid=ChIJKc6ttft3w0cRl--XdxjNKD0";
 
-export default function BedanktScherm({ token, score, opmerking }) {
+export default function BedanktScherm({ token, score, opmerking, alGevraagd = false }) {
   const [ster, setSter] = useState(score);
   const [tekst, setTekst] = useState(opmerking || "");
   const [bewaard, setBewaard] = useState(false);
@@ -118,8 +118,8 @@ export default function BedanktScherm({ token, score, opmerking }) {
             {netjes ? "✅ Top — de volgende vindt het netjes (+1 punt)" : "✅ Ik heb alles teruggelegd en afgeveegd"}
           </button>
 
-          {/* Identiek voor elke score. */}
-          <div className="mt-8 rounded-2xl border border-borderc bg-surface p-6 text-center">
+          {/* Identiek voor elke score. Wie al eens naar Google doorklikte, krijgt de vraag niet opnieuw (0167). */}
+          {!alGevraagd && <div className="mt-8 rounded-2xl border border-borderc bg-surface p-6 text-center">
             <p className="font-black text-ink">Help anderen ons vinden</p>
             <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-soft">
               Een eerlijke review op Google — goed of slecht — helpt iemand die twijfelt meer dan
@@ -129,11 +129,12 @@ export default function BedanktScherm({ token, score, opmerking }) {
               href={REVIEW_URL}
               target="_blank"
               rel="noreferrer"
+              onClick={() => { googleReviewGeklikt(token); }}
               className="mt-4 inline-flex rounded-full bg-accent px-6 py-3 font-black text-brand transition hover:opacity-90"
             >
               Schrijf een review op Google ↗
             </a>
-          </div>
+          </div>}
 
           <div className="mt-6 text-center">
             <a href="/account" className="text-sm font-bold text-ink hover:underline">Naar mijn account</a>

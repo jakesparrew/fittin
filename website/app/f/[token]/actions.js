@@ -17,7 +17,7 @@ export async function boekingVanToken(token) {
   const admin = createAdminClient();
   const { data } = await admin
     .from("bookings")
-    .select("id, gym_id, user_id, starts_at, ends_at, status, member:profiles!bookings_user_id_fkey(full_name, feedback_opt_out)")
+    .select("id, gym_id, user_id, starts_at, ends_at, status, member:profiles!bookings_user_id_fkey(full_name, feedback_opt_out, google_review_klik_at)")
     .eq("report_token", kort(token, 64))
     .maybeSingle();
   if (!data || data.status !== "bevestigd") return null;
@@ -87,6 +87,15 @@ export async function verklaarNetjes(token) {
   if (error) return { error: "Bewaren lukte niet." };
   const punten = await geefNu(admin, { gymId: b.gym_id, userId: b.user_id, kind: "netjes", sourceKey: `netjes:${b.id}`, meta: { booking: b.id } }).catch(() => 0);
   return { ok: true, punten };
+}
+
+// De tik op de Google-knop onthouden: wie al naar Google ging, krijgt de vraag nooit meer (0167).
+export async function googleReviewGeklikt(token) {
+  const b = await boekingVanToken(token);
+  if (!b?.user_id) return { ok: false };
+  const { error } = await createAdminClient().from("profiles").update({ google_review_klik_at: new Date().toISOString() })
+    .eq("id", b.user_id).is("google_review_klik_at", null);
+  return error ? { ok: false } : { ok: true };
 }
 
 // Bezwaarrecht (art. 21 AVG): apart van de nieuwsbriefschakelaar, en bereikbaar zonder in te loggen
