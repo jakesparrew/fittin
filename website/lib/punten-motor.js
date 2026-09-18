@@ -169,18 +169,20 @@ async function perGym(admin, s, nu) {
   }
 
   // ---------- 4b. groei ----------
-  for (const p of deelnemers) {
-    const b = bk.get(p.booking_id);
-    if (p.confirmed_at && na(p.confirmed_at) && b && p.user_id !== b.user_id) geef(b.user_id, "gast_bevestigd", "gast_bevestigd", `gastbev:p:${p.id}`, { meta: { booking: b.id } });
-  }
-  for (const i of invites) {
-    if (i.confirmed_at && na(i.confirmed_at)) geef(i.inviter_id, "gast_bevestigd", "gast_bevestigd", `gastbev:i:${i.id}`, { meta: { booking: i.booking_id } });
-  }
-  const betaaldeSessie = (b) => b.status === "bevestigd" && ["los", "abo", "credit"].includes(b.payment_source) && (b.paid || b.payment_source === "credit") && (b.price_cents > 0 || b.payment_source === "credit");
+  // Caps tegen misbruik (eigen extra e-mailadressen als "gast", nepaccounts met je eigen code): per host en per maand
+  // hoogstens 4× gast-bevestigd en 5× vriend-account. Geteld op wat er al in het boek staat plus deze ronde.
   const maandStart = new Date(beginMaand(nu)).getTime();
+  const telMaand = (uid, kind) => [...ledger, ...rijen].filter((r) => r.user_id === uid && r.kind === kind && (!r.created_at || new Date(r.created_at).getTime() >= maandStart)).length;
+  const geefGecapt = (uid, kind, cap, key, opts) => { if (telMaand(uid, kind) < cap) geef(uid, kind, kind, key, opts); };
+  const gastRijen = [
+    ...deelnemers.filter((p) => p.confirmed_at && bk.get(p.booking_id) && p.user_id !== bk.get(p.booking_id).user_id).map((p) => ({ host: bk.get(p.booking_id).user_id, key: `gastbev:p:${p.id}`, op: p.confirmed_at, booking: p.booking_id })),
+    ...invites.filter((i) => i.confirmed_at).map((i) => ({ host: i.inviter_id, key: `gastbev:i:${i.id}`, op: i.confirmed_at, booking: i.booking_id })),
+  ].sort((a, b) => new Date(a.op) - new Date(b.op));
+  for (const g of gastRijen) if (na(g.op)) geefGecapt(g.host, "gast_bevestigd", 4, g.key, { meta: { booking: g.booking } });
+  const betaaldeSessie = (b) => b.status === "bevestigd" && ["los", "abo", "credit"].includes(b.payment_source) && (b.paid || b.payment_source === "credit") && (b.price_cents > 0 || b.payment_source === "credit");
   for (const r of referrals) {
     if (!r.referrer_id || !r.referred_id) continue;
-    if (na(r.created_at)) geef(r.referrer_id, "gast_account", "gast_account", `gastacc:${r.id}`, { meta: { vriend: r.referred_id } });
+    if (na(r.created_at)) geefGecapt(r.referrer_id, "gast_account", 5, `gastacc:${r.id}`, { meta: { vriend: r.referred_id } });
     const eerste = voltooid.filter((b) => b.user_id === r.referred_id && betaaldeSessie(b)).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at))[0];
     if (eerste && na(eerste.ends_at)) {
       geef(r.referrer_id, "vriend_eerste", "vriend_eerste", `vriend1:${r.id}`, { meta: { vriend: r.referred_id, booking: eerste.id } });
@@ -214,7 +216,10 @@ async function perGym(admin, s, nu) {
   // ---------- 4d. training en ervaring ----------
   for (const l of logs) if (na(l.created_at)) geef(l.user_id, "log", "log", `log:${l.user_id}:${l.logged_on || dagBxl(l.created_at)}`);
   for (const m of metingen) if (na(m.created_at)) geef(m.user_id, "gewicht", "gewicht", `gewicht:${m.user_id}:${isoWeek(m.created_at)}`);
-  for (const r of ratings) if (na(r.created_at) && r.user_id) geef(r.user_id, "rating", "rating", `rating:${r.booking_id}`, { meta: { booking: r.booking_id } });
+  // Een beoordeling telt enkel voor een sessie die het lid zelf trainde (boeker of bevestigde deelnemer). De
+  // insert-policy op session_feedback controleert het booking_id niet; het puntenboek doet dat hier wel.
+  const trainde = (uid, bookingId) => (sessiesVan.get(uid) || []).some((b) => b.id === bookingId);
+  for (const r of ratings) if (na(r.created_at) && r.user_id && trainde(r.user_id, r.booking_id)) geef(r.user_id, "rating", "rating", `rating:${r.booking_id}`, { meta: { booking: r.booking_id } });
   for (const c of checks) {
     if (!na(c.created_at)) continue;
     geef(c.user_id, "zaalcheck", "zaalcheck", `zaalcheck:${c.booking_id}`, { meta: { booking: c.booking_id } });
