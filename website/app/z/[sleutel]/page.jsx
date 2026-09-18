@@ -35,7 +35,7 @@ export default async function ZaalCheckPagina({ params, searchParams }) {
     );
   }
 
-  const al = await bestaandeCheck(b.id);
+  const al = await bestaandeCheck(sleutel);
   const gekozen = ["netjes", "rommel", "stuk"].includes(sp.s) ? sp.s : null;
   return (
     <main className="min-h-screen bg-paper px-5 py-10">

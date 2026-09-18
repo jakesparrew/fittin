@@ -23,8 +23,12 @@ export async function boekingVoorCheck(sleutel) {
   return b || null;
 }
 
-export async function bestaandeCheck(bookingId) {
-  const { data } = await createAdminClient().from("zaal_checks").select("state, tags, photo_path").eq("booking_id", bookingId).maybeSingle();
+// Op de SLEUTEL, niet op een boeking-id: een server action is voor iedereen aanroepbaar, en met een geraden id zou
+// je anders de check (en het fotopad) van een ander lid kunnen lezen.
+export async function bestaandeCheck(sleutel) {
+  const id = leesSleutel("zaal", sleutel);
+  if (!id) return null;
+  const { data } = await createAdminClient().from("zaal_checks").select("state, tags, photo_path").eq("booking_id", id).maybeSingle();
   return data || null;
 }
 
