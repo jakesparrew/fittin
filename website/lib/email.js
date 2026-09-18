@@ -282,6 +282,28 @@ export async function sendBookingCancelled({ to, name, serviceName, startsAt }) 
   );
 }
 
+// ---- Netheid: een vriendelijke herinnering (0165) ----
+// ALTIJD met de hand verstuurd door de uitbater vanaf /beheer/netheid, nooit automatisch: wie er vóór zat, is een
+// vermoeden, geen bewijs. Daarom geen verwijt, geen naam van de melder, en een uitweg ("was jij het niet?").
+export async function sendNetheidHerinnering({ to, name, startsAt, endsAt, tags = [] }) {
+  const wat = tags.length ? `<p style="font-size:14px;color:#6b6685;margin:0 0 12px">Wat opviel: ${esc(tags.join(", "))}.</p>` : "";
+  return send(
+    to,
+    "Een kleine vraag over je laatste sessie",
+    shell({
+      title: "Samen houden we de zaal fijn 🧼",
+      intro: `Hallo ${esc(name) || "daar"}, na jouw sessie kregen we een melding dat de zaal niet helemaal netjes was toen de volgende binnenkwam.`,
+      rows: [["Sessie", dayLabel(startsAt)], ["Uur", timeRange(startsAt, endsAt)]],
+      body: `${wat}<p style="font-size:14px;color:#6b6685;margin:0 0 12px">Het kan iedereen overkomen. Wil je er de volgende keer even op letten? Toestellen afvegen, gewichten terug op hun plaats, en je flesje of handdoek mee — dan vindt de volgende het zoals jij het graag vindt.</p>
+        <p style="font-size:13px;color:#8b86a3;margin:0">Was jij het niet, of was het al zo toen je binnenkwam? Antwoord dan gewoon op deze mail — dan weten we dat ook.</p>`,
+      cta: { href: `${SITE}/huisregels`, label: "De huisregels" },
+    }),
+    FROM_BOOKING,
+    REPLY_TO,
+    "netheid_herinnering",
+  );
+}
+
 const eurTxt = (c) => `€ ${((c || 0) / 100).toFixed(2).replace(".", ",")}`;
 
 // ---- Member: monthly membership payment failed ----
@@ -528,7 +550,7 @@ export async function sendBookingRescheduled({ to, name, serviceName, startsAt, 
 }
 
 // ---- Member: access code, sent ~5 minutes before the session starts ----
-export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl, reportToken = null, zaalNotitie = null, workout = null, kind = null }) {
+export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, accessCode, personal = false, address, mapsUrl, reportToken = null, zaalNotitie = null, workout = null, kind = null, zaalSleutel = null, puntenRegel = null }) {
   // Persoonlijk vs reserve is geen detail: de eerste vervalt vanzelf na de sessie, de tweede is de
   // vaste code van de gym en blijft altijd geldig. Wie dat niet weet, stuurt hem gedachteloos door.
   const codeCaption = personal ? "Jouw persoonlijke code" : "Reservecode";
@@ -572,6 +594,22 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
   const codeHtml = accessCode
     ? `<div style="margin:6px 0 4px;text-align:center"><div style="font-size:12px;color:#6b6685;letter-spacing:.08em;text-transform:uppercase">${codeCaption}</div><div style="font-size:34px;font-weight:800;letter-spacing:.18em;color:#22194F;background:#f0effa;border-radius:14px;padding:14px 0;margin-top:6px">${accessCode}</div>${codeNote}</div>`
     : `<p style="font-size:14px;color:#6b6685">Open de deur met de knop in je account zodra je sessie begint.</p>`;
+  // De zaalcheck: drie knoppen ONDER de code (de code blijft het eerste wat je ziet). Enkel in de mail van het lid —
+  // de sleutel is ondertekend voor deze boeking en voor deze handeling (lib/sleutel.js), de coach krijgt hem niet.
+  const zaalHtml = zaalSleutel
+    ? `<div style="margin:16px 0 4px;background:#f7f7fb;border:1px solid #ece9f5;border-radius:14px;padding:14px;text-align:center">
+        <p style="margin:0 0 10px;font-size:14px;font-weight:bold;color:#22194F">Hoe vond je de zaal toen je binnenkwam?</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto"><tr>
+          ${[["netjes", "👍 Netjes"], ["rommel", "🧼 Niet netjes"], ["stuk", "🔧 Iets stuk"]].map(([v, l]) =>
+            `<td style="padding:0 4px"><a href="${SITE}/z/${zaalSleutel}?s=${v}" style="display:inline-block;background:#ffffff;border:1px solid #d9d5ea;border-radius:999px;padding:9px 12px;font-size:13px;font-weight:bold;color:#22194F;text-decoration:none;white-space:nowrap">${l}</a></td>`
+          ).join("")}
+        </tr></table>
+        <p style="margin:8px 0 0;font-size:11px;color:#8b86a3">Eén tik = 3 punten. Enkel de zaakvoerder leest mee.</p>
+      </div>`
+    : "";
+  const puntenHtml = puntenRegel
+    ? `<p style="margin:12px 0 0;text-align:center;font-size:12px;color:#6b6685"><a href="${SITE}/account/punten" style="color:#6b6685;text-decoration:none">${esc(puntenRegel)}</a></p>`
+    : "";
   const navHtml = mapsUrl
     ? `<div style="text-align:center"><a href="${mapsUrl}" style="display:inline-block;margin:6px 0;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:11px 20px;border-radius:999px;font-size:14px">📍 Navigeer naar de gym</a></div>`
     : "";
@@ -593,7 +631,7 @@ export async function sendAccessCode({ to, name, serviceName, startsAt, endsAt, 
       // of een verwijt bevatten.
       body: `${zaalNotitie ? `<div style="margin:0 0 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:12px 14px">
           <p style="margin:0;font-size:13px;color:#9a3412;line-height:1.6"><b>Let op:</b> ${esc(zaalNotitie)}</p>
-        </div>` : ""}${workoutHtml}${codeHtml}${navHtml}
+        </div>` : ""}${workoutHtml}${codeHtml}${zaalHtml}${navHtml}${puntenHtml}
         <div style="margin-top:16px;border-top:1px solid #ece9f5;padding-top:14px">
           <p style="font-size:14px;font-weight:bold;color:#22194F;margin:0 0 6px">Zo kom je binnen</p>
           <ol style="font-size:13px;color:#6b6685;margin:0;padding-left:18px;line-height:1.6">
@@ -889,7 +927,13 @@ export async function sendPaymentRequest({ to, name, coachName, amount, descript
 }
 
 // ---- Invited to a session (a member added you to their booking) ----
-export async function sendSessionInvite({ to, name, fromName, serviceName, startsAt, endsAt }) {
+// "Ik kom" (0165): de gast bevestigt zelf. Dat is ook het enige signaal dat hij er écht was — meetrainpunten
+// tellen pas na die tik, anders boek je voor vier en zet je drie namen erbij.
+const komBlok = (url, fromName) => url
+  ? `<div style="margin:14px 0 4px;text-align:center"><a href="${url}" style="display:inline-block;background:#5FDA6B;color:#22194F;text-decoration:none;font-weight:bold;padding:12px 24px;border-radius:999px;font-size:15px">✅ Ik kom</a><p style="margin:6px 0 0;font-size:11px;color:#8b86a3">Eén tik, zodat ${esc(fromName)} weet dat je erbij bent.</p></div>`
+  : "";
+
+export async function sendSessionInvite({ to, name, fromName, serviceName, startsAt, endsAt, komUrl = null }) {
   await send(
     to,
     `${fromName} nodigt je uit voor een sessie`,
@@ -901,7 +945,7 @@ export async function sendSessionInvite({ to, name, fromName, serviceName, start
         ["Wanneer", dayLabel(startsAt)],
         ["Uur", timeRange(startsAt, endsAt)],
       ],
-      body: `<p style="font-size:14px;color:#6b6685">Het bezoek telt mee voor jouw stats. Tot dan!</p>`,
+      body: `${komBlok(komUrl, fromName)}<p style="font-size:14px;color:#6b6685">Het bezoek telt mee voor jouw stats — en na je bevestiging krijg je er ook punten voor. Tot dan!</p>`,
       cta: { href: `${SITE}/account`, label: "Mijn account" },
     }),
     FROM_BOOKING
@@ -909,7 +953,7 @@ export async function sendSessionInvite({ to, name, fromName, serviceName, start
 }
 
 // ---- Invite a NON-member by e-mail: session invite + a make-an-account CTA ----
-export async function sendEmailInvite({ to, fromName, serviceName, startsAt, endsAt, signupUrl }) {
+export async function sendEmailInvite({ to, fromName, serviceName, startsAt, endsAt, signupUrl, komUrl = null }) {
   await send(
     to,
     `${fromName} nodigt je uit bij Fittin' — je 1e sessie is gratis 🎁`,
@@ -922,7 +966,7 @@ export async function sendEmailInvite({ to, fromName, serviceName, startsAt, end
         ["Uur", timeRange(startsAt, endsAt)],
         ["Welkomstcadeau", `<span style="color:#33B24A">Je 1e sessie is gratis 🎁</span>`],
       ],
-      body: `<div style="margin-top:8px;background:#eafbe9;border:1px solid #bdebb9;border-radius:12px;padding:12px 14px;font-size:14px;color:#22194F"><b>Promotie:</b> maak nu een gratis account en je <b>allereerste sessie is volledig gratis</b> — geen kaart nodig. Daarna train je vanaf € 15 voor een uur in de privégym.</div><p style="font-size:13px;color:#9b97ab;margin-top:10px">Een account maken duurt 30 seconden. Daarna verschijnt deze sessie meteen in je account.</p>`,
+      body: `${komBlok(komUrl, fromName)}<div style="margin-top:8px;background:#eafbe9;border:1px solid #bdebb9;border-radius:12px;padding:12px 14px;font-size:14px;color:#22194F"><b>Promotie:</b> maak nu een gratis account en je <b>allereerste sessie is volledig gratis</b> — geen kaart nodig. Daarna train je vanaf € 15 voor een uur in de privégym.</div><p style="font-size:13px;color:#9b97ab;margin-top:10px">Een account maken duurt 30 seconden. Daarna verschijnt deze sessie meteen in je account.</p>`,
       cta: { href: signupUrl || `${SITE}/login?mode=signup`, label: "Maak gratis account + claim je gratis sessie" },
     }),
     FROM_BOOKING
@@ -1094,6 +1138,15 @@ export async function sendAboSuggestion({ to, name, sessions, losCount, creditCo
 // worden weggelaten — een lege sectie leest als "hier is niets aan de hand" en dat is niet altijd waar.
 // Opbouw en versturen staan apart zodat de HTML te renderen valt zonder iemand te mailen
 // (scripts/preview-weekreport.mjs schrijft hem naar een bestand).
+// Fittin' Punten en de zaalcheck (0165) in twee regels. Geen gegevens (oudere rapporten, tests) → niets.
+function puntenRegel(p) {
+  if (!p) return "";
+  return calloutBox(
+    `🏅 <b>${p.verdiend.toLocaleString("nl-BE")} punten</b> verdiend · <b>${p.gratis}</b> gratis sessie${p.gratis === 1 ? "" : "s"} ingewisseld`
+    + `<br>🧼 ${p.zaalchecks ? `<b>${p.zaalchecks} zaalchecks</b> · ${p.netjesPct == null ? "—" : `<b>${p.netjesPct}% netjes</b>`}${p.rommel ? ` · ${p.rommel}× niet netjes — <a href="${SITE}/beheer/netheid" style="color:#1a7d34;font-weight:bold">bekijk wie</a>` : ""}` : "nog geen zaalchecks deze week"}`
+  );
+}
+
 export function weekReportHtml({ name, report }) {
   const r = report;
   const periode = `${fmt(r.range.start, { day: "numeric", month: "long" })} – ${fmt(new Date(r.range.end.getTime() - 86400000), { day: "numeric", month: "long" })}`;
@@ -1208,7 +1261,7 @@ export function weekReportHtml({ name, report }) {
   // ---- Draait de machine? ----
   // lockOffline is bewust géén "taak liep niet": de deurcodemail vertrok wél, alleen syncte een
   // persoonlijke code mogelijk niet naar het keypad. Eigen regel, eigen woorden.
-  const machineOk = !r.health.mailsFailed && !r.health.accessCronBad && !r.health.activationCronBad && !r.health.lockOffline;
+  const machineOk = !r.health.mailsFailed && !r.health.accessCronBad && !r.health.activationCronBad && !r.health.lockOffline && !r.health.puntenCronBad;
   const machine = sectionTitle("Draait de app?", "")
     + (machineOk
       ? calloutBox(`De app verstuurde deze week <b>${r.health.mailsSent} mails</b> (bevestigingen, deurcodes, herinneringen, win-backs) — <b>geen enkele mislukt</b>. Deurcodes en dagelijkse taken liepen op tijd.`, "good")
@@ -1217,6 +1270,7 @@ export function weekReportHtml({ name, report }) {
           + (r.health.mailsFailed ? `<li><b>${r.health.mailsFailed} mail(s) niet aangekomen</b> deze week (mislukt of gebouncet). Check Resend (domein, suppressielijst) — bij een deurcode stond dat lid voor een dichte deur.</li>` : "")
           + (r.health.accessCronBad ? `<li><b>Deurcode-taak liep niet recent.</b> Leden kunnen daardoor zonder code voor de deur staan.</li>` : "")
           + (r.health.activationCronBad ? `<li><b>Dagelijkse taak liep niet.</b> Herinneringen en win-backs staan stil.</li>` : "")
+          + (r.health.puntenCronBad ? `<li><b>De puntentaak liep niet recent.</b> Leden krijgen geen punten voor hun sessies tot ze weer loopt.</li>` : "")
           + (r.health.lockOffline ? `<li><b>Het slot leek ${r.health.lockOffline}× offline</b> deze week. De deurcodemails vertrokken wél en de reservecode werkt altijd, maar een persoonlijke code syncet dan mogelijk niet — check de Bridge/Wi-Fi.</li>` : "")
           + `</ul>`, "warn"));
 
@@ -1230,7 +1284,7 @@ export function weekReportHtml({ name, report }) {
   return shell({
     title: `Je week in het kort`,
     intro: `${esc(name) ? `Hallo ${esc(name)}, ` : ""}dit is <b>${periode}</b>.<br>${kop}`,
-    body: stats + abo + verkeer + bezet + uren + actiesHtml + machine,
+    body: stats + abo + puntenRegel(r.punten) + verkeer + bezet + uren + actiesHtml + machine,
     cta: { href: `${SITE}/beheer`, label: "Open het dashboard" },
   });
 }

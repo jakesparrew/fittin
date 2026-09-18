@@ -73,6 +73,10 @@ inbegrepen in de scope; App Store-lancering kost €100 (Apple) + €25 (Google)
 - Pricing 2026 (live): losse sessie **€15** · **10-beurtenkaart €150** = 10+1 gratis (11 sessies) ·
   **abonnement €12/mnd** (1 sessie inclusief, daarna alle sessies aan €12). Coaches betalen altijd
   **€12/sessie** en kopen 1–100 credits vooraf (geen kaart/abonnement). Géén duurkortingen.
+- **Rustige uren** (sinds 2026-09-18, migratie 0165): automatisch berekend per uur-van-de-week; daar kost
+  2 uur de prijs van 1 en geeft een sessie dubbele punten. Regel in `public.slot_promo()` + `lib/punten.js`.
+- **Fittin' punten** (0165): puntenboek `member_points`, 300 punten = 1 gratis sessie; plan en regels in
+  `docs/plans/2026-09-18-gamification-community.md`, motor `lib/punten-motor.js` (cron `/api/cron/punten`, elk uur).
 - Eerste uur gratis met code **FittinWelcome** (dienst "Fit60") — verdwijnt zodra een lid het gebruikt heeft
 - PT: 1-op-1 €60 · 1-op-2 €35 pp · 1-op-3 €30 pp · gratis intake + proeftraining ·
   kosteloos annuleren tot 24u vooraf
@@ -87,6 +91,6 @@ inbegrepen in de scope; App Store-lancering kost €100 (Apple) + €25 (Google)
   (géén `slotState()`-demo meer). Boekbaar 06:00–23:00, laatste sessie start om 22:00.
 - Positionering: losse sessie zónder lidgeld blijft de hoofdboodschap ("betaal enkel voor je
   tijd"), maar het abonnement is intussen live (€12/mnd, 1 sessie inclusief + alle sessies aan
-  €12, géén daluren-korting). Géén lengte-/duurkortingen meer.
+  €12). Géén lengte-/duurkortingen — behalve op rustige uren (2u voor 1, zie hierboven).
 - Foto's van de oude site staan op de Wix-CDN (zie docs/CONTENT.md); download originelen
   bij de klant op te vragen vóór migratie.

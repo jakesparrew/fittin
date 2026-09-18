@@ -8,6 +8,9 @@ import SearchSelect from "@/components/admin/SearchSelect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import CoachDossier from "@/components/coaching/CoachDossier";
 import { dossierVoorCoach } from "@/lib/coaching/plan.js";
+import { puntenVan, huidigeReeks } from "@/lib/punten-db";
+import { soortLabel } from "@/lib/punten";
+import { netheidsScore, KLEUR } from "@/lib/netheid";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +68,13 @@ export default async function MemberDetail({ params }) {
   ]);
 
   if (!member) return <div className="px-4 py-6 md:px-8 md:py-8">Lid niet gevonden. <Link href="/beheer/leden" className="text-accentdark">Terug</Link></div>;
+
+  // Fittin' Punten + netheid (0165). Best-effort, zoals het dossier hieronder.
+  const [punten, { data: naMijChecks }] = await Promise.all([
+    puntenVan(adminDb, id, { limit: 15 }).catch(() => null),
+    adminDb.from("zaal_checks").select("state, photo_path, owner_verdict, created_at").eq("previous_user", id).gte("created_at", new Date(Date.now() - 90 * 86400000).toISOString()),
+  ]);
+  const netheid = netheidsScore(naMijChecks || []);
 
   // Het AI-coachdossier. Faalt het, dan valt alleen dit blok weg — nooit de hele ledenpagina.
   const aiDossier = await dossierVoorCoach(adminDb, id).catch(() => null);
@@ -173,6 +183,32 @@ export default async function MemberDetail({ params }) {
       </section>
 
       {/* Payments */}
+      {punten && (
+        <section id="punten" className="mt-8 rounded-2xl border border-borderc bg-surface p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="font-black text-ink">Punten</h2>
+            <Link href="/beheer/punten" className="text-xs font-bold text-accentdark hover:underline">Punten aanpassen →</Link>
+          </div>
+          <p className="mt-2 text-sm text-ink/70">
+            <b className="text-ink">{punten.saldo}</b> te besteden · <b className="text-ink">{punten.lifetime}</b> ooit verdiend · niveau <b className="text-ink">{punten.niveau.naam}</b>
+            {huidigeReeks(punten.alle) >= 2 && <> · 🔥 {huidigeReeks(punten.alle)} weken op rij</>}
+          </p>
+          <p className="mt-1 text-xs text-ink/55">
+            Netheid na hun sessies: {netheid.kleur ? <span className="inline-flex items-center gap-1 font-bold text-ink"><span className={"h-2 w-2 rounded-full " + KLEUR[netheid.kleur].dot} />{KLEUR[netheid.kleur].l}</span> : "nog te weinig zaalchecks"} ({netheid.aantal} checks, 90 dagen) · <Link href="/beheer/netheid" className="font-bold text-accentdark hover:underline">details</Link>
+          </p>
+          {punten.rijen.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {punten.rijen.map((r) => (
+                <div key={r.id} className="flex items-center justify-between rounded-lg bg-paper px-3 py-1.5 text-xs">
+                  <span className="text-ink">{soortLabel(r.kind).e} {soortLabel(r.kind).l}{r.meta?.reden ? ` — ${r.meta.reden}` : ""}</span>
+                  <span className="flex items-center gap-3"><span className="text-ink/40">{fmt(r.created_at)}</span><b className={r.points < 0 ? "text-ink/50" : "text-accentdark"}>{r.points > 0 ? "+" : ""}{r.points}</b></span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       <section className="mt-8 rounded-2xl border border-borderc bg-surface p-6">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-black text-ink">Betalingen</h2>

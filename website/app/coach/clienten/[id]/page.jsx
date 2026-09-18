@@ -7,6 +7,7 @@ import ActionForm from "@/components/ui/ActionForm";
 import ProgressPanel from "@/components/progress/ProgressPanel";
 import CoachDossier from "@/components/coaching/CoachDossier";
 import { dossierVoorCoach } from "@/lib/coaching/plan.js";
+import { puntenVan, huidigeReeks } from "@/lib/punten-db";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,9 @@ export default async function CoachClientDetail({ params }) {
   // Het AI-dossier van deze client. Gemachtigd door de aanvaarde koppeling hierboven — zonder die
   // controle mag `dossierVoorCoach` niet aangeroepen worden.
   const aiDossier = await dossierVoorCoach(admin, id).catch(() => null);
+  // Fittin' Punten (0165): reeks en niveau motiveren de client, en vertellen de coach of het ritme zit.
+  const punten = await puntenVan(admin, id, { limit: 0 }).catch(() => null);
+  const reeks = punten ? huidigeReeks(punten.alle) : 0;
 
   const confirmed = (bookings || []).filter((b) => b.status === "bevestigd");
   const upcoming = confirmed.filter((b) => new Date(b.starts_at).getTime() >= now).sort((a, b) => new Date(a.starts_at) - new Date(b.starts_at));
@@ -72,6 +76,17 @@ export default async function CoachClientDetail({ params }) {
         <Mini label="Workouts gelogd (30d)" value={logDays} hint="dagen actief in de app" />
         <Mini label="Laatste gewicht" value={lastWeight ? `${Number(lastWeight.weight_kg).toFixed(1)} kg` : "—"} hint={lastWeight ? fmtDay(lastWeight.logged_on) : "nog niet gelogd"} />
       </div>
+      {punten && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 rounded-2xl border border-borderc bg-surface px-5 py-3 text-sm">
+          <span className="text-ink">{reeks >= 2 ? <>🔥 <b>{reeks} weken op rij</b> het weekdoel gehaald</> : "Nog geen lopende reeks"}</span>
+          <span className="text-ink/60">· niveau <b className="text-ink">{punten.niveau.naam}</b> ({punten.lifetime} punten)</span>
+          <ActionForm action={coachGiveFeedback} success="Kudos verstuurd 👏" className="ml-auto">
+            <input type="hidden" name="clientId" value={client.id} />
+            <input type="hidden" name="body" value={reeks >= 2 ? `👏 ${reeks} weken op rij — sterk bezig, hou dat ritme vast!` : "👏 Goed bezig — ik zie dat je werk levert. Blijven gaan!"} />
+            <button className="rounded-full bg-accent px-4 py-2 text-xs font-black text-brand">👏 Stuur kudos</button>
+          </ActionForm>
+        </div>
+      )}
 
       {/* Client's training progress (same charts the member sees) — authorized by the accepted link above. */}
       <ProgressPanel userId={client.id} />

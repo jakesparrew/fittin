@@ -5,6 +5,7 @@ import { getSessionProfile } from "@/lib/auth";
 import { getGymCached, getServicesCached, getPublicCoachesCached, getCoachAvailabilityCached } from "@/lib/cache";
 import BookingClient from "@/components/booking/BookingClient";
 import BookingUnavailable from "@/components/booking/BookingUnavailable";
+import { laadRustigeUren } from "@/lib/punten-db";
 
 const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
 
@@ -39,7 +40,7 @@ export default async function BoekenPage({ searchParams }) {
   // ingelogde client faalde hij voor uitgelogde bezoekers stil, en die zien de gym dus voller
   // dan ze is. Vandaar de admin-client én een expliciete foutafhandeling.
   const expiring = admin.rpc("expire_unpaid_bookings", { p_gym: gym.id });
-  const [services, coaches, availability, { data: taken }] = await Promise.all([
+  const [services, coaches, availability, { data: taken }, rustig] = await Promise.all([
     getServicesCached(gym.id),
     getPublicCoachesCached(gym.id),
     getCoachAvailabilityCached(gym.id),
@@ -55,6 +56,8 @@ export default async function BoekenPage({ searchParams }) {
       }
       return supabase.rpc("gym_taken_slots", { p_gym: gym.id, p_from: from.toISOString(), p_to: to.toISOString() });
     })(),
+    // Rustige uren (0165). Faalt dit, dan gewoon een rooster zonder ⚡ — nooit een kapotte boekingspagina.
+    laadRustigeUren(admin, gym.id).catch(() => ({ aan: false, rijen: [] })),
   ]);
 
   let credits = 0;
@@ -92,6 +95,8 @@ export default async function BoekenPage({ searchParams }) {
       buddies={buddies}
       referralCode={profile?.referral_code || ""}
       prefill={{ persons: sp.personen, duration: sp.duur }}
+      rustig={rustig}
+      rustigFilter={sp.rustig === "1"}
     />
   );
 }

@@ -10,6 +10,7 @@ import BuddyInvite from "@/components/community/BuddyInvite";
 import ReferralInvite from "@/components/community/ReferralInvite";
 import ShareRank from "@/components/ShareRank";
 import Feed from "@/components/community/Feed";
+import { klassementDezeMaand } from "@/lib/punten-db";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Community | Fittin'" };
@@ -25,30 +26,24 @@ export default async function Community() {
   const supabase = await createClient();
   const admin = createAdminClient();
   const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   const [
     { data: myReferral },
     { data: myBookings },
     { data: challenges },
-    monthAgg,
     eventsRes,
     { data: gymBookings },
     { data: buddyRows },
     { data: postRows },
-    { data: refPts },
   ] = await Promise.all([
     supabase.from("referrals").select("id").eq("referred_id", user.id).maybeSingle(),
     supabase.from("bookings").select("starts_at").eq("user_id", user.id).eq("status", "bevestigd"),
     supabase.from("challenges").select("*").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }),
-    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthStart.toISOString()).lt("starts_at", now.toISOString()),
     admin.from("events").select("*, event_signups(id, user_id, paid)").eq("gym_id", profile.gym_id).eq("status", "approved").gte("starts_at", today.toISOString()).order("starts_at"),
     admin.from("bookings").select("user_id, starts_at, member:profiles!bookings_user_id_fkey(full_name)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", new Date(Date.now() - 120 * 86400000).toISOString()),
     admin.from("buddies").select("id, status, requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(full_name), addressee:profiles!buddies_addressee_id_fkey(full_name)").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
     admin.from("posts").select("id, author_id, kind, body, image_url, meta, created_at, author:profiles!posts_author_id_fkey(full_name, coach_photo_url), post_kudos(user_id), post_comments(id, user_id, body, created_at, cauthor:profiles!post_comments_user_id_fkey(full_name))").eq("gym_id", profile.gym_id).order("created_at", { ascending: false }).limit(40),
-    // Referral bonus points this month — same source /boeken uses, so both leaderboards agree.
-    admin.rpc("referral_points", { p_gym: profile.gym_id, p_since: monthStart.toISOString() }),
   ]);
 
   const challengeBoard = (c) => {
@@ -62,20 +57,11 @@ export default async function Community() {
     return Object.entries(cc).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
   };
 
-  // Leaderboard — sessions + referral bonus points (same formula as /boeken so the two boards agree;
-  // the "breng een vriend → extra punt op het scoreboard" promise is now actually kept here too).
-  const counts = {};
-  for (const b of monthAgg.data || []) {
-    if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; // no coaches, respect opt-out
-    const k = b.user_id;
-    (counts[k] ||= { name: b.member?.full_name || "Lid", n: 0, pts: 0 }).n++;
-  }
-  for (const r of refPts || []) {
-    if (r.referrer_id && counts[r.referrer_id]) counts[r.referrer_id].pts = r.points || 0;
-  }
-  const board = Object.entries(counts).map(([id, v]) => ({ id, ...v, score: v.n + (v.pts || 0) })).sort((a, b) => b.score - a.score);
+  // Klassement op PUNTEN (0165) — sessies, weken, zaalchecks, vrienden … Eén bron: het puntenboek, zodat dit
+  // bord, het maandelijkse scorebord en /beheer/punten altijd hetzelfde zeggen.
+  const k = await klassementDezeMaand(admin, profile.gym_id).catch(() => ({ top: [], verbeterd: null, aanbrenger: null }));
+  const board = k.top.map((r) => ({ id: r.id, name: r.naam, score: r.deze, n: r.sessies }));
   const myRank = board.findIndex((r) => r.id === user.id);
-  const mySessions = (myBookings || []).filter((b) => new Date(b.starts_at) >= monthStart).length;
 
   const challengeProgress = (c) => {
     const from = c.starts_on ? new Date(c.starts_on) : new Date(0);
@@ -186,7 +172,7 @@ export default async function Community() {
           {/* Referral */}
           <section className="rounded-3xl border border-borderc bg-surface p-6">
             <h2 className="font-black text-ink">Breng een vriend 🎁</h2>
-            <p className="mt-1 text-sm text-ink/60">Nodig een vriend uit met jouw code. Zodra zij hun eerste sessie boeken, krijgt <span className="font-bold text-ink">jij een extra punt op het scoreboard</span> én <span className="font-bold text-ink">cadeauen we hen een gratis sessie</span> (direct als tegoed op hun account).</p>
+            <p className="mt-1 text-sm text-ink/60">Nodig een vriend uit met jouw code. <span className="font-bold text-ink">Hun eerste uur is gratis</span>, en jij verdient tot <span className="font-bold text-ink">270 punten</span>: 20 als ze een account maken, 100 bij hun eerste betaalde sessie en 150 als ze een abonnement of kaart nemen. Drie vrienden die klant worden = een gratis sessie extra 🎖️</p>
             <div className="mt-4 flex items-center gap-3">
               <span className="text-xs font-bold uppercase text-lav">Jouw code</span>
               <span className="rounded-full bg-brand px-4 py-1.5 font-black tracking-wider text-accent">{profile.referral_code}</span>
@@ -219,11 +205,14 @@ export default async function Community() {
                     <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-surface/20" : "bg-surface")}>{i + 1}</span>
                     <span className="font-bold">{r.name}</span>
                   </span>
-                  <span className="font-black">{r.score} pt{r.pts > 0 ? ` · ${r.n}× + ${r.pts} vriend${r.pts === 1 ? "" : "en"}` : ""}</span>
+                  <span className="font-black">{r.score} pt</span>
                 </div>
               ))}
-              {board.length === 0 && <p className="text-sm text-ink/50">Nog geen sessies deze maand. Wees de eerste!</p>}
-              {myRank >= 6 && <p className="pt-1 text-center text-xs text-ink/50">Jij: #{myRank + 1} · {mySessions} sessies</p>}
+              {board.length === 0 && <p className="text-sm text-ink/50">Nog geen punten deze maand. Wees de eerste!</p>}
+              {myRank >= 6 && <p className="pt-1 text-center text-xs text-ink/50">Jij: #{myRank + 1} · nog {board[4].score - board[myRank].score + 1} punten tot de top 5</p>}
+              {myRank < 0 && board.length > 0 && <p className="pt-1 text-center text-xs text-ink/50">Jij staat er nog niet op — elke sessie is 10 punten.</p>}
+              {k.verbeterd && <p className="mt-3 rounded-xl bg-accent/10 px-3 py-2 text-xs text-ink">📈 <b>Meest verbeterd:</b> {k.verbeterd.naam} (+{k.verbeterd.deze - k.verbeterd.vorige} tegenover vorige maand)</p>}
+              <p className="pt-2 text-[11px] text-ink/45">Op de 1e: +50 / +30 / +20 punten voor de top 3, +50 voor wie het meest verbeterde en +50 voor wie de meeste vrienden meebracht. <Link href="/account/punten" className="font-bold text-accentdark hover:underline">Zo verdien je punten →</Link></p>
             </div>
           </section>
 

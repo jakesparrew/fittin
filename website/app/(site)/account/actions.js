@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { stripe, isStripeConfigured, bizGuest, invoiceForBusiness } from "@/lib/stripe";
-import { sendBookingRescheduled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk } from "@/lib/email";
+import { sendBookingRescheduled, sendSessionInvite, sendInviteSent, sendBuddyJoinAsk, sendEmailInvite } from "@/lib/email";
+import { maakSleutel } from "@/lib/sleutel";
 import { notify, notifyMany } from "@/lib/notify";
 import { getNukiConfig, openDoorViaNuki } from "@/lib/nuki";
 import { recordConsent, hasConsent, PRIVACY_VERSION } from "@/lib/legal";
@@ -145,11 +146,14 @@ export async function inviteBuddiesToBooking(bookingId, userIds) {
 
   try {
     const admin = createAdminClient();
-    const [{ data: booking }, { data: people }, { data: me }] = await Promise.all([
+    const [{ data: booking }, { data: people }, { data: me }, { data: deelRijen }] = await Promise.all([
       admin.from("bookings").select("starts_at, ends_at, paid, price_cents, services(name)").eq("id", bookingId).single(),
-      admin.from("profiles").select("email, full_name").in("id", ids),
+      admin.from("profiles").select("id, email, full_name").in("id", ids),
       admin.from("profiles").select("full_name").eq("id", user.id).single(),
+      admin.from("booking_participants").select("id, user_id").eq("booking_id", bookingId).in("user_id", ids),
     ]);
+    // "Ik kom"-link per deelnemer (0165): de gast bevestigt zelf, pas dan telt meetrainen voor punten.
+    const deelId = new Map((deelRijen || []).map((d) => [d.user_id, d.id]));
     const fromName = me?.full_name || user.user_metadata?.full_name || "Een Fittin'-lid";
     // Only e-mail the invitee once the booking is CONFIRMED (paid or free). For an unpaid booking
     // (pending Stripe) the participant is already added above — the invite e-mail is sent by the
@@ -158,7 +162,8 @@ export async function inviteBuddiesToBooking(bookingId, userIds) {
     const confirmed = !!booking && (booking.paid || booking.price_cents === 0);
     if (confirmed) {
       for (const p of people || []) {
-        if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
+        const kom = deelId.get(p.id);
+        if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName, serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at, komUrl: kom ? `${process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be"}/k/${maakSleutel("kom-p", kom)}` : null });
       }
     }
     if (user.email) await sendInviteSent({ to: user.email, name: me?.full_name, buddyNames: (people || []).map((p) => p.full_name).filter(Boolean).join(", "), serviceName: booking?.services?.name || "Sessie", startsAt: booking?.starts_at, endsAt: booking?.ends_at });
@@ -168,6 +173,47 @@ export async function inviteBuddiesToBooking(bookingId, userIds) {
 
   revalidatePath("/account");
   return { ok: true, added };
+}
+
+// Iemand zonder account uitnodigen voor een boeking die al bestaat ("Wie komt er mee?", 0165). Dezelfde remmen als bij
+// het boeken: enkel je eigen boeking, niet meer gasten dan het aantal personen, 20 uitnodigingen per dag.
+export async function inviteEmailToBooking(bookingId, email) {
+  const e = String(email || "").trim().toLowerCase();
+  if (!bookingId || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)) return { error: "Geef een geldig e-mailadres." };
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: "Niet ingelogd." };
+  if (e === (user.email || "").toLowerCase()) return { error: "Dat ben jij zelf 🙂" };
+  const admin = createAdminClient();
+  const { data: b } = await admin.from("bookings").select("id, gym_id, user_id, persons, status, paid, price_cents, payment_source, starts_at, ends_at, services(name)").eq("id", bookingId).maybeSingle();
+  if (!b || b.user_id !== user.id || b.status !== "bevestigd") return { error: "Boeking niet gevonden." };
+  if (new Date(b.starts_at).getTime() < Date.now()) return { error: "Deze sessie is al begonnen." };
+  const [{ count: deel }, { data: invs }, { count: vandaag }, { data: lid }] = await Promise.all([
+    admin.from("booking_participants").select("id", { count: "exact", head: true }).eq("booking_id", b.id),
+    admin.from("email_invites").select("email").eq("booking_id", b.id),
+    admin.from("email_invites").select("id", { count: "exact", head: true }).eq("inviter_id", user.id).gte("created_at", new Date(Date.now() - 86400000).toISOString()),
+    admin.from("profiles").select("id").eq("gym_id", b.gym_id).eq("email", e).maybeSingle(),
+  ]);
+  if (lid) return inviteBuddiesToBooking(b.id, [lid.id]); // al lid → gewoon als deelnemer
+  if ((invs || []).some((i) => String(i.email).toLowerCase() === e)) return { error: "Die persoon is al uitgenodigd." };
+  if ((deel || 0) + (invs || []).length >= Math.max(0, (b.persons || 1) - 1)) return { error: "Er is geen plaats meer vrij voor deze boeking — verhoog eerst het aantal personen." };
+  if ((vandaag || 0) >= 20) return { error: "Je nodigde vandaag al 20 mensen uit. Morgen kan het weer." };
+  const { data: inv, error } = await admin.from("email_invites").insert({ gym_id: b.gym_id, inviter_id: user.id, email: e, booking_id: b.id }).select("id").single();
+  if (error) return { error: "Uitnodigen lukte niet." };
+  // Enkel mailen als de boeking rond is — anders doet de betaalwebhook het (sendBookingInvites).
+  const rond = b.paid || b.price_cents === 0 || ["credit", "gratis_code"].includes(b.payment_source);
+  if (rond) {
+    const SITE = process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
+    const { data: me } = await admin.from("profiles").select("full_name, referral_code").eq("id", user.id).single();
+    const code = String(me?.referral_code || "").trim();
+    await sendEmailInvite({
+      to: e, fromName: me?.full_name || "Een Fittin'-lid", serviceName: b.services?.name || "Sessie", startsAt: b.starts_at, endsAt: b.ends_at,
+      signupUrl: code ? `${SITE}/uitnodiging/${encodeURIComponent(code)}` : `${SITE}/login?mode=signup`,
+      komUrl: `${SITE}/k/${maakSleutel("kom-i", inv.id)}`,
+    });
+  }
+  revalidatePath("/account");
+  return { ok: true, email: e };
 }
 
 // Remove someone you invited from your booking.

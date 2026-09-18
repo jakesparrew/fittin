@@ -156,6 +156,26 @@ export async function createWinbackPrefabs() {
       reward_credits: 1,
       cooldown_days: 90,
     },
+    // 0165 §13.2 — wie deze maand al twee keer los betaalde. Eerlijk rekenwerk, geen druk.
+    {
+      name: "Abonnement na 2e sessie",
+      trigger_type: "abo_kandidaat",
+      trigger_params: { min: 2 },
+      subject: "{{naam}}, dit had je deze maand minder gekost",
+      body_html: `<p>Hey {{naam}}, je trainde deze maand al een paar keer bij Fittin' — top!</p><p>Even eerlijk rekenen: met een <strong>abonnement van € 12 per maand</strong> zit je eerste sessie inbegrepen en kost elke volgende € 12 in plaats van € 15. Wie twee keer per maand komt, zit al goedkoper. Opzeggen kan maandelijks.</p><p>Bovendien: <strong>+50 punten</strong> bij je start en +20 elke maand — samen sneller aan een gratis sessie.</p><p><a href="${SITE_ACT}/lidmaatschap" style="background:#5fda6b;color:#22194f;font-weight:800;text-decoration:none;padding:12px 22px;border-radius:999px;display:inline-block">Bekijk het abonnement</a></p>`,
+      reward_credits: 0,
+      cooldown_days: 30,
+    },
+    // 0165 §13.1 — de rustige uren van de week, voor wie recent kwam. {{rustig}} wordt per ronde ingevuld.
+    {
+      name: "Rustige uren deze week ⚡",
+      trigger_type: "recent_actief",
+      trigger_params: { days: 30 },
+      subject: "⚡ Deze uren zijn rustig — dubbele punten, 2u voor 1",
+      body_html: `<p>Hey {{naam}}, deze week zijn deze momenten nog rustig in de zaal:</p>{{rustig}}<p>Boek je op een rustig uur, dan krijg je <strong>dubbele punten</strong> en train je <strong>2 uur voor de prijs van 1</strong>.</p><p><a href="${SITE_ACT}/boeken?rustig=1" style="background:#5fda6b;color:#22194f;font-weight:800;text-decoration:none;padding:12px 22px;border-radius:999px;display:inline-block">Toon de rustige uren</a></p>`,
+      reward_credits: 0,
+      cooldown_days: 7,
+    },
   ];
   let created = 0;
   const fouten = [];

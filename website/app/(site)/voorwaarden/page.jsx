@@ -15,8 +15,8 @@ export const metadata = {
 //    misleidend. In de plaats staat de Belgische Consumentenombudsdienst.
 //  • Aansprakelijkheid wordt NIET uitgesloten voor eigen fout of voor lichamelijke schade —
 //    zo'n beding is onrechtmatig (art. VI.83) en zou de hele clausule onderuit halen.
-const Section = ({ title, children }) => (
-  <section className="mt-8">
+const Section = ({ title, id, children }) => (
+  <section id={id} className="mt-8 scroll-mt-24">
     <h2 className="text-xl font-black text-ink">{title}</h2>
     <div className="mt-3 space-y-3 leading-relaxed text-ink/70">{children}</div>
   </section>
@@ -32,7 +32,7 @@ export default function Voorwaarden() {
       <div className="mx-auto max-w-3xl px-5 py-16">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Voorwaarden</p>
         <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Algemene voorwaarden</h1>
-        <p className="mt-3 text-sm text-ink/50">Versie 2 — laatst bijgewerkt: 5 augustus 2026</p>
+        <p className="mt-3 text-sm text-ink/50">Versie 2.1 — laatst bijgewerkt: 18 september 2026 (nieuw: artikel 11, Fittin&rsquo; punten)</p>
 
         <p className="mt-6 leading-relaxed text-ink/70">
           Deze voorwaarden gelden voor elke boeking, elke aankoop en elk gebruik van Fittin&rsquo;.
@@ -230,7 +230,34 @@ export default function Voorwaarden() {
           </p>
         </Section>
 
-        <Section title="11. Klachten en geschillen">
+        <Section id="punten" title="11. Fittin’ punten en rustige uren">
+          <p>
+            Als lid verdien je <strong>punten</strong>, bijvoorbeeld voor een sessie die je trainde, voor de zaalcheck of
+            voor een vriend die klant wordt. Je kan ze inwisselen voor een <strong>gratis sessie</strong>; het aantal punten
+            per sessie staat op je puntenpagina. Een gratis sessie via punten is 3 maanden geldig en hangt, zoals elke
+            boeking, af van de beschikbaarheid. Per lid en per maand, en voor de hele gym per maand, is het aantal gratis
+            sessies beperkt; is het maandplafond bereikt, dan blijven je punten staan tot de volgende maand.
+          </p>
+          <p>
+            Punten hebben <strong>geen geldwaarde</strong>: ze zijn niet inwisselbaar voor geld en niet overdraagbaar. Een
+            sessie telt pas na afloop; wordt ze geannuleerd of terugbetaald, dan vervallen de punten die ze opleverde.
+            Punten die je <strong>12 maanden</strong> niet gebruikt terwijl je in die periode geen sessie deed, vervallen.
+            Bij het verwijderen van je account vervallen je punten. Misbruik (bijvoorbeeld uitnodigingen voor mensen die
+            niet komen) kan leiden tot het intrekken van de betrokken punten.
+          </p>
+          <p>
+            <strong>Rustige uren</strong> zijn momenten die de laatste weken zelden geboekt werden, of die binnen de 24 uur
+            nog vrij zijn. Boek je daar 2 uur of langer, dan betaal je één uur minder, en de sessie levert dubbele punten
+            op. Welke uren rustig zijn, kan wekelijks veranderen; het voordeel dat op het moment van je boeking gold, blijft
+            gelden. Een boeking op een rustig uur kan je enkel naar een ander rustig uur verplaatsen.
+          </p>
+          <p>
+            We kunnen de puntenregeling aanpassen of stopzetten. Wijzigingen in je nadeel kondigen we minstens 30 dagen
+            vooraf aan; punten die je al verdiende, blijven dan nog minstens 3 maanden inwisselbaar.
+          </p>
+        </Section>
+
+        <Section title="12. Klachten en geschillen">
           <p>
             Heb je een klacht? Laat het ons eerst zelf weten via <Mail />. We bevestigen je klacht
             binnen enkele dagen en zoeken samen een oplossing — in de praktijk is dat de snelste weg.
@@ -248,7 +275,7 @@ export default function Voorwaarden() {
           </p>
         </Section>
 
-        <Section title="12. Wijzigingen aan deze voorwaarden en aan de prijzen">
+        <Section title="13. Wijzigingen aan deze voorwaarden en aan de prijzen">
           <p>
             We kunnen deze voorwaarden en onze prijzen aanpassen. Wijzigingen die jou nadeliger maken,
             kondigen we <strong>minstens 30 dagen vooraf</strong> aan per e-mail. Ben je het er niet mee
@@ -261,7 +288,7 @@ export default function Voorwaarden() {
           </p>
         </Section>
 
-        <Section title="13. Je persoonsgegevens">
+        <Section title="14. Je persoonsgegevens">
           <p>
             Hoe we met je gegevens omgaan, lees je in ons{" "}
             <a href="/privacy" className="font-semibold text-accentdark hover:underline">privacybeleid</a>.

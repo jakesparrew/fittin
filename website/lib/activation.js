@@ -39,6 +39,20 @@ export const SEGMENTS = {
     param: { key: "max", label: "Tegoed ≤", default: 1 },
     match: (m, p) => Number(m.credits ?? 0) <= (p.max ?? 1) && m.visits_total > 0,
   },
+  // 0165 §13.2: wie deze maand al 2× los betaalde (en geen abonnement heeft), betaalt met een abonnement minder.
+  // De telling komt uit `los_deze_maand`, die evaluateMatches enkel voor dit segment aanvult.
+  abo_kandidaat: {
+    label: "Abonnement-kandidaat (2e betaalde sessie deze maand)",
+    desc: "Leden zonder abonnement die deze kalendermaand al X keer los betaalden. Met een abonnement had elke sessie € 12 gekost.",
+    param: { key: "min", label: "Min. losse sessies deze maand", default: 2 },
+    match: (m, p) => (m.active_memberships || 0) === 0 && (m.los_deze_maand || 0) >= (p.min ?? 2),
+  },
+  recent_actief: {
+    label: "Recent actief",
+    desc: "Leden die de laatste X dagen minstens één keer kwamen — bv. voor de rustige uren van de week ({{rustig}}).",
+    param: { key: "days", label: "Kwam in de laatste … dagen", default: 30 },
+    match: (m, p) => !!m.last_visit && Date.now() - new Date(m.last_visit).getTime() <= days(p.days ?? 30),
+  },
   lapsed_member: {
     label: "Abonnement gestopt",
     desc: "Leden die ooit een abonnement hadden maar nu niet meer.",
@@ -48,11 +62,21 @@ export const SEGMENTS = {
 };
 
 const firstName = (n) => (n ? n.split(" ")[0] : "daar");
-const personalize = (text, m, code = "") =>
+const personalize = (text, m, code = "", extra = {}) =>
   String(text || "")
     .replaceAll("{{naam}}", firstName(m.full_name))
     .replaceAll("{{name}}", firstName(m.full_name))
-    .replaceAll("{{code}}", code || "");
+    .replaceAll("{{code}}", code || "")
+    .replaceAll("{{rustig}}", extra.rustig || "");
+
+// {{rustig}}: de rustigste momenten van de komende week, één keer per verzendronde berekend (0165).
+const RUSTIG_FMT = new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+async function rustigeUrenTekst(admin, gymId) {
+  const { laadRustigeUren, rustigsteMomenten } = await import("@/lib/punten-db");
+  const m = rustigsteMomenten(await laadRustigeUren(admin, gymId), { max: 4 });
+  if (!m.length) return "";
+  return `<ul style="margin:0 0 16px;padding-left:18px;font-size:15px;line-height:1.7;color:#22194F">${m.map((x) => `<li>⚡ ${RUSTIG_FMT.format(new Date(x.iso))}</li>`).join("")}</ul><p style="margin:0 0 16px;font-size:14px;color:#6b6685">Op een rustig uur krijg je dubbele punten, en boek je 2 uur voor de prijs van 1.</p>`;
+}
 
 // Members currently matching a campaign's trigger (active subscribers only → respects unsubscribe).
 export async function evaluateMatches(admin, gymId, triggerType, params) {
@@ -63,12 +87,21 @@ export async function evaluateMatches(admin, gymId, triggerType, params) {
     admin.from("subscribers").select("id, email, unsub_token, status").eq("gym_id", gymId).eq("status", "active"),
   ]);
   const subByEmail = new Map((subs || []).map((s) => [s.email.toLowerCase(), s]));
+  // abo_kandidaat heeft een telling nodig die member_engagement niet heeft: betaalde losse sessies deze maand.
+  const losPer = new Map();
+  if (triggerType === "abo_kandidaat") {
+    const { beginMaand } = await import("@/lib/punten-db"); // de 1e om 00:00 in Brussel, niet in UTC
+    const { data: los } = await admin.from("bookings").select("user_id").eq("gym_id", gymId).eq("status", "bevestigd")
+      .eq("payment_source", "los").eq("paid", true).gt("price_cents", 0).gte("starts_at", beginMaand());
+    for (const b of los || []) losPer.set(b.user_id, (losPer.get(b.user_id) || 0) + 1);
+  }
   const out = [];
   for (const m of eng || []) {
     if (!m.email) continue;
     const sub = subByEmail.get(m.email.toLowerCase());
     if (!sub) continue; // not an active subscriber
-    if (seg.match(m, params || {})) out.push({ ...m, subscriber_id: sub.id, unsub_token: sub.unsub_token });
+    const rij = losPer.size ? { ...m, los_deze_maand: losPer.get(m.user_id) || 0 } : m;
+    if (seg.match(rij, params || {})) out.push({ ...rij, subscriber_id: sub.id, unsub_token: sub.unsub_token });
   }
   return out;
 }
@@ -110,6 +143,8 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
     alreadyCredited = new Set((cr || []).map((r) => r.user_id));
   }
 
+  const extra = String(c.body_html || "").includes("{{rustig}}") ? { rustig: await rustigeUrenTekst(admin, c.gym_id).catch(() => "") } : {};
+
   let sent = 0;
   for (const part of chunk(targets, 100)) {
     const payload = [];
@@ -121,7 +156,7 @@ export async function runActivationCampaign(campaignId, { force = false } = {}) 
       const discLine = c.discount_percent > 0 && code
         ? `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#22194F">Gebruik jouw persoonlijke code <b style="background:#C6F24E;padding:2px 8px;border-radius:6px">${code}</b> voor <b>${c.discount_percent}% korting</b> op je volgende sessie.</p>`
         : "";
-      const body = rewardLine + discLine + personalize(c.body_html, m, code);
+      const body = rewardLine + discLine + personalize(c.body_html, m, code, extra);
       payload.push({
         from: FROM_NEWS,
         to: m.email,

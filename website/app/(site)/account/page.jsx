@@ -34,6 +34,8 @@ import TrackBookingCompleted from "./TrackBookingCompleted";
 import TrackSignup from "@/components/TrackSignup";
 import ThemaKeuze from "@/components/ThemaKeuze";
 import PushOptIn from "@/components/native/PushOptIn";
+import PuntenKaart from "@/components/account/PuntenKaart";
+import { puntenOverzicht } from "@/lib/punten-overzicht";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -265,12 +267,15 @@ export default async function AccountPage({ searchParams }) {
   // Who you've already invited to each of your own bookings (for the manage-buddies UI).
   const ownIds = (bookings || []).map((b) => b.id);
   const partMap = {};
+  const mailMap = {};
   if (ownIds.length) {
     const { data: parts } = await admin
       .from("booking_participants")
       .select("booking_id, user_id, member:profiles!booking_participants_user_id_fkey(full_name)")
       .in("booking_id", ownIds);
     for (const p of parts || []) (partMap[p.booking_id] ||= []).push({ id: p.user_id, name: p.member?.full_name || "Lid" });
+    const { data: mailGasten } = await admin.from("email_invites").select("booking_id, email").in("booking_id", ownIds);
+    for (const g of mailGasten || []) (mailMap[g.booking_id] ||= []).push(g.email);
   }
 
   // Derived from the batch above.
@@ -282,6 +287,10 @@ export default async function AccountPage({ searchParams }) {
   const bmi = bodyProfile?.height_cm && latestWeight ? +(latestWeight / Math.pow(bodyProfile.height_cm / 100, 2)).toFixed(1) : null;
 
   const firstName = (profile?.full_name || "").split(" ")[0] || "daar";
+  // Fittin' Punten (0165). Best-effort: een fout hier mag het account nooit onbereikbaar maken.
+  const punten = profile?.role === "lid" && profile?.gym_id
+    ? await puntenOverzicht(admin, user.id, profile.gym_id).catch((e) => { console.error("punten op /account:", e?.message); return null; })
+    : null;
 
   return (
     <main className="bg-paper">
@@ -338,6 +347,8 @@ export default async function AccountPage({ searchParams }) {
 
         {/* App: meldingen aanzetten, op het scherm waar een lid het vaakst komt. Niets op de website. */}
         <PushOptIn className="mt-6" />
+
+        <div className="mt-6"><PuntenKaart o={punten} /></div>
 
         {/* Primary CTA — drive bookings */}
         <section className="mt-8 rounded-3xl bg-brand p-7 text-white md:p-8">
@@ -795,7 +806,7 @@ export default async function AccountPage({ searchParams }) {
                   </div>
                   <DoorCodeCard {...doorCodeFor(b)} leadMin={leadMin} />
                   {!b.invited && b.persons > 1 && (
-                    <BookingBuddies bookingId={b.id} capacity={b.persons} participants={partMap[b.id] || []} paid={b.paid || b.price_cents === 0} />
+                    <BookingBuddies bookingId={b.id} capacity={b.persons} participants={partMap[b.id] || []} gasten={mailMap[b.id] || []} paid={b.paid || b.price_cents === 0} />
                   )}
                   {!b.invited && myBuddies.length > 0 && (
                     <BuddyJoin bookingId={b.id} buddies={myBuddies} askedIds={askedByBooking[b.id] || []} />

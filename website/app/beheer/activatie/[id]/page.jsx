@@ -24,6 +24,31 @@ export default async function ActivationDetail({ params }) {
   const on = c.status === "active";
   const paramVal = seg.param ? c.trigger_params?.[seg.param.key] ?? seg.param.default : "";
 
+  // Per persoon (0165 §13.2): geen totaal zonder de mensen erachter. Wie kreeg wat, deed die iets, en wat werd het?
+  const { data: sends } = await admin.from("campaign_sends").select("email, status, sent_at, opened_at, clicked_at")
+    .eq("campaign_id", c.id).order("sent_at", { ascending: false }).limit(60);
+  const mails = [...new Set((sends || []).map((x) => String(x.email).toLowerCase()))];
+  const { data: profs } = mails.length ? await admin.from("profiles").select("id, email, full_name").eq("gym_id", gym.id).in("email", mails) : { data: [] };
+  const perMail = new Map((profs || []).map((p) => [String(p.email).toLowerCase(), p]));
+  const ids = (profs || []).map((p) => p.id);
+  const [{ data: abos }, { data: boekt }] = ids.length ? await Promise.all([
+    admin.from("memberships").select("user_id, started_at").in("user_id", ids),
+    admin.from("bookings").select("user_id, created_at, starts_at").in("user_id", ids).eq("status", "bevestigd").gte("created_at", (sends || []).at(-1)?.sent_at || new Date().toISOString()),
+  ]) : [{ data: [] }, { data: [] }];
+  const kort = (iso) => (iso ? new Date(iso).toLocaleDateString("nl-BE", { day: "numeric", month: "short", timeZone: "Europe/Brussels" }) : "");
+  const verhalen = (sends || []).map((x) => {
+    const p = perMail.get(String(x.email).toLowerCase());
+    const na = (iso) => iso && x.sent_at && new Date(iso) > new Date(x.sent_at);
+    const abo = p && (abos || []).filter((a) => a.user_id === p.id && na(a.started_at)).sort((a, b) => new Date(a.started_at) - new Date(b.started_at))[0];
+    const boeking = p && (boekt || []).filter((b) => b.user_id === p.id && na(b.created_at)).sort((a, b) => new Date(a.created_at) - new Date(b.created_at))[0];
+    const resultaat = c.trigger_type === "abo_kandidaat"
+      ? (abo ? `abonnement gestart ${kort(abo.started_at)} ✓` : boeking ? `boekte opnieuw ${kort(boeking.created_at)}, nog geen abonnement` : null)
+      : (boeking ? `boekte opnieuw ${kort(boeking.created_at)} ✓` : abo ? `abonnement gestart ${kort(abo.started_at)} ✓` : null);
+    const volgende = x.sent_at ? new Date(new Date(x.sent_at).getTime() + (c.cooldown_days || 30) * 86400000) : null;
+    return { naam: p?.full_name || x.email, id: p?.id, x, resultaat, gelukt: !!resultaat?.endsWith("✓"), volgende };
+  });
+  const omgezet = verhalen.filter((v) => v.gelukt).length;
+
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
       <Link href="/beheer/activatie" className="text-sm font-semibold text-ink/50 hover:text-ink">← Activatie</Link>
@@ -78,7 +103,7 @@ export default async function ActivationDetail({ params }) {
           )}
 
           <h2 className="mt-6 font-black text-ink">Bericht</h2>
-          <p className="mt-1 text-xs text-ink/50">Gebruik <code className="rounded bg-paper px-1">{"{{naam}}"}</code> voor de voornaam.</p>
+          <p className="mt-1 text-xs text-ink/50">Gebruik <code className="rounded bg-paper px-1">{"{{naam}}"}</code> voor de voornaam en <code className="rounded bg-paper px-1">{"{{rustig}}"}</code> voor de rustige uren van de komende week.</p>
           <Field label="Onderwerp" name="subject" defaultValue={c.subject} placeholder="We missen je, {{naam}}!" />
           <Field label="Preheader" name="preheader" defaultValue={c.preheader} placeholder="Kom je weer langs?" />
           <label className="mt-3 block">
@@ -105,6 +130,27 @@ export default async function ActivationDetail({ params }) {
               <RunActivationButton id={c.id} matches={matches.length} />
             </div>
             <p className="mt-3 text-xs text-ink/40">Activeren = elke ochtend automatisch versturen. "Nu versturen" doet meteen een ronde (respecteert de wachttijd).</p>
+          </div>
+
+          <div className="rounded-2xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Per persoon <span className="text-xs font-bold text-ink/40">· {omgezet} van {verhalen.length} deden daarna iets</span></h2>
+            <div className="mt-3 space-y-2">
+              {verhalen.slice(0, 30).map((v, i) => (
+                <div key={i} className={"rounded-lg px-3 py-2 text-sm " + (v.gelukt ? "bg-accent/10" : "bg-paper")}>
+                  <p className="text-ink">
+                    {v.id ? <Link href={`/beheer/leden/${v.id}`} className="font-bold hover:underline">{v.naam}</Link> : <b>{v.naam}</b>}
+                    <span className="text-ink/60"> · mail {v.x.status === "failed" ? "NIET vertrokken" : `verstuurd ${kort(v.x.sent_at)}`}
+                      {v.x.opened_at && ` → geopend ${kort(v.x.opened_at)}`}
+                      {v.x.clicked_at && ` → geklikt ${kort(v.x.clicked_at)}`}
+                    </span>
+                  </p>
+                  <p className={"text-xs " + (v.gelukt ? "font-bold text-accentdark" : "text-ink/50")}>
+                    {v.resultaat || `nog geen reactie · volgende mail ten vroegste ${kort(v.volgende)}`}
+                  </p>
+                </div>
+              ))}
+              {verhalen.length === 0 && <p className="text-xs text-ink/40">Nog niemand gemaild met deze campagne.</p>}
+            </div>
           </div>
 
           <div className="rounded-2xl border border-borderc bg-surface p-6">

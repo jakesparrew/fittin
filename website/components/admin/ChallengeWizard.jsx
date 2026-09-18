@@ -9,6 +9,19 @@ const GOALS = [
   { key: "streak", label: "Streak (weken)", desc: "X weken op rij minstens één sessie." },
 ];
 
+// Sjablonen (0165 §4.8): een lege wizard leverde nul challenges op. Eén tik vult alles in — de uitbater kijkt na en
+// bevestigt. Enkel doeltypes die award_challenges() écht uitbetaalt (0148).
+const ymd = (d) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" }).format(d);
+function dezeMaand() {
+  const [j, m] = ymd(new Date()).split("-").map(Number);
+  return { van: ymd(new Date()), tot: ymd(new Date(Date.UTC(j, m, 0, 12))) };
+}
+const SJABLONEN = [
+  { l: "🔥 4 weken op rij", goalType: "streak", goalCount: 4, reward: 1, max: 10, name: "4 weken op rij", looptijd: 42 },
+  { l: "💪 8 sessies deze maand", goalType: "sessions", goalCount: 8, reward: 1, max: 10, name: "8 sessies deze maand", maand: true },
+  { l: "⚡ Rustige-urenmaand", goalType: "daluren", goalCount: 6, reward: 1, max: 10, name: "6× op een rustig uur", maand: true },
+];
+
 // Step-by-step builder for a community challenge: 1) doel 2) beloning 3) naam + looptijd.
 export default function ChallengeWizard() {
   const [open, setOpen] = useState(false);
@@ -34,8 +47,23 @@ export default function ChallengeWizard() {
 
   const goal = GOALS.find((g) => g.key === goalType);
 
+  function gebruik(t) {
+    setGoalType(t.goalType); setGoalCount(t.goalCount); setReward(t.reward); setMaxWinners(t.max); setName(t.name);
+    if (t.maand) { const m = dezeMaand(); setStartsOn(m.van); setEndsOn(m.tot); }
+    else { setStartsOn(ymd(new Date())); setEndsOn(ymd(new Date(Date.now() + t.looptijd * 86400000))); }
+    setOpen(true); setStep(3);
+  }
+
   if (!open) {
-    return <button onClick={() => { setOpen(true); setStep(1); }} className="mt-6 rounded-full bg-brand px-6 py-3 text-sm font-bold text-white transition hover:opacity-90">+ Nieuwe challenge</button>;
+    return (
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <button onClick={() => { setOpen(true); setStep(1); }} className="rounded-full bg-brand px-6 py-3 text-sm font-bold text-white transition hover:opacity-90">+ Nieuwe challenge</button>
+        <span className="ml-2 text-xs font-bold text-ink/50">of een sjabloon:</span>
+        {SJABLONEN.map((t) => (
+          <button key={t.l} type="button" onClick={() => gebruik(t)} className="rounded-full border border-borderc bg-surface px-4 py-2 text-xs font-bold text-ink transition hover:border-lav">{t.l}</button>
+        ))}
+      </div>
+    );
   }
 
   return (

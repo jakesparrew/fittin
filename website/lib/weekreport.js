@@ -47,6 +47,9 @@ export async function buildWeekReport(gym, now = new Date()) {
     { data: openInvoices },
     { data: uninvoiced },
     { data: accessRuns },
+    { data: puntRijen },
+    { data: zaalRijen },
+    { data: puntenCredits },
   ] = await Promise.all([
     admin.from("bookings").select("starts_at, ends_at, status, persons, price_cents, paid, payment_source, user_id").eq("gym_id", gym.id).gte("starts_at", sIso).lt("starts_at", eIso),
     admin.from("bookings").select("status, user_id").eq("gym_id", gym.id).gte("starts_at", pIso).lt("starts_at", sIso),
@@ -71,6 +74,10 @@ export async function buildWeekReport(gym, now = new Date()) {
     // leek zet ok=false terwijl de deurcodemail wél vertrok; enkel op ok kijken maakt daar "de taak
     // liep niet" van, en zo'n vals alarm leert de eigenaar het échte alarm te negeren.
     admin.from("cron_runs").select("ok, detail").eq("job", "access_codes").gte("created_at", sIso).lt("created_at", eIso),
+    // Fittin' Punten + zaalcheck (0165): één regel elk in het rapport.
+    admin.from("member_points").select("points, kind").eq("gym_id", gym.id).gte("created_at", sIso).lt("created_at", eIso),
+    admin.from("zaal_checks").select("state").eq("gym_id", gym.id).gte("created_at", sIso).lt("created_at", eIso),
+    admin.from("credits_ledger").select("reason").eq("gym_id", gym.id).in("reason", ["punten", "ambassadeur"]).gte("created_at", sIso).lt("created_at", eIso),
   ]);
 
   // ---- Verkeer + trechter -----------------------------------------------------------------
@@ -199,7 +206,16 @@ export async function buildWeekReport(gym, now = new Date()) {
     mailsFailed,
     accessCronBad: cronStale("access_codes", 20),
     activationCronBad: cronStale("activation", 60 * 30),
+    puntenCronBad: cronStale("punten", 60 * 3),
     lockOffline,
+  };
+  const zaal = zaalRijen || [];
+  const punten = {
+    verdiend: (puntRijen || []).filter((r) => r.points > 0).reduce((a, r) => a + r.points, 0),
+    gratis: (puntenCredits || []).length,
+    zaalchecks: zaal.length,
+    netjesPct: zaal.filter((c) => c.state !== "stuk").length ? Math.round((zaal.filter((c) => c.state === "netjes").length / zaal.filter((c) => c.state !== "stuk").length) * 100) : null,
+    rommel: zaal.filter((c) => c.state === "rommel").length,
   };
 
   return {
@@ -219,6 +235,7 @@ export async function buildWeekReport(gym, now = new Date()) {
     openReports: openReports || 0,
     traffic,
     health,
+    punten,
   };
 }
 

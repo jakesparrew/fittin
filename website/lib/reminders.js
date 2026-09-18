@@ -1,3 +1,5 @@
+import { maakSleutel } from "@/lib/sleutel";
+import { korteStatus } from "@/lib/punten-db";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendSessionReminder, sendGuestSessionReminder, sendAccessCode, sendCreditsExpiring, sendCreditsEmpty, sendFirstSessionFollowup, sendGuestFollowup, sendAboSuggestion } from "@/lib/email";
 import { workoutVoorBoeking } from "@/lib/coaching/levering.js";
@@ -409,6 +411,9 @@ export async function sendDueAccessCodes() {
           // en niet dichtgeklapt op een accountpagina.
           reportToken: await zorgVoorToken(admin, b.id, b.report_token),
           zaalNotitie: await zaalNotitie(b.gym_id),
+          // Fittin' Punten (0165): de zaalcheck en één statusregel — enkel voor het LID, nooit in de coachkopie.
+          zaalSleutel: maakSleutel("zaal", b.id),
+          puntenRegel: await korteStatus(admin, b.user_id, b.gym_id).catch(() => null),
         });
         sent++;
       } catch {}
@@ -535,7 +540,8 @@ export async function rewardDueReferrals() {
 // Drie remmen, elk met een reden:
 //  • feedback_asked_at op de BOEKING → idempotent, ook als de cron twee keer in hetzelfde venster
 //    draait. Dat is de echte claim; email_log is de tweede gordel.
-//  • max één vraag per lid per 30 dagen, op TO_EMAIL en niet op to_user_id — logEmail() schrijft
+//  • max één vraag per lid per 7 dagen (was 30; sinds Fittin' Punten levert antwoorden punten op en is het één
+//    tik — plan v3 §13.3), op TO_EMAIL en niet op to_user_id — logEmail() schrijft
 //    to_user_id nooit (alleen insight-actions doet dat), dus een dedupe op die kolom vindt per
 //    definitie nul rijen. Precies de bug die de 30-dagenrem op de abo-mails maandenlang stil hield.
 //  • feedback_opt_out op het profiel → art. 21 AVG, apart van de nieuwsbrief-schakelaar.
@@ -554,7 +560,7 @@ export async function sendSessionFeedbackRequests() {
     .limit(50);
   if (!rows?.length) return 0;
 
-  const d30 = new Date(nu - 30 * 86400000).toISOString();
+  const d30 = new Date(nu - 7 * 86400000).toISOString(); // naam behouden: 7 dagen sinds 0165
   const { data: eerder } = await admin.from("email_log")
     .select("to_email").eq("kind", "sessie_feedback").gte("created_at", d30);
   const recent = new Set((eerder || []).map((l) => String(l.to_email || "").toLowerCase()));

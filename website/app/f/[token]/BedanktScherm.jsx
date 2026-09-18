@@ -1,6 +1,13 @@
 "use client";
 import { useState, useTransition } from "react";
-import { bewaarScore, zetFeedbackUit } from "./actions";
+import { bewaarScore, zetFeedbackUit, bewaarEnergie, verklaarNetjes } from "./actions";
+
+const ENERGIE = [
+  { n: 1, e: "😫", l: "Zwaar" },
+  { n: 2, e: "😐", l: "Matig" },
+  { n: 3, e: "🙂", l: "Goed" },
+  { n: 4, e: "💪", l: "Sterk" },
+];
 
 // Het bedankscherm na de sterrenvraag.
 //
@@ -23,6 +30,8 @@ export default function BedanktScherm({ token, score, opmerking }) {
   const [tekst, setTekst] = useState(opmerking || "");
   const [bewaard, setBewaard] = useState(false);
   const [uit, setUit] = useState(false);
+  const [energie, setEnergie] = useState(null);
+  const [netjes, setNetjes] = useState(false);
   const [pending, start] = useTransition();
 
   const kies = (n) => start(async () => {
@@ -50,6 +59,7 @@ export default function BedanktScherm({ token, score, opmerking }) {
   return (
     <>
       <h1 className="mt-4 text-2xl font-black text-ink">{ster ? "Bedankt!" : "Hoe was je sessie?"}</h1>
+      {ster && <p className="mt-1 text-sm font-bold text-accentdark">+2 punten voor je beoordeling</p>}
 
       <div className="mt-4 flex justify-center gap-1 rounded-2xl border border-borderc bg-surface py-4">
         {[1, 2, 3, 4, 5].map((n) => (
@@ -85,6 +95,26 @@ export default function BedanktScherm({ token, score, opmerking }) {
             className="mt-2 rounded-full border-2 border-borderc px-5 py-2 text-sm font-bold text-ink transition hover:border-lav disabled:opacity-50"
           >
             {bewaard ? "Bewaard ✓" : pending ? "Bezig…" : "Bewaren"}
+          </button>
+
+          <div className="mt-6 rounded-2xl border border-borderc bg-surface p-5">
+            <p className="text-sm font-black text-ink">Hoe voelde je training?</p>
+            <div className="mt-3 grid grid-cols-4 gap-2">
+              {ENERGIE.map((x) => (
+                <button key={x.n} type="button" disabled={pending}
+                  onClick={() => start(async () => { const r = await bewaarEnergie(token, x.n); if (!r?.error) setEnergie(x.n); })}
+                  aria-pressed={energie === x.n}
+                  className={"flex flex-col items-center rounded-xl border-2 py-2 text-xs font-bold transition " + (energie === x.n ? "border-accent bg-accent/10 text-ink" : "border-borderc text-ink-soft hover:border-lav")}>
+                  <span className="text-2xl" aria-hidden>{x.e}</span>{x.l}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <button type="button" disabled={pending || netjes}
+            onClick={() => start(async () => { const r = await verklaarNetjes(token); if (!r?.error) setNetjes(true); })}
+            className={"mt-3 w-full rounded-2xl border-2 px-4 py-3 text-sm font-bold transition " + (netjes ? "border-accent bg-accent/10 text-ink" : "border-borderc bg-surface text-ink hover:border-lav")}>
+            {netjes ? "✅ Top — de volgende vindt het netjes (+1 punt)" : "✅ Ik heb alles teruggelegd en afgeveegd"}
           </button>
 
           {/* Identiek voor elke score. */}

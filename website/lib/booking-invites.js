@@ -1,4 +1,5 @@
 import "server-only";
+import { maakSleutel } from "@/lib/sleutel";
 import { sendSessionInvite, sendEmailInvite, sendBookingCancelled, sendBookingRescheduled } from "@/lib/email";
 
 const siteUrl = () => process.env.NEXT_PUBLIC_SITE_URL || "https://fittin.be";
@@ -18,12 +19,14 @@ export async function sendBookingInvites(admin, booking, fromName) {
 
   // Members invited to the session (participants, excluding the booker themselves).
   try {
-    const { data: parts } = await admin.from("booking_participants").select("user_id").eq("booking_id", booking.id);
-    const ids = (parts || []).map((p) => p.user_id).filter((id) => id && id !== booking.user_id);
-    if (ids.length) {
-      const { data: people } = await admin.from("profiles").select("email, full_name").in("id", ids);
-      for (const p of people || []) {
-        if (p.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName: from, serviceName, startsAt: booking.starts_at, endsAt: booking.ends_at });
+    const { data: parts } = await admin.from("booking_participants").select("id, user_id").eq("booking_id", booking.id);
+    const mee = (parts || []).filter((p) => p.user_id && p.user_id !== booking.user_id);
+    if (mee.length) {
+      const { data: people } = await admin.from("profiles").select("id, email, full_name").in("id", mee.map((p) => p.user_id));
+      const perId = new Map((people || []).map((p) => [p.id, p]));
+      for (const deel of mee) {
+        const p = perId.get(deel.user_id);
+        if (p?.email) await sendSessionInvite({ to: p.email, name: p.full_name, fromName: from, serviceName, startsAt: booking.starts_at, endsAt: booking.ends_at, komUrl: `${siteUrl()}/k/${maakSleutel("kom-p", deel.id)}` });
       }
     }
   } catch (e) {
@@ -43,9 +46,9 @@ export async function sendBookingInvites(admin, booking, fromName) {
     const signupUrl = code
       ? `${siteUrl()}/uitnodiging/${encodeURIComponent(code)}`
       : `${siteUrl()}/login?mode=signup&next=/boeken`;
-    const { data: invs } = await admin.from("email_invites").select("email").eq("booking_id", booking.id);
+    const { data: invs } = await admin.from("email_invites").select("id, email").eq("booking_id", booking.id);
     for (const inv of invs || []) {
-      if (inv.email) await sendEmailInvite({ to: inv.email, fromName: from, serviceName, startsAt: booking.starts_at, endsAt: booking.ends_at, signupUrl });
+      if (inv.email) await sendEmailInvite({ to: inv.email, fromName: from, serviceName, startsAt: booking.starts_at, endsAt: booking.ends_at, signupUrl, komUrl: `${siteUrl()}/k/${maakSleutel("kom-i", inv.id)}` });
     }
   } catch (e) {
     console.error("sendBookingInvites (emails):", e?.message);

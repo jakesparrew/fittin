@@ -20,6 +20,10 @@
     {
       "path": "/api/cron/coaching",
       "schedule": "0 17 * * 0"
+    },
+    {
+      "path": "/api/cron/punten",
+      "schedule": "20 * * * *"
     }
   ]
 }

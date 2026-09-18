@@ -8,6 +8,7 @@ const groups = [
   { title: "Gym", items: [
     { href: "/beheer/boekingen", label: "Boekingen", icon: "▤" },
     { href: "/beheer/leden", label: "Leden", icon: "◍" },
+    { href: "/beheer/netheid", label: "Netheid", icon: "🧼" },
     { href: "/beheer/abonnementen", label: "Abonnementen", icon: "★" },
     { href: "/beheer/coaches", label: "Coaches", icon: "♦" },
     { href: "/beheer/aanbreng", label: "Aanbreng", icon: "🤝" },
@@ -21,6 +22,7 @@ const groups = [
   { title: "Groei", items: [
     { href: "/beheer/nieuwsbrief", label: "Nieuwsbrief", icon: "➤" },
     { href: "/beheer/activatie", label: "Activatie", icon: "✦" },
+    { href: "/beheer/punten", label: "Punten", icon: "🏅" },
     { href: "/beheer/challenges", label: "Challenges", icon: "★" },
     { href: "/beheer/events", label: "Events", icon: "◆" },
   ] },

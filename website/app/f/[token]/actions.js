@@ -1,6 +1,7 @@
 "use server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notify } from "@/lib/notify";
+import { geefNu } from "@/lib/punten-db";
 
 // De score uit de mail vastleggen, en daarna de vervolgvraag.
 //
@@ -62,6 +63,30 @@ export async function bewaarScore(token, rating, comment = null) {
     } catch {}
   }
   return { ok: true, rating: n };
+}
+
+// Hoe voelde de training (1 zwaar · 2 matig · 3 goed · 4 sterk)? Optioneel, na de sterren. Voedt het overzicht
+// "Ervaring" en later de AI-coach.
+export async function bewaarEnergie(token, energie) {
+  const b = await boekingVanToken(token);
+  if (!b) return { error: "Deze link is verlopen." };
+  const n = Number(energie);
+  if (!Number.isInteger(n) || n < 1 || n > 4) return { error: "Ongeldig antwoord." };
+  const { error, count } = await createAdminClient().from("session_feedback").update({ energie: n }, { count: "exact" }).eq("booking_id", b.id);
+  if (error || !count) return { error: "Geef eerst je sterren." };
+  return { ok: true };
+}
+
+// "Ik heb alles teruggelegd." Geen bewijs — wel context: een 'niet netjes' ná zo'n verklaring zegt de uitbater
+// meer. 1 punt, één keer per boeking.
+export async function verklaarNetjes(token) {
+  const b = await boekingVanToken(token);
+  if (!b) return { error: "Deze link is verlopen." };
+  const admin = createAdminClient();
+  const { error } = await admin.from("bookings").update({ netjes_verklaard_at: new Date().toISOString() }).eq("id", b.id).is("netjes_verklaard_at", null);
+  if (error) return { error: "Bewaren lukte niet." };
+  const punten = await geefNu(admin, { gymId: b.gym_id, userId: b.user_id, kind: "netjes", sourceKey: `netjes:${b.id}`, meta: { booking: b.id } }).catch(() => 0);
+  return { ok: true, punten };
 }
 
 // Bezwaarrecht (art. 21 AVG): apart van de nieuwsbriefschakelaar, en bereikbaar zonder in te loggen

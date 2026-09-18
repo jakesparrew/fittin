@@ -132,6 +132,22 @@ export default function Privacy() {
               foutbericht en de pagina. <em>Grondslag: gerechtvaardigd belang</em> bij een werkende app.
             </li>
           </ul>
+          <ul className="list-disc space-y-2 pl-5">
+            <li>
+              <strong>Fittin&rsquo; punten</strong> — welke acties je punten opleverden (sessies, zaalchecks, gelogde
+              trainingen, uitnodigingen), je niveau en je badges. <em>Grondslag: uitvoering van de overeenkomst</em>
+              (het puntenprogramma uit de voorwaarden). Op het klassement staan enkel je naam en je punten van de maand; je
+              kan je afmelden in je account.
+            </li>
+            <li>
+              <strong>Zaalcheck</strong> — wanneer je aangeeft hoe je de zaal aantrof, koppelen we dat aan de sessie die
+              net vóór de jouwe plaatsvond (dezelfde dag, hoogstens 3 uur ervoor). Zo kan de uitbater zien of de zaal
+              netjes wordt achtergelaten. <em>Grondslag: gerechtvaardigd belang</em> bij een propere, veilige zaal voor
+              iedereen. <strong>Enkel de uitbater ziet die koppeling</strong> — nooit andere leden. Er volgt nooit
+              automatisch iets; hoogstens stuurt de uitbater zelf een vriendelijke herinnering. Foto&rsquo;s bij een
+              zaalcheck bewaren we in een afgeschermde opslag; er mogen geen personen op staan.
+            </li>
+          </ul>
           <p>
             We nemen <strong>geen geautomatiseerde beslissingen</strong> met rechtsgevolgen voor jou en
             we maken geen profielen om je gedrag te voorspellen.
@@ -143,7 +159,9 @@ export default function Privacy() {
             Nodig je iemand uit voor een sessie, of geeft een coach de naam op van een klant die zelf
             geen Fittin&rsquo;-account heeft, dan verwerken wij ook diens gegevens — beperkt tot wat nodig
             is om te weten wie er in de zaal komt. Wie zo&rsquo;n naam doorgeeft, is er zelf verantwoordelijk
-            voor dat die persoon daarvan op de hoogte is. Wij gebruiken die gegevens voor niets anders
+            voor dat die persoon daarvan op de hoogte is. Wie je per e-mail uitnodigt, krijgt de uitnodiging
+            (met een &ldquo;Ik kom&rdquo;-knop) en hoogstens één herinnering om zelf een account te maken — geen
+            nieuwsbrief of reclame zonder eigen toestemming. Verder gebruiken wij die gegevens voor niets anders
             en verwijderen ze samen met de boeking.
           </p>
         </Section>
