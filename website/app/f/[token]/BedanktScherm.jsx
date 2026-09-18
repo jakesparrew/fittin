@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
-import { bewaarScore, zetFeedbackUit, bewaarEnergie, verklaarNetjes, googleReviewGeklikt } from "./actions";
+import { bewaarScore, zetFeedbackUit, bewaarEnergie, verklaarNetjes, googleReviewGeklikt, bewaarRedenen } from "./actions";
+import { ANTWOORDEN, REDENEN, antwoordVan } from "@/lib/ervaring";
 
 const ENERGIE = [
   { n: 1, e: "😫", l: "Zwaar" },
@@ -26,13 +27,19 @@ const REVIEW_URL =
   // Rechtstreeks het venster "review schrijven" van het bedrijfsprofiel (place-id doorgegeven door de eigenaar, 19-09-2026).
   "https://search.google.com/local/writereview?placeid=ChIJKc6ttft3w0cRl--XdxjNKD0";
 
-export default function BedanktScherm({ token, score, opmerking, alGevraagd = false }) {
+export default function BedanktScherm({ token, score, opmerking, alGevraagd = false, redenenVooraf = [] }) {
   const [ster, setSter] = useState(score);
   const [tekst, setTekst] = useState(opmerking || "");
   const [bewaard, setBewaard] = useState(false);
   const [uit, setUit] = useState(false);
   const [energie, setEnergie] = useState(null);
   const [netjes, setNetjes] = useState(false);
+  const [redenen, setRedenen] = useState(redenenVooraf);
+  const wissel = (v) => start(async () => {
+    const nieuw = redenen.includes(v) ? redenen.filter((x) => x !== v) : [...redenen, v];
+    setRedenen(nieuw);
+    await bewaarRedenen(token, nieuw);
+  });
   const [pending, start] = useTransition();
 
   const kies = (n) => start(async () => {
@@ -62,24 +69,36 @@ export default function BedanktScherm({ token, score, opmerking, alGevraagd = fa
       <h1 className="mt-4 text-2xl font-black text-ink">{ster ? "Bedankt!" : "Hoe was je sessie?"}</h1>
       {ster && <p className="mt-1 text-sm font-bold text-accentdark">+2 punten voor je beoordeling</p>}
 
-      <div className="mt-4 flex justify-center gap-1 rounded-2xl border border-borderc bg-surface py-4">
-        {[1, 2, 3, 4, 5].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => kies(n)}
-            aria-label={`${n} van 5`}
-            className={"px-1.5 text-4xl transition " + (ster && n <= ster ? "text-amber-500" : "text-borderc hover:text-amber-300")}
-          >
-            ★
-          </button>
-        ))}
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        {ANTWOORDEN.map((x) => {
+          const aan = antwoordVan(ster)?.s === x.s;
+          return (
+            <button key={x.s} type="button" onClick={() => kies(x.s)} aria-pressed={aan}
+              className={"flex min-h-[84px] flex-col items-center justify-center gap-1 rounded-2xl border-2 text-sm font-bold transition " + (aan ? "border-accent bg-accent/10 text-ink" : "border-borderc bg-surface text-ink-soft hover:border-lav")}>
+              <span className="text-3xl" aria-hidden>{x.e}</span>{x.l}
+            </button>
+          );
+        })}
       </div>
+
+      {ster && ster < 5 && (
+        <div className="mt-5">
+          <p className="text-sm font-black text-ink">Wat scheelde er? <span className="font-normal text-ink-soft">(tik aan wat past)</span></p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {REDENEN.map((r) => (
+              <button key={r.v} type="button" onClick={() => wissel(r.v)} aria-pressed={redenen.includes(r.v)}
+                className={"rounded-full border-2 px-3 py-1.5 text-xs font-bold transition " + (redenen.includes(r.v) ? "border-accent bg-accent/10 text-ink" : "border-borderc bg-surface text-ink-soft hover:border-lav")}>
+                {r.l}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {ster && (
         <>
           <label className="mt-5 block">
-            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Wil je er iets bij zeggen? (mag je overslaan)</span>
+            <span className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-lav">Nog iets kwijt? (mag je overslaan)</span>
             <textarea
               value={tekst}
               onChange={(e) => { setTekst(e.target.value); setBewaard(false); }}

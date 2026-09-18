@@ -1449,8 +1449,9 @@ export async function sendMeldingUpdate({ to, name, categorie, status, notitie }
 // om positieve reviews" (support.google.com/contributionpolicy/answer/7400114), en de sanctie loopt
 // tot schorsing van het bedrijfsprofiel.
 export async function sendSessionFeedback({ to, name, token, startsAt, uitschrijfUrl }) {
-  const ster = (n) =>
-    `<a href="${SITE}/f/${token}?s=${n}" style="display:inline-block;text-decoration:none;font-size:30px;padding:4px 6px;color:#f59e0b">★</a>`;
+  // Drie antwoorden i.p.v. vijf sterren (0168): wat een 4 of een 2 betekent, weet niemand.
+  const knop = ([s, e, l]) =>
+    `<td style="padding:0 4px"><a href="${SITE}/f/${token}?s=${s}" style="display:inline-block;min-width:84px;text-decoration:none;background:#ffffff;border:1px solid #d9d5ea;border-radius:14px;padding:10px 8px;text-align:center;color:#22194F;font-size:13px;font-weight:bold"><span style="display:block;font-size:26px;line-height:1.2">${e}</span>${l}</a></td>`;
   return send(
     to,
     "Hoe was je sessie?",
@@ -1458,10 +1459,9 @@ export async function sendSessionFeedback({ to, name, token, startsAt, uitschrij
       title: "Hoe was het?",
       intro: `Dag ${esc(name) || "daar"} — je trainde ${dayLabel(startsAt)}. Eén tik, meer vragen we niet.`,
       body: `
-        <div style="text-align:center;margin:10px 0 4px">${[1, 2, 3, 4, 5].map(ster).join("")}</div>
-        <p style="text-align:center;font-size:12px;color:#6b6685;margin:0">links = het kon beter · rechts = top</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="margin:10px auto 4px"><tr>${[[5, "😃", "Top"], [3, "🙂", "Oké"], [1, "😕", "Niet goed"]].map(knop).join("")}</tr></table>
         <p style="font-size:12px;color:#6b6685;margin:18px 0 0;line-height:1.6">
-          Was er iets mis met de zaal? Dat mag je op het volgende scherm kwijt — daar leest de
+          Was het oké of niet goed? Op het volgende scherm tik je aan wat er scheelde — daar leest de
           zaakvoerder mee.
           ${uitschrijfUrl ? `<br><a href="${uitschrijfUrl}" style="color:#6b6685">Liever geen vraag meer na je sessie? Zet het hier uit.</a>` : ""}
         </p>`,

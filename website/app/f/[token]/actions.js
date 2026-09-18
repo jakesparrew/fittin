@@ -2,6 +2,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { notify } from "@/lib/notify";
 import { geefNu } from "@/lib/punten-db";
+import { REDEN_SET } from "@/lib/ervaring";
 
 // De score uit de mail vastleggen, en daarna de vervolgvraag.
 //
@@ -28,7 +29,7 @@ export async function boekingVanToken(token) {
 
 export async function bestaandeScore(bookingId) {
   const admin = createAdminClient();
-  const { data } = await admin.from("session_feedback").select("rating, comment").eq("booking_id", bookingId).maybeSingle();
+  const { data } = await admin.from("session_feedback").select("rating, comment, redenen").eq("booking_id", bookingId).maybeSingle();
   return data || null;
 }
 
@@ -63,6 +64,16 @@ export async function bewaarScore(token, rating, comment = null) {
     } catch {}
   }
   return { ok: true, rating: n };
+}
+
+// Waarom Oké of Niet goed? Vaste keuzes (lib/ervaring.js), zodat het beheer telt i.p.v. leest.
+export async function bewaarRedenen(token, redenen) {
+  const b = await boekingVanToken(token);
+  if (!b) return { error: "Deze link is verlopen." };
+  const r = (Array.isArray(redenen) ? redenen : []).filter((x) => REDEN_SET.has(x)).slice(0, 8);
+  const { error, count } = await createAdminClient().from("session_feedback").update({ redenen: r }, { count: "exact" }).eq("booking_id", b.id);
+  if (error || !count) return { error: "Kies eerst hoe het was." };
+  return { ok: true };
 }
 
 // Hoe voelde de training (1 zwaar · 2 matig · 3 goed · 4 sterk)? Optioneel, na de sterren. Voedt het overzicht

@@ -5,6 +5,7 @@ import ActionForm from "@/components/ui/ActionForm";
 import { oordeelZaalcheck, stuurNetheidHerinnering } from "../netheid-actions";
 import { STAAT, TAGS, netheidsScore, weekTrend, uurband, KLEUR } from "@/lib/netheid";
 import { isoWeek } from "@/lib/punten";
+import { ervaringCijfers, antwoordVan, redenLabel } from "@/lib/ervaring";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Netheid | Beheer" };
@@ -33,7 +34,7 @@ export default async function Netheid({ searchParams }) {
       .eq("gym_id", gym.id).gte("created_at", sinds).order("created_at", { ascending: false }).limit(500),
     admin.from("bookings").select("id", { count: "exact", head: true }).eq("gym_id", gym.id).eq("status", "bevestigd")
       .gte("starts_at", new Date(Date.now() - 56 * 86400000).toISOString()).lte("starts_at", new Date().toISOString()),
-    admin.from("session_feedback").select("rating, comment, energie, created_at, member:profiles!session_feedback_user_id_fkey(full_name)")
+    admin.from("session_feedback").select("rating, comment, energie, redenen, created_at, member:profiles!session_feedback_user_id_fkey(full_name)")
       .eq("gym_id", gym.id).gte("created_at", sinds).order("created_at", { ascending: false }).limit(300),
   ]);
   const alle = checks || [];
@@ -68,7 +69,7 @@ export default async function Netheid({ searchParams }) {
   const tijdlijn = alle.filter((c) => c.state !== "netjes").slice(0, 60);
 
   const r8 = (ratings || []).filter((r) => new Date(r.created_at).getTime() >= Date.now() - 56 * 86400000);
-  const gem = r8.length ? (r8.reduce((a, r) => a + r.rating, 0) / r8.length).toFixed(1).replace(".", ",") : "—";
+  const ec = ervaringCijfers(r8);
 
   return (
     <div className="px-4 py-6 md:px-8 md:py-8">
@@ -199,20 +200,34 @@ export default async function Netheid({ searchParams }) {
       ) : (
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            <Stat label="Gemiddeld (8 weken)" value={`${gem} ★`} sub={`${r8.length} beoordelingen`} />
-            <Stat label="Met opmerking" value={r8.filter((r) => r.comment).length} />
-            <Stat label="Voelde zich sterk 💪" value={r8.filter((r) => r.energie === 4).length} />
+            <Stat label="😃 Top (8 weken)" value={`${ec.pct(ec.top)}%`} sub={`${ec.top} van ${ec.n} antwoorden`} />
+            <Stat label="🙂 Oké" value={`${ec.pct(ec.oke)}%`} sub={`${ec.oke} antwoorden`} />
+            <Stat label="😕 Niet goed" value={`${ec.pct(ec.slecht)}%`} sub={`${ec.slecht} antwoorden`} />
           </div>
           <section className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
-            <h2 className="font-black text-ink">Opmerkingen</h2>
+            <h2 className="font-black text-ink">Wat scheelde er? <span className="text-xs font-bold text-ink/40">· bij Oké en Niet goed, 8 weken</span></h2>
+            {ec.redenen.length === 0 ? <p className="mt-3 text-sm text-ink/50">Nog geen redenen aangeduid.</p> : (
+              <div className="mt-4 space-y-2">
+                {ec.redenen.map((r) => (
+                  <div key={r.v} className="text-sm">
+                    <div className="flex justify-between"><span className="text-ink">{r.l}</span><span className="font-bold text-ink">{r.k}×</span></div>
+                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-paper"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.round((r.k / ec.redenen[0].k) * 100)}%` }} /></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+          <section className="mt-6 rounded-2xl border border-borderc bg-surface p-6">
+            <h2 className="font-black text-ink">Antwoorden met uitleg</h2>
             <div className="mt-3 divide-y divide-borderc">
-              {(ratings || []).filter((r) => r.comment).slice(0, 50).map((r, i) => (
+              {(ratings || []).filter((r) => r.comment || r.redenen?.length).slice(0, 50).map((r, i) => (
                 <div key={i} className="py-3 text-sm">
-                  <p className="font-bold text-ink">{"★".repeat(r.rating)}<span className="text-ink/20">{"★".repeat(5 - r.rating)}</span> <span className="font-normal text-ink/50">· {r.member?.full_name || "lid"} · {fmt(r.created_at)}</span></p>
-                  <p className="mt-1 text-ink/75">{r.comment}</p>
+                  <p className="font-bold text-ink">{antwoordVan(r.rating)?.e} {antwoordVan(r.rating)?.l} <span className="font-normal text-ink/50">· {r.member?.full_name || "lid"} · {fmt(r.created_at)}</span></p>
+                  {r.redenen?.length > 0 && <p className="mt-1 text-ink/70">{r.redenen.map(redenLabel).join(" · ")}</p>}
+                  {r.comment && <p className="mt-1 text-ink/75">{r.comment}</p>}
                 </div>
               ))}
-              {!(ratings || []).some((r) => r.comment) && <p className="py-3 text-sm text-ink/50">Nog geen opmerkingen.</p>}
+              {!(ratings || []).some((r) => r.comment || r.redenen?.length) && <p className="py-3 text-sm text-ink/50">Nog geen antwoorden met uitleg.</p>}
             </div>
             <p className="mt-4 text-xs text-ink/50">De vraag voor een Google-review staat na élke score op de bedankpagina, ook na 1 ster — Google verbiedt enkel tevreden klanten te vragen.</p>
           </section>
