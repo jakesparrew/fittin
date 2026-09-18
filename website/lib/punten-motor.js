@@ -433,7 +433,11 @@ async function feedPosts(admin, gym, voltooid, t, start) {
 export async function herberekenRustigeUren(admin, s, boekingen, nu = new Date(), { forceer = false } = {}) {
   const gym = s.gym_id;
   const { data: laatst } = await admin.from("slot_demand").select("computed_at").eq("gym_id", gym).order("computed_at", { ascending: false }).limit(1).maybeSingle();
-  if (!forceer && laatst && nu.getTime() - new Date(laatst.computed_at).getTime() < 20 * 3600000) return 0;
+  // Elke nacht om 03:00 (Brussel) — dan is er niemand aan het boeken en verspringt er niets onder iemands vinger.
+  // Vangnet: liep de nachtelijke run niet, dan de eerstvolgende keer na 30 uur.
+  const uurBxl = Number(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Brussels", hour: "2-digit", hour12: false }).format(nu)) % 24;
+  const oud = laatst ? nu.getTime() - new Date(laatst.computed_at).getTime() : Infinity;
+  if (!forceer && !(uurBxl === 3 && oud > 2 * 3600000) && oud < 30 * 3600000) return 0;
   const { data: g } = await admin.from("gyms").select("open_hour, close_hour").eq("id", gym).single();
   const open = g?.open_hour ?? 6, dicht = g?.close_hour ?? 23;
   const van = nu.getTime() - 56 * DAG;

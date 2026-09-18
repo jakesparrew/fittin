@@ -491,8 +491,10 @@ export default function BookingClient({
               iemand net zelf overtuigd is. */}
           {referralCode && (
             <div className="mt-8 border-t border-borderc pt-6">
-              <p className="text-sm font-bold text-ink">Breng een vriend mee — zijn eerste uur is ook gratis.</p>
+              <p className="text-sm font-bold text-ink">🏅 Na je sessie krijg je punten{rustigeGekozen > 0 ? " — dubbel, want je koos een rustig uur ⚡" : ""}. 300 punten = een gratis sessie.</p>
+              <p className="mt-3 text-sm font-bold text-ink">Breng een vriend mee — zijn eerste uur is ook gratis, en jij verdient tot 270 punten.</p>
               <div className="mt-3 flex justify-center"><ShareReferral code={referralCode} compact /></div>
+              <Link href="/account/punten" className="mt-3 inline-block text-xs font-bold text-accentdark hover:underline">Zo verdien je punten →</Link>
             </div>
           )}
         </div>

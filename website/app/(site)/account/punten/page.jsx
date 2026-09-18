@@ -14,25 +14,26 @@ export const metadata = { title: "Mijn punten | Fittin'" };
 const datum = new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", day: "numeric", month: "short" });
 
 // Wat levert wat op — de tabel die leden zien. Leest de waarden van de gym (instellingen), niet vast.
+// [sleutel, wat, extra, knop-link, knop-tekst] — elke manier om punten te verdienen met een knop die er meteen heen gaat.
 const VERDIENEN = [
-  ["sessie", "Een sessie die je trainde (telt na afloop)", "× 2 op een rustig uur ⚡"],
-  ["week", "Een week waarin je je weekdoel haalt", ""],
-  ["reeks4", "Elke 4 weken op rij", "1 pauzeweek per 2 maanden"],
-  ["zaalcheck", "Zaalcheck bij het binnenkomen (in je deurcodemail)", "+2 met een foto"],
-  ["rating", "Je sessie beoordelen", ""],
-  ["netjes", "“Ik heb alles teruggelegd”", ""],
-  ["log", "Je training loggen", "max. 1 per dag"],
-  ["gewicht", "Je gewicht bijhouden", "max. 1 per week"],
-  ["deelnemer", "Meetrainen als gast (na “Ik kom”)", ""],
-  ["gast_bevestigd", "Je gast bevestigt dat hij meekomt", ""],
-  ["gast_account", "Een vriend maakt een account via jou", ""],
-  ["vriend_eerste", "Die vriend traint voor het eerst (betaald)", "hij krijgt er zelf 25"],
-  ["vriend_abo", "Die vriend neemt een abonnement of kaart", ""],
-  ["abo_start", "Je start een abonnement", "één keer"],
-  ["abo_maand", "Elke betaalde abonnementsmaand", ""],
-  ["kaart", "Een beurtenkaart kopen", ""],
-  ["coach_checkin", "AI-coach: wekelijkse check-in", ""],
-  ["coach_mijlpaal", "AI-coach: mijlpaal gehaald", ""],
+  ["sessie", "Een sessie die je trainde (telt na afloop)", "× 2 op een rustig uur ⚡", "/boeken", "Boek"],
+  ["week", "Een week waarin je je weekdoel haalt", "", "#profiel", "Weekdoel"],
+  ["reeks4", "Elke 4 weken op rij", "1 pauzeweek per 2 maanden", "/boeken", "Boek"],
+  ["zaalcheck", "Zaalcheck bij het binnenkomen", "in je deurcodemail · +2 met een foto", null, null],
+  ["rating", "Je sessie beoordelen", "in de mail na je sessie", null, null],
+  ["netjes", "“Ik heb alles teruggelegd”", "in de mail na je sessie", null, null],
+  ["log", "Je training loggen", "max. 1 per dag", "/training", "Loggen"],
+  ["gewicht", "Je gewicht bijhouden", "max. 1 per week", "/account#gewicht", "Invullen"],
+  ["gast_bevestigd", "Je gast bevestigt dat hij meekomt", "zet gasten bij je boeking", "/account#sessies", "Gast toevoegen"],
+  ["deelnemer", "Meetrainen als gast (na “Ik kom”)", "", null, null],
+  ["gast_account", "Een vriend maakt een account via jou", "", "/community", "Nodig uit"],
+  ["vriend_eerste", "Die vriend traint voor het eerst (betaald)", "die krijgt er zelf 25", "/community", "Nodig uit"],
+  ["vriend_abo", "Die vriend neemt een abonnement of kaart", "", "/community", "Nodig uit"],
+  ["abo_start", "Je start een abonnement", "één keer", "/lidmaatschap", "Bekijk"],
+  ["abo_maand", "Elke betaalde abonnementsmaand", "", "/lidmaatschap", "Bekijk"],
+  ["kaart", "Een beurtenkaart kopen", "", "/lidmaatschap", "Bekijk"],
+  ["coach_checkin", "AI-coach: wekelijkse check-in", "", "/coaching", "Naar coach"],
+  ["coach_mijlpaal", "AI-coach: mijlpaal gehaald", "", "/coaching", "Naar coach"],
 ];
 
 export default async function MijnPunten() {
@@ -114,10 +115,13 @@ export default async function MijnPunten() {
         <section className="mt-6 rounded-3xl border border-borderc bg-surface p-6">
           <h2 className="font-black text-ink">Zo verdien je punten</h2>
           <div className="mt-3 divide-y divide-borderc">
-            {VERDIENEN.filter(([k]) => Number(w[k]) > 0).map(([k, l, extra]) => (
+            {VERDIENEN.filter(([k]) => Number(w[k]) > 0).map(([k, l, extra, href, knop]) => (
               <div key={k} className="flex items-center justify-between gap-3 py-2 text-sm">
-                <span className="text-ink">{l}{extra && <span className="block text-xs text-ink/50">{extra}</span>}</span>
-                <span className="shrink-0 font-black text-accentdark">+{w[k]}</span>
+                <span className="min-w-0 text-ink">{l}{extra && <span className="block text-xs text-ink/50">{extra}</span>}</span>
+                <span className="flex shrink-0 items-center gap-3">
+                  <span className="font-black text-accentdark">+{w[k]}</span>
+                  {href && <Link href={href} className="rounded-full border border-borderc px-3 py-1 text-xs font-bold text-ink hover:border-lav">{knop} →</Link>}
+                </span>
               </div>
             ))}
           </div>

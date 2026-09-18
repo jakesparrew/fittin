@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ActionForm from "@/components/ui/ActionForm";
 import { wisselPuntenIn } from "@/app/(site)/account/punten-actions";
+import ShareReferral from "@/components/ShareReferral";
 
 const dagUur = new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -98,6 +99,33 @@ export default function PuntenKaart({ o, compact = true }) {
             <span className="text-ink/50">dubbele punten · 2 uur voor de prijs van 1</span>
           </div>
         )}
+      </div>
+      {/* Snel punten verdienen: de acties die het meest opleveren, elk met een knop die er meteen naartoe gaat. */}
+      <div className="border-t border-borderc px-5 py-4 md:px-6">
+        <p className="text-xs font-bold uppercase tracking-widest text-lav">Snel punten verdienen</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <div className="rounded-2xl bg-accent/10 p-3 sm:col-span-2">
+            <p className="text-sm font-black text-ink">👋 Nodig een vriend uit — tot +270 punten</p>
+            <p className="mt-0.5 text-xs text-ink/60">+20 als die een account maakt, +100 bij hun eerste betaalde sessie, +150 als ze klant worden. Hun eerste uur is gratis.</p>
+            <div className="mt-2"><ShareReferral code={o.referralCode} compact /></div>
+          </div>
+          <Link href="/boeken?rustig=1" className="rounded-2xl bg-paper p-3 transition hover:bg-accent/10">
+            <p className="text-sm font-black text-ink">⚡ Boek een rustig uur →</p>
+            <p className="text-xs text-ink/60">Dubbele punten, en 2 uur voor de prijs van 1</p>
+          </Link>
+          <Link href="/boeken" className="rounded-2xl bg-paper p-3 transition hover:bg-accent/10">
+            <p className="text-sm font-black text-ink">👥 Train met z&rsquo;n tweeën →</p>
+            <p className="text-xs text-ink/60">Zet je gast erbij: +5 als die &ldquo;Ik kom&rdquo; tikt</p>
+          </Link>
+          <Link href="/training" className="rounded-2xl bg-paper p-3 transition hover:bg-accent/10">
+            <p className="text-sm font-black text-ink">📝 Log je training →</p>
+            <p className="text-xs text-ink/60">+3 per dag dat je logt</p>
+          </Link>
+          <div className="rounded-2xl bg-paper p-3">
+            <p className="text-sm font-black text-ink">🧼 Zaalcheck</p>
+            <p className="text-xs text-ink/60">Eén tik in je deurcodemail bij het binnenkomen: +3</p>
+          </div>
+        </div>
       </div>
       {compact && (
         <Link href="/account/punten" className="block border-t border-borderc bg-paper/60 px-5 py-2.5 text-center text-xs font-bold text-ink/60 hover:text-ink">

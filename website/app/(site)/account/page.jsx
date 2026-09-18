@@ -36,6 +36,7 @@ import ThemaKeuze from "@/components/ThemaKeuze";
 import PushOptIn from "@/components/native/PushOptIn";
 import PuntenKaart from "@/components/account/PuntenKaart";
 import { puntenOverzicht } from "@/lib/punten-overzicht";
+import { klassementDezeMaand } from "@/lib/punten-db";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn account | Fittin'" };
@@ -109,9 +110,6 @@ export default async function AccountPage({ searchParams }) {
 
   const supabase = await createClient();
   const admin = createAdminClient();
-  const monthStartLb = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-  const monthIso = monthStartLb.toISOString();
-  const nowIso = new Date().toISOString();
 
   // One parallel batch instead of a dozen serial round-trips (each query is independent).
   // expire_unpaid_bookings runs alongside; freed slots show correctly on the next render.
@@ -123,7 +121,6 @@ export default async function AccountPage({ searchParams }) {
     { data: invitedRows },
     { data: coachLinks },
     { data: payReqs },
-    { data: boardRows },
     { data: buddyLinks },
     { data: sentJoins },
     { data: incomingJoins },
@@ -137,7 +134,6 @@ export default async function AccountPage({ searchParams }) {
     admin.from("booking_participants").select("booking:bookings(id, starts_at, ends_at, status, persons, paid, price_cents, payment_source, nuki_code, nuki_cleaned, access_sent, services(name,type), booker:profiles!bookings_user_id_fkey(full_name))").eq("user_id", user.id),
     admin.from("coach_clients").select("id, status, requested_by, coach:profiles!coach_clients_coach_id_fkey(id, full_name, email)").eq("client_id", user.id),
     supabase.from("coach_payment_requests").select("id, amount_cents, description, coach:profiles!coach_payment_requests_coach_id_fkey(full_name)").eq("client_id", user.id).eq("status", "pending").order("created_at", { ascending: false }),
-    admin.from("bookings").select("user_id, member:profiles!bookings_user_id_fkey(full_name, role, leaderboard_opt_in)").eq("gym_id", profile.gym_id).eq("status", "bevestigd").gte("starts_at", monthIso).lt("starts_at", nowIso),
     admin.from("buddies").select("requester_id, addressee_id, requester:profiles!buddies_requester_id_fkey(id, full_name), addressee:profiles!buddies_addressee_id_fkey(id, full_name)").eq("status", "accepted").eq("gym_id", profile.gym_id).or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`),
     supabase.from("booking_join_requests").select("booking_id, to_user").eq("from_user", user.id),
     admin.from("booking_join_requests").select("id, booking:bookings(starts_at, ends_at, services(name)), from:profiles!booking_join_requests_from_user_fkey(full_name)").eq("to_user", user.id).eq("status", "pending"),
@@ -206,11 +202,10 @@ export default async function AccountPage({ searchParams }) {
   const incomingCoachReqs = coachLinksAll.filter((l) => l.status === "pending" && l.requested_by === "coach"); // a coach invited me
   const sentCoachReqs = coachLinksAll.filter((l) => l.status === "pending" && l.requested_by === "client");    // I asked a coach
 
-  const lbCounts = {};
-  // Coaches/beheerders never appear; members who opted out are excluded. PT sessions count
-  // because the booking's user_id is the member.
-  for (const b of boardRows || []) { if (b.member?.role !== "lid" || b.member?.leaderboard_opt_in === false) continue; const k = b.user_id; (lbCounts[k] ||= { name: b.member?.full_name || "Lid", n: 0 }).n++; }
-  const leaderboard = Object.entries(lbCounts).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.n - a.n);
+  // Klassement op PUNTEN (0165) — dezelfde bron als /community en het maandelijkse scorebord. Coaches/beheerders
+  // en wie zich afmeldde, staan er niet op (klassementDezeMaand filtert).
+  const k = await klassementDezeMaand(admin, profile?.gym_id).catch(() => ({ top: [] }));
+  const leaderboard = (k.top || []).map((r) => ({ id: r.id, name: r.naam, n: r.deze }));
   const myRank = leaderboard.findIndex((r) => r.id === user.id);
 
   const now = Date.now();
@@ -504,7 +499,7 @@ export default async function AccountPage({ searchParams }) {
             <div>
               <h2 className="font-black text-ink">Leaderboard <span className="text-ink/40">· deze maand</span></h2>
               <p className="text-sm text-ink/60">
-                {myRank >= 0 ? <>Je staat <span className="font-black text-accentdark">#{myRank + 1}</span> van de {leaderboard.length} leden.</> : "Boek een sessie deze maand om mee te doen."}
+                {myRank >= 0 ? <>Je staat <span className="font-black text-accentdark">#{myRank + 1}</span> van de {leaderboard.length} leden.</> : "Verdien punten deze maand om mee te doen — elke sessie is 10 punten."}
               </p>
             </div>
             {myRank >= 0 && <ShareRank />}
@@ -522,11 +517,12 @@ export default async function AccountPage({ searchParams }) {
                   <span className={"flex h-6 w-6 items-center justify-center rounded-full text-xs font-black " + (i < 3 ? "bg-accent text-brand" : r.id === user.id ? "bg-surface/20" : "bg-surface")}>{i + 1}</span>
                   <span className="font-bold">{r.name}</span>
                 </span>
-                <span className="font-black">{r.n}</span>
+                <span className="font-black">{r.n} pt</span>
               </div>
             ))}
-            {leaderboard.length === 0 && <p className="text-sm text-ink/50">Nog geen sessies deze maand. Wees de eerste!</p>}
-            {myRank >= 5 && <p className="pt-1 text-center text-xs text-ink/50">Jij: #{myRank + 1} · {leaderboard[myRank].n} sessies</p>}
+            {leaderboard.length === 0 && <p className="text-sm text-ink/50">Nog geen punten deze maand. Wees de eerste!</p>}
+            {myRank >= 5 && <p className="pt-1 text-center text-xs text-ink/50">Jij: #{myRank + 1} · {leaderboard[myRank].n} punten</p>}
+            <Link href="/account/punten" className="block pt-1 text-center text-xs font-bold text-accentdark hover:underline">Zo verdien je punten →</Link>
           </div>
         </section>
 
@@ -618,7 +614,7 @@ export default async function AccountPage({ searchParams }) {
         )}
 
         {/* Lichaam & voortgang */}
-        <section className="mt-8 rounded-3xl border border-borderc bg-surface p-6">
+        <section id="gewicht" className="mt-8 scroll-mt-24 rounded-3xl border border-borderc bg-surface p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-black text-ink">Lichaam &amp; voortgang</h2>
@@ -719,7 +715,7 @@ export default async function AccountPage({ searchParams }) {
         )}
 
         {/* Upcoming */}
-        <section className="mt-12">
+        <section id="sessies" className="mt-12 scroll-mt-24">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black">Aankomende boekingen</h2>
             <Link

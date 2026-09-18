@@ -20,7 +20,7 @@ export async function puntenOverzicht(admin, userId, gymId) {
   const nu = Date.now();
   const [pt, { data: prof }, { data: eigen }, { data: mee }, { data: badges }, rustig, { data: gymSessies }] = await Promise.all([
     puntenVan(admin, userId, { limit: 60 }),
-    admin.from("profiles").select("role, streak_target, coaching_doel, hoe_gevonden").eq("id", userId).maybeSingle(),
+    admin.from("profiles").select("role, streak_target, coaching_doel, hoe_gevonden, referral_code").eq("id", userId).maybeSingle(),
     admin.from("bookings").select("id, starts_at, ends_at, status, paid, price_cents, payment_source, promo, created_at").eq("user_id", userId).neq("status", "geannuleerd").order("starts_at"),
     admin.from("booking_participants").select("confirmed_at, booking:bookings(starts_at, ends_at, status, paid, price_cents, payment_source, promo)").eq("user_id", userId).not("confirmed_at", "is", null),
     admin.from("member_badges").select("badge, earned_at").eq("user_id", userId),
@@ -71,5 +71,6 @@ export async function puntenOverzicht(admin, userId, gymId) {
     gymdoel: { doel: doelMaand, gedaan: dezeMaand || 0 },
     profiel: { doel: prof?.coaching_doel || "", streak_target: prof?.streak_target || 1, hoe_gevonden: prof?.hoe_gevonden || "" },
     kanInwisselen: pt.saldo >= s.prijs_sessie,
+    referralCode: prof?.referral_code || "",
   };
 }
