@@ -23,7 +23,8 @@ const ENERGIE = [
 
 const REVIEW_URL =
   process.env.NEXT_PUBLIC_GOOGLE_REVIEW_URL ||
-  "https://www.google.com/maps/search/?api=1&query=Fittin+Aannemersstraat+186+9040+Gent";
+  // Rechtstreeks het venster "review schrijven" van het bedrijfsprofiel (place-id doorgegeven door de eigenaar, 19-09-2026).
+  "https://search.google.com/local/writereview?placeid=ChIJKc6ttft3w0cRl--XdxjNKD0";
 
 export default function BedanktScherm({ token, score, opmerking }) {
   const [ster, setSter] = useState(score);
