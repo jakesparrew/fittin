@@ -238,6 +238,11 @@ export default function BookingClient({
     : selected ? urenVoor(selected.dateStr, selected.hour) : duration;
   const rustigeGekozen = multi ? momenten.filter((m) => promoOp(m.dateStr, m.hour)).length : selected && promoOp(selected.dateStr, selected.hour) ? 1 : 0;
   const tegoedNodig = betaaldeUrenTotaal;
+  // Het aanbod op een rustig uur: een GRATIS tweede uur, als optie — niet opgedrongen. Wie 1 uur wil, krijgt wel de
+  // dubbele punten. Enkel bij één gekozen moment, zonder welkomstuur (dat is voordeliger), en als het 2e uur vrij is.
+  const selPromo = !multi && selected && !welcomeApplies ? promoOp(selected.dateStr, selected.hour) : null;
+  const kanTweedeUur = !!selPromo && duration < 2 && canBook(selected.dateStr, selected.hour, 2);
+  const gratisUurCents = selPromo && duration >= 2 && !creditApplies ? Math.round(unitCents) : 0;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= tegoedNodig;
   const durLabel = (n) => (n % 1 ? `${Math.floor(n)}u30` : `${n} uur`);
   // Een uitgelogde bezoeker heeft nog geen profiel, dus we weten NIET of zijn gratis uur nog
@@ -269,6 +274,26 @@ export default function BookingClient({
   const eenSessie = Math.round(unitCents * (isFit60 ? (eersteMoment ? urenVoor(eersteMoment.dateStr, eersteMoment.hour) : duration) : 1));
   const kortingAf = discountInfo?.ok ? Math.max(0, (multi ? eenSessie : priceCents) - discountInfo.cents) : 0;
   const teBetalen = Math.max(0, priceCents - kortingAf);
+
+  const RustigAanbod = ({ compact = false }) => {
+    if (kanTweedeUur) {
+      return (
+        <div className={"flex items-center justify-between gap-3 rounded-2xl border border-amber-400 bg-amber-50 text-ink " + (compact ? "mb-2 px-3 py-2" : "mt-4 p-3")}>
+          <p className="min-w-0 text-xs font-bold">⚡ Rustig uur — neem er <b>gratis</b> een 2e uur bij{compact ? "" : " (en je krijgt dubbele punten)"}.</p>
+          <button type="button" onClick={() => setDuration(2)} className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-black text-brand">+1 uur gratis</button>
+        </div>
+      );
+    }
+    if (selPromo && duration >= 2) {
+      return (
+        <p className={"rounded-2xl bg-amber-50 text-xs font-bold text-ink " + (compact ? "mb-2 px-3 py-2" : "mt-4 p-3")}>
+          ⚡ Rustig uur: {durLabel(duration)} voor de prijs van {durLabel(duration - 1)} · dubbele punten
+          <button type="button" onClick={() => setDuration(1)} className="ml-2 font-bold text-ink/60 underline">toch maar 1 uur</button>
+        </p>
+      );
+    }
+    return null;
+  };
 
   // Het bedrag onder "Totaal" en in de mobiele balk komt uit één berekening — die twee mogen nooit
   // iets anders zeggen.
@@ -874,7 +899,8 @@ export default function BookingClient({
               {isFit60 && <Row label="Personen" value={persons} />}
               {isFit60 && <Row label="Duur" value={durLabel(duration)} />}
             </dl>
-            {rustigeGekozen > 0 && !welcomeApplies && (
+            {!multi && <RustigAanbod />}
+            {multi && rustigeGekozen > 0 && !welcomeApplies && (
               <p className="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-ink">
                 ⚡ <b>{multi ? `${rustigeGekozen} van je ${momenten.length} momenten ${rustigeGekozen === 1 ? "is een rustig uur" : "zijn rustige uren"}` : "Rustig uur"}</b> — dubbele punten
                 {duration >= 2 ? " en 1 uur gratis per moment." : ". Kies 2 uur: dan betaal je er maar 1."}
@@ -979,10 +1005,14 @@ export default function BookingClient({
         // bottom-[4.75rem] houdt de tabbalk vrij, maar die verdwijnt al vanaf md — daarboven bleef
         // er een lege strook onder deze balk staan.
         <div className="fixed inset-x-0 bottom-[4.75rem] z-40 border-t border-borderc bg-surface/95 px-4 py-3 shadow-[0_-6px_20px_rgba(34,25,79,0.08)] backdrop-blur md:bottom-0 lg:hidden">
+          <div className="mx-auto max-w-md"><RustigAanbod compact /></div>
           <div className="mx-auto flex max-w-md items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-ink">{multi ? `${momenten.length} moment${momenten.length === 1 ? "" : "en"}${momenten.length < 2 ? " — kies er nog een" : ""}` : `${days.find((d) => d.dateStr === selected.dateStr)?.dayMonth || ""} · ${slotRangeLabel(selected.hour, (isFit60 ? duration : 1) * 60)}`}</p>
-              <p className="text-sm font-black text-accentdark">{totalValue()}</p>
+              <p className="text-sm font-black text-accentdark">
+                {gratisUurCents > 0 && <s className="mr-1.5 font-bold text-ink/40">{euro(teBetalen + gratisUurCents)}</s>}
+                {totalValue()}
+              </p>
             </div>
             {isLoggedIn ? (
               <button onClick={submit} disabled={busy || (multi && momenten.length < 2)} className="shrink-0 rounded-full bg-accent px-6 py-3 text-sm font-black text-brand shadow-lg shadow-accent/30 transition enabled:hover:-translate-y-0.5 disabled:opacity-50">
