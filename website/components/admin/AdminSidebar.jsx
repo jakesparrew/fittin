@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV, itemVoor } from "@/lib/beheer-nav";
+import { NAV, itemVoor, tabVoor } from "@/lib/beheer-nav";
 
 // Het register staat in lib/beheer-nav.js (zijbalk + tabs bovenaan de pagina's).
 const groups = NAV;
@@ -31,6 +31,7 @@ export default function AdminSidebar({ name, role, badges = {} }) {
   };
 
   const actief = itemVoor(pathname);
+  const actieveTab = tabVoor(actief, pathname);
   const isActive = (href) => actief?.href === href;
   const linkClass = (href) =>
     "flex items-center gap-3 rounded-xl px-3 py-1.5 text-sm font-bold transition " +
@@ -81,7 +82,8 @@ export default function AdminSidebar({ name, role, badges = {} }) {
                   </button>
                 )}
                 {!folded && grp.items.map((it) => (
-                  <Link key={it.href} href={it.href} onClick={() => setOpen(false)} className={linkClass(it.href)}>
+                  <div key={it.href}>
+                  <Link href={it.href} onClick={() => setOpen(false)} className={linkClass(it.href)}>
                     <span className="w-4 text-center">{it.icon}</span>
                     <span className="min-w-0 flex-1 truncate">{it.label}</span>
                     {/* Aantal open items. Staat er niets open, dan staat er ook niets — een teller op
@@ -91,7 +93,20 @@ export default function AdminSidebar({ name, role, badges = {} }) {
                         {badges[it.href] > 99 ? "99+" : badges[it.href]}
                       </span>
                     )}
+                    {it.tabs && <span className={"shrink-0 text-[8px] transition-transform " + (isActive(it.href) ? "" : "-rotate-90")} aria-hidden>▼</span>}
                   </Link>
+                  {/* Onderdelen van een gegroepeerd item klappen hier open (i.p.v. tabs bovenaan de pagina). */}
+                  {it.tabs && isActive(it.href) && (
+                    <div className="ml-7 mt-0.5 space-y-0.5 border-l border-white/10 pl-2">
+                      {it.tabs.map(([href, label]) => (
+                        <Link key={href} href={href} onClick={() => setOpen(false)} aria-current={actieveTab?.href === href ? "page" : undefined}
+                          className={"block rounded-lg px-3 py-1 text-[13px] font-bold transition " + (actieveTab?.href === href ? "bg-surface/15 text-white" : "text-lav hover:bg-surface/10 hover:text-white")}>
+                          {label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  </div>
                 ))}
               </div>
             );

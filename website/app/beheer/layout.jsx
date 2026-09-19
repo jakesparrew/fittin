@@ -3,7 +3,6 @@ import { getSessionProfile } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import ToastHost from "@/components/ui/ToastHost";
-import BeheerTabs from "@/components/admin/BeheerTabs";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -33,7 +32,7 @@ export default async function BeheerLayout({ children }) {
   return (
     <div className="flex min-h-screen flex-col bg-paper md:flex-row">
       <AdminSidebar name={profile.full_name || "Beheerder"} role={profile.role} badges={badges} />
-      <main className="min-w-0 flex-1 nativebar:pb-[var(--native-tabbar-h)]"><BeheerTabs />{children}</main>
+      <main className="min-w-0 flex-1 nativebar:pb-[var(--native-tabbar-h)]">{children}</main>
       <ToastHost />
     </div>
   );
