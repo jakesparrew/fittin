@@ -43,6 +43,8 @@ export default function BookingClient({
   // Rustige uren (0165): de databank beslist (slot_promo), dit rooster toont het vooraf. Zelfde regel: pin, klasse,
   // en het last-minute-vangnet (binnen 24 u, niet druk).
   const [enkelRustig, setEnkelRustig] = useState(!!rustigFilter);
+  // Stond het 2e uur er automatisch bij (rustig uur)? Dan valt het ook automatisch weg bij een gewoon uur.
+  const [autoUur, setAutoUur] = useState(false);
   const vraag = useMemo(() => new Map((rustig?.rijen || []).map((r) => [`${r.dow}:${r.hour}`, r])), [rustig]);
   const [mobileDay, setMobileDay] = useState(null);
   const [selected, setSelected] = useState(null); // { dateStr, hour } — hour is decimal (6.5 = 06:30)
@@ -189,7 +191,16 @@ export default function BookingClient({
     `${new Intl.DateTimeFormat("nl-BE", { timeZone: "Europe/Brussels", weekday: "short", day: "numeric", month: "short" }).format(slotInstant(m.dateStr, m.hour))} · ${slotRangeLabel(m.hour, duration * 60)}`;
   function kies(dateStr, h) {
     track("booking_slot_chosen");
-    if (!multi) { setSelected({ dateStr, hour: h }); return; }
+    if (!multi) {
+      setSelected({ dateStr, hour: h });
+      // Rustig uur: het gratis 2e uur staat er meteen bij — enkel als dat uur vrij is (promoOp keurde al dat het ook
+      // rustig is), en nooit bovenop het gratis welkomstuur, dat voordeliger is. "Maar 1 uur" zet het terug.
+      const promo = promoOp(dateStr, h);
+      // Uitgelogd niet: wie nog nooit boekte, heeft een gratis eerste uur van 1 uur — dat wint van het 2e uur gratis.
+      if (promo && duration < 2 && canBook(dateStr, h, 2) && isLoggedIn && !(welcomeAvailable && useWelcome)) { setDuration(2); setAutoUur(true); }
+      else if (autoUur && !promo) { setDuration(1); setAutoUur(false); }
+      return;
+    }
     mandSleutel.current = null; // een andere mand is een nieuwe indiening
     setError("");
     const al = dekkend(dateStr, h);
@@ -227,7 +238,8 @@ export default function BookingClient({
   // Weekdag uit de datum-string (Brusselse kalenderdag) — geen Intl per cel.
   // `t` mag meegegeven worden: het rooster heeft het tijdstip al berekend, en slotInstant bouwt telkens een formatter.
   const promoOp = (dateStr, h, t = null) => {
-    if (!isFit60 || !rustig?.aan) return null;
+    // Enkel op een vol uur: vanaf het halfuur zou het gratis 2e uur een half uur uit het uur daarna nemen (0171).
+    if (!isFit60 || !rustig?.aan || h % 1) return null;
     const dow = new Date(`${dateStr}T12:00:00Z`).getUTCDay() || 7;
     return promoVoor(vraag.get(`${dow}:${Math.floor(h)}`), vraag.get(`${dow}:${Math.floor(h) + 1}`), t ?? slotInstant(dateStr, h).getTime(), Date.now(), { aan: rustig.aan });
   };
@@ -242,7 +254,8 @@ export default function BookingClient({
   // dubbele punten. Enkel bij één gekozen moment, zonder welkomstuur (dat is voordeliger), en als het 2e uur vrij is.
   const selPromo = !multi && selected && !welcomeApplies ? promoOp(selected.dateStr, selected.hour) : null;
   const kanTweedeUur = !!selPromo && duration < 2 && canBook(selected.dateStr, selected.hour, 2);
-  const gratisUurCents = selPromo && duration >= 2 && !creditApplies ? Math.round(unitCents) : 0;
+  // De halfuren van het GRATIS uur (het uur na het startuur) — zo toont het rooster welk uur je cadeau krijgt.
+  const gratisCel = (dateStr, h) => !!selPromo && duration >= 2 && selected.dateStr === dateStr && h >= selected.hour + 1 && h < selected.hour + 2;
   const creditApplies = isFit60 && !welcomeApplies && useCredit && creditBalance >= tegoedNodig;
   const durLabel = (n) => (n % 1 ? `${Math.floor(n)}u30` : `${n} uur`);
   // Een uitgelogde bezoeker heeft nog geen profiel, dus we weten NIET of zijn gratis uur nog
@@ -265,6 +278,8 @@ export default function BookingClient({
   const ptByPersons = ptCoach ? (persons >= 3 ? ptCoach.coach_pt3_price_cents : persons === 2 ? ptCoach.coach_pt2_price_cents : ptCoach.coach_pt_price_cents) : null;
   const ptUnit = (ptByPersons != null ? ptByPersons : ptCoach?.coach_pt_price_cents) ?? (service?.price_cents ?? 0);
   const unitCents = memberRate ? service.member_price_cents : (isPT ? ptUnit : (service?.price_cents ?? 0));
+  // NA creditApplies én unitCents: ervoor gaf een rustig uur van 2 uur een ReferenceError (TDZ) en viel de boekpagina om.
+  const gratisUurCents = selPromo && duration >= 2 && !creditApplies ? Math.round(unitCents) : 0;
   const priceCents = welcomeApplies || creditApplies ? 0
     : isPT ? Math.round(ptUnit * persons * duration)
     : isFit60 ? Math.round(unitCents * betaaldeUrenTotaal * durFactor)
@@ -280,15 +295,24 @@ export default function BookingClient({
       return (
         <div className={"flex items-center justify-between gap-3 rounded-2xl border border-amber-400 bg-amber-50 text-ink " + (compact ? "mb-2 px-3 py-2" : "mt-4 p-3")}>
           <p className="min-w-0 text-xs font-bold">⚡ Rustig uur — neem er <b>gratis</b> een 2e uur bij{compact ? "" : " (en je krijgt dubbele punten)"}.</p>
-          <button type="button" onClick={() => setDuration(2)} className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-black text-brand">+1 uur gratis</button>
+          <button type="button" onClick={() => { setDuration(2); setAutoUur(true); }} className="shrink-0 rounded-full bg-accent px-3 py-1.5 text-xs font-black text-brand">+1 uur gratis</button>
         </div>
       );
     }
     if (selPromo && duration >= 2) {
       return (
+        <div className={"flex items-center justify-between gap-3 rounded-2xl border border-amber-400 bg-amber-50 text-ink " + (compact ? "mb-2 px-3 py-2" : "mt-4 p-3")}>
+          <p className="min-w-0 text-xs font-bold">
+            🎁 Je 2e uur is <b>gratis</b> ({fmtHour(selected.hour + 1)}–{fmtHour(selected.hour + 2)}): {durLabel(duration)} voor de prijs van {durLabel(duration - 1)}{compact ? "" : " · dubbele punten"}.
+          </p>
+          <button type="button" onClick={() => { setDuration(1); setAutoUur(false); }} className="shrink-0 rounded-full border-2 border-borderc bg-surface px-3 py-1.5 text-xs font-black text-ink">Maar 1 uur</button>
+        </div>
+      );
+    }
+    if (selPromo) {
+      return (
         <p className={"rounded-2xl bg-amber-50 text-xs font-bold text-ink " + (compact ? "mb-2 px-3 py-2" : "mt-4 p-3")}>
-          ⚡ Rustig uur: {durLabel(duration)} voor de prijs van {durLabel(duration - 1)} · dubbele punten
-          <button type="button" onClick={() => setDuration(1)} className="ml-2 font-bold text-ink/60 underline">toch maar 1 uur</button>
+          ⚡ Rustig uur: dubbele punten. Het uur erna is niet vrij, dus hier geen gratis 2e uur.
         </p>
       );
     }
@@ -620,7 +644,7 @@ export default function BookingClient({
                       {[1, 1.5, 2, 3, 4].map((n) => (
                         // Altijd kiesbaar: de duur bepaalt wélke momenten het rooster hieronder toont, niet
                         // omgekeerd. Ze grijs maken tot er een moment gekozen is, verborg 1u30 volledig.
-                        <button key={n} onClick={() => { setDuration(n); if (selected && !canBook(selected.dateStr, selected.hour, n)) setSelected(null); }} className={"rounded-2xl border-2 px-3.5 py-2.5 text-center transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
+                        <button key={n} onClick={() => { setDuration(n); setAutoUur(false); if (selected && !canBook(selected.dateStr, selected.hour, n)) setSelected(null); }} className={"rounded-2xl border-2 px-3.5 py-2.5 text-center transition " + (duration === n ? "border-accent bg-accent/10" : "border-borderc hover:border-lav")}>
                           <span className="block text-sm font-black text-ink">{n % 1 ? `${Math.floor(n)}u30` : `${n} uur`}</span>
                         </button>
                       ))}
@@ -765,9 +789,10 @@ export default function BookingClient({
                     if (taken) return <WaitlistSlot key={h} date={activeDay} hour={h} label={label} isLoggedIn={isLoggedIn} />;
                     if (!inRange && !(multi ? pastInMand(activeDay, h) : canBook(activeDay, h, fitDur))) return <div key={h} className="rounded-xl bg-paper py-3 text-center text-xs font-bold text-ink/20">{label}</div>;
                     const promo = promoOp(activeDay, h, t);
+                    const gratis = !multi && gratisCel(activeDay, h);
                     return (
-                      <button key={h} onClick={() => kies(activeDay, h)} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (inRange ? "border-accent bg-accent text-brand" : promo ? "border-amber-400 bg-amber-50 text-ink" : "border-accent/30 bg-accent/10 text-accentdark") + (enkelRustig && !promo && !inRange ? " opacity-30" : "")}>
-                        {label}{promo ? " ⚡" : ""}{isSel ? " ✓" : ""}
+                      <button key={h} onClick={() => kies(activeDay, h)} className={"rounded-xl border-2 py-3 text-center text-xs font-black transition " + (gratis ? "border-amber-400 bg-amber-100 text-ink" : inRange ? "border-accent bg-accent text-brand" : promo ? "border-amber-400 bg-amber-50 text-ink" : "border-accent/30 bg-accent/10 text-accentdark") + (enkelRustig && !promo && !inRange ? " opacity-30" : "")}>
+                        {label}{gratis ? " · gratis" : promo ? " ⚡" : ""}{isSel ? " ✓" : ""}
                       </button>
                     );
                   })}
@@ -804,14 +829,15 @@ export default function BookingClient({
                           if (taken) return <WaitlistSlot key={d.dateStr} date={d.dateStr} hour={h} compact isLoggedIn={isLoggedIn} />;
                           if (!inRange && !(multi ? pastInMand(d.dateStr, h) : canBook(d.dateStr, h, fitDur))) return <div key={d.dateStr} className="h-7 rounded-md bg-paper/60" />;
                           const promo = promoOp(d.dateStr, h, t);
+                          const gratis = !multi && gratisCel(d.dateStr, h);
                           return (
                             <button
                               key={d.dateStr}
                               onClick={() => kies(d.dateStr, h)}
-                              title={promo ? "Rustig uur: dubbele punten · 2 uur voor de prijs van 1" : undefined}
-                              className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (inRange ? "border-accent bg-accent text-brand" : promo ? "border-amber-400 bg-amber-50 text-ink hover:bg-amber-100" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25") + (enkelRustig && !promo && !inRange ? " opacity-30" : "")}
+                              title={gratis ? "Dit uur krijg je gratis (rustig uur)" : promo ? "Rustig uur: 2e uur gratis + dubbele punten" : undefined}
+                              className={"h-7 select-none rounded-md border text-[9px] font-bold transition " + (gratis ? "border-amber-400 bg-amber-100 text-ink" : inRange ? "border-accent bg-accent text-brand" : promo ? "border-amber-400 bg-amber-50 text-ink hover:bg-amber-100" : "border-accent/30 bg-accent/10 text-accentdark hover:bg-accent/25") + (enkelRustig && !promo && !inRange ? " opacity-30" : "")}
                             >
-                              {isSel ? "✓" : inRange ? "•" : promo ? "⚡" : ""}
+                              {isSel ? "✓" : gratis ? "gratis" : inRange ? "•" : promo ? "⚡" : ""}
                             </button>
                           );
                         })}
@@ -826,7 +852,7 @@ export default function BookingClient({
                     "alles is volgeboekt" terwijl het uur gewoon te kort is vóór sluitingstijd. */}
                 <p className="text-xs text-ink/40">
                   Groen = vrij voor {fitDur % 1 ? `${Math.floor(fitDur)}u30` : `${fitDur} uur`} · grijs = geboekt of te kort · de zaal is exclusief van jou tijdens je sessie.
-                  {isFit60 && rustig?.aan && <> · <span className="font-bold text-ink/60">⚡ = rustig uur: dubbele punten, 2 uur voor de prijs van 1</span></>}
+                  {isFit60 && rustig?.aan && <> · <span className="font-bold text-ink/60">⚡ = rustig uur: het 2e uur krijg je gratis + dubbele punten</span></>}
                 </p>
                 {isFit60 && rustig?.aan && (
                   <button type="button" onClick={() => setEnkelRustig((v) => !v)} aria-pressed={enkelRustig}
@@ -962,7 +988,7 @@ export default function BookingClient({
               <span className="text-3xl font-black text-accent">{totalValue()}</span>
             </div>
             {guestWelcome && <p className="mt-1 text-right text-xs text-lav">Is dit je állereerste boeking? Dan is dit uur gratis — je rekent niets af.</p>}
-            {guestWelcomeTooLong && <p className="mt-1 text-right text-xs font-bold text-amber-300">Een gratis eerste uur geldt enkel voor een sessie van 1 uur — bij {durLabel(duration)} betaal je de volledige prijs.</p>}
+            {guestWelcomeTooLong && <p className="mt-1 text-right text-xs font-bold text-amber-300">Een gratis eerste uur geldt enkel voor een sessie van 1 uur.{selPromo ? " Is dit je eerste boeking? Kies dan 'Maar 1 uur'." : ` Bij ${durLabel(duration)} betaal je de volledige prijs.`}</p>}
 
             {error && <p className="mt-4 rounded-xl bg-red-500/20 p-3 text-sm font-semibold text-red-100">{error}</p>}
 
