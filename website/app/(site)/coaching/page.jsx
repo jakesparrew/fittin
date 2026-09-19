@@ -5,11 +5,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { dossierVoor } from "@/lib/coaching/plan.js";
 import { coachAan } from "@/lib/coaching/model.js";
 import IntakeWizard from "@/components/coaching/IntakeWizard";
+import OpenCoachKaart from "@/components/coaching/OpenCoachKaart";
 import WeekPaneel from "@/components/coaching/WeekPaneel";
 import MaaltijdPaneel from "@/components/coaching/MaaltijdPaneel";
 import PlanBeheer from "@/components/coaching/PlanBeheer";
 import { maaltijdenAan, richtlijnVoor } from "@/lib/coaching/maaltijd.js";
-import { magCoaching } from "@/lib/coaching/toegang.js";
+import { magCoachingNu } from "@/lib/coaching/toegang.js";
 import { MIJLPALEN, volgendeMijlpaal } from "@/lib/coaching/mijlpalen.js";
 import { volgendeStap, dagenTeGaan } from "@/lib/coaching/volgendestap.js";
 import { fmt } from "@/lib/format";
@@ -35,9 +36,9 @@ export default async function CoachingPagina() {
   if (profile?.role === "coach") redirect("/coach");
   // De AI-coach draait voorlopig voor een proefgroep. Wie er niet in zit, hoort niet te weten dat
   // deze pagina bestaat — vandaar een omleiding en geen "geen toegang"-scherm.
-  if (!magCoaching(profile)) redirect("/account");
-
   const admin = createAdminClient();
+  if (!(await magCoachingNu(admin, profile))) redirect("/account");
+
   const dossier = await dossierVoor(admin, user.id);
   const aan = coachAan();
 
@@ -64,6 +65,7 @@ export default async function CoachingPagina() {
           klaar wanneer je een sessie boekt, je vinkt af wat je deed, en je coach past de week erna
           daarop aan. Wil je er een weekmenu bij, dan kies je dat straks zelf.
         </p>
+        {aan && <OpenCoachKaart />}
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Kaartje titel="Workouts" tekst="Je sessie staat klaar in je deurcodemail, met oefeningen en gewichten." />
@@ -149,6 +151,7 @@ export default async function CoachingPagina() {
           <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">Op pauze</span>
         )}
       </div>
+      {aan && <OpenCoachKaart />}
 
       {/* De weekbalk: waar sta je in het plan. Elke bol is een week. */}
       <div className="mt-5 flex flex-wrap items-center gap-1.5">

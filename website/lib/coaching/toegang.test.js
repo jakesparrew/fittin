@@ -69,4 +69,12 @@ describe("de lijst instellen", () => {
     process.env.COACH_AI_TOEGANG = "IEDEREEN";
     expect(magCoaching(lid("wie.dan.ook@gmail.com"))).toBe(true);
   });
+
+  it("de schakelaar van de gym opent de coach voor leden en de beheerder, niet voor coaches", () => {
+    delete process.env.COACH_AI_TOEGANG;
+    expect(magCoaching(lid("wie.dan.ook@gmail.com"), { open: true })).toBe(true);
+    expect(magCoaching({ role: "coach", email: "coach@fittin.be" }, { open: true })).toBe(false);
+    expect(magCoaching(lid("wie.dan.ook@gmail.com"), { open: false })).toBe(false);
+    expect(magCoaching(null, { open: true })).toBe(false);
+  });
 });

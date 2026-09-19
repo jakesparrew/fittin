@@ -5,7 +5,7 @@ import { isSettled } from "@/lib/booking-status";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
-import { magCoaching } from "@/lib/coaching/toegang.js";
+import { magCoachingNu } from "@/lib/coaching/toegang.js";
 import { payCoachRequest, respondJoinRequest, setLeaderboardOptIn } from "./actions";
 import { respondCoachLink } from "@/app/coach/actions";
 import WeightChart from "@/components/WeightChart";
@@ -110,6 +110,7 @@ export default async function AccountPage({ searchParams }) {
 
   const supabase = await createClient();
   const admin = createAdminClient();
+  const coachingMag = await magCoachingNu(admin, profile);
 
   // One parallel batch instead of a dozen serial round-trips (each query is independent).
   // expire_unpaid_bookings runs alongside; freed slots show correctly on the next render.
@@ -476,7 +477,7 @@ export default async function AccountPage({ searchParams }) {
         {/* De AI-coach. Bewust hier, onder je coach en boven het leaderboard: het is een
             begeleidingsfunctie, geen spelletje. De tekst verschilt naargelang je al bezig bent —
             wie een plan heeft, wil ernaartoe; wie er geen heeft, moet weten waarom hij zou. */}
-        {magCoaching(profile) && (
+        {coachingMag && (
         <section className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-3xl border-2 border-accent/30 bg-accent/5 p-6">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-widest text-accentdark">Fittin&rsquo; coaching</p>

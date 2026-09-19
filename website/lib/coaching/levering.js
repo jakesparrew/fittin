@@ -8,7 +8,7 @@
 // deurcode vertrekt. Vooraf koppelen zou betekenen dat een verplaatste of geannuleerde boeking een
 // sessie meesleept, en dan klopt de volgorde van de week niet meer.
 
-import { magCoaching } from "./toegang.js";
+import { magCoachingNu } from "./toegang.js";
 import { nieuwToken } from "@/lib/meldpunt";
 
 /**
@@ -23,8 +23,8 @@ export async function workoutVoorBoeking(admin, { bookingId, memberId }) {
   // De proefgroep-poort geldt ook hier. Deze mail was de enige ingang die hem niet passeerde: wie
   // ooit een plan maakte toen de lijst ruimer stond, kreeg zijn schema anders gewoon blijven
   // toegestuurd. De poort is de poort, op alle vijf — nu zes — ingangen.
-  const { data: lid } = await admin.from("profiles").select("id, email, role, coaching_ervaring").eq("id", memberId).maybeSingle();
-  if (!magCoaching(lid)) return null;
+  const { data: lid } = await admin.from("profiles").select("id, gym_id, email, role, coaching_ervaring").eq("id", memberId).maybeSingle();
+  if (!(await magCoachingNu(admin, lid))) return null;
 
   const { data: plan } = await admin.from("coaching_plans")
     .select("id, weken, status").eq("member_id", memberId).eq("status", "lopend").maybeSingle();

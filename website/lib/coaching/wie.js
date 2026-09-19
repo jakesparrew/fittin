@@ -1,6 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionProfile } from "@/lib/auth";
-import { magCoaching } from "./toegang.js";
+import { magCoachingNu } from "./toegang.js";
 
 /**
  * Wie vraagt dit, en mag die het?
@@ -16,6 +16,6 @@ import { magCoaching } from "./toegang.js";
 export async function wie() {
   const { user, profile } = await getSessionProfile();
   if (!user || !profile) return null;
-  if (!magCoaching(profile)) return null;
+  if (!(await magCoachingNu(createAdminClient(), profile))) return null;
   return { user, profile, admin: createAdminClient() };
 }

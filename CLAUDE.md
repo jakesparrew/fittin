@@ -77,6 +77,8 @@ inbegrepen in de scope; App Store-lancering kost €100 (Apple) + €25 (Google)
   2 uur de prijs van 1 en geeft een sessie dubbele punten. Regel in `public.slot_promo()` + `lib/punten.js`.
 - **Fittin' punten** (0165): puntenboek `member_points`, 300 punten = 1 gratis sessie; plan en regels in
   `docs/plans/2026-09-18-gamification-community.md`, motor `lib/punten-motor.js` (cron `/api/cron/punten`, elk uur).
+- **AI-coach chat** (0170, testfase): zwevende coachknop, model stelt enkel VOOR, lid bevestigt; vangrails en keuzes in
+  `docs/plans/2026-09-19-ai-coach-chat.md`. Aan/uit voor alle leden: Beheer → AI-coach (`gyms.ai_coach_open`).
 - Eerste uur gratis met code **FittinWelcome** (dienst "Fit60") — verdwijnt zodra een lid het gebruikt heeft
 - PT: 1-op-1 €60 · 1-op-2 €35 pp · 1-op-3 €30 pp · gratis intake + proeftraining ·
   kosteloos annuleren tot 24u vooraf

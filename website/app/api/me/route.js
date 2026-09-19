@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { roleHome } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { magCoachingNu } from "@/lib/coaching/toegang.js";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,7 +24,7 @@ export async function GET() {
   // Supabase queries resolve to { data, count, error } and never throw, so a missing table or
   // RLS denial degrades to null (→ unread 0) rather than rejecting the Promise.all.
   const [{ data: profile }, { count }] = await Promise.all([
-    supabase.from("profiles").select("full_name, role, pending_referral").eq("id", user.id).single(),
+    supabase.from("profiles").select("full_name, role, pending_referral, gym_id, email").eq("id", user.id).single(),
     supabase.from("notifications").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("read", false),
   ]);
 
@@ -39,9 +40,14 @@ export async function GET() {
     );
   }
 
+  // Zwevende coachknop (components/coaching/CoachKnop.jsx). Dezelfde poort als /coaching; de gymschakelaar is
+  // 60 s gecachet, dus dit kost geen extra rondrit per paginawissel.
+  const coach = profile ? await magCoachingNu(createAdminClient(), profile).catch(() => false) : false;
+
   return NextResponse.json(
     {
       loggedIn: true,
+      coach,
       name: profile?.full_name || user.email || "Account",
       role: profile?.role || "lid",
       home: roleHome(profile?.role),

@@ -5,7 +5,7 @@ import { openVolgendeWeek } from "@/lib/coaching/plan.js";
 import { coachAan } from "@/lib/coaching/model.js";
 import { zorgVoorMenu, menuVoorWeek, maaltijdenAan } from "@/lib/coaching/maaltijd.js";
 import { noteerMijlpalen, markeerGemeld, zwaarste, wekenOpRij } from "@/lib/coaching/mijlpalen.js";
-import { magCoaching } from "@/lib/coaching/toegang.js";
+import { magCoachingNu } from "@/lib/coaching/toegang.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -142,7 +142,7 @@ export async function GET(req) {
       if (!lid?.email) continue;
       // Wie buiten de proefgroep valt, krijgt geen zondagmail — ook niet als hij ooit een plan
       // maakte toen de lijst ruimer stond. De poort is de poort, in beide richtingen.
-      if (!magCoaching(lid)) { buitenGroep++; continue; }
+      if (!(await magCoachingNu(admin, lid))) { buitenGroep++; continue; }
 
       // ---- 1. Nog geen check-in en nog niet te lang bezig: vragen hoe het ging ----
       if (!checkin && dagenOpen < 10) {

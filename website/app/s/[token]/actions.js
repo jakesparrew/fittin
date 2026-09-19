@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { magCoaching } from "@/lib/coaching/toegang.js";
+import { magCoachingNu } from "@/lib/coaching/toegang.js";
 
 // Afvinken vanuit de deurcodemail, zonder login.
 //
@@ -50,8 +50,8 @@ export async function sessieVanToken(token) {
   if (Date.now() > new Date(boeking.ends_at).getTime() + VENSTER_NA) return null;
 
   const { data: lid } = await admin.from("profiles")
-    .select("id, email, role, full_name").eq("id", boeking.user_id).maybeSingle();
-  if (!magCoaching(lid)) return null;
+    .select("id, gym_id, email, role, full_name").eq("id", boeking.user_id).maybeSingle();
+  if (!(await magCoachingNu(admin, lid))) return null;
 
   const { data: week } = await admin.from("coaching_weeks")
     .select("id, plan_id, weeknummer").eq("id", sessie.week_id).maybeSingle();

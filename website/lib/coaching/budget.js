@@ -28,7 +28,7 @@ export const euroVan = (micro) => "€ " + ((micro || 0) / 1_000_000 * USD_EUR).
  * De uitkomsten die betekenen dat het lid er iets aan had. Alles daarbuiten is geld dat wegging
  * zonder resultaat — zie 0161 voor waarom `ok` die vraag niet beantwoordt.
  */
-export const GELEVERD = new Set(["plan_geschreven", "zin_geschreven", "menu_geschreven"]);
+export const GELEVERD = new Set(["plan_geschreven", "zin_geschreven", "menu_geschreven", "chat_antwoord"]);
 
 /** Begin van vandaag in Brussel, als ISO — zodat de rem meeloopt met de kalenderdag van de gym. */
 export function beginVanVandaag(nu = new Date()) {

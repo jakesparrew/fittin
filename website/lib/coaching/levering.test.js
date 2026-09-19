@@ -149,7 +149,7 @@ describe("de grenzen van de AI-coach", () => {
       "app/(site)/training/page.jsx",
       "app/api/cron/coaching/route.js",
     ]) {
-      expect(lees(bestand), `${bestand} mist de poort`).toMatch(/magCoaching\(/);
+      expect(lees(bestand), `${bestand} mist de poort`).toMatch(/magCoachingNu\(admin, /);
     }
     // De twee SCHRIJFingangen — de serveracties en de stroomroute — doen het niet zelf maar via
     // wie.js. Dat is met opzet: zie de volgende test.
@@ -161,7 +161,7 @@ describe("de grenzen van de AI-coach", () => {
   it("de poort zit in één plek, niet per actie en niet per ingang herhaald", () => {
     // Per actie herhalen is hem ooit vergeten. Sinds er een tweede ingang bij kwam (de stroomroute,
     // die exact hetzelfde werk doet mét meekijker) geldt datzelfde tussen bestanden.
-    expect(lees("lib/coaching/wie.js")).toMatch(/export async function wie\(\)[\s\S]{0,400}?magCoaching\(profile\)/);
+    expect(lees("lib/coaching/wie.js")).toMatch(/export async function wie\(\)[\s\S]{0,500}?magCoachingNu\(createAdminClient\(\), profile\)/);
     // En niemand bouwt zijn eigen versie: wie zelf `getSessionProfile` ophaalt, kan `magCoaching`
     // vergeten zonder dat iets het merkt.
     for (const bestand of ["app/(site)/coaching/actions.js", "app/api/coaching/stroom/route.js", "lib/coaching/opdracht.js"]) {
@@ -319,8 +319,8 @@ describe("afvinken vanuit de deurcodemail", () => {
     // Deze mail was de enige ingang die `magCoaching` niet passeerde. Wie ooit een plan maakte toen
     // de lijst ruimer stond, kreeg zijn schema anders gewoon blijven toegestuurd.
     const l = lees("lib/coaching/levering.js");
-    expect(l).toMatch(/import \{ magCoaching \}/);
-    expect(l).toMatch(/if \(!magCoaching\(lid\)\) return null;/);
+    expect(l).toMatch(/import \{ magCoachingNu \}/);
+    expect(l).toMatch(/if \(!\(await magCoachingNu\(admin, lid\)\)\) return null;/);
   });
 });
 
@@ -354,7 +354,7 @@ describe("de landingspagina van het afvinken", () => {
   });
 
   it("laat de proefgroep-poort ook hier gelden", () => {
-    expect(lees("app/s/[token]/actions.js")).toMatch(/magCoaching\(lid\)/);
+    expect(lees("app/s/[token]/actions.js")).toMatch(/magCoachingNu\(admin, lid\)/);
   });
 
   it("de pagina staat niet in Google", () => {

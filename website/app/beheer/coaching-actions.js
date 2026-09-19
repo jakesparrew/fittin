@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { requireStaff } from "@/lib/staff";
 import { nagekeken, leesbareFout } from "@/lib/uitkomst";
 import { exerciseRowFromForm, uniqueSlug } from "@/lib/exercise-fields";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { vergeetCoachOpen } from "@/lib/coaching/toegang.js";
 
 const num = (v, d = null) => {
   const n = parseInt(v, 10);
@@ -19,6 +21,22 @@ function peRichFields(formData) {
     rpe: (() => { const r = num(formData.get("rpe")); return r != null ? Math.max(1, Math.min(10, r)) : null; })(),
     superset_group: num(formData.get("superset_group")),
   };
+}
+
+// ---------------- AI-coach voor iedereen (0170) ----------------
+
+/** De schakelaar: de AI-coach aan of uit voor alle leden van de gym. Enkel de beheerder. */
+export async function zetAiCoachOpen(formData) {
+  const { profile, error } = await requireStaff(true);
+  if (error) return { error };
+  const open = formData.get("open") === "1";
+  // Service role: ai_coach_open is een nieuwe kolom zonder kolomrechten voor `authenticated`.
+  const res = await createAdminClient().from("gyms").update({ ai_coach_open: open }, { count: "exact" }).eq("id", profile.gym_id);
+  const fout = nagekeken(res, "AI-coach schakelen");
+  if (fout) return fout;
+  vergeetCoachOpen(profile.gym_id);
+  revalidatePath("/beheer/coaching");
+  return { ok: true, message: open ? "AI-coach staat open voor alle leden ✓" : "AI-coach is weer dicht ✓" };
 }
 
 // ---------------- Exercises ----------------

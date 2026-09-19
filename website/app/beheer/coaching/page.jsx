@@ -5,6 +5,7 @@ import { telOp, DAGBUDGET_MICRO, beginVanVandaag, euroVan } from "@/lib/coaching
 import { coachAan } from "@/lib/coaching/model.js";
 import { fmtDate, fmtDay } from "@/lib/format";
 import CoachTesten from "@/components/admin/CoachTesten";
+import AiCoachSchakelaar from "@/components/admin/AiCoachSchakelaar";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function BeheerCoaching() {
   const db = createAdminClient();
   const dertigDagen = new Date(Date.now() - 30 * 86400000).toISOString();
 
-  const [plannenR, verbruikR, menusR, mijlpalenR, cronR] = await Promise.all([
+  const [plannenR, verbruikR, menusR, mijlpalenR, cronR, chatR, gymR] = await Promise.all([
     db.from("coaching_plans")
       .select("id, member_id, doel, weken, status, gestart_op, afgerond_at, doorverwezen_at, doorverwijs_reden, updated_at")
       .eq("gym_id", gym.id).order("updated_at", { ascending: false }).limit(200),
@@ -39,7 +40,26 @@ export default async function BeheerCoaching() {
     // nooit optellen — alleen de laatste beurt is hier interessant.
     db.from("cron_runs").select("ok, detail, created_at").eq("job", "coaching_week")
       .order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    // De chat: enkel tellingen. Wat een lid schrijft, leest de beheerpagina niet (zie de kop van dit bestand).
+    db.from("coach_berichten").select("rol, vlag, acties, member_id").eq("gym_id", gym.id).gte("created_at", dertigDagen).limit(10000),
+    db.from("gyms").select("ai_coach_open").eq("id", gym.id).maybeSingle(),
   ]);
+  const chat = (() => {
+    const r = chatR.data || [];
+    const acties = r.flatMap((b) => b.acties || []);
+    const vlag = (v) => r.filter((b) => b.rol === "lid" && b.vlag === v).length;
+    return {
+      berichten: r.filter((b) => b.rol === "lid").length,
+      leden: new Set(r.filter((b) => b.rol === "lid").map((b) => b.member_id)).size,
+      voorgesteld: acties.length,
+      uitgevoerd: acties.filter((a) => a.status === "uitgevoerd").length,
+      boekingen: acties.filter((a) => a.status === "uitgevoerd" && a.type === "stel_boeking_voor").length,
+      coach: acties.filter((a) => a.status === "uitgevoerd" && a.type === "stel_coach_voor").length,
+      spoed: vlag("spoed") + vlag("crisis"),
+      pijn: vlag("pijn"),
+    };
+  })();
+  const chatOpen = !!gymR.data?.ai_coach_open;
 
   const plannen = plannenR.data || [];
   const verbruik = verbruikR.data || [];
@@ -106,6 +126,36 @@ export default async function BeheerCoaching() {
           </div>
         );
       })()}
+
+      {/* De schakelaar + de chat in cijfers. Open = elk lid ziet de coachknop (testfase-label staat erop). */}
+      <section className={"mt-6 " + KAART}>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="font-display text-lg font-black text-ink">Coach-chat voor alle leden</h2>
+            <p className="mt-1 text-sm text-ink-soft">
+              {chatOpen
+                ? "Staat OPEN: elk lid ziet de coachknop, met het label testfase. Zonder deploy terug dicht te zetten."
+                : "Staat DICHT: enkel de proefgroep en de beheerder zien de coach."}
+            </p>
+          </div>
+          <AiCoachSchakelaar open={chatOpen} />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            ["Berichten van leden", chat.berichten, `${chat.leden} ${chat.leden === 1 ? "lid" : "leden"} · 30 dagen`],
+            ["Voorstellen", chat.voorgesteld, `${chat.uitgevoerd} bevestigd door het lid`],
+            ["Via de chat geboekt", chat.boekingen, `${chat.coach}× een echte coach gevraagd`],
+            ["Veiligheid", chat.spoed + chat.pijn, `${chat.spoed}× noodtekst (112/1813) · ${chat.pijn}× pijn`],
+          ].map(([t, n, s]) => (
+            <div key={t} className="rounded-xl bg-paper px-3 py-2">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-ink/45">{t}</p>
+              <p className="font-display text-xl font-black text-ink">{n}</p>
+              <p className="text-[11px] text-ink/50">{s}</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-xs text-ink/45">Wat leden schrijven, is van hen: deze pagina toont enkel tellingen. Een doorverwijzing komt als melding bij je binnen.</p>
+      </section>
 
       {/* 1. Waar iemand iets mee moet doen. */}
       {leads.length > 0 && (

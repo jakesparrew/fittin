@@ -8,7 +8,8 @@ import ProgressPanel from "@/components/progress/ProgressPanel";
 import WorkoutPlayer from "./WorkoutPlayer";
 import VandaagKaart from "./VandaagKaart";
 import { bouwDagen, kiesDagId, schatMinuten } from "@/lib/training-dagen";
-import { magCoaching } from "@/lib/coaching/toegang.js";
+import { magCoachingNu } from "@/lib/coaching/toegang.js";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mijn training | Fittin'" };
@@ -19,7 +20,8 @@ export default async function Training() {
   if (!isSupabaseConfigured) redirect("/");
   const { user, profile: mijnProfiel } = await getSessionProfile();
   if (!user) redirect("/login?next=/training");
-  const coachOpen = magCoaching(mijnProfiel);
+  const admin = createAdminClient();
+  const coachOpen = await magCoachingNu(admin, mijnProfiel);
 
   const supabase = await createClient();
   const [{ data: program }, { data: logs }, { data: coachLink }, { data: feedback }, { data: aiPlan }] = await Promise.all([

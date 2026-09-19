@@ -37,7 +37,7 @@ export default function Privacy() {
       <div className="mx-auto max-w-3xl px-5 py-16">
         <p className="text-sm font-black uppercase tracking-[0.25em] text-accentdark">Privacy</p>
         <h1 className="mt-2 text-3xl font-black text-ink md:text-4xl">Privacybeleid</h1>
-        <p className="mt-3 text-sm text-ink/50">Versie 4 — laatst bijgewerkt: 10 september 2026</p>
+        <p className="mt-3 text-sm text-ink/50">Versie 5 — laatst bijgewerkt: 19 september 2026</p>
 
         <p className="mt-6 leading-relaxed text-ink/70">
           Fittin&rsquo; verwerkt je persoonsgegevens volgens de Algemene Verordening
@@ -113,6 +113,15 @@ export default function Privacy() {
               je haalde, zodat je er maar één keer een bericht over krijgt.
             </li>
             <li>
+              <strong>Coach-chat (testfase)</strong> — praat je met de AI-coach, dan bewaren we je berichten,
+              zijn antwoorden en wat je hem vroeg te onthouden, zodat je het gesprek kan teruglezen. Om te
+              antwoorden krijgt het model je berichten, je komende boekingen, je tegoed, je puntenstand en je
+              plan — je naam en contactgegevens niet, lichaamsgegevens enkel met je toestemming (zie hierboven).
+              De coach voert niets zelf uit: boeken, verplaatsen of iets in je plan wijzigen gebeurt pas als jij
+              bevestigt. De uitbater ziet enkel tellingen, niet wat je schrijft. Je wist het hele gesprek en
+              het geheugen zelf met één knop in de chat. <em>Grondslag: uitvoering van de overeenkomst.</em>
+            </li>
+            <li>
               <strong>Communicatie</strong> — berichten met je coach of met ons, en je meldingen over
               defecten. <em>Grondslag: uitvoering van de overeenkomst.</em>
             </li>
@@ -175,6 +184,7 @@ export default function Privacy() {
                 <Row wat="Betalingen en facturen" hoelang="7 jaar, wettelijke bewaartermijn voor de boekhouding. Deze gegevens verdwijnen dus niet bij het verwijderen van je account." />
                 <Row wat="Toegangscodes en deurlogs" hoelang="Codes worden na je sessie meteen ingetrokken. Logs bewaren we 12 maanden voor de veiligheid van een onbemande zaal; daarna worden ze automatisch verwijderd." />
                 <Row wat="Lichaamsmetingen en trainingslogs" hoelang="Zolang je toestemming loopt. Trek je ze in, dan wissen we ze." />
+                <Row wat="Coach-chat" hoelang="Tot je het gesprek zelf wist, of tot je account verdwijnt. Voorstellen die je niet bevestigt, vervallen na een dag." />
                 <Row wat="Fittin&rsquo; Coaching" hoelang="Zolang je een plan hebt lopen, en daarna zolang je account bestaat — je kan je dossier teruglezen. Stop je met coaching, dan kan je het laten wissen via Mijn account. Trek je je toestemming voor lichaamsgegevens in, dan gaan die velden meteen niet meer mee naar het model." />
                 <Row wat="Aanvragen en aanmeldingen" hoelang="Zolang we je aanvraag opvolgen, en daarna hoogstens twee jaar — zodat we een eerdere vraag nog kunnen terugvinden als je later opnieuw contact opneemt. Een sollicitatie als coach, inclusief cv en foto, verwijderen we uiterlijk een jaar na de procedure." />
                 <Row wat="Nieuwsbrief" hoelang="Tot je uitschrijft. Je uitschrijving zelf houden we bij zodat we je niet opnieuw aanschrijven." />
